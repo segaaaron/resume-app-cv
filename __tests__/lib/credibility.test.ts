@@ -29,7 +29,7 @@ describe("the second number", () => {
 
   it("costs the most for the things that end an application", () => {
     const backwards = computeCredibility(with_({ chronology: { kind: "reverse_order", firstShown: "A", mostRecent: "B" } }))
-    const untidy = computeCredibility(with_({ dateInconsistency: { formats: ["MM/YYYY", "YYYY"] } }))
+    const untidy = computeCredibility(with_({ dateInconsistency: { formats: ["MM/YYYY", "YYYY"], jobsMissingMonth: [] } }))
     expect(backwards.score).toBeLessThan(untidy.score)
   })
 
@@ -46,7 +46,7 @@ describe("the second number", () => {
         { targetId: "c", jobTitle: "C", count: 12, kind: "too_many" },
         { targetId: "d", jobTitle: "D", count: 10, kind: "too_many" },
       ],
-      dateInconsistency: { formats: ["MM/YYYY", "YYYY"] },
+      dateInconsistency: { formats: ["MM/YYYY", "YYYY"], jobsMissingMonth: [] },
     }))
     expect(r.findings[0].key).toBe("years_contradiction")
     expect(r.findings[0].band).toBe("trust")
@@ -78,7 +78,7 @@ describe("the second number", () => {
       duplicateBullets: Array.from({ length: 10 }, (_, i) => ({ targetId: "j", jobTitle: "x", index: i, text: "x".repeat(40), duplicateOfJobTitle: "x" })),
       clicheBullets: Array.from({ length: 10 }, (_, i) => ({ targetId: "j", jobTitle: "x", index: i, text: "x".repeat(40), cliches: ["team player"] })),
       bulletBalance: [{ targetId: "a", jobTitle: "A", count: 12, kind: "too_many" }],
-      dateInconsistency: { formats: ["MM/YYYY", "YYYY"] },
+      dateInconsistency: { formats: ["MM/YYYY", "YYYY"], jobsMissingMonth: [] },
     }))
     expect(r.score).toBe(20)
   })

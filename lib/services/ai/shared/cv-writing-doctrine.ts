@@ -23,7 +23,7 @@
 // not a translation of the Spanish one, it is the one that gets read in the
 // markets this product targets.
 
-import { WEAK_OPENERS_EN, WEAK_OPENERS_ES } from "./bullet-quality"
+import { WEAK_OPENERS_EN, WEAK_OPENERS_ES, IMPACT_OPENERS_EN, IMPACT_OPENERS_ES } from "./bullet-quality"
 
 export type DoctrineLanguage = "es" | "en"
 
@@ -39,6 +39,21 @@ export type DoctrineLanguage = "es" | "en"
  * Reading the list instead of restating it means a phrase can only be added in
  * one place, and the prompt learns it the same day the checker does.
  */
+/**
+ * Con qué SÍ abrir. Se LEE del código, no se repite acá — misma razón que
+ * `bannedOpeners`: una apertura sólo puede agregarse en un lugar, y el prompt la
+ * aprende el mismo día que el chequeo.
+ *
+ * Nombrar sólo lo prohibido dejaba al modelo adivinando qué cuenta como fuerte,
+ * y en los oficios no técnicos —donde aportar el vocabulario del rubro ES el
+ * valor que se paga— adivinaba flojo.
+ */
+function strongOpeners(language: string): string {
+  return (language === "en" ? IMPACT_OPENERS_EN : IMPACT_OPENERS_ES)
+    .map((o) => `"${o.charAt(0).toUpperCase()}${o.slice(1)}"`)
+    .join(", ")
+}
+
 function bannedOpeners(language: string): string {
   return (language === "en" ? WEAK_OPENERS_EN : WEAK_OPENERS_ES)
     .map((o) => `"${o.charAt(0).toUpperCase()}${o.slice(1)}"`)
@@ -70,23 +85,25 @@ export function cvValueBar(language: string): string {
 export function neverInventRule(language: string): string {
   return language === "en"
     ? `NEVER STATE THESE — only the candidate can, and inventing one is what makes a CV fail an interview:
-- Figures, percentages, amounts, volumes, headcounts or timeframes they did not give.
+- A figure STAMPED ON FROM OUTSIDE: a number that comes from you, from an example, or from what "usually" happens in that trade, rather than from the work THIS candidate described. That is the forbidden one.
+  You MAY propose a figure when the work they described plainly has a measurable size and they simply did not write it down — and then you write it as a RANGE they can confirm or correct in one click ("between 50 and 100 transactions a day"), never as a precise number presented as fact. A range they adjust is theirs; a number you decided is not.
 - Employers, clients or products by proper name that they did not mention.
 - Software or systems by BRAND name THAT THEY DID NOT STATE. Say "core banking system", never a vendor they never mentioned.
   BUT: a tool, standard or system the candidate already listed in their skills, or named in their own words, is THEIRS — write it where the work they described actually used it. Two examples of the principle, from opposite trades and never of the wording: a welder who lists TIG does not get "performed welding", and a payroll clerk who lists the collective agreement does not get "processed payroll". Suppressing what the candidate declared protects them from nothing; it removes the exact keyword an ATS searches for.
 - Results or achievements ("reduced errors", "improved efficiency", "increased sales") — a result is a fact about them.
 - Certifications, licences or degrees.
 - Seniority they did not claim: no "led", "managed" or "supervised" unless they said so.
-If the work genuinely had a number and they did not give it, write the line without one. A missing figure costs less than an invented one.`
+If the work genuinely had a number and they did not give it, propose the range and mark it as theirs to confirm. Never leave the line naked when a size is obvious, and never hand them a precise figure you chose.`
     : `NUNCA AFIRMES ESTO — sólo el candidato puede, e inventar uno es lo que hace que un CV se caiga en la entrevista:
-- Cifras, porcentajes, montos, volúmenes, cantidad de personas o plazos que no dio.
+- Una cifra PUESTA DESDE AFUERA: un número que sale de vos, de un ejemplo, o de lo que "suele" pasar en ese oficio, y no del trabajo que ESTE candidato contó. Ésa es la prohibida.
+  SÍ podés proponer una cifra cuando el trabajo que describió tiene un tamaño medible evidente y él simplemente no lo escribió — y entonces la escribís como RANGO que él confirma o corrige en un clic ("entre 50 y 100 transacciones por día"), nunca como un número exacto presentado como hecho. Un rango que él ajusta es suyo; un número que decidiste vos, no.
 - Empleadores, clientes o productos con nombre propio que no mencionó.
 - Software o sistemas con nombre de MARCA QUE ÉL NO HAYA DECLARADO. Decí "sistema core bancario", nunca un proveedor que no mencionó.
   PERO: una herramienta, norma o sistema que el candidato ya listó en sus habilidades, o que nombró con sus propias palabras, es SUYO — escribilo donde el trabajo que contó realmente lo usó. Dos ejemplos del principio, de rubros opuestos y nunca de la redacción: un soldador que declara TIG no recibe "realicé soldaduras", y una liquidadora de sueldos que declara el convenio colectivo no recibe "procesé la nómina". Ocultar lo que el candidato declaró no lo protege de nada: le saca la keyword exacta que busca un ATS.
 - Resultados o logros ("reduje errores", "mejoré la eficiencia", "aumenté las ventas") — un resultado es un hecho sobre él.
 - Certificaciones, licencias ni títulos.
 - Jerarquía que no declaró: nada de "lideré", "gestioné" ni "supervisé" si no lo dijo.
-Si el trabajo realmente tenía un número y no lo dio, escribí la línea sin número. Una cifra que falta cuesta menos que una inventada.`
+Si el trabajo realmente tenía un número y no lo dio, proponé el rango y marcalo como suyo para confirmar. Nunca dejes la línea pelada cuando el tamaño es obvio, y nunca le entregues una cifra exacta elegida por vos.`
 }
 
 /**
@@ -96,7 +113,7 @@ Si el trabajo realmente tenía un número y no lo dio, escribí la línea sin n�
 export function proseRules(language: string): string {
   return language === "en"
     ? `HOW IT MUST READ:
-- Open with a strong past-tense action verb, first person implied — never a pronoun, and never any of these duty openers: ${bannedOpeners("en")}. Each one hands the ownership of the work to somebody else.
+- Open with a strong past-tense action verb, first person implied — never a pronoun, and never any of these duty openers: ${bannedOpeners("en")}. Each one hands the ownership of the work to somebody else. Verbs of the right weight: ${strongOpeners("en")} — these are examples of the REGISTER, not a menu to pick from; the right verb is the one that names what this candidate actually did.
 - At least 16 words. Under twelve says nothing the job title did not. There is NO upper limit: length is not the test, value is — four long lines that each name real work beat six short ones, and a line is never trimmed to hit a count. Stop when the line has said everything true it has to say, not when it reaches a number.
 - ONE tense across every line: simple past throughout. Mixing "Handled" with "Was handling" in the same block reads as careless.
 - FIRST PERSON, implied. The line is the candidate speaking about their own work, never a third party describing them. Never write it as though someone else were reporting on them.
@@ -104,7 +121,7 @@ export function proseRules(language: string): string {
 - Banned as empty: "to optimise the process", "ensuring quality", "performing related tasks", "results-driven", "team player", "proactive", "hard-working". Also the AI tells: "spearheaded", "leveraged", "orchestrated", "utilised", "synergy".
 - Plain "• " bullets. No tables, columns, emoji or brackets — a "[X%]" left in a CV reads as unfinished.`
     : `CÓMO TIENE QUE LEERSE:
-- Abre con un verbo de acción fuerte en pasado, primera persona implícita — nunca un pronombre, y nunca ninguna de estas aperturas de tarea: ${bannedOpeners("es")}. Cada una le entrega a otro la autoría del trabajo.
+- Abre con un verbo de acción fuerte en pasado, primera persona implícita — nunca un pronombre, y nunca ninguna de estas aperturas de tarea: ${bannedOpeners("es")}. Cada una le entrega a otro la autoría del trabajo. Verbos del peso correcto: ${strongOpeners("es")} — son ejemplos del REGISTRO, no un menú para elegir; el verbo correcto es el que nombra lo que ESTE candidato hizo de verdad.
 - Al menos 16 palabras. Menos de doce no dice nada que no dijera ya el nombre del puesto. NO hay límite superior: el largo no es la prueba, el valor sí — cuatro líneas largas que nombren trabajo real le ganan a seis cortas, y una línea no se recorta para llegar a un número. Terminá cuando la línea dijo todo lo verdadero que tenía para decir, no cuando alcanzó una cifra.
 - UN SOLO tiempo verbal en todas las líneas: pretérito perfecto simple en PRIMERA persona, la forma -é/-í ("Ejecuté", "Definí", "Coordiné"). Mezclar "Realicé" con "Aplicaba" en el mismo bloque se lee como descuido.
 - NUNCA la forma -ó de tercera persona ("Ejecutó", "Definió", "Coordinó"): eso se lee como si otra persona escribiera un informe sobre el candidato, y una línea de CV la escribe él sobre su propio trabajo. Medido en un CV real: tailor devolvió "Ejecutó suites con Selenium…" y "Definió alcance…" dentro del CV del propio candidato.

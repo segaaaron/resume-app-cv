@@ -855,3 +855,94 @@ select:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Full-screen overlay while a dashboard tab loads ──────────────────
+   Delayed 120ms via animation-delay so an instant route never flashes it.
+   The element still blocks clicks during that delay — that is the point.
+   See components/dashboard/NavPendingOverlay.tsx. */
+@keyframes navPendingIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Dashboard tab skeleton ───────────────────────────────────────────
+   Zero-JS placeholder shipped by each (dashboard) loading.tsx. Reuses the
+   `shimmer` keyframe above. See components/dashboard/DashboardSkeleton.tsx. */
+.dash-skel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #EDF1F6 0%, #E5EBF3 100%);
+}
+.dash-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.72) 45%,
+    rgba(0, 212, 255, 0.10) 58%,
+    transparent 100%
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* ── Panel ATS — tokens del diseño aprobado (ats-tailor-standalone) ────
+   ACOTADOS A `.ats-panel` A PROPÓSITO. El CEO pidió el diseño sólo para la
+   pestaña ATS y su modal; Contenido, Diseño, IA y Plantillas conservan la paleta
+   del producto. Definirlos en `:root` los habría filtrado a las cinco pestañas,
+   que quedan montadas a la vez (display:none, no render condicional). */
+.ats-panel {
+  --a-bg:        #F6F3EC;
+  --a-surface:   #FFFFFF;
+  --a-surface-2: #FBF9F4;
+  --a-surface-3: #F4F1E9;
+  --a-border:    #E6E0D2;
+  --a-border-2:  #D4CCB8;
+  --a-ink:       #14140F;
+  --a-ink-2:     #2D2C25;
+  /* 4.16:1 sobre --a-surface-3 con el valor anterior: por debajo de AA en la
+     superficie donde más se usa. Este da 4.53:1 ahí y 5.12:1 sobre blanco. */
+  --a-muted:     #706E64;
+  /* Medido: #9A978C daba 2.93:1 sobre blanco y 2.59:1 sobre --a-surface-3 —
+     por debajo del mínimo de 4.5:1 de WCAG AA, y en el panel pinta texto de
+     9-9.5px, que es la peor combinación posible: diminuto y sin contraste.
+     Este valor da 5.34:1 sobre blanco y 4.73:1 sobre la superficie gris. */
+  --a-muted-2:   #6D6B63;
+  --a-accent:    #0FB8C8;
+  --a-accent-ink:#075C66;
+  --a-accent-soft:#E1F5F7;
+  --a-ai:        #8B5CF6;
+  --a-ai-soft:   #F3EEFF;
+  --a-ai-ink:    #4A2FB8;
+  --a-ok:        #2A7D5E;
+  /* De relleno —puntos, barras, bordes— el mínimo es 3:1 como forma, y el
+     valor anterior daba 2.95:1 sobre blanco: no llegaba ni a distinguirse.
+     El texto no usa éste sino --a-warn-ink, más abajo. */
+  --a-warn:      #C48711;
+  --a-bad:       #C43D4F;
+  --a-ok-soft:   #E8F4EE;
+  --a-warn-soft: #FDF3E0;
+  --a-bad-soft:  #FBEAEC;
+  /* TINTA vs RELLENO, la distinción que el sistema ya hacía en accent y ai y le
+     faltaba a los tres semánticos. Los de arriba están calibrados para pintar
+     puntos, barras y bordes; sobre su propio fondo suave no llegan a 4.5:1
+     —medido: warn 2.68:1, ok 3.79:1, bad 3.98:1— así que el texto de un aviso
+     quedaba por debajo del mínimo legible. Oscurecer los de arriba habría
+     apagado los rellenos; estos existen sólo para el texto. */
+  --a-ok-ink:    #297A5C;
+  --a-warn-ink:  #94660D;
+  --a-bad-ink:   #C03B4D;
+  --a-track:     #EAE4D6;
+  --a-sh-sm: 0 1px 2px rgba(20,20,15,.05);
+  --a-sh-md: 0 4px 14px rgba(20,20,15,.07), 0 1px 3px rgba(20,20,15,.04);
+  --a-sh-lg: 0 20px 50px rgba(20,20,15,.13);
+}
+
+/* El anillo se anima al llegar el puntaje nuevo; bajo prefers-reduced-motion la
+   regla global de arriba lo deja quieto y el número sigue siendo legible. */
+.ats-dial-arc {
+  transition: stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1), stroke .4s ease;
+}

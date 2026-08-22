@@ -23,7 +23,7 @@ const allFindings: WritingChecks = {
   clicheBullets: [{ targetId: "j", jobTitle: "x", index: 0, text: "y".repeat(40), cliches: ["team player"] }],
   weakVerbBullets: [],
   duplicateBullets: [{ targetId: "j", jobTitle: "x", index: 1, text: "y".repeat(40), duplicateOfJobTitle: "x" }],
-  dateInconsistency: { formats: ["MM/YYYY", "YYYY"] },
+  dateInconsistency: { formats: ["MM/YYYY", "YYYY"], jobsMissingMonth: [] },
   bulletBalance: [{ targetId: "j", jobTitle: "x", count: 12, kind: "too_many" }],
   mergeCandidates: [],
   chronology: { kind: "reverse_order", firstShown: "A", mostRecent: "B" },

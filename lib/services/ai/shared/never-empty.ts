@@ -96,3 +96,25 @@ export function retryNudge(language: string): string {
     ? "\n\nYour previous answer came back empty. Return the same JSON structure, filled in. If the request is genuinely impossible, return the off-topic sentinel — but an empty answer to a valid request is not an option."
     : "\n\nTu respuesta anterior vino vacía. Devolvé la misma estructura JSON, con contenido. Si el pedido es genuinamente imposible, devolvé el centinela de off-topic — pero una respuesta vacía a un pedido válido no es una opción."
 }
+
+/**
+ * El reintento cuando la respuesta LLEGÓ pero los guards la descartaron entera.
+ *
+ * EL HUECO QUE CIERRA (reportado por el CEO, 2026-08-21: «espero que tus guards
+ * no estén perjudicando la información de alto impacto»). `askUntilAnswered`
+ * mira la respuesta CRUDA del modelo; los guards corren DESPUÉS. Así que un
+ * modelo que devolvía cinco reescrituras y perdía las cinco —una cifra borrada,
+ * un cambio cosmético— contaba como «respondió», no había reintento, y al
+ * usuario le quedaba la pantalla vacía habiendo gastado el uso y el cooldown.
+ *
+ * No agrega reglas nuevas —eso haría que el modelo gaste razonamiento
+ * reconciliando—: le dice QUÉ falló de lo que ya escribió, que es información
+ * que no tenía. Una sola vez: dos reintentos esconden un prompt que dejó de
+ * funcionar.
+ */
+export function rejectedNudge(language: string, reasons: readonly string[]): string {
+  const list = reasons.join("; ")
+  return language === "en"
+    ? `\n\nEvery rewrite you returned was rejected before reaching the user: ${list}. Write them again, keeping every figure the candidate already states, and changing enough that the line actually gains something.`
+    : `\n\nTodas las reescrituras que devolviste fueron descartadas antes de llegar al usuario: ${list}. Escribilas de nuevo, conservando cada cifra que el candidato ya dice, y cambiando lo suficiente para que la línea gane algo de verdad.`
+}

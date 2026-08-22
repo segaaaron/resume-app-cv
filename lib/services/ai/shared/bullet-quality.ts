@@ -36,6 +36,43 @@ export const WEAK_OPENERS_ES: readonly string[] = [
 export const WEAK_OPENERS: readonly string[] = [...WEAK_OPENERS_EN, ...WEAK_OPENERS_ES]
 
 /**
+ * Con qué SÍ abrir. La otra mitad de la regla, que faltaba.
+ *
+ * El prompt decía «abrí con un verbo de acción fuerte» y a continuación la lista
+ * de los prohibidos. Nombraba el error y no el acierto: el modelo tenía que
+ * adivinar qué cuenta como fuerte, y en los CVs no técnicos —donde el vocabulario
+ * del oficio es justo lo que hay que aportar— adivinaba flojo.
+ *
+ * ── PRIMERA PERSONA EN ESPAÑOL, Y NO ES UN DETALLE ─────────────────────────
+ *
+ * Existía ya una lista `IMPACT_VERBS` en `summary-quality.ts`, pero en TERCERA
+ * persona: «lideró», «desarrolló», «implementó». Son exactamente las formas que
+ * `opensInThirdPersonEs` —el guard de este mismo archivo— rechaza, porque una
+ * viñeta de CV la escribe el candidato, no un tercero que informa sobre él.
+ * Cablear aquella lista al prompt le habría dado al modelo ejemplos que su
+ * propio guard tira: el prompt empujando en una dirección y el filtro en la
+ * contraria, que es el patrón de contradicción que este proyecto ya pagó caro.
+ *
+ * Aquella lista se queda donde está y para lo suyo: mide con qué abre un
+ * RESUMEN, que no se escribe en primera persona conjugada («Cajera con
+ * experiencia en…»). Son dos preguntas distintas y por eso son dos listas.
+ *
+ * SEPARADAS POR IDIOMA COMO DATO, no con regex — misma razón que WEAK_OPENERS:
+ * un intento con regex metió aperturas inglesas en el prompt español porque las
+ * raíces se solapan.
+ */
+export const IMPACT_OPENERS_EN: readonly string[] = [
+  "led", "built", "designed", "implemented", "automated", "delivered",
+  "launched", "negotiated", "coordinated", "resolved", "trained", "audited",
+  "reconciled", "streamlined", "reduced", "increased", "recovered", "prepared",
+]
+export const IMPACT_OPENERS_ES: readonly string[] = [
+  "lideré", "construí", "diseñé", "implementé", "automaticé", "entregué",
+  "gestioné", "negocié", "coordiné", "resolví", "capacité", "audité",
+  "cuadré", "atendí", "reduje", "incrementé", "recuperé", "preparé",
+]
+
+/**
  * A Spanish bullet written as if somebody else were reporting on the candidate.
  *
  * The -ó preterite is third person: "Ejecutó suites con Selenium" is a sentence

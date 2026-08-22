@@ -236,12 +236,138 @@ export function resolveJobId(raw: string | undefined, jobs: { id?: string }[]): 
  * written under two locales, and a CV in Spanish must not be judged by an
  * English separator.
  */
+/** Un año suelto es una fecha, no una medida del trabajo. */
+const BARE_YEAR_REGEX = /^(?:19|20)\d{2}$/
+
+/**
+ * Los números que MIDEN el trabajo, no todos los números del texto.
+ *
+ * La versión anterior sacaba todo lo que matcheara `\d+`. Con eso, un año
+ * ("desde 2019"), un horario ("24/7") o cualquier cifra suelta armaba el guard, y
+ * una reescritura mejor moría por no repetir un dígito que no medía nada. Acá un
+ * número cuenta sólo si lo que lo rodea lo convierte en cantidad —la misma
+ * pregunta que ya contesta `hasAnyMetric`, hecha sobre la ventana del número.
+ *
+ * La ventana mira 20 caracteres ATRÁS a propósito: en "from 3.2s to 1.1s" lo que
+ * vuelve cantidad al 3.2 es el "from … to", que está antes.
+ *
+ * Se comparan dígitos, no el token: un CV español escribe 1.400 donde el inglés
+ * escribe 1,400 — dos locales, una cifra.
+ */
+function statedFigures(text: string): string[] {
+  const figures = new Set<string>()
+  for (const m of text.matchAll(/\d+(?:[.,]\d+)?/g)) {
+    const raw = m[0]
+    const digits = raw.replace(/[.,]/g, "")
+    if (BARE_YEAR_REGEX.test(digits)) continue
+    const start = Math.max(0, (m.index ?? 0) - 20)
+    if (hasAnyMetric(text.slice(start, (m.index ?? 0) + raw.length + 14))) figures.add(digits)
+  }
+  return [...figures]
+}
+
+/**
+ * ¿La reescritura borró o alteró una cifra del candidato?
+ *
+ * Contesta DOS casos, y sólo esos dos:
+ *
+ *   1. LA ALTERÓ. Sobreviven unas cifras y falta otra: el modelo conservó la
+ *      frase y cambió un número ("de 3.2s a 1.1s" → "de 3.5s a 1.1s"). Eso
+ *      falsea un dato del candidato y se tira siempre.
+ *   2. LA BORRÓ. No sobrevive ninguna y la reescritura no trae ninguna propia:
+ *      es el defecto medido el 2026-08-19, donde una línea volvía más rica y sin
+ *      el 12 ni el 3, y ningún filtro lo veía porque el texto había crecido.
+ *
+ * Lo que YA NO tira: decir la misma cifra de otra forma ("de 12 a 3" → "75%").
+ * Si el número nuevo es correcto no lo decide este guard — no está en el CV, así
+ * que `hallucinationKind` lo marca `figure` y llega con el chip "confirmá la
+ * cifra", que es exactamente donde esa pregunta se contesta: se la hace al
+ * candidato. Antes se tiraba la línea entera y él nunca veía nada.
+ */
 export function losesStatedFigure(original: string, rewrite: string): boolean {
-  const digitsOf = (t: string) => (t.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(/[.,]/g, ""))
-  const before = digitsOf(original)
+  const before = statedFigures(original)
   if (before.length === 0) return false
-  const after = new Set(digitsOf(rewrite))
-  return before.some((d) => !after.has(d))
+  const after = new Set(statedFigures(rewrite))
+  const missing = before.filter((d) => !after.has(d))
+  if (missing.length === 0) return false
+  // Alteró: algo de la cifra original sigue ahí y otra parte cambió.
+  if (missing.length < before.length) return true
+  // Borró: no quedó ninguna, y tampoco trajo una propia.
+  return after.size === 0
+}
+
+/**
+ * Las palabras que le dan SENTIDO a una cifra: sin ellas el número no dice nada.
+ *
+ * FORMAS COMPLETAS, NO RAÍCES, y la diferencia costó una corrida de tests. Con
+ * `baj` como raíz, la reescritura rota del caso reportado pasaba limpia: decía
+ * «ítems de baja rotación» y ese «baja» —un adjetivo— contaba como el verbo
+ * bajar. Un guard que descarta trabajo bueno hace más daño que no tenerlo, así
+ * que acá se prefiere el falso negativo: una forma rara que no esté en la lista
+ * deja pasar la línea, y eso es recuperable; tirar una reescritura correcta, no.
+ *
+ * Sólo verbos de CAMBIO —lo que sube, baja o se ahorra—. «Gestioné 40 cuentas»
+ * no está en juego: ahí la cifra se sostiene sola.
+ */
+const CHANGE_WORDS = new Set([
+  // es · sube
+  "aumentar", "aumento", "aumenta", "aumento", "aumente", "aumentaron", "aumentando", "aumentada", "aumentadas",
+  "incrementar", "incremento", "incrementa", "incremente", "incrementaron", "incrementando",
+  "subir", "subio", "subi", "sube", "subiendo", "crecer", "crecio", "crece", "creciendo", "crecimiento",
+  "elevar", "elevo", "eleve", "elevando", "duplicar", "duplico", "duplique", "duplicando",
+  "triplicar", "triplico", "impulsar", "impulso", "impulse", "impulsando",
+  "multiplicar", "multiplico", "escalar", "escalo", "ampliar", "amplio", "amplie", "ampliando",
+  // es · baja
+  "reducir", "redujo", "reduje", "reduce", "reduciendo", "reduccion",
+  "bajar", "bajo", "baje", "bajando", "disminuir", "disminuyo", "disminuye", "disminuyendo",
+  "recortar", "recorto", "recorte", "recortando", "acortar", "acorto", "acortando",
+  "ahorrar", "ahorro", "ahorre", "ahorrando", "minimizar", "minimizo",
+  "optimizar", "optimizo", "optimice", "optimizando", "acelerar", "acelero", "acelerando",
+  "mejorar", "mejoro", "mejore", "mejora", "mejorando",
+  // en · up
+  "increased", "increase", "increases", "increasing", "grew", "grow", "growing", "growth",
+  "raised", "raise", "raising", "boosted", "boost", "boosting",
+  "doubled", "double", "tripled", "triple", "lifted", "lift", "scaled", "scale", "scaling",
+  // en · down
+  "reduced", "reduce", "reducing", "reduction", "lowered", "lower", "lowering",
+  "decreased", "decrease", "decreasing", "cut", "cutting", "shortened", "shorten",
+  "saved", "save", "saving", "savings", "improved", "improve", "improving", "improvement",
+  "optimized", "optimised", "optimizing", "accelerated", "accelerate", "minimized", "maximized",
+])
+
+function hasChangeVerb(text: string): boolean {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .some((w) => CHANGE_WORDS.has(w))
+}
+
+/**
+ * ¿La cifra sobrevivió pero perdió el verbo que la explicaba?
+ *
+ * EL HUECO QUE ESTE GUARD CIERRA, reportado con captura el 2026-08-21:
+ *
+ *   antes:   "logrando AUMENTAR las ventas entre un 15% y 20%"
+ *   después: "logrando ventas de 15% a 20%"
+ *
+ * `losesStatedFigure` se quedó callado —y hacía bien lo suyo: compara DÍGITOS, y
+ * el 15 y el 20 seguían ahí—. `dropsContentWithoutGain` tampoco lo vio porque el
+ * texto no se achicó. Pero el dato quedó destruido: sin «aumentar», un «15% a
+ * 20%» no es un logro, no es nada. Y es PEOR que borrar la cifra, porque lo que
+ * queda parece un dato y el candidato lo firma sin mirar.
+ *
+ * La pregunta es estrecha a propósito: sólo mira las cifras que venían con un
+ * verbo de cambio. Si el original no tenía uno, no hay nada que perder.
+ */
+export function figureLosesItsVerb(original: string, rewrite: string): boolean {
+  if (statedFigures(original).length === 0) return false
+  if (!hasChangeVerb(original)) return false
+  // Si además se llevó la cifra, ya lo dice `losesStatedFigure`: acá sólo
+  // interesa el caso silencioso — el número quedó y su significado no.
+  if (statedFigures(rewrite).length === 0) return false
+  return !hasChangeVerb(rewrite)
 }
 
 export const METRIC_PLACEHOLDER_REGEX =
@@ -265,6 +391,93 @@ export const METRIC_PLACEHOLDER_REGEX =
  * metric onto an otherwise unchanged sentence. When a figure is missing the
  * answer is to write without it, or to ask the user — never to bracket it.
  */
+/**
+ * Un sistema con nombre propio que el candidato NUNCA declaró.
+ *
+ * ── EL HUECO QUE ESTO CIERRA ───────────────────────────────────────────────
+ *
+ * `TECH_BUZZWORDS` es una lista SÓLO TÉCNICA, y estaba declarado como hueco
+ * conocido: «Temenos T24» en el CV de un cajero de banco no lo cazaba nadie más
+ * que el prompt. El producto no atiende sólo a perfiles de software —cajeros,
+ * enfermeras, abogados, agricultores— y cada rubro tiene sus propios sistemas.
+ * Mantener una lista por rubro es una carrera que se pierde: siempre falta el
+ * siguiente.
+ *
+ * ── POR QUÉ POR FORMA Y NO POR CATÁLOGO ────────────────────────────────────
+ *
+ * La pregunta correcta nunca fue «¿es una marca que yo conozco?» sino «¿el
+ * candidato declaró esto?». Y hay dos formas que en prosa de CV sólo tiene un
+ * nombre de producto, en cualquier idioma y cualquier rubro:
+ *
+ *   · MAYÚSCULA INTERNA — SwiftUI, PostgreSQL, PowerBI, QuickBooks, SAP4HANA.
+ *     Ninguna palabra de un idioma natural se escribe así.
+ *   · LETRAS PEGADAS A DÍGITOS — T24, S4HANA, Office365, AutoCAD2024, SAP2000.
+ *     Un año o una cifra sueltos no entran: tienen que ir pegados a las letras.
+ *     Basta UNA letra: los sistemas de banca y ERP se llaman así —«T24», «S4HANA»—
+ *     y exigir dos los dejaba pasar, que era justo el caso reportado.
+ *
+ * ── LO QUE DELIBERADAMENTE NO SE MIRA ──────────────────────────────────────
+ *
+ * Una palabra capitalizada normal («Temenos» a secas, «Cochabamba», «Marzo») NO
+ * se juzga. Cazarla exigiría marcar todo nombre propio, y ahí caerían empleadores
+ * reales, ciudades, meses y apellidos — descartando reescrituras correctas. La
+ * regla es la del CEO: un guard que tira trabajo bueno hace más daño que el hueco
+ * que tapa. Ese resto lo contiene el prompt, y se dice así en vez de fingir que
+ * está cubierto.
+ */
+const UNDECLARED_SYSTEM = /\b(?=\w*[A-Z])(?:[A-Za-z]+[A-Z][A-Za-z]*\d*|[A-Za-z]+\d+[A-Za-z\d]*)\b/g
+
+/** Siglas del oficio y del idioma que no son un producto de nadie. */
+const NOT_A_SYSTEM = new Set([
+  "KPI", "KPIs", "CRM", "ERP", "POS", "SLA", "ROI", "B2B", "B2C", "PYME", "PYMEs",
+  "IVA", "RRHH", "TI", "IT", "QA", "UX", "UI", "API", "APIs", "PDF", "CV", "MIG", "TIG",
+  "OK", "ID", "IDs", "SKU", "SKUs", "M2", "M3", "H2", "CO2", "P95", "P99", "A1", "B1", "B2", "C1", "C2",
+])
+
+function namesUndeclaredSystem(text: string, sourceContext: string): boolean {
+  const source = sourceContext.toLowerCase()
+  for (const m of text.match(UNDECLARED_SYSTEM) ?? []) {
+    if (NOT_A_SYSTEM.has(m) || NOT_A_SYSTEM.has(m.toUpperCase())) continue
+    // Todo en mayúsculas sin dígitos es una sigla, no un producto: la lista de
+    // arriba no puede enumerar las de cada oficio, y marcarlas descartaría
+    // líneas correctas de rubros que no conocemos.
+    if (m === m.toUpperCase() && !/\d/.test(m)) continue
+    if (!source.includes(m.toLowerCase())) return true
+  }
+  return false
+}
+
+/**
+ * POR QUÉ se disparó `detectHallucination`. Las tres causas no son iguales.
+ *
+ * La función devuelve un booleano y quien llama tiraba la sugerencia entera, sin
+ * distinguir un `[X%]` de una marca inventada de una CIFRA. Y la cifra es el caso
+ * que el CEO corrigió el 2026-08-20: proponer el tamaño del trabajo que el
+ * candidato describió NO es inventar — inventar es quemar un número desde afuera.
+ * Una cifra propuesta se le MUESTRA para que la confirme o la corrija; lo que se
+ * sigue tirando sin preguntar es el placeholder (nunca puede llegar al CV) y la
+ * marca que el candidato no declaró (eso sí es un hecho falso sobre él).
+ *
+ * `null` = nada que objetar.
+ */
+export function hallucinationKind(
+  text: string,
+  sourceContext: string,
+): "placeholder" | "brand" | "figure" | null {
+  if (!text) return null
+  if (METRIC_PLACEHOLDER_REGEX.test(text)) return "placeholder"
+  for (const tech of TECH_BUZZWORDS) {
+    const re = new RegExp(`\\b${tech.replace(/[.+]/g, "\\$&")}\\b`, "i")
+    if (re.test(text) && !re.test(sourceContext)) return "brand"
+  }
+  if (namesUndeclaredSystem(text, sourceContext)) return "brand"
+  const sourceLower = sourceContext.toLowerCase()
+  for (const metric of text.match(METRIC_REGEX) ?? []) {
+    if (!sourceLower.includes(metric.toLowerCase())) return "figure"
+  }
+  return null
+}
+
 export function detectHallucination(text: string, sourceContext: string): boolean {
   if (!text) return false
   const sourceLower = sourceContext.toLowerCase()

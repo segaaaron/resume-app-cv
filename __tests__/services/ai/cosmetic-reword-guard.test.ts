@@ -63,12 +63,17 @@ describe("cosmetic-reword guard — tailor-cv", () => {
     }
     const chat = chatReturning({
       summary: "Improved app performance and user experience across releases.",
-      experiences: [{ targetId: "w1", jobTitle: "iOS Dev", employer: "Acme", changedBullets: [{ index: 0, text: "• Integrated RESTful APIs to improve iOS app functionality." }] }],
-      missingSkills: [],
+      rewrites: [{ checkId: "c1", text: "• Integrated RESTful APIs to improve iOS app functionality." }],
     })
     const mod = new AITailorModule({ chat } as never, logger as never)
-    const res = await mod.tailorCV("u1", { sectionData, jobDescription: "iOS developer role building Swift apps with REST APIs.", language: "en" }, "PRO")
+    const res = await mod.tailorCV("u1", {
+      sectionData,
+      language: "en",
+      posting: { jobTitle: "iOS Developer", hardSkills: ["Swift", "REST APIs"], softSkills: [], mustHaves: [] },
+      workload: [{ checkId: "c1", targetId: "w1", index: 0, reason: "weak_verb" }],
+      rewriteSummary: true,
+    }, "PRO")
     expect(res.summary).toBeNull()
-    expect(res.experiences[0].changedBullets).toHaveLength(0)
+    expect(res.rewrites).toHaveLength(0)
   })
 })

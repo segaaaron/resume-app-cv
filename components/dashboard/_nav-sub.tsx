@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useTranslations } from "next-intl"
+import NavPendingOverlay from "./NavPendingOverlay"
 
 // ── NavItem ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ export function NavItem({ label, href, icon: Icon, count, isNew, locked, active,
         </span>
       )}
       {isNew && <NewBadge t={t} />}
+      <NavPendingOverlay />
     </Link>
   )
 }

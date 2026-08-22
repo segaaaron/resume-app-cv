@@ -15,7 +15,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
-import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination, losesStatedFigure, resolveJobId } from "../shared/ai-helpers"
+import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
 import { cvValueBar, neverInventRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
@@ -53,6 +53,8 @@ import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { groundFixAction } from "@/lib/ats/fix-actions"
 import { splitFixText } from "@/lib/ats/fix-text"
 import { untrustedDataRule } from "../shared/untrusted-input"
+import { refineMissingRequirements } from "@/lib/ats/requirement-satisfied"
+import { fixesRepetition } from "@/lib/ats/repeated-content"
 
 /**
  * Hard requirements this CV provably meets, normalized for the matcher.
@@ -63,8 +65,26 @@ import { untrustedDataRule } from "../shared/untrusted-input"
  * one that was wrong.
  */
 function metMustHaves(mustHaves: string[], sectionData: Record<string, unknown>): Set<string> {
-  const stillMissing = new Set(dropSatisfiedYearRequirements(mustHaves, sectionData))
+  const stillMissing = new Set(stillMissingRequirements(mustHaves, sectionData))
   return new Set(mustHaves.filter((m) => !stillMissing.has(m)).map((m) => normalizeTerm(m)))
+}
+
+/**
+ * Los requisitos que el CV NO cumple, por las dos vías que existen: los años de
+ * experiencia (aritmética sobre las fechas) y el contenido (título, habilidades,
+ * certificaciones).
+ *
+ * Faltaba la segunda. Reportado: la vacante pedía "Licenciatura en Ingeniería
+ * Comercial, Administración de Empresas, Marketing o carreras afines" y el CV
+ * dice exactamente "Licenciatura en Ingeniería Comercial" — el panel lo listaba
+ * como incumplido y le bajaba el techo del score. Una frase con alternativas no
+ * aparece literal en ningún CV, ni cumpliéndola: era un falso negativo que nadie
+ * podía satisfacer. Ver `lib/ats/requirement-satisfied.ts`.
+ *
+ * Un solo lugar, porque el número y la lista tienen que decir lo mismo.
+ */
+function stillMissingRequirements(mustHaves: string[], sectionData: Record<string, unknown>): string[] {
+  return refineMissingRequirements(dropSatisfiedYearRequirements(mustHaves, sectionData), sectionData)
 }
 
 /** A bracketed blank, or several — the shape of a form, not of an example. */
@@ -99,9 +119,23 @@ const ANALYSIS_CACHE_MAX = 100
 /**
  * Version of the ANALYSIS QUESTION: the prompt, the action catalogue and the
  * schema the model answers with. Not the model id — answerHash already carries
- * that. Bump on any change to what we ask.
+ * that.
+ *
+ * NO SE BUMPEA A MANO, y ésa es la corrección. El 2026-08-20 se cambió la regla
+ * de las cifras en la doctrina y esta constante quedó igual: el análisis siguió
+ * saliendo del caché con la respuesta escrita bajo la regla ANTERIOR. Horas de
+ * cambios de prompt que el usuario nunca vio, y una pantalla idéntica que parecía
+ * decir que nada de eso servía.
+ *
+ * Ahora la revisión INCLUYE una huella de la doctrina que el prompt inyecta, así
+ * que cambiar la doctrina invalida el caché solo. Un humano no puede olvidarse de
+ * algo que no tiene que hacer.
  */
-const ANALYSIS_REVISION = "v2-dates"
+const DOCTRINE_FINGERPRINT = createHash("sha256")
+  .update(`${cvValueBar("es")}\u0000${neverInventRule("es")}\u0000${proseRules("es")}`)
+  .digest("hex")
+  .slice(0, 8)
+const ANALYSIS_REVISION = `v3-${DOCTRINE_FINGERPRINT}`
 
 export class AIReviewModule {
   /**
@@ -198,7 +232,7 @@ export class AIReviewModule {
        * degrading to `manual` keeps the diagnosis and removes only the write.
        */
       const target = targetTextFor(f.action, sectionData)
-      if (target && f.fix?.trim() && losesStatedFigure(target, f.fix)) {
+      if (target && f.fix?.trim() && (losesStatedFigure(target, f.fix) || figureLosesItsVerb(target, f.fix))) {
         this.logger.warn("[AIService.atsScore] fix would delete a stated figure — degraded to advice", {
           kind: f.action.kind,
         })
@@ -628,6 +662,7 @@ Return JSON with this exact shape:
 
 Rules:
 - hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management"). Max ~12 hard skills.
+- mustHaves: an ALTERNATIVE LIST IS ONE REQUIREMENT. If the posting says "Degree in Business Engineering, Business Administration, Marketing or related", that is a SINGLE mustHaves entry written as one string — never three entries, one per career. Split apart, each is judged on its own and at most one can ever be met, so the others are reported as unmet for every candidate alive. Same for "Excel or Google Sheets". Only split when the posting truly demands BOTH ("Excel AND SQL").
 - Extract ONLY what the job description actually asks for. Do not invent requirements.
 - WRITE EVERY ITEM IN THE RESUME'S LANGUAGE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
 - Every suggestion carries an "action" — the tool that performs it, which the user gets as a working button: add_skill (put the exact skill in "value"), rewrite_bullet (give the job ID shown as "ID:x" in the resume and the bullet's 0-based index), rewrite_summary, fix_dates, remove_duplicates, or manual when nothing in the editor can do it in one click. A wrong action is worse than manual.
@@ -653,6 +688,7 @@ Devuelve JSON con esta forma exacta:
 
 Reglas:
 - hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos"). Máx ~12 hard skills.
+- mustHaves: UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO. Si el aviso dice "Licenciatura en Ingeniería Comercial, Administración de Empresas, Marketing o carreras afines", eso es UNA sola entrada de mustHaves escrita como una sola cadena — nunca tres entradas, una por carrera. Separadas, cada una se juzga sola y como mucho puede cumplirse una: las demás figuran como incumplidas para cualquier candidato del planeta. Lo mismo con "Excel o Google Sheets". Separá sólo cuando el aviso exige AMBAS ("Excel Y SQL").
 - Extrae SOLO lo que la descripción realmente pide. No inventes requisitos.
 - ESCRIBE CADA ÍTEM EN EL IDIOMA DEL CV, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
 - Cada sugerencia lleva una "action" — la herramienta que la ejecuta, que el usuario recibe como botón real: add_skill (pon la habilidad exacta en "value"), rewrite_bullet (da el ID del puesto que aparece como "ID:x" en el CV y el índice 0-based del bullet), rewrite_summary, fix_dates, remove_duplicates, o manual cuando nada en el editor pueda hacerlo en un clic. Una acción equivocada es peor que manual.
@@ -1085,7 +1121,7 @@ Reglas:
       // The matcher can only look for the requirement's words, and no CV writes
       // "5+ years of experience as an iOS developer" — so a 7-year candidate was
       // told 5 years was missing.
-      gaps: dropSatisfiedYearRequirements(match.missingMustHaves, sectionData ?? {}),
+      gaps: stillMissingRequirements(match.missingMustHaves, sectionData ?? {}),
       matchedKeywords: match.matchedKeywords,
       missingKeywords: match.missingKeywords,
       listedOnlyKeywords: match.listedOnlyKeywords,
@@ -1174,7 +1210,7 @@ Reglas:
       // The matcher can only look for the requirement's words, and no CV writes
       // "5+ years of experience as an iOS developer" — so a 7-year candidate was
       // told 5 years was missing.
-      gaps: dropSatisfiedYearRequirements(match.missingMustHaves, sectionData ?? {}),
+      gaps: stillMissingRequirements(match.missingMustHaves, sectionData ?? {}),
       matchedKeywords: match.matchedKeywords,
       missingKeywords: match.missingKeywords,
       listedOnlyKeywords: match.listedOnlyKeywords,
@@ -1552,6 +1588,24 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             return !anyReal
           })()
         : !!currentValue && isCosmeticReword(currentValue, cleanedPreview)
+      /**
+       * Y que el arreglo ARREGLE.
+       *
+       * Reportado: el resumen del candidato estaba duplicado, el panel lo
+       * detectaba bien, y el texto que ofrecía venía TAMBIÉN duplicado. El
+       * usuario lo aplicaba, guardaba, corría el ATS otra vez y el mismo defecto
+       * seguía ahí — porque nunca se había ido. Un botón que devuelve el problema
+       * gasta el clic, el uso y la paciencia.
+       *
+       * Nadie comprobaba lo evidente. El guard de invención mira cifras y marcas;
+       * el de reescritura cosmética, si cambió lo suficiente. Ninguno preguntaba
+       * si la propuesta sigue teniendo el defecto que la motivó.
+       */
+      if (currentValue && !fixesRepetition(currentValue, cleanedPreview)) {
+        this.logger.warn("[AIService.reviewCV] dropped a fix that keeps the repetition it was fixing", { field })
+        return { ...item, suggestion: undefined, location: loc }
+      }
+
       if (cosmetic) {
         this.logger.warn("[AIService.reviewCV] dropped cosmetic reword suggestion", {
           field,

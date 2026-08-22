@@ -1,16 +1,13 @@
 "use client"
 
-import { useState, useRef, useMemo, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
-import type { SkillItem, WorkExperienceItem } from "@/types/resume"
-import { filterVisibleMissingSkills } from "../tailor-dedupe"
 import { useAICooldown, useCooldownLabel } from "./useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
-import { parseBullets } from "@/lib/services/ai/shared/bullets"
 import { useCvLanguage } from "./useCvLanguage"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
@@ -18,23 +15,31 @@ import { useRouter } from "next/navigation"
 import { track } from "@/lib/analytics/track"
 import { useEditorPro } from "../EditorContext"
 
+/**
+ * Lo que tailor devuelve: texto, atado al hallazgo que cierra.
+ *
+ * `missingSkills` y `softSkillSuggestions` se fueron con el arreglo de fondo del
+ * 2026-08-20: no eran suyos. Los calcula `ats-score` de forma determinista y el
+ * panel los muestra en la tabla de términos, con el conteo a los dos lados.
+ */
 export interface TailorResult {
   summary: string | null
-  experiences: Array<{
-    targetId: string
-    jobTitle: string
-    employer: string
-    changedBullets: Array<{ index: number; text: string }>
+  rewrites: Array<{
+    checkId: string
+    text: string
+    metricHint?: string
+    demonstrates?: string
+    needsFigureConfirm?: boolean
   }>
-  missingSkills: string[]
-  softSkillSuggestions?: { skill: string; suggestion: string }[]
 }
 
 interface Options {
-  /** The job description — owned by the ATS panel, never re-asked here. */
-  jobDescription: string
-  /** Missing keywords the ATS score already lists, so a skill is offered once. */
-  atsMissingKeywords?: string[]
+  /** Los términos de la vacante, ya extraídos por el análisis. */
+  posting: { jobTitle: string; hardSkills: string[]; softSkills: string[]; mustHaves: string[] } | null
+  /** Los ítems que el informe le asignó. Vacío = no hay nada que pedirle. */
+  workload: Array<{ checkId: string; targetId: string; index: number; reason: string }>
+  /** Si el informe pidió reescribir el resumen. */
+  rewriteSummary?: boolean
   /** Bumped by the panel on each full analysis; tailor then runs itself once. */
   autoRunSignal?: number
 }
@@ -52,7 +57,7 @@ interface Options {
  * for everything that writes to the CV, and a second writer is how duplicate
  * bullets got introduced before.
  */
-export function useTailorCV({ jobDescription, atsMissingKeywords = [], autoRunSignal = 0 }: Options) {
+export function useTailorCV({ posting, workload, rewriteSummary = false, autoRunSignal = 0 }: Options) {
   const t = useTranslations("editor.tailor")
   const aiT = useTranslations("editor.ai")
   const locale = useLocale()
@@ -70,56 +75,27 @@ export function useTailorCV({ jobDescription, atsMissingKeywords = [], autoRunSi
   const lastTailorKeyRef = useRef<string | null>(null)
 
   /**
-   * Skills worth showing: not already in the CV, and not already listed by the
-   * ATS score above. Matched through the shared ATS vocabulary rather than
-   * string equality, so React ≡ React.js ≡ reactjs never shows twice.
+   * Las reescrituras ya no hay que emparejarlas: vienen con el `checkId` que
+   * cierran. El emparejamiento por puesto+índice era donde vivía el defecto
+   * medido — el modelo devolvió para el índice 0 una reescritura de la viñeta 1.
    */
-  const missingSkills = useMemo(() => {
-    if (!result) return []
-    return filterVisibleMissingSkills(
-      result.missingSkills,
-      ((sectionData.skills ?? []) as SkillItem[]).map((s) => s.name),
-      atsMissingKeywords,
-    )
-  }, [result, sectionData.skills, atsMissingKeywords])
-
-  /** Every rewritten bullet, flattened and paired with the line it replaces. */
-  const bulletRewrites = useMemo(() => {
-    if (!result) return []
-    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
-    return result.experiences.flatMap((exp) =>
-      exp.changedBullets.map((b) => {
-        const desc = work.find((j) => j.id === exp.targetId)?.description ?? ""
-        // parseBullets, NOT a raw split: it strips the "• " marker the CV stores.
-        // A raw line carries the glyph, and the index the model answers with is
-        // the parseBullets index (that is what the prompt enumerates). Keeping the
-        // glyph made every downstream comparison against the live bullet fail —
-        // the write guards rejected Remove, Rewrite and the user's own edit
-        // ("Could not apply change" / "Could not improve the achievement"), and
-        // the figure-slot preview received a line that did not exist in the CV.
-        const lines = parseBullets(desc)
-        return {
-          targetId: exp.targetId,
-          jobTitle: exp.jobTitle,
-          employer: exp.employer,
-          index: b.index,
-          text: b.text,
-          currentBullet: lines[b.index] ?? "",
-        }
-      }),
-    )
-  }, [result, sectionData.workExperience])
 
   const runTailor = useCallback(async () => {
     if (loading) return
-    const jd = jobDescription.trim()
-    if (jd.length < 20) { toast.info(t("jd_too_short")); return }
+    /**
+     * Sin trabajo asignado no hay llamada, y no es un error.
+     *
+     * Antes tailor decidía solo qué tocar y siempre encontraba algo, así que un
+     * CV impecable igual gastaba un uso y dos minutos de enfriamiento. Ahora el
+     * informe dice qué falta: si no falta nada, no hay nada que pedir.
+     */
+    if (!posting || (workload.length === 0 && !rewriteSummary)) return
 
     const tailorKey = JSON.stringify({
-      jd,
+      w: workload.map((x) => x.checkId).sort(),
+      rs: rewriteSummary,
       s: sectionData.summary,
-      w: sectionData.workExperience,
-      sk: sectionData.skills,
+      j: sectionData.workExperience,
     })
     if (tailorKey === lastTailorKeyRef.current) { toast.info(t("no_changes")); return }
     if (inCooldown) { toast.info(t("cooldown", { seconds: cooldownLabel })); return }
@@ -131,8 +107,8 @@ export function useTailorCV({ jobDescription, atsMissingKeywords = [], autoRunSi
       const res = await apiFetch("/api/ai/tailor-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Tailor rewrites bullets and names skills that land in the CV → CV's language.
-        body: JSON.stringify({ sectionData, jobDescription: jd, language: cvLanguage, atsMissingKeywords }),
+        // Tailor escribe texto que entra al CV → idioma del CV.
+        body: JSON.stringify({ sectionData, language: cvLanguage, posting, workload, rewriteSummary }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
@@ -151,14 +127,14 @@ export function useTailorCV({ jobDescription, atsMissingKeywords = [], autoRunSi
       lastTailorKeyRef.current = tailorKey
       setCooldownUntil(Date.now() + 120_000)
       await onSuccess()
-      track("ai_tailor_completed", { plan, added_count: Array.isArray(data?.missingSkills) ? data.missingSkills.length : undefined })
+      track("ai_tailor_completed", { plan, added_count: Array.isArray(data?.rewrites) ? data.rewrites.length : undefined })
     } catch {
       toast.error(t("error"))
     } finally {
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, jobDescription, sectionData, inCooldown, cooldownLabel, atsMissingKeywords, cvLanguage, locale, plan])
+  }, [loading, posting, workload, rewriteSummary, sectionData, inCooldown, cooldownLabel, cvLanguage, locale, plan])
 
   // One "Analyze" is one report: the panel bumps this after a full run with a
   // real posting and tailor fills in behind it. runTailor still guards dedup,
@@ -167,7 +143,7 @@ export function useTailorCV({ jobDescription, atsMissingKeywords = [], autoRunSi
   useEffect(() => {
     if (autoRunSignal <= 0 || autoRunSignal === lastAutoRef.current) return
     lastAutoRef.current = autoRunSignal
-    if (loading || inCooldown || jobDescription.trim().length < 20) return
+    if (loading || inCooldown || !posting) return
     void runTailor()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRunSignal])
@@ -177,10 +153,10 @@ export function useTailorCV({ jobDescription, atsMissingKeywords = [], autoRunSi
   return {
     /** True while the posting-specific rewrites are still being written. */
     loading,
-    /** Tailored summary, or null when the model had nothing better to offer. */
+    /** Tailored summary, or null when the report did not ask for one. */
     tailoredSummary: result?.summary ?? null,
-    bulletRewrites,
-    missingSkills,
-    softSkillSuggestions: result?.softSkillSuggestions ?? [],
+    /** Lo escrito, indexado por hallazgo. El panel lo cruza con el informe. */
+    rewrites: result?.rewrites ?? [],
+    runTailor,
   }
 }

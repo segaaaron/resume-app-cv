@@ -11,13 +11,6 @@ export const AXIS_STYLE: Record<FixAxis, string> = {
   trust: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
 }
 
-/** Pass-risk pill styling — color-not-only (icon + word), readable in the report. */
-export const RISK_STYLE: Record<"low" | "medium" | "high", { chip: string; label: string }> = {
-  low: { chip: "bg-emerald-50 text-emerald-700 ring-emerald-200", label: "risk_low" },
-  medium: { chip: "bg-amber-50 text-amber-700 ring-amber-200", label: "risk_medium" },
-  high: { chip: "bg-rose-50 text-rose-700 ring-rose-200", label: "risk_high" },
-}
-
 export function ScoreRing({ score, label }: { score: number; label: string }) {
   const r = 70
   const c = 2 * Math.PI * r

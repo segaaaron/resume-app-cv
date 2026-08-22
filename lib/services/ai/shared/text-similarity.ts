@@ -7,6 +7,7 @@
 // drop it here rather than show the user a diff with nothing in it.
 import { distance } from "fastest-levenshtein"
 import { isKnownSkill } from "@/lib/ats/skills-dictionary"
+import { WEAK_OPENERS } from "./bullet-quality"
 
 /** Collapses whitespace/case/markers so only real edits register. */
 function normalize(text: string): string {
@@ -57,11 +58,21 @@ function wordsOf(text: string): string[] {
 }
 
 /**
- * Similarity floor above which a near-copy is a candidate for the cosmetic-reword
- * check. Below it the two texts differ enough to be a genuine rewrite worth showing.
- * Deliberately below TRIVIAL_EDIT_SIMILARITY: a synonym swap ("improve"→"strengthen")
- * changes more characters than a typo fix, so it lands lower on the similarity scale
- * yet still adds no information.
+ * Piso de similitud a partir del cual se ANALIZA si una casi-copia es un cambio
+ * cosmético. NO es un umbral de descarte: por sí solo no tira nada.
+ *
+ * La regla del CEO —"90% de similitud para arriba, descartado como mejora"— la
+ * aplica `TRIVIAL_EDIT_SIMILARITY = 0.9`, que sí descarta por parecido. Este
+ * número más bajo sólo habilita una pregunta distinta: ¿se cambiaron palabras
+ * reales por otras palabras reales sin agregar nada? Y esa pregunta tiene tres
+ * salidas que PROTEGEN la mejora:
+ *   · agregar sin quitar (enriquecer con vocabulario del oficio) → no es cosmético
+ *   · corregir una palabra mal escrita → no es cosmético
+ *   · sólo cuando entró una palabra Y salió otra sobre una frase casi idéntica
+ *
+ * Se probó subirlo a 0.9 y cayeron 4 tests que codifican justamente esa
+ * diferencia: a 0.85 un cambio de sinónimos puro volvía a mostrarse como
+ * "mejora", que es la otra cosa que el CEO no quiere ver.
  */
 export const COSMETIC_REWORD_SIMILARITY = 0.82
 
@@ -79,9 +90,80 @@ export const COSMETIC_REWORD_SIMILARITY = 0.82
  * Only when BOTH a real word left and a real word came in (a swap) on an otherwise
  * near-identical sentence is it cosmetic.
  */
+/** Abría con una apertura de tarea y ya no. La lista se LEE, no se repite. */
+function fixesWeakOpener(original: string, suggested: string): boolean {
+  const opens = (t: string) =>
+    WEAK_OPENERS.some((w) => normalize(t).replace(/^[^a-z0-9]+/, "").startsWith(w))
+  return opens(original) && !opens(suggested)
+}
+
+/**
+ * ¿Las dos frases son «casi la misma», medido en palabras y no en caracteres?
+ *
+ * EL GATE DE CARACTERES SE QUEDA CORTO EN LÍNEAS CORTAS, y es aritmética: en
+ * «Realicé arqueo de caja diario» cambiar una palabra de cinco mueve la
+ * similitud a 0.79 —bajo el umbral, así que el análisis ni corría—; la MISMA
+ * sustitución en una viñeta de once palabras da 0.895 y sí se cazaba. El defecto
+ * no estaba en el umbral sino en la unidad: un cambio de sinónimo es igual de
+ * cosmético en una frase corta que en una larga, y contar caracteres hace que el
+ * largo decida.
+ *
+ * Contar palabras de CONTENIDO escala solo. El umbral de caracteres se queda
+ * como el otro camino —cubre frases largas con mucha puntuación compartida— y
+ * basta con que uno de los dos diga que son casi la misma.
+ */
+/**
+ * 0.7, Y EL VALOR LO DECIDIÓ LA SUITE, NO EL CRITERIO.
+ *
+ * Medido: las reescrituras cosméticas caen en 0.50–0.75 y las buenas en
+ * 0.00–0.50. Se solapan en 0.50, así que se probó bajar el umbral hasta ahí para
+ * cazar también las líneas de dos o tres palabras. **Cayeron 7 tests**, y entre
+ * ellos «keeps a weak-verb upgrade» y «keeps a bullet that adds a real, grounded
+ * detail»: el guard había empezado a tirar mejoras reales, que es exactamente lo
+ * que no puede pasar.
+ *
+ * En 0.7 se caza el caso reportado —«Realicé arqueo de caja diario» → «Efectué
+ * arqueo de caja diario», que el gate de caracteres dejaba pasar por corta— y
+ * ninguna reescritura buena se pierde.
+ *
+ * LO QUE QUEDA FUERA, dicho: una línea de dos o tres palabras de contenido
+ * («Atendí clientes» → «Asistí clientes») todavía se escapa. Cazarla exige bajar
+ * a 0.5 y ahí se lleva puestas las buenas. Además `proseRules` pide 16 palabras
+ * mínimo, así que una viñeta así no debería existir — y si existe, el problema
+ * es que es demasiado corta, no que la reformularon.
+ */
+const SAME_LINE_CONTENT_RATIO = 0.7
+
+function nearlySameLine(original: string, suggested: string): boolean {
+  if (normalizedSimilarity(original, suggested) >= COSMETIC_REWORD_SIMILARITY) return true
+  const o = contentWords(original)
+  const s = new Set(contentWords(suggested))
+  if (o.length === 0) return false
+  const kept = o.filter((w) => s.has(w) || [...s].some((x) => sameStem(w, x))).length
+  // Sobre el lado MÁS LARGO: si la reescritura agregó información real, el
+  // denominador crece y esto deja de ser «casi la misma frase» — que es
+  // exactamente lo que queremos, porque agregar no es reformular.
+  return kept / Math.max(o.length, contentWords(suggested).length) >= SAME_LINE_CONTENT_RATIO
+}
+
 export function isCosmeticReword(original: string, suggested: string): boolean {
   if (!suggested.trim()) return false
-  if (normalizedSimilarity(original, suggested) < COSMETIC_REWORD_SIMILARITY) return false
+  /**
+   * ARREGLAR UNA APERTURA DÉBIL NUNCA ES COSMÉTICO — es el trabajo pedido.
+   *
+   * «Worked on the payment module» → «Developed the payment module» cambia UNA
+   * palabra sobre una frase idéntica, así que por forma parece un cambio de
+   * sinónimos. No lo es: «Worked on» está en `WEAK_OPENERS` y es exactamente lo
+   * que el propio panel señala como defecto. Descartarlo deja al usuario con el
+   * aviso puesto y sin la corrección — el bucle «me lo marca y no me lo arregla».
+   *
+   * ESTE DEFECTO YA SE PAGÓ UNA VEZ, con el mismo guard: de seis viñetas
+   * cambiaba una —la que arreglaba el «Participé en» que el panel acababa de
+   * marcar— y el 90% idéntico tiraba el arreglo. Volvió a aparecer al medir la
+   * similitud en palabras en vez de caracteres, y lo cazó la suite.
+   */
+  if (fixesWeakOpener(original, suggested)) return false
+  if (!nearlySameLine(original, suggested)) return false
 
   const o = wordsOf(original)
   const s = wordsOf(suggested)
@@ -283,4 +365,51 @@ export function addsNoInformation(original: string, suggested: string): boolean 
   if (contentAdded.length === 0 && contentRemoved.length === 0) return true
 
   return false
+}
+
+/**
+ * ¿La reescritura habla de la viñeta que dice, o de otra del mismo puesto?
+ *
+ * MEDIDO CONTRA LA API REAL (2026-08-20, set STRONG, 33 propuestas): el modelo
+ * devolvió para el índice 0 —"Managed post-operative care for 15 beds"— una línea
+ * que reescribía la 1, "Reduced readmissions from 9% to 4% over two years".
+ * Aplicarla habría borrado la de las 15 camas y dejado la de reingresos DOS veces.
+ *
+ * Nadie lo estaba cazando. Lo frenaba de rebote el guard de la cifra, porque el
+ * "15" desaparecía — un accidente, no una defensa: la misma línea con las dos
+ * viñetas sin números habría entrado igual. Y en cuanto ese guard dejó de
+ * aplicarse de más, el hueco quedó a la vista.
+ *
+ * "El índice es pista, el texto es identidad" (`lib/ats/bullet-locate.ts`). Ahí la
+ * identidad se resuelve por texto exacto porque se conoce la línea original; acá
+ * lo que llega es una REESCRITURA, así que se pregunta de quién conserva el
+ * asunto: qué proporción de las palabras con contenido de cada viñeta sobrevive.
+ * Una reescritura de la viñeta j conserva el asunto de j.
+ *
+ * Margen exigente a propósito. Las viñetas de un mismo puesto hablan del mismo
+ * trabajo y se parecen; mover una por diferencias de ruido sería peor que el
+ * defecto. Sólo se reasigna cuando otra viñeta gana por un tercio y además el
+ * ganador conserva la mitad de su asunto.
+ *
+ * @returns el índice al que la reescritura pertenece de verdad.
+ */
+export function rewriteBelongsTo(rewrite: string, bullets: string[], claimed: number): number {
+  const words = contentWords(rewrite)
+  if (words.length === 0 || bullets.length === 0) return claimed
+  const kept = (bullet: string): number => {
+    const own = contentWords(bullet)
+    if (own.length === 0) return 0
+    const hit = own.filter((w) => words.some((r) => r === w || sameStem(r, w))).length
+    return hit / own.length
+  }
+  const claimedScore = claimed >= 0 && claimed < bullets.length ? kept(bullets[claimed]) : 0
+  let bestIdx = claimed
+  let bestScore = claimedScore
+  bullets.forEach((b, i) => {
+    if (i === claimed) return
+    const s = kept(b)
+    if (s > bestScore) { bestScore = s; bestIdx = i }
+  })
+  if (bestIdx === claimed) return claimed
+  return bestScore >= 0.5 && bestScore - claimedScore >= 0.34 ? bestIdx : claimed
 }

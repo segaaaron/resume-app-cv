@@ -79,6 +79,49 @@ describe("losesStatedFigure", () => {
   it("catches a decimal that changed value", () => {
     expect(losesStatedFigure("Cut sync time from 3.2s to 1.1s", "Cut sync time from 3.5s to 1.1s")).toBe(true)
   })
+
+  /**
+   * SE APLICABA DE MÁS. La versión anterior sacaba TODO lo que matcheara \d+ y
+   * exigía verlo de vuelta, así que cualquier número mataba la reescritura
+   * aunque no midiera nada del trabajo. Un año y un horario no son logros: son
+   * fecha y disponibilidad, y reformularlos no borra ninguna cifra del candidato.
+   */
+  it("does not arm on a year — a date is not a measure of the work", () => {
+    expect(losesStatedFigure(
+      "Atención al cliente en sucursal desde 2019",
+      "Atención al cliente en ventanilla: apertura de cuentas, reclamos y derivación a ejecutivo.",
+    )).toBe(false)
+  })
+
+  it("does not arm on a schedule like 24/7", () => {
+    expect(losesStatedFigure(
+      "Soporte 24/7 a la planta",
+      "Soporte permanente a planta: diagnóstico en línea, escalamiento y reposición de repuestos críticos.",
+    )).toBe(false)
+  })
+
+  /**
+   * LA MITAD QUE FALTABA. "de 12 a 3" y "un 75%" dicen lo mismo, y la versión
+   * anterior tiraba la segunda por no repetir los dígitos de la primera — se
+   * perdía una línea mejor por decir la misma cifra de otra forma.
+   *
+   * Que el 75 sea correcto NO lo decide este guard: la cifra no está en el CV,
+   * así que `hallucinationKind` la marca como `figure` y llega con el chip
+   * "confirmá la cifra". El candidato la confirma o la corrige antes de aplicar.
+   */
+  it("allows the same achievement restated as another figure", () => {
+    expect(losesStatedFigure(
+      "Cut medication errors from 12 to 3 per month",
+      "Cut medication errors 75% by reconciling prescriptions at every handover.",
+    )).toBe(false)
+  })
+
+  it("still blocks when the achievement comes back with no figure at all", () => {
+    expect(losesStatedFigure(
+      "Atendí 120 clientes por día en ventanilla",
+      "Atendí clientes en ventanilla resolviendo depósitos, retiros y pagos de servicios.",
+    )).toBe(true)
+  })
 })
 
 describe("tailor-cv drops a rewrite that deletes the candidate's figure", () => {
@@ -93,27 +136,28 @@ describe("tailor-cv drops a rewrite that deletes the candidate's figure", () => 
     }],
     skills: [{ name: "Triage" }],
   }
-  const JD = "Charge Nurse for an emergency department: triage, handover coordination, medication safety, supervising staff nurses. ".repeat(2)
 
-  function serviceReturning(bullets: { index: number; text: string }[]) {
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
-      summary: null,
-      experiences: [{ targetId: "n1", jobTitle: "Charge Nurse", employer: "Hospital Viedma", changedBullets: bullets }],
-      missingSkills: [], softSkillSuggestions: [],
-    })))
+  const POSTING = { jobTitle: "Charge Nurse", hardSkills: ["triage"], softSkills: [], mustHaves: [] }
+  const WORK = [
+    { checkId: "b0", targetId: "n1", index: 0, reason: "no_metric" as const },
+    { checkId: "b1", targetId: "n1", index: 1, reason: "no_metric" as const },
+  ]
+
+  function serviceReturning(rewrites: { checkId: string; text: string }[]) {
+    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({ summary: null, rewrites })))
     return { service: new AIService({ chat, embed: vi.fn() } as IAIClient, logger), chat }
   }
 
   it("drops the figure-losing rewrite and keeps the one that preserved it", async () => {
     const { service } = serviceReturning([
       // Loses 12 and 3 — exactly the measured failure.
-      { index: 0, text: "• Reduced medication errors by reconciling prescriptions and administered doses across two wards." },
+      { checkId: "b0", text: "• Reduced medication errors by reconciling prescriptions and administered doses across two wards." },
       // Keeps 30 and adds the trade's content.
-      { index: 1, text: "• Coordinated triage for up to 30 patients per shift, routing by acuity under the department's escalation protocol." },
+      { checkId: "b1", text: "• Coordinated triage for up to 30 patients per shift, routing by acuity under the department's escalation protocol." },
     ])
-    const r = await service.tailorCV("u1", { sectionData: SECTIONS, jobDescription: JD }, "PRO")
+    const r = await service.tailorCV("u1", { sectionData: SECTIONS, language: "en", posting: POSTING, workload: WORK }, "PRO")
 
-    const kept = r.experiences.flatMap((e) => e.changedBullets.map((b) => b.text))
+    const kept = r.rewrites.map((b) => b.text)
     expect(kept).toHaveLength(1)
     expect(kept[0]).toContain("30 patients per shift")
   })
@@ -122,171 +166,24 @@ describe("tailor-cv drops a rewrite that deletes the candidate's figure", () => 
     const withFigures = { ...SECTIONS, summary: "Registered nurse with 9 years in emergency care. Triaged up to 30 patients per shift and trained 6 new hires." }
     const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
       summary: "Registered nurse with emergency experience coordinating triage, handover and medication safety across busy wards.",
-      experiences: [], missingSkills: [], softSkillSuggestions: [],
+      rewrites: [],
     })))
     const r = await new AIService({ chat, embed: vi.fn() } as IAIClient, logger)
-      .tailorCV("u1", { sectionData: withFigures, jobDescription: JD }, "PRO")
+      .tailorCV("u1", { sectionData: withFigures, language: "en", posting: POSTING, workload: WORK, rewriteSummary: true }, "PRO")
 
     expect(r.summary).toBeNull()
   })
 })
 
 /**
- * The model answers with the job id it was SHOWN, and it was shown "ID:w1".
+ * EL ID PREFIJADO YA NO PUEDE PASAR.
  *
- * Measured across 8 résumés: sometimes "w1", sometimes "ID:w1". The second form
- * matches no job, and every per-bullet guard in tailor is written as
- * `if (orig !== undefined)` — so an unresolved id does not fail loudly, it makes
- * the figure-loss, trivial-edit and lateral-rewrite checks all skip themselves
- * while the rewrite ships. The client cannot place it either.
- */
-describe("a job id the model prefixed still resolves to the real job", () => {
-  let logger: ILogger
-  beforeEach(() => { logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }; vi.clearAllMocks() })
-
-  const SECTIONS = {
-    summary: "Welder.",
-    workExperience: [{ id: "w1", jobTitle: "Welder", employer: "Talleres Cruz", description: "• Completed 40 structural frames with zero rework" }],
-    skills: [{ name: "TIG" }],
-  }
-  const JD = "Structural welder: drawings, bevelling, MIG and TIG on structural steel, weld inspection. ".repeat(2)
-
-  it("still runs the figure guard when the id came back as \"ID:w1\"", async () => {
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
-      summary: null,
-      // Prefixed id AND a rewrite that deletes the 40. Before resolveJobId this
-      // shipped untouched, because the guard could not find the original.
-      experiences: [{ targetId: "ID:w1", jobTitle: "Welder", employer: "Talleres Cruz",
-        changedBullets: [{ index: 0, text: "• Completed structural frames to drawing with zero rework across the fabrication run." }] }],
-      missingSkills: [], softSkillSuggestions: [],
-    })))
-    const r = await new AIService({ chat, embed: vi.fn() } as IAIClient, logger)
-      .tailorCV("u1", { sectionData: SECTIONS, jobDescription: JD }, "PRO")
-
-    expect(r.experiences[0]?.changedBullets).toEqual([])
-  })
-
-  it("hands the client the real id, never the prefixed one", async () => {
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
-      summary: null,
-      experiences: [{ targetId: "ID:w1", jobTitle: "Welder", employer: "Talleres Cruz",
-        changedBullets: [{ index: 0, text: "• Completed 40 structural frames with zero rework, fitting and tacking to drawing before final pass." }] }],
-      missingSkills: [], softSkillSuggestions: [],
-    })))
-    const r = await new AIService({ chat, embed: vi.fn() } as IAIClient, logger)
-      .tailorCV("u1", { sectionData: SECTIONS, jobDescription: JD }, "PRO")
-
-    expect(r.experiences[0]?.targetId).toBe("w1")
-    expect(r.experiences[0]?.changedBullets).toHaveLength(1)
-  })
-})
-
-/**
- * The ATS panel's Apply button, measured END TO END.
+ * El modelo respondía con el id del puesto que se le mostró —a veces "w1", a
+ * veces "ID:w1"— y la segunda forma no encontraba ningún puesto, así que todos
+ * los guards por viñeta (`if (orig !== undefined)`) se salteaban solos mientras la
+ * reescritura viajaba. `resolveJobId` existía para eso.
  *
- * Every critical fix in the eval set was applied to the real CV through the same
- * write path the panel uses. Seven résumés came out missing a figure: "Completed
- * 40 structural frames with zero rework" replaced by a fuller sentence with no 40
- * in it. `groundFixAction` could not see it — it validates that the target job and
- * index exist, and never receives `fix`.
+ * Con el contrato nuevo el modelo no elige a qué línea apunta: devuelve el
+ * `checkId` que le dimos, y un id que no está en la lista se descarta. La clase
+ * entera de defecto dejó de ser construible, así que su test se fue con ella.
  */
-describe("an ATS fix never gets a button that deletes the candidate's figure", () => {
-  let logger: ILogger
-  beforeEach(() => { logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }; vi.clearAllMocks() })
-
-  const SECTIONS = {
-    summary: "Certified welder with 12 years in structural steel. Completed 40 building frames with zero rework.",
-    workExperience: [{
-      id: "w1", jobTitle: "Lead Welder", employer: "Metalúrgica Andina",
-      description: "• Completed 40 structural frames with zero rework\n• Cut scrap from 8% to 2% by changing the cutting sequence",
-    }],
-    skills: [{ name: "TIG Welding" }],
-  }
-  const JD = "Lead Welder for structural steel fabrication: drawings, bevelling, TIG and MIG, weld inspection. ".repeat(2)
-
-  function clientReturning(fix: string, kind: "rewrite_bullet" | "rewrite_summary", index = 0): IAIClient {
-    const extraction = JSON.stringify({ hardSkills: ["TIG"], softSkills: [], jobTitle: "Welder", mustHaves: ["TIG"], summary: "fit", label: "ok" })
-    const analysis = JSON.stringify({
-      verdict: "Strong", passRisk: "low",
-      criticalFixes: [{ issue: "the line reads thin", why: "no trade detail", fix, severity: "high",
-        action: kind === "rewrite_bullet" ? { kind, targetId: "w1", index } : { kind } }],
-      strengths: ["Structural steel"],
-    })
-    const chat = vi.fn().mockImplementation((params: { messages: Array<{ content: string }> }) => {
-      const prompt = params.messages.map((m) => m.content).join("\n")
-      const isAnalysis = /senior technical recruiter|reclutador t[eé]cnico/i.test(prompt)
-      return Promise.resolve(completion(isAnalysis ? analysis : extraction))
-    })
-    return { chat, embed: vi.fn().mockResolvedValue([]) } as IAIClient
-  }
-
-  it("degrades a bullet rewrite that drops the 40 to advice", async () => {
-    const r = await new AIService(clientReturning(
-      "Completed structural steel frames to drawing, fitting and tacking each assembly before the final pass with zero rework.",
-      "rewrite_bullet",
-    ), logger).atsScore("u1", { jobDescription: JD, sectionData: SECTIONS, language: "en" }, "PRO")
-
-    expect(r.analysis?.criticalFixes?.[0]?.action?.kind).toBe("manual")
-    // The diagnosis survives — only the write is taken away.
-    expect(r.analysis?.criticalFixes?.[0]?.issue).toContain("thin")
-  })
-
-  it("keeps the button when the rewrite carries the 40 through", async () => {
-    const r = await new AIService(clientReturning(
-      "Completed 40 structural steel frames to drawing with zero rework, fitting and tacking each assembly before the final pass.",
-      "rewrite_bullet",
-    ), logger).atsScore("u1", { jobDescription: JD, sectionData: SECTIONS, language: "en" }, "PRO")
-
-    expect(r.analysis?.criticalFixes?.[0]?.action?.kind).toBe("rewrite_bullet")
-  })
-
-  it("guards the summary rewrite the same way", async () => {
-    const r = await new AIService(clientReturning(
-      "Certified welder with over a decade in structural steel fabrication and fit-up across building frames.",
-      "rewrite_summary",
-    ), logger).atsScore("u1", { jobDescription: JD, sectionData: SECTIONS, language: "en" }, "PRO")
-
-    expect(r.analysis?.criticalFixes?.[0]?.action?.kind).toBe("manual")
-  })
-})
-
-/**
- * A CV line is written BY the candidate, not ABOUT them.
- *
- * Measured on the reported CV: tailor returned "Ejecutó suites con Selenium…"
- * and "Definió alcance…" into the candidate's own work history — third person,
- * next to six first-person lines. The rule existed, but only inside the
- * assistant's own prompt; the shared bar never carried it, so every other
- * surface was free to break it.
- */
-describe("a Spanish bullet is never written in the third person", () => {
-  let logger: ILogger
-  beforeEach(() => { logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }; vi.clearAllMocks() })
-
-  const SECTIONS = {
-    summary: "QA automatization.",
-    workExperience: [{
-      id: "patito", jobTitle: "Quality automatization", employer: "Patito SA",
-      description: "• Participé en la automatización de QA para nuevos features\n• Elaboré matrices de test para productos de apps",
-    }],
-    skills: [{ name: "Selenium" }],
-  }
-  const JD = "QA Automation Engineer: suites automatizadas, CI/CD, Selenium, regresión, criterios de aceptación. ".repeat(2)
-
-  it("drops the third-person rewrite and keeps the first-person one", async () => {
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
-      summary: null,
-      experiences: [{ targetId: "patito", jobTitle: "Quality automatization", employer: "Patito SA", changedBullets: [
-        { index: 0, text: "• Definió el alcance y los criterios de prueba para nuevos features antes del ciclo de desarrollo." },
-        { index: 1, text: "• Elaboré matrices de test con criterios de aceptación y trazabilidad a requisitos para cada funcionalidad." },
-      ] }],
-      missingSkills: [], softSkillSuggestions: [],
-    })))
-    const r = await new AIService({ chat, embed: vi.fn() } as IAIClient, logger)
-      .tailorCV("u1", { sectionData: SECTIONS, jobDescription: JD, language: "es" }, "PRO")
-
-    const kept = r.experiences.flatMap((e) => e.changedBullets.map((b) => b.text))
-    expect(kept).toHaveLength(1)
-    expect(kept[0]).toContain("Elaboré")
-  })
-})

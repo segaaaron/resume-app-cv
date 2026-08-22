@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { IMPACT_OPENERS_ES, opensInThirdPersonEs } from "@/lib/services/ai/shared/bullet-quality"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { cvValueBar, neverInventRule, proseRules, alreadyGoodRule, cvWritingDoctrine } from "@/lib/services/ai/shared/cv-writing-doctrine"
@@ -36,9 +37,19 @@ describe("the CV-writing bar", () => {
    * behaviour the other language never gets, and the English CV is the one read
    * in the markets this targets.
    */
+  /**
+   * LA REGLA CAMBIÓ, y el cambio es del CEO (2026-08-20): "no inventes" siempre
+   * quiso decir NO LO QUEMES VOS — no una prohibición de que la IA proponga una
+   * métrica sacada del trabajo que el candidato describió.
+   *
+   * Lo prohibido es la cifra puesta desde afuera: la que sale de un ejemplo o de
+   * lo que "suele" pasar en ese oficio. Lo permitido —y esperado— es proponer el
+   * tamaño evidente del trabajo COMO RANGO que el candidato confirma en un clic.
+   * Un rango que él ajusta es suyo; un número que decidió el modelo, no.
+   */
   it("forbids the same six things on both sides", () => {
     const checks: [RegExp, RegExp][] = [
-      [/cifras|porcentajes/i, /figures|percentages/i],
+      [/cifra puesta desde afuera/i, /figure stamped on from outside/i],
       [/empleadores/i, /employers/i],
       [/marca/i, /brand/i],
       [/resultados o logros/i, /results or achievements/i],
@@ -179,5 +190,79 @@ describe("the CV-writing bar", () => {
     // the product serves any profession, and that is checked here and measured
     // live across 12 trades in two languages.
     expect(DOCTRINE).not.toMatch(/only for|solo para|únicamente para/i)
+  })
+})
+
+/**
+ * La vara nueva, explícita, porque es la que más veces se malinterpretó.
+ *
+ * "No inventes" = no lo quemes vos. La cifra prohibida es la que viene de un
+ * ejemplo o de lo que "suele" pasar en el oficio; la permitida es el tamaño del
+ * trabajo que ESTE candidato describió, escrito como rango que él confirma.
+ */
+describe("qué cifra puede escribir el modelo", () => {
+  it.each([["es"], ["en"]])("prohíbe la cifra puesta desde afuera (%s)", (lang) => {
+    const rule = neverInventRule(lang)
+    expect(rule).toMatch(lang === "es" ? /desde afuera/i : /from outside/i)
+    expect(rule).toMatch(lang === "es" ? /suele/i : /usually/i)
+  })
+
+  it.each([["es"], ["en"]])("autoriza el rango que el candidato confirma (%s)", (lang) => {
+    const rule = neverInventRule(lang)
+    expect(rule).toMatch(lang === "es" ? /RANGO/ : /RANGE/)
+    expect(rule).toMatch(lang === "es" ? /confirma|corrige/i : /confirm|correct/i)
+  })
+
+  /** Y lo que NO cambió: un número exacto presentado como hecho sigue prohibido. */
+  it.each([["es"], ["en"]])("sigue prohibiendo el número exacto elegido por el modelo (%s)", (lang) => {
+    const rule = neverInventRule(lang)
+    expect(rule).toMatch(lang === "es" ? /nunca como un número exacto/i : /never as a precise number/i)
+  })
+
+  /** Ya no se acepta dejar la línea pelada cuando el tamaño es obvio. */
+  it.each([["es"], ["en"]])("ya no manda escribir la línea sin número (%s)", (lang) => {
+    const rule = neverInventRule(lang)
+    expect(rule).not.toMatch(lang === "es" ? /escribí la línea sin número/i : /write the line without one/i)
+  })
+})
+
+/**
+ * CON QUÉ SÍ ABRIR — la otra mitad de la regla, que faltaba.
+ *
+ * El prompt nombraba los verbos PROHIBIDOS y ninguno de los buenos: el modelo
+ * tenía que adivinar qué cuenta como fuerte, y en oficios no técnicos —donde
+ * aportar el vocabulario del rubro ES el valor que se paga— adivinaba flojo.
+ */
+describe("los verbos de impacto llegan al prompt", () => {
+  it("los cita, y cada rama sólo los suyos", () => {
+    const es = proseRules("es")
+    const en = proseRules("en")
+    expect(es).toContain("Lideré")
+    expect(en).toContain('"Led"')
+    // Un intento anterior con regex metió aperturas inglesas en el prompt
+    // español porque las raíces se solapan. Separadas como DATO, no con regex.
+    expect(es).not.toContain('"Led"')
+    expect(en).not.toContain("Lideré")
+  })
+
+  /**
+   * EL DEFECTO QUE ESTE TEST EVITA, y estuvo a punto de entrar.
+   *
+   * Ya existía una lista `IMPACT_VERBS` en `summary-quality.ts`, en TERCERA
+   * persona: «lideró», «desarrolló», «implementó» — exactamente las formas que
+   * `opensInThirdPersonEs` rechaza. Cablear aquélla al prompt le habría dado al
+   * modelo ejemplos que su propio guard tira: el prompt empujando hacia un lado
+   * y el filtro hacia el otro.
+   */
+  it("ninguno sería rechazado por el guard de tercera persona", () => {
+    const rechazados = IMPACT_OPENERS_ES.filter((v) => opensInThirdPersonEs(`${v} el proceso de ventas.`))
+    expect(rechazados).toEqual([])
+  })
+
+  /** Y son primera persona de verdad, no infinitivos ni sustantivos. */
+  it("están en primera persona del pasado", () => {
+    for (const v of IMPACT_OPENERS_ES) {
+      expect(v, v).toMatch(/(é|í)$|^(reduje|resolví|construí|atendí)$/)
+    }
   })
 })

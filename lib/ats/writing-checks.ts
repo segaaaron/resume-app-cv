@@ -85,12 +85,30 @@ export interface DuplicateBullet {
   duplicateOfJobTitle: string
 }
 
+/**
+ * Un puesto cuya fecha lleva sólo el año, con la fecha que lo delata.
+ *
+ * El puesto solo no alcanza: el usuario lee su propio cargo y no ve el defecto.
+ */
+export interface BareYearRole {
+  jobTitle: string
+  /** Las fechas crudas del puesto que vienen sin mes: "2019", "2023". */
+  dates: string[]
+}
+
 export interface WritingChecks {
   clicheBullets: ClicheBullet[]
   weakVerbBullets: WeakVerbBullet[]
   duplicateBullets: DuplicateBullet[]
-  /** Non-null when the CV mixes date formats (confuses ATS tenure parsing). */
-  dateInconsistency: { formats: string[] } | null
+  /**
+   * Non-null when the CV mixes date formats (confuses ATS tenure parsing).
+   *
+   * `jobsMissingMonth` names WHICH roles carry a bare year, because the message
+   * without them is unusable: "tus fechas mezclan formatos" told the user there
+   * was a problem and left him to hunt through every role for it — the one part
+   * of the job a person is worst at on their own CV. Reported as such.
+   */
+  dateInconsistency: { formats: string[]; jobsMissingMonth: BareYearRole[] } | null
   bulletBalance: BulletBalance[]
   /** Pairs of thin bullets in one role that would read better as a single line. */
   mergeCandidates: MergeCandidate[]
@@ -189,6 +207,7 @@ export function analyzeWriting(
   const bulletBalance: BulletBalance[] = []
   const duplicateBullets: DuplicateBullet[] = []
   const formats = new Set<string>()
+  const jobsMissingMonth: BareYearRole[] = []
   // First occurrence wins: the twin is what gets flagged, so applying the fix
   // (delete) always leaves the CV with exactly one copy.
   const firstSeen = new Map<string, { jobTitle: string }>()
@@ -234,13 +253,31 @@ export function analyzeWriting(
       const c = dateFormatClass(d ?? "")
       if (c) formats.add(c)
     }
+    // El puesto que lleva un año pelado: es el que hay que tocar — y CUÁL de sus
+    // dos fechas. Nombrar sólo el puesto dejaba al usuario leyendo su propio
+    // cargo sin entender qué tenía de malo: reportado con captura, el chip decía
+    // «Marketing Digital / Community Manager» y se leía como un tema, no como un
+    // defecto. La fecha cruda es lo que lo vuelve verificable de un vistazo.
+    const bare = ([
+      ["start", j.startDate],
+      ["end", j.endDate],
+    ] as const).filter(([, d]) => dateFormatClass(d ?? "") === "year")
+    if (bare.length > 0) {
+      const label = (j.jobTitle ?? "").trim()
+      if (label && !jobsMissingMonth.some((r) => r.jobTitle === label)) {
+        jobsMissingMonth.push({
+          jobTitle: label,
+          dates: bare.map(([, d]) => (d ?? "").trim()),
+        })
+      }
+    }
   }
 
   return {
     clicheBullets,
     weakVerbBullets,
     duplicateBullets,
-    dateInconsistency: formats.size > 1 ? { formats: [...formats] } : null,
+    dateInconsistency: formats.size > 1 ? { formats: [...formats], jobsMissingMonth } : null,
     bulletBalance,
     // Two thin lines telling one story. Deliberately computed here, with the other
     // deterministic checks, so the panel can offer the merge without a model call

@@ -24,6 +24,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) =>
     React.createElement("a", { href }, children),
+  // Nav links carry NavPendingOverlay, which reads the in-flight navigation from
+  // this hook. Idle is the state this test renders in.
+  useLinkStatus: () => ({ pending: false }),
 }))
 vi.mock("sonner", () => ({
   toast: Object.assign(() => {}, { success: () => {}, error: () => {}, info: () => {}, warning: () => {} }),

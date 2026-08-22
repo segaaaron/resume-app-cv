@@ -17,6 +17,7 @@ import { useTranslations, useLocale } from "next-intl"
 import { NavItem, SectionLabel, NavSeparator } from "./_nav-sub"
 import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
 import ImportResumeButton from "./ImportResumeButton"
+import NavPendingOverlay from "./NavPendingOverlay"
 
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
@@ -199,6 +200,7 @@ export default function DashboardNav({
             className={`shrink-0 transition-opacity duration-150 w-4 h-4 ${settingsActive ? "opacity-100" : "opacity-60"}`}
           />
           <span className="flex-1">{t("settings")}</span>
+          <NavPendingOverlay />
         </Link>
 
         {/* Import a CV — topbar only shows this from sm up, so on a phone the

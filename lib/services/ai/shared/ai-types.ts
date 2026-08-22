@@ -721,17 +721,63 @@ export interface FillProfileInput {
   mode?: FillProfileMode
 }
 
+/**
+ * Por qué esta línea necesita trabajo. Un CÓDIGO, no una frase.
+ *
+ * El motivo lo decidió el informe; mandarlo como texto libre desde el cliente
+ * sería meter una cadena arbitraria dentro del prompt, y el prompt ya tiene
+ * bastante superficie con la oferta. Con un código cerrado, el módulo escribe la
+ * guía y el cliente sólo elige de una lista.
+ */
+export type TailorReason =
+  | "no_metric"     // la línea no dice ningún tamaño del trabajo
+  | "weak_verb"     // abre enumerando tareas, no logros
+  | "duplicate"     // el mismo logro escrito dos veces
+  | "dilutes"       // el puesto carga más líneas de las que un reclutador lee
+  | "cliche"        // frase hecha que no dice nada
+  | "orphan"        // la cola de la línea de arriba, partida al importar
+  | "critical"      // lo señaló el análisis del reclutador
+  | "tailored"      // no tiene defecto: se adapta a ESTA vacante
+
+/** Un ítem del informe asignado a tailor. */
+export interface TailorWorkItem {
+  /** El id del hallazgo. El modelo lo devuelve tal cual: así no puede desalinear. */
+  checkId: string
+  targetId: string
+  index: number
+  reason: TailorReason
+}
+
+/** Los términos de la vacante, YA extraídos por ats-score. */
+export interface TailorPosting {
+  jobTitle: string
+  hardSkills: string[]
+  softSkills: string[]
+  mustHaves: string[]
+}
+
+/**
+ * LO QUE TAILOR RECIBE, después del arreglo de fondo del 2026-08-20.
+ *
+ * ANTES recibía la OFERTA CRUDA (hasta 6.000 caracteres) y un array de keywords.
+ * Con eso volvía a interpretar la vacante por su cuenta y devolvía su propio
+ * `missingSkills`, su propio `softSkillSuggestions`, su propio resumen y su
+ * propio diagnóstico de métricas — cuatro diagnósticos que `ats-score` ya había
+ * hecho, y que el panel después desempataba a mano.
+ *
+ * La regla del CEO es "el ATS muestra lo que falta, tailor lo soluciona". Ahora
+ * eso es el tipo: entra el trabajo ya diagnosticado, sale texto. Tailor no
+ * descubre nada — si el informe no lo listó, no existe.
+ */
 export interface TailorCVInput {
   sectionData: Record<string, unknown>
-  jobDescription: string
   language?: string
-  /**
-   * Missing keywords the ATS score already listed for this same posting. Tailor
-   * drops any missingSkill semantically equivalent to one of these (embeddings),
-   * so the user never sees the same gap twice across the two panels — including
-   * under a different spelling/word-order/language the exact vocabulary misses.
-   */
-  atsMissingKeywords?: string[]
+  /** Extraídos una vez, en ats-score. No se vuelve a leer la oferta. */
+  posting: TailorPosting
+  /** Las líneas a reescribir, con su motivo. Vacío = nada que hacer. */
+  workload: TailorWorkItem[]
+  /** Si el informe pidió reescribir el resumen. No lo decide tailor. */
+  rewriteSummary?: boolean
 }
 
 // Weave a skill the candidate already has into ONE bullet of the best-fit job.
@@ -788,6 +834,38 @@ export interface TranslateCVResult {
 export interface TailorBulletChange {
   index: number   // posición 0-based del bullet en la descripción original
   text: string    // texto mejorado del bullet
+  /**
+   * Qué cifra haría fuerte a ESTA línea, dicho en una frase, cuando la línea no
+   * la tiene y el candidato tampoco la declaró en ningún lado.
+   *
+   * POR QUÉ VIENE ACÁ Y NO EN OTRA SECCIÓN (decisión del CEO, 2026-08-19): el
+   * panel reescribía la viñeta en un lugar y en otro distinto pedía la métrica,
+   * así que el usuario resolvía una tarjeta y aparecía otra sobre la MISMA línea.
+   * Una llamada, una tarjeta, todo resuelto: el texto mejorado y —si falta— qué
+   * número lo terminaría de levantar y por qué.
+   *
+   * Nunca es la cifra: es qué medir. El número lo pone el candidato.
+   */
+  metricHint?: string
+  /**
+   * La habilidad blanda que esta línea PASA A DEMOSTRAR con la reescritura.
+   *
+   * Las blandas no se listan como etiqueta: se prueban dentro de un bullet. Al
+   * venir junto a la línea que las demuestra, dejan de ser una tarea aparte que
+   * el panel vuelve a reclamar después.
+   */
+  demonstrates?: string
+  /**
+   * La línea trae una cifra que el CV no respalda, y el usuario tiene que
+   * confirmarla o corregirla antes de aplicarla.
+   *
+   * No es una alarma: es el camino normal cuando el trabajo que el candidato
+   * describió tiene un tamaño evidente que él no escribió. Antes la sugerencia
+   * entera se descartaba por eso, y se perdía una línea mejor en todo lo demás
+   * por un número que él conoce. Lo que NO llega hasta acá es un placeholder o
+   * una marca que no declaró: eso se sigue tirando sin preguntar.
+   */
+  needsFigureConfirm?: boolean
 }
 
 export interface TailorExperienceResult {
@@ -797,19 +875,36 @@ export interface TailorExperienceResult {
   changedBullets: TailorBulletChange[]  // vacío = todos los bullets ya están bien
 }
 
+/**
+ * Una línea reescrita, atada al hallazgo que cierra.
+ *
+ * `checkId` viene del informe y el modelo lo DEVUELVE tal cual: no puede
+ * desalinear porque no elige a qué línea apunta. Medido el 2026-08-20 con el
+ * contrato viejo: devolvió para el índice 0 una reescritura de la viñeta 1, y
+ * aplicarla habría borrado una línea y duplicado otra.
+ */
+export interface TailorRewrite {
+  checkId: string
+  text: string
+  /** Qué medir en ESA línea. Nunca la cifra: el número lo pone el candidato. */
+  metricHint?: string
+  /** La blanda que esa línea pasa a demostrar. */
+  demonstrates?: string
+  /** La cifra propuesta se confirma en la tarjeta, no se descarta. */
+  needsFigureConfirm?: boolean
+}
+
+/**
+ * LO QUE TAILOR DEVUELVE. Texto, y nada más.
+ *
+ * `missingSkills` y `softSkillSuggestions` se fueron: no eran suyos. Los calcula
+ * `ats-score` de forma determinista y verificada contra el CV, y el panel los
+ * muestra en la tabla de términos con su conteo a los dos lados. Tenerlos acá
+ * significaba dos listas para la misma pregunta y un desempate a mano.
+ */
 export interface TailorCVResultV2 {
-  summary: string | null            // null = resumen ya está bien
-  experiences: TailorExperienceResult[]
-  missingSkills: string[]
-  /** Soft skills the job asks for that the CV doesn't yet evidence, each with a
-   *  grounded, one-line suggestion on HOW/WHERE to show it. Actionable advice the
-   *  user applies by hand — soft skills are proven inside bullets, not listed as
-   *  chips — and never invented. Max ~4. */
-  softSkillSuggestions?: { skill: string; suggestion: string }[]
-  // No keywordsToAdd: it duplicated ats-score's missingKeywords, which is
-  // computed deterministically and verified against the CV (ats-matcher.ts),
-  // where this one was a raw substring match on the JD. With both panels now
-  // sharing one job description they rendered as two near-identical chip rows.
+  summary: string | null   // null = el informe no lo pidió, o ya estaba bien
+  rewrites: TailorRewrite[]
 }
 
 // ─── Central input character limits ────────────────────────────────────────────

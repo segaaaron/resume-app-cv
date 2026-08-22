@@ -1,4 +1,33 @@
 // lib/services/ai/modules/AITailorModule.ts
+//
+// EL EJECUTOR. Recibe el trabajo ya diagnosticado y devuelve texto.
+//
+// LO QUE ESTE ARCHIVO DEJÓ DE HACER, y por qué (auditado el 2026-08-20):
+//
+// Recibía la OFERTA CRUDA —hasta 6.000 caracteres— y un array de keywords, así
+// que volvía a interpretar la vacante por su cuenta y devolvía su propio
+// `missingSkills`, su propio `softSkillSuggestions`, su propio resumen y su
+// propio diagnóstico de métricas. Cuatro diagnósticos que `ats-score` ya había
+// hecho, con embeddings encima para deduplicarlos contra los suyos, y un panel
+// desempatando a mano cuál mostrar.
+//
+// La regla del CEO estaba escrita desde la sesión anterior: «el ATS muestra lo
+// que falta, tailor lo soluciona». Lo que se había implementado era juntar las
+// tarjetas en un panel; los productores quedaron intactos.
+//
+// AHORA entra `workload` —los ítems que el informe le asignó, cada uno con su
+// `checkId` y su motivo— y los términos de la vacante YA extraídos. Sale texto,
+// atado al hallazgo que cierra. Tailor no descubre nada: si el informe no lo
+// listó, no existe.
+//
+// EFECTO COLATERAL BUSCADO: el prompt deja de cargar la oferta entera y pasa a
+// llevar una lista de términos y las líneas exactas a reescribir.
+//
+// LO QUE NO CAMBIÓ: los guards de salida. Siguen todos, y siguen siendo la capa
+// que contiene el daño después del modelo — placeholder, marca no declarada,
+// tercera persona, cifra borrada o alterada, edición trivial, reescritura
+// lateral, y la verificación de que la reescritura habla de la línea que dice.
+
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
@@ -11,43 +40,64 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, detectHallucination, losesStatedFigure, resolveJobId } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hallucinationKind, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
 import { cvValueBar, neverInventRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
-import { askUntilAnswered, retryNudge } from "../shared/never-empty"
-import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../shared/text-similarity"
-import { assessDescription, isDescriptionOptimized, opensInThirdPersonEs } from "../shared/bullet-quality"
+import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
+import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
+import { assessDescription, opensInThirdPersonEs } from "../shared/bullet-quality"
 import { hasCliche } from "../shared/cliches"
 import { computeCostUsd } from "../shared/cost-tracker"
-import { EMBEDDING_MODEL } from "../OpenAIClientAdapter"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { findSemanticMatches } from "../shared/semantic-match"
-import { normalizeTerm } from "@/lib/ats/vocabulary"
-import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2 } from "../shared/ai-types"
-
-// Filler words in requirement lines the model sometimes returns as "skills".
-// Dropped before token-overlap so a phrase's real signal ("gcd", "async/await")
-// decides coverage, not connective words shared with every CV.
-const SKILL_STOPWORDS = new Set([
-  "of", "and", "or", "the", "a", "an", "to", "in", "on", "with", "for", "using",
-  "strong", "experience", "knowledge", "concepts", "concept", "ability", "abilities",
-  "understanding", "familiarity", "proficiency", "proficient", "skills", "skill",
-  "including", "related", "etc", "maintaining", "publishing",
-])
+import { reportGuardDrops } from "../shared/guard-metrics"
+import {
+  AI_INPUT_LIMITS,
+  type TailorCVInput,
+  type TailorCVResultV2,
+  type TailorReason,
+  type TailorRewrite,
+  type TailorWorkItem,
+} from "../shared/ai-types"
 
 /**
- * True when the CV already covers a required skill. Plain substring first (an atomic
- * skill like "kubernetes"); then token overlap for the case the model hands back a
- * whole requirement line — if ≥60% of its significant words already appear in the CV
- * it is covered, so it is not re-suggested as "missing".
+ * Qué se le pide para cada motivo, en una línea.
+ *
+ * El motivo llega como CÓDIGO, no como frase: el diagnóstico lo hizo el informe
+ * y el texto de la guía lo escribe este módulo. Mandar la razón como cadena
+ * libre desde el cliente sería meterla cruda en el prompt.
  */
-function resumeCoversSkill(skill: string, resumeLower: string): boolean {
-  const sl = skill.toLowerCase().trim()
-  if (!sl) return true
-  if (resumeLower.includes(sl)) return true
-  const tokens = sl.split(/[^a-z0-9/+#.]+/).filter((w) => w.length > 2 && !SKILL_STOPWORDS.has(w))
-  if (tokens.length === 0) return false
-  const present = tokens.filter((w) => resumeLower.includes(w)).length
-  return present / tokens.length >= 0.6
+const REASON_GUIDE: Record<TailorReason, { en: string; es: string }> = {
+  no_metric: {
+    en: "names no size for the work — say what it consisted of; add a figure ONLY if the CV already states one",
+    es: "no dice ningún tamaño del trabajo — nombrá en qué consistió; agregá una cifra SÓLO si el CV ya la declara",
+  },
+  weak_verb: {
+    en: "opens by listing duties instead of what was achieved",
+    es: "abre enumerando tareas en vez de lo que se logró",
+  },
+  duplicate: {
+    en: "says the same as another line in this role — make this one carry what the other does not",
+    es: "dice lo mismo que otra línea del puesto — que ésta cargue lo que la otra no",
+  },
+  dilutes: {
+    en: "is among the weakest of a role carrying more lines than a recruiter reads — make it earn its line",
+    es: "está entre las más flojas de un puesto que carga más líneas de las que un reclutador lee — que gane su renglón",
+  },
+  cliche: {
+    en: "leans on a stock phrase that says nothing",
+    es: "se apoya en una frase hecha que no dice nada",
+  },
+  orphan: {
+    en: "is the tail of the line above it, split by a page break — write it as one sentence",
+    es: "es la cola de la línea de arriba, partida por un salto de página — escribila como una sola oración",
+  },
+  critical: {
+    en: "the recruiter analysis flagged it as costing the interview",
+    es: "el análisis del reclutador la marcó como algo que cuesta la entrevista",
+  },
+  tailored: {
+    en: "has no defect — adapt it to this posting's vocabulary without changing what it claims",
+    es: "no tiene defecto — adaptala al vocabulario de esta vacante sin cambiar lo que afirma",
+  },
 }
 
 export class AITailorModule {
@@ -59,69 +109,78 @@ export class AITailorModule {
   async tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResultV2> {
     await enforceAIQuota(userId, "tailor-cv", plan)
 
-    const { sectionData, jobDescription, language: rawLanguage, atsMissingKeywords } = input
+    const { sectionData, posting, workload, language: rawLanguage } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
+    const en = language === "en"
 
-    const jdValidation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
-    if (!jdValidation.valid) throw new AppError(jdValidation.error ?? "invalid_input", 400)
-
-    /**
-     * NO GUARD CANCELS THE CALL — the CEO's rule, and this endpoint was the last
-     * place still breaking it.
-     *
-     * What stood here returned an empty result without asking the model, on two
-     * conditions: the ATS pass found no missing keyword, AND `isDescriptionOptimized`
-     * found no formal defect in any bullet. The second half is the problem. A formal
-     * check reads the first word; it cannot tell whether a line carries CV value,
-     * and "Soldé piezas." passes it. So the user could press a button that costs a
-     * use and a cooldown and be told there was nothing to do, about a CV whose every
-     * line says nothing.
-     *
-     * The signal is not thrown away — it becomes FOCUS in the prompt below, which is
-     * what a guard is for. The re-tailor loop this early return also prevented is
-     * braked where it belongs, in the RESPONSE: isTrivialEdit, isCosmeticReword and
-     * dropsContentWithoutGain drop a rewrite that changed nothing, so applying our
-     * own output cannot produce another round of cosmetic edits.
-     */
-    // `undefined` means the caller did not run the ATS pass — that is "unknown",
-    // NOT "nothing is missing". Only an actual empty array is evidence that this
-    // CV already covers the posting.
-    const nothingMissing = Array.isArray(atsMissingKeywords) && atsMissingKeywords.length === 0
-    const jobs = (sectionData?.workExperience ?? []) as Array<{ description?: string }>
-    const everyBulletClean = jobs.every((j) => !j.description?.trim() || isDescriptionOptimized(j.description))
-    const focus = nothingMissing && everyBulletClean && jobs.length > 0
-      ? (language === "en"
-        ? "\n\nFOCUS (a check we ran, not a verdict): this CV already covers the posting's keywords and no bullet has a formal defect. Judge it against the bar instead — a line with a strong verb that still names nothing of the trade's work is exactly the kind this check cannot see. If every line genuinely clears the bar, return empty arrays and say so by omission."
-        : "\n\nFOCO (una comprobación que hicimos, no un veredicto): este CV ya cubre las keywords de la oferta y ningún bullet tiene un defecto formal. Juzgalo contra la vara en su lugar — una línea con verbo fuerte que igual no nombra nada del trabajo del oficio es justo la que esta comprobación no ve. Si todas las líneas pasan la vara de verdad, devolvé arrays vacíos y decilo por omisión.")
-      : ""
-
-    // WORK EXPERIENCE DETAILS below is this prompt's source of truth for jobs —
-    // full bullets, indexed. Letting buildResumeContext also emit its own,
-    // 500-char-truncated copy of the same jobs would give the model two texts
-    // for the same (ID, index).
+    // WORK EXPERIENCE DETAILS abajo es la fuente de verdad de los puestos. Dejar
+    // que `buildResumeContext` emita además su copia truncada le daría al modelo
+    // dos textos para el mismo (ID, índice).
     const resumeContext = buildResumeContext(sectionData, language, { includeWorkExperience: false })
     const ctxValidation = validateAIInput(resumeContext, AI_INPUT_LIMITS.resumeContext)
     if (!ctxValidation.valid) throw new AppError("invalid_input", 400)
 
-    // FULL bullets, never elided. The model replaces a bullet wholesale by index,
-    // so anything it cannot see, it destroys: at the old 80-char cap it read
-    // "…cutting d…" and rewrote away the "40 minutes to under 6" it never saw.
-    // If you must bound this, bound the number of bullets — never their text.
-    const work = (sectionData.workExperience ?? []) as { id?: string; jobTitle?: string; employer?: string; description?: string }[]
+    const work = (sectionData.workExperience ?? []) as Array<{
+      id?: string; jobTitle?: string; employer?: string; description?: string
+    }>
+    const bulletsByJob = new Map(work.map((j) => [j.id ?? "?", parseBullets(j.description ?? "")]))
+
+    /**
+     * El trabajo, verificado contra el CV REAL antes de entrar al prompt.
+     *
+     * `workload` llega del cliente. Un id de puesto que no existe o un índice
+     * fuera de rango produciría una reescritura inaplicable —o peor, aplicable
+     * sobre la línea equivocada—. Lo que no se puede ubicar, no se pide.
+     */
+    const grounded = workload.filter((w) => {
+      const lines = bulletsByJob.get(w.targetId)
+      return !!lines && w.index >= 0 && w.index < lines.length && !!lines[w.index]?.trim()
+    })
+
+    /**
+     * Sin trabajo no hay llamada.
+     *
+     * No es un hueco: es la respuesta correcta y no cuesta ni un uso ni un
+     * enfriamiento. Antes esto no podía pasar, porque tailor decidía solo qué
+     * tocar y siempre encontraba algo.
+     */
+    if (grounded.length === 0 && !input.rewriteSummary) {
+      return { summary: null, rewrites: [] }
+    }
+
     const workList = work.slice(0, 4).map((j) => {
       const bulletLines = renderBulletsForPrompt(parseBullets(j.description ?? ""), {
-        emptyLabel: "  (sin bullets)",
+        emptyLabel: en ? "  (no bullets)" : "  (sin bullets)",
       })
       return `ID:${j.id ?? "?"} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}:\n${bulletLines}`
     }).join("\n\n")
 
-    // What the model is allowed to have known. resumeContext no longer carries
-    // the jobs, so the bullets must come from workList — otherwise every faithful
-    // rewrite reads as invented content and detectHallucination bins it.
+    // Lo que el modelo tiene permitido haber sabido. Sin las viñetas acá, toda
+    // reescritura fiel se leería como contenido inventado y el guard la tiraría.
     const groundingSource = `${resumeContext}\n${workList}`
 
-    const prompt = language === "en"
-      ? `You are an expert resume strategist. Tailor the candidate's CV to this specific job description.
+    /** La lista de tareas: qué línea, cuál es su texto de hoy, y por qué. */
+    const tasks = grounded.map((w) => {
+      const current = bulletsByJob.get(w.targetId)?.[w.index] ?? ""
+      const why = REASON_GUIDE[w.reason]?.[en ? "en" : "es"] ?? ""
+      return `- checkId: ${w.checkId}\n  ${en ? "line" : "línea"}: ${current}\n  ${en ? "why" : "por qué"}: ${why}`
+    }).join("\n")
+
+    const terms = [
+      posting.jobTitle && `${en ? "Target role" : "Puesto objetivo"}: ${posting.jobTitle}`,
+      posting.hardSkills.length && `${en ? "Skills it asks for" : "Habilidades que pide"}: ${posting.hardSkills.slice(0, 30).join(", ")}`,
+      posting.softSkills.length && `${en ? "Soft skills" : "Blandas"}: ${posting.softSkills.slice(0, 15).join(", ")}`,
+      posting.mustHaves.length && `${en ? "Hard requirements" : "Requisitos duros"}: ${posting.mustHaves.slice(0, 15).join(", ")}`,
+    ].filter(Boolean).join("\n")
+
+    const summaryBlock = input.rewriteSummary
+      ? (en
+        ? `\n=== SUMMARY ===\nRewrite the summary to speak this posting's language, keeping every figure it states.\nCurrent: ${(sectionData.summary as string) ?? ""}`
+        : `\n=== RESUMEN ===\nReescribí el resumen para que hable el idioma de esta vacante, conservando cada cifra que declara.\nActual: ${(sectionData.summary as string) ?? ""}`)
+      : ""
+
+    const prompt = en
+      ? `You are an expert resume strategist. You are given lines that ALREADY have a diagnosis. Write their replacements.
 
 ${cvValueBar("en")}
 
@@ -131,12 +190,12 @@ ${keepCandidateFactsRule("en")}
 
 ${proseRules("en")}
 
-${alreadyGoodRule("en")}${focus}
+${alreadyGoodRule("en")}
 
 ${untrustedDataRule(true)}
 
-=== JOB DESCRIPTION ===
-${jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)}
+=== WHAT THIS POSTING ASKS FOR ===
+${terms}
 
 CANDIDATE CV:
 ${resumeContext}
@@ -144,34 +203,25 @@ ${resumeContext}
 WORK EXPERIENCE DETAILS (bullets indexed by position):
 ${workList}
 
+=== LINES TO REWRITE ===
+${tasks}
+${summaryBlock}
+
 Return a JSON object:
 {
-  "summary": "rewritten summary aligned to job OR null if already strong",
-  "experiences": [
-    {
-      "targetId": "ID",
-      "jobTitle": "title",
-      "employer": "company",
-      "changedBullets": [
-        { "index": 1, "text": "• Improved bullet text using CAR method" }
-      ]
-    }
-  ],
-  "missingSkills": ["skill1"],
-  "softSkillSuggestions": [{ "skill": "teamwork", "suggestion": "Show it in a bullet: name a project where you coordinated with other teams." }]
+  "summary": "rewritten summary OR null",
+  "rewrites": [
+    { "checkId": "the id given above, copied exactly", "text": "• the rewritten line", "metricHint": "what to measure — only if the line has no figure and the CV states none", "demonstrates": "the soft skill this line now proves" }
+  ]
 }
 
 Rules:
-- summary: rewrite if it lacks job keywords. Do NOT rewrite it just because it has no numbers — the CV may state none, and that is fine. Return null if it's already strong.
-- experiences: include ALL jobs from the work experience list, even those with no changes
-- changedBullets: include every bullet that does not clear the bar — judged by WHEN TO LEAVE A LINE ALONE above, never by whether it opens with a strong verb. An empty array is only correct when every line already names the content of the work; never pad it with cosmetic rewords, and never leave a line untouched while advising elsewhere that it be expanded.
-- For each changed bullet: use • prefix. Name what the work consists of in this trade's words. If the bullet would need a figure the CV does not state, write it without the figure — never invent one and never leave a bracket
-- Human voice (avoid AI-detection): vary sentence length/structure across bullets, natural not press-release tone. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source
-- NEVER add new bullets that don't exist in the original — only replace existing ones by index
-- missingSkills: skills required by the JOB DESCRIPTION and not present in the CV (max 5). Never invent a skill name — it must appear in the posting. Each MUST be a SHORT atomic skill or keyword (1-3 words, e.g. "GCD", "async/await", "App Store", "Kubernetes") — NEVER a full requirement sentence like "Knowledge of GCD, async/await, and concurrency concepts"
-- softSkillSuggestions: SOFT skills the job asks for (communication, teamwork, leadership, adaptability, problem-solving, ownership…) that the CV does NOT yet evidence. Max 4. For each, "skill" is the short soft skill and "suggestion" is ONE actionable line telling the user HOW/WHERE to show it, anchored to their real experience — never invent a fact, and never claim they have it; you are advising them to demonstrate it. If the CV already shows the soft skills the job needs, return an empty array.
-- If all bullets and summary are already well-optimized: return summary null, empty changedBullets for all experiences`
-      : `Eres un estratega experto en currículos. Adapta el CV del candidato a esta oferta de trabajo específica.
+- Echo "checkId" EXACTLY as given. Never invent one, never rewrite a line that is not on the list.
+- Use the • prefix. Name what the work consists of in this trade's words.
+- Human voice: vary sentence length and structure; natural, not press-release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source.
+- "metricHint" names WHAT TO MEASURE on that exact line — never a number, never invent one — and only when the line has no figure. "demonstrates" is the soft skill that line now proves. Both travel WITH the line; never as a separate task.
+- Include an entry ONLY for a line you can materially improve. Omit every other one. If none qualify, return an empty array — that is a correct and expected answer.`
+      : `Eres un estratega experto en currículos. Recibís líneas que YA tienen diagnóstico. Escribí sus reemplazos.
 
 ${cvValueBar("es")}
 
@@ -181,12 +231,12 @@ ${keepCandidateFactsRule("es")}
 
 ${proseRules("es")}
 
-${alreadyGoodRule("es")}${focus}
+${alreadyGoodRule("es")}
 
 ${untrustedDataRule(false)}
 
-=== OFERTA DE TRABAJO ===
-${jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)}
+=== LO QUE PIDE ESTA VACANTE ===
+${terms}
 
 CV DEL CANDIDATO:
 ${resumeContext}
@@ -194,72 +244,51 @@ ${resumeContext}
 DETALLES DE EXPERIENCIA LABORAL (bullets indexados por posición):
 ${workList}
 
+=== LÍNEAS A REESCRIBIR ===
+${tasks}
+${summaryBlock}
+
 Devuelve un objeto JSON:
 {
-  "summary": "resumen reescrito alineado a la oferta O null si ya está bien",
-  "experiences": [
-    {
-      "targetId": "ID",
-      "jobTitle": "puesto",
-      "employer": "empresa",
-      "changedBullets": [
-        { "index": 1, "text": "• Texto mejorado del bullet con método CAR" }
-      ]
-    }
-  ],
-  "missingSkills": ["habilidad1"],
-  "softSkillSuggestions": [{ "skill": "trabajo en equipo", "suggestion": "Mostralo en un bullet: nombrá un proyecto donde coordinaste con otros equipos." }]
+  "summary": "resumen reescrito O null",
+  "rewrites": [
+    { "checkId": "el id dado arriba, copiado exacto", "text": "• la línea reescrita", "metricHint": "qué medir — sólo si la línea no tiene cifra y el CV tampoco declara ninguna", "demonstrates": "la blanda que esa línea pasa a probar" }
+  ]
 }
 
 Reglas:
-- summary: reescribir si le faltan keywords de la oferta. NO lo reescribas solo porque no tenga cifras — puede que el CV no declare ninguna, y eso está bien. Devolver null si ya está bien.
-- experiences: incluir TODOS los puestos de la lista de experiencia, incluso los que no tienen cambios
-- changedBullets: incluí todo bullet que no pase la vara — juzgado por CUÁNDO DEJAR UNA LÍNEA COMO ESTÁ de arriba, nunca por si abre con verbo fuerte. Un array vacío sólo es correcto cuando todas las líneas ya nombran el contenido del trabajo; nunca lo rellenes con reescrituras cosméticas, y nunca dejes una línea intacta mientras en otra parte aconsejás ampliarla.
-- Para cada bullet cambiado: usar prefijo •. Nombrá en qué consiste el trabajo con las palabras de ese oficio. Si el bullet necesitaría una cifra que el CV no declara, escribilo sin la cifra — nunca la inventes ni dejes un corchete
-- Voz humana (evita detección de IA): varía el largo/estructura de las frases entre bullets, tono natural no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantén cada reescritura anclada a un dato concreto ya presente en el source
-- NUNCA agregar bullets nuevos que no existen en el original — solo reemplazar existentes por índice
-- missingSkills: habilidades requeridas por la OFERTA y no presentes en el CV (máximo 5). Nunca inventes un nombre de habilidad — tiene que aparecer en la oferta. Cada una DEBE ser una habilidad o keyword CORTA y atómica (1-3 palabras, ej.: "GCD", "async/await", "App Store", "Kubernetes") — NUNCA una frase de requisito completa como "Conocimiento de GCD, async/await y conceptos de concurrencia"
-- softSkillSuggestions: habilidades BLANDAS que pide la oferta (comunicación, trabajo en equipo, liderazgo, adaptabilidad, resolución de problemas, ownership…) que el CV AÚN no evidencia. Máximo 4. Para cada una, "skill" es la blanda corta y "suggestion" es UNA línea accionable de CÓMO/DÓNDE mostrarla, anclada a su experiencia real — nunca inventes un dato, y nunca afirmes que ya la tiene; le estás aconsejando cómo demostrarla. Si el CV ya muestra las blandas que pide la oferta, devolvé un array vacío.
-- Si todos los bullets y el resumen ya están bien optimizados: devolver summary null, changedBullets vacíos para todas las experiencias`
+- Copiá "checkId" EXACTO como se te dio. Nunca inventes uno, nunca reescribas una línea que no está en la lista.
+- Usá el prefijo •. Nombrá en qué consiste el trabajo con las palabras de ese oficio.
+- Voz humana: variá el largo y la estructura de las frases; natural, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantené cada reescritura anclada a un dato concreto ya presente en el source.
+- "metricHint" dice QUÉ MEDIR en esa línea exacta — nunca una cifra, nunca la inventes — y sólo cuando la línea no tiene número. "demonstrates" es la blanda que esa línea pasa a probar. Las dos VIAJAN CON LA LÍNEA; nunca como tarea aparte.
+- Incluí una entrada SÓLO por una línea que puedas mejorar de verdad. Omití todas las demás. Si ninguna califica, devolvé un array vacío — es una respuesta correcta y esperada.`
 
-    const systemPrompt = `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summary": null, "experiences": [], "missingSkills": [] }. Whether a bullet is already good is defined in the user message, by the bar and by WHEN TO LEAVE A LINE ALONE — apply that and nothing else. You never invent figures and never write bracket placeholders; a bullet the CV gives no number for is written without one. ${langInstruction}`
+    const systemPrompt = `You are an elite career coach. You rewrite résumé lines that already carry a diagnosis; you do not decide which lines need work. Return ONLY valid JSON. If the input is off-topic or nonsensical, return { "summary": null, "rewrites": [] }. Whether a line is already good is defined in the user message — apply that and nothing else. You never invent figures and never write bracket placeholders; a line the CV gives no number for is written without one. ${langInstruction}`
 
-    // A rich CV (several jobs × several bullets) plus summary, skills and soft-skill
-    // advice easily exceeds 900 tokens of JSON — at 900 the response was TRUNCATED
-    // mid-object, so parseAIJson threw and the whole tailor 500'd (the "error when
-    // applying tailor" report). 3000 fits the worst realistic case; nano is cheap.
-    const doChat = (attempt: number) => this.aiClient.chat({
+    // Un CV rico (varios puestos × varias líneas) más el resumen pasa los 900
+    // tokens de JSON con facilidad — a 900 la respuesta se truncaba a mitad de
+    // objeto y todo el endpoint devolvía 500. 3000 cubre el peor caso realista.
+    let calls = 0
+    const doChat = (nudge: string) => this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 3000,
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
-        // The nudge goes on the retry only, and it says nothing new — it reports
-        // that the last answer was empty. Adding rules on a retry is how prompts
-        // end up contradicting themselves.
-        { role: "user", content: attempt === 0 ? prompt : prompt + retryNudge(language) },
+        // El empujón va sólo en el reintento y no dice nada nuevo: informa que la
+        // respuesta anterior vino vacía. Agregar reglas en un reintento es como
+        // los prompts terminan contradiciéndose.
+        { role: "user", content: prompt + nudge },
       ],
     })
 
     const usages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = []
-
-    /**
-     * One ask, with ONE retry, for two different empties.
-     *
-     * Unparseable JSON was already retried here (a truncated emission at 3000
-     * tokens). The other empty was not: valid JSON with `changedBullets: []` for
-     * every job. Measured over 8 résumés whose bullets are three words each, that
-     * was 5 of 8 — the user spent a use and a cooldown to be told there was
-     * nothing to improve about "Soldé piezas.". Both are the same event from the
-     * user's side, so both get the same single retry.
-     */
-    // The last parsed answer, whether or not it qualified as "answered". Kept
-    // because a second empty must NOT cost a third call: what the model did send
-    // (missing skills, soft-skill advice) is still the user's result.
     let lastParsed: TailorCVResultV2 | null = null
+
     const ask = async (attempt: number): Promise<TailorCVResultV2 | null> => {
-      const response = await doChat(attempt)
+      calls++
+      const response = await doChat(attempt === 0 ? "" : retryNudge(language))
       usages.push(response.usage ?? {})
       try {
         lastParsed = parseAIJson<TailorCVResultV2>(response.choices[0]?.message?.content ?? "{}")
@@ -272,46 +301,156 @@ Reglas:
 
     const answered = await askUntilAnswered<TailorCVResultV2 | null>({
       ask,
-      // Skills and soft-skill advice alone are not an answer: the button the user
-      // pressed rewrites their CV. A summary or at least one bullet is.
-      isAnswered: (r) => !!r && (typeof r.summary === "string" && r.summary.trim().length > 0
-        || (r.experiences ?? []).some((e) => (e.changedBullets?.length ?? 0) > 0)),
-      // Nothing truthful can be manufactured here: a tailored bullet the model
-      // declined to write cannot be written in code without inventing content.
-      // What the second answer DID carry (missing skills, soft-skill advice) is
-      // kept rather than discarded — that is the useful-and-true floor.
+      // El botón que el usuario apretó reescribe su CV: un resumen o al menos
+      // una línea es una respuesta; nada más lo es.
+      isAnswered: (r) => !!r && ((typeof r.summary === "string" && r.summary.trim().length > 0)
+        || (r.rewrites ?? []).length > 0),
+      // Nada verdadero se puede fabricar acá: una línea que el modelo se negó a
+      // escribir no se puede escribir en código sin inventar contenido.
       fallback: () => null,
       onFilled: (what) => this.logger.warn("[AIService.tailorCV] empty answer filled", { what }),
     })
 
-    // The fallback returns null, so `answered` null means both attempts came back
-    // without a rewrite. Whatever the last attempt DID carry still stands — no
-    // third call, and no 500 for an answer that simply had nothing to rewrite.
     const raw: TailorCVResultV2 | null = answered ?? lastParsed
     if (!raw) throw new AppError("invalid_response_format", 500)
 
-    // The prompt tells the model to return null when the summary is already strong,
-    // but a JSON model frequently emits the literal STRING "null"/"none"/"" instead of
-    // a JSON null. Left as-is, the panel renders "null" as the adapted summary and — worse
-    // — the truthy string passes the apply guard, writing "null" into the user's résumé.
-    // Normalise here, once, so downstream only ever sees a real rewrite or a true null.
-    raw.summary = ((): string | null => {
-      if (typeof raw.summary !== "string") return null
-      const t = raw.summary.trim()
-      return !t || /^(null|none|n\/?a|undefined)$/i.test(t) ? null : t
-    })()
+    /**
+     * LOS GUARDS, y qué pasa cuando se lo llevan TODO.
+     *
+     * `askUntilAnswered` mira la respuesta CRUDA del modelo. Los guards corren
+     * después. Así que una respuesta con cinco reescrituras que los guards
+     * descartaban enteras contaba como «respondió»: no había reintento, y al
+     * usuario le quedaba la pantalla vacía habiendo gastado el uso y el cooldown.
+     * Reportado por el CEO el 2026-08-21.
+     *
+     * Ahora el filtro es una función: si no sobrevive nada, se pide UNA vez más
+     * diciendo qué falló de lo que ya escribió. Ningún guard se relajó — lo que
+     * se arregló es el hueco que dejaban al disparar todos juntos.
+     */
+    const applyGuards = (raw: TailorCVResultV2) => {
+      // El prompt pide `null` cuando el resumen ya está bien, pero un modelo JSON
+      // manda con frecuencia la CADENA "null"/"none"/"" en su lugar. Sin normalizar,
+      // el panel pinta "null" como resumen adaptado y —peor— la cadena pasa el guard
+      // de aplicar, escribiendo "null" dentro del CV del usuario.
+      const summaryRaw = ((): string | null => {
+        if (typeof raw.summary !== "string") return null
+        const t = raw.summary.trim()
+        return !t || /^(null|none|n\/?a|undefined)$/i.test(t) ? null : t
+      })()
 
-    // off_topic ONLY when there is genuinely nothing to tailor: the CV itself has no
-    // work experience AND the model surfaced nothing. A real CV the model left untouched
-    // (already optimized) MUST return a valid "nothing to improve" result — never a 422.
-    // That spurious error, thrown whenever the model played it safe, is what made the
-    // first tailor attempt look broken. With real experience present, we never error.
-    const hasExperiences = (raw.experiences?.length ?? 0) > 0
-    if (work.length === 0 && !raw.summary && !hasExperiences && !raw.missingSkills?.length) {
-      throw new AppError("off_topic", 422)
+      // ── Los guards. Ninguno se fue con el cambio de contrato. ──────────────────
+      const byCheckId = new Map<string, TailorWorkItem>(grounded.map((w) => [w.checkId, w]))
+      let offered = 0
+      let kept = 0
+      let droppedInvented = 0
+      let droppedFigure = 0
+      let droppedTrivial = 0
+      const seen = new Set<string>()
+      const rewriteKey = (s: string) =>
+        s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim()
+
+      const rewrites: TailorRewrite[] = []
+      for (const r of Array.isArray(raw.rewrites) ? raw.rewrites : []) {
+        const checkId = typeof r?.checkId === "string" ? r.checkId : ""
+        const text = typeof r?.text === "string" ? r.text.trim() : ""
+        // Un checkId que no está en la lista es trabajo que nadie pidió: el modelo
+        // no puede abrir tarea por su cuenta, que es todo el punto del cambio.
+        const item = byCheckId.get(checkId)
+        if (!item || !text) continue
+        offered++
+
+        const original = bulletsByJob.get(item.targetId)?.[item.index] ?? ""
+
+        /**
+         * Una cifra propuesta se MUESTRA para confirmar; no se tira. Lo que se
+         * sigue tirando sin preguntar es el placeholder —un "[X%]" jamás puede
+         * llegar al CV— y la marca que el candidato no declaró.
+         */
+        const kind = hallucinationKind(text, groundingSource)
+        if (kind === "placeholder" || kind === "brand") { droppedInvented++; continue }
+
+        // Una reescritura que habla DE la persona en tercera persona se lee como
+        // una carta que escribió otro, dentro de su propio historial.
+        if (!en && opensInThirdPersonEs(text)) { droppedTrivial++; continue }
+
+        // El texto es la identidad: si la reescritura habla de otra línea del mismo
+        // puesto, aplicarla borraría una y duplicaría otra.
+        const lines = bulletsByJob.get(item.targetId) ?? []
+        if (rewriteBelongsTo(text, lines, item.index) !== item.index) { droppedTrivial++; continue }
+
+        // Borró o alteró una cifra del candidato.
+        if (original && losesStatedFigure(original, text)) { droppedFigure++; continue }
+
+        // O la dejó puesta y le sacó el verbo que la explicaba: «aumentar las
+        // ventas entre un 15% y 20%» → «ventas de 15% a 20%». Peor que borrarla,
+        // porque lo que queda PARECE un dato y el candidato lo firma sin mirar.
+        if (original && figureLosesItsVerb(original, text)) { droppedFigure++; continue }
+
+        // Sin cambio real: idéntica, o un cambio de sinónimos.
+        if (original && (isTrivialEdit(original, text) || isCosmeticReword(original, text))) { droppedTrivial++; continue }
+
+        // Reescritura lateral sobre una línea ya fuerte: distinta, no mejor.
+        if (original) {
+          const strong = assessDescription(original).weakOpenerIndices.length === 0 && !hasCliche(original)
+          if (strong && dropsContentWithoutGain(original, text)) { droppedTrivial++; continue }
+        }
+
+        const key = rewriteKey(text)
+        if (key && seen.has(key)) { droppedTrivial++; continue }
+        if (key) seen.add(key)
+
+        kept++
+        rewrites.push({
+          checkId,
+          text,
+          ...(kind === "figure" ? { needsFigureConfirm: true } : {}),
+          ...(typeof r.metricHint === "string" && r.metricHint.trim()
+            ? { metricHint: r.metricHint.trim().slice(0, 160) } : {}),
+          ...(typeof r.demonstrates === "string" && r.demonstrates.trim()
+            ? { demonstrates: r.demonstrates.trim().slice(0, 60) } : {}),
+        })
+      }
+
+      // El resumen pasa por los mismos guards: no puede volver casi idéntico ni
+      // perder las cifras que lo hacían valer la pena.
+      const origSummary = (typeof sectionData.summary === "string" ? sectionData.summary : "").trim()
+      const summary = summaryRaw && origSummary && (
+        isTrivialEdit(origSummary, summaryRaw)
+        || isCosmeticReword(origSummary, summaryRaw)
+        || losesStatedFigure(origSummary, summaryRaw)
+        || figureLosesItsVerb(origSummary, summaryRaw)
+      ) ? null : summaryRaw
+      return { summary, rewrites, offered, kept, droppedInvented, droppedFigure, droppedTrivial }
     }
 
-    // Bill every call, including a parse retry — never let a retry's tokens go unrecorded.
+    let out = applyGuards(raw)
+
+    // Todo lo que escribió murió en la puerta: preguntar de nuevo cuesta una
+    // llamada; no preguntar le cuesta al usuario el uso entero y la espera.
+    if (out.kept === 0 && !out.summary && out.offered > 0 && calls < 2) {
+      const reasons: string[] = []
+      if (out.droppedFigure > 0) reasons.push(language === "en" ? "a figure the CV already states was dropped or altered" : "borró o cambió una cifra que el CV ya dice")
+      if (out.droppedInvented > 0) reasons.push(language === "en" ? "a bracket placeholder or a tool the candidate never declared" : "un corchete de relleno o una herramienta que el candidato no declaró")
+      if (out.droppedTrivial > 0) reasons.push(language === "en" ? "the line barely changed, or changed without gaining anything" : "la línea casi no cambió, o cambió sin ganar nada")
+      calls++
+      const retryResponse = await doChat(rejectedNudge(language, reasons))
+      usages.push(retryResponse.usage ?? {})
+      try {
+        const second = parseAIJson<TailorCVResultV2>(retryResponse.choices[0]?.message?.content ?? "{}")
+        const retried = applyGuards(second)
+        // Se queda con la que sobrevive; si la segunda tampoco sobrevive, no se
+        // fabrica nada: una línea que el modelo no escribió no se puede escribir
+        // en código sin inventar contenido sobre la persona.
+        if (retried.kept > 0 || retried.summary) out = retried
+      } catch {
+        this.logger.warn("[AIService.tailorCV] unparseable JSON on guard retry")
+      }
+    }
+
+    const { summary, rewrites, offered, kept, droppedInvented, droppedFigure, droppedTrivial } = out
+
+    // UNA fila de AIUsageLog por petición: el panel de admin agrupa por conteo,
+    // así que un reintento no puede figurar como dos llamadas.
     const promptTokens = usages.reduce((sum, u) => sum + (u.prompt_tokens ?? 0), 0)
     const completionTokens = usages.reduce((sum, u) => sum + (u.completion_tokens ?? 0), 0)
     logAIUsage(userId, "tailor-cv", {
@@ -321,192 +460,20 @@ Reglas:
       completionTokens,
       costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
     })
-    // Anti-hallucination sanitization: drop bullet rewrites that introduce
-    // content not derivable from the resume context. Filter missingSkills so
-    // only items present in the JD survive (the model is supposed to extract
-    // them — never invent).
-    const jdLower = jobDescription.toLowerCase()
-    const resumeLower = groundingSource.toLowerCase()
-    let droppedBullets = 0
-    let droppedTrivial = 0
-    let droppedFigureLoss = 0
 
-    // Original bullets per job, so a rewrite that barely changes the original can be
-    // dropped with the same 90% threshold (isTrivialEdit) used by bullets/summary/cover.
-    const origBulletsByJob = new Map(work.map((j) => [j.id ?? "?", parseBullets(j.description ?? "")]))
-
-    // Identical rewrites, collapsed. A CV that states the same bullet twice (a
-    // real and common copy-paste) makes the model return the same improved line
-    // for both indexes, and the panel then listed "Reduje regresiones…" twice
-    // with two Apply buttons. One rewrite per distinct text, first index wins.
-    const rewriteKey = (s: string) =>
-      s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim()
-
-    const sanitizedExperiences = (raw.experiences ?? []).map((e) => {
-      // Resolved, not trusted. The model answers "w1" or "ID:w1" depending on the
-      // roll, and an unresolved id makes every guard below skip itself — each one
-      // is written as `if (orig !== undefined)`, so a job we cannot find is a job
-      // whose rewrites ship unexamined and unplaceable.
-      const targetId = resolveJobId(e.targetId, work)
-      const origBullets = targetId ? origBulletsByJob.get(targetId) ?? [] : []
-      const seenRewrites = new Set<string>()
-      const cleanedBullets = (e.changedBullets ?? [])
-        .map((b) => ({
-          index: typeof b.index === "number" ? b.index : 0,
-          text: typeof b.text === "string" ? b.text : "",
-        }))
-        .filter((b) => b.text)
-        .filter((b) => {
-          // Placeholders are banned outright now, so they count as hallucinations:
-          // a "[X%]" reaching the CV is exactly the bracket the prompt forbids.
-          if (detectHallucination(b.text, groundingSource)) {
-            droppedBullets++
-            return false
-          }
-          /**
-           * A rewrite that speaks ABOUT the candidate is dropped.
-           *
-           * Measured on the reported CV: "Ejecutó suites con Selenium…",
-           * "Definió alcance…" — third person, inside the candidate's own work
-           * history, where every other line is first person. It reads as a
-           * reference someone else wrote, and it was the same defect already
-           * fixed for summaries and never carried across to bullets.
-           */
-          if (language === "es" && opensInThirdPersonEs(b.text)) {
-            droppedTrivial++
-            return false
-          }
-          // No-op guard, unified with the other AIs: a rewrite ≥90% identical to
-          // the original bullet is not a real improvement — omit it. Plus the
-          // cosmetic-reword guard Review/bullets use: a synonym-only swap
-          // ("enhance"→"improve") on an otherwise-identical bullet adds nothing.
-          const orig = origBullets[b.index]
-          /**
-           * A rewrite that deleted the candidate's figure is dropped outright.
-           *
-           * This is the guard the doctrine run did not need and the well-written
-           * résumés did: told to name the content of the work, the model rewrote
-           * "Cut medication errors from 12 to 3 per month" into a fuller line
-           * with no numbers in it, and every existing filter waved it through —
-           * nothing was invented, the text grew, so the content-loss check saw a
-           * gain. The prompt now forbids it; this makes it unrepresentable.
-           *
-           * Dropping means the user gets no rewrite for that bullet, which is the
-           * correct trade: their line still says what they achieved, and a bullet
-           * that came back empty-handed is retried once by never-empty above.
-           */
-          if (orig !== undefined && losesStatedFigure(orig, b.text)) {
-            droppedFigureLoss++
-            return false
-          }
-          if (orig !== undefined && (isTrivialEdit(orig, b.text) || isCosmeticReword(orig, b.text))) {
-            droppedTrivial++
-            return false
-          }
-          // Lateral-rewrite guard (same as improve-bullet): a rewrite of an already-
-          // strong bullet that strips content and adds nothing concrete is different,
-          // not better. A real JD-tailored rewrite ADDS a keyword, so it survives.
-          if (orig !== undefined) {
-            const origStrong = assessDescription(orig).weakOpenerIndices.length === 0 && !hasCliche(orig)
-            if (origStrong && dropsContentWithoutGain(orig, b.text)) {
-              droppedTrivial++
-              return false
-            }
-          }
-          const key = rewriteKey(b.text)
-          if (key && seenRewrites.has(key)) { droppedTrivial++; return false }
-          if (key) seenRewrites.add(key)
-          return true
-        })
-      return {
-        targetId: targetId ?? "",
-        jobTitle: e.jobTitle ?? "",
-        employer: e.employer ?? "",
-        // A job we could not resolve gets no rewrites: they cannot be checked
-        // against an original and the client cannot apply them anywhere.
-        changedBullets: targetId ? cleanedBullets : [],
-      }
-    })
-
-    const cleanMissingSkills = (raw.missingSkills ?? [])
-      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
-      .filter((s) => {
-        const sl = s.toLowerCase().trim()
-        // A skill is "missing" only if the JOB requires it (anti-invention: the
-        // name must appear in the JD, never fabricated) AND the CV does not
-        // already cover it. `resumeCoversSkill` (token overlap, not a plain
-        // substring) is what fixes the reported bug: the model sometimes returns a
-        // whole JD requirement line ("Knowledge of GCD, async/await, and
-        // concurrency concepts") instead of an atomic skill, so `resumeLower
-        // .includes(phrase)` never matched the user's per-skill chips ("GCD",
-        // "async/await") and the skill resurfaced as "missing" even after they
-        // added it. Coverage now EXCLUDES a skill already demonstrated in the CV.
-        return jdLower.includes(sl) && !resumeCoversSkill(sl, resumeLower)
+    if (droppedInvented > 0 || droppedFigure > 0 || droppedTrivial > 0) {
+      this.logger.warn("[AIService.tailorCV] dropped rewrites", { droppedInvented, droppedFigure, droppedTrivial })
+      reportGuardDrops({
+        endpoint: "tailor-cv",
+        offered,
+        kept,
+        invented: droppedInvented,
+        figureLoss: droppedFigure,
+        trivial: droppedTrivial,
       })
-      .slice(0, 5)
-
-    // Semantic dedup vs the ATS panel. The ATS score above already lists its own
-    // missing keywords for this posting; a Tailor skill that means the same thing
-    // ("k8s" vs "kubernetes", "async await" vs "async/await", cross-language pairs)
-    // would show the gap twice. The exact vocabulary the client filters with can't
-    // see those; embeddings can. ADD-only safety: this can only REMOVE a duplicate,
-    // never invent one, and fails closed (embed error → the list stands untouched).
-    let dedupedMissingSkills = cleanMissingSkills
-    const atsKeywords = (atsMissingKeywords ?? []).map((k) => k.trim()).filter(Boolean).slice(0, 50)
-    if (cleanMissingSkills.length > 0 && atsKeywords.length > 0) {
-      const dupNorms = await findSemanticMatches(
-        cleanMissingSkills,
-        atsKeywords,
-        // Los embeddings valían $0,02/1M y su costo terminaba en un log de texto que
-        // nadie suma: cada análisis embebe el CV y las keywords, así que el gasto por
-        // usuario salía por debajo del real. Barato no es gratis.
-        (texts) => this.aiClient.embed(texts, (u) =>
-          logAIUsage(userId, "tailor-cv:embeddings", {
-            model: EMBEDDING_MODEL,
-            plan,
-            promptTokens: u.tokens,
-            completionTokens: 0,
-            costUsd: computeCostUsd(EMBEDDING_MODEL, u.tokens, 0),
-          }),
-        ),
-      )
-      if (dupNorms.size > 0) {
-        dedupedMissingSkills = cleanMissingSkills.filter((s) => !dupNorms.has(normalizeTerm(s)))
-      }
     }
 
-    // No-op guard for the summary, unified with bullets/cover: a tailored summary
-    // ≥90% identical to the current one is not a real improvement — showing an
-    // "Apply" button that overwrites the summary with a near-copy is noise, so drop it.
-    const origSummary = (typeof sectionData.summary === "string" ? sectionData.summary : "").trim()
-    const tailoredSummary = raw.summary ?? null
-    const summaryOut = tailoredSummary && origSummary && (
-      isTrivialEdit(origSummary, tailoredSummary)
-      || isCosmeticReword(origSummary, tailoredSummary)
-      // A summary states the candidate's headline figures. Measured on a
-      // well-written résumé, the tailored version dropped "30 patients per
-      // shift" and "6 new hires" — the two things that made the summary worth
-      // reading. Same rule as the bullets: keep them or keep the original.
-      || losesStatedFigure(origSummary, tailoredSummary)
-    ) ? null : tailoredSummary
 
-    if (droppedBullets > 0 || droppedTrivial > 0 || droppedFigureLoss > 0) {
-      this.logger.warn("[AIService.tailorCV] dropped bullets", { droppedBullets, droppedTrivial, droppedFigureLoss })
-    }
-
-    // Soft-skill advice: keep only well-formed {skill, suggestion} pairs — a short
-    // skill and a real one-line suggestion — capped at 4. This is guidance the user
-    // applies by hand, so there is nothing to write into the CV and nothing to invent.
-    const softSkillSuggestions = (Array.isArray(raw.softSkillSuggestions) ? raw.softSkillSuggestions : [])
-      .map((x) => ({ skill: typeof x?.skill === "string" ? x.skill.trim() : "", suggestion: typeof x?.suggestion === "string" ? x.suggestion.trim() : "" }))
-      .filter((x) => x.skill.length > 0 && x.skill.length <= 40 && x.suggestion.length >= 8)
-      .slice(0, 4)
-
-    return {
-      summary: summaryOut,
-      experiences: sanitizedExperiences,
-      missingSkills: dedupedMissingSkills,
-      softSkillSuggestions,
-    } satisfies TailorCVResultV2
+    return { summary, rewrites } satisfies TailorCVResultV2
   }
 }

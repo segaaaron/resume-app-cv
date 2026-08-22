@@ -124,37 +124,42 @@ describe("no improvement loop — strong content never reaches the model", () =>
    * prompt, and the loop brake lives in the response (a rewrite that changed
    * nothing is dropped) rather than in a refusal to look.
    */
-  it("tailor-cv: asks the model even when nothing is missing, and passes the check as focus", async () => {
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
-      summary: null, experiences: [], missingSkills: [], softSkillSuggestions: [],
-    })))
+  /**
+   * NINGÚN GUARD CANCELA LA LLAMADA — pero ahora la pregunta cambió de dueño.
+   *
+   * Antes tailor decidía SOLO si valía la pena mirar, y con un check formal
+   * («¿algún bullet tiene defecto?») devolvía vacío sin preguntarle al modelo:
+   * medido, 5 de 8 CVs cuyos bullets son de tres palabras se quedaban sin nada,
+   * gastando un uso y un enfriamiento para que les dijeran que no había qué hacer.
+   *
+   * Ahora quien decide es el INFORME. Si listó trabajo, se llama; si no listó
+   * nada, no hay a quién preguntarle — y eso no cuesta ni un uso. El freno del
+   * bucle sigue en la RESPUESTA: una reescritura que no cambió nada se descarta.
+   */
+  it("tailor-cv: con trabajo asignado, siempre le pregunta al modelo", async () => {
+    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({ summary: null, rewrites: [] })))
     const c: IAIClient = { chat, embed: vi.fn() }
     const r = await new AIService(c, logger).tailorCV("u1", {
       sectionData: { workExperience: [{ id: "w1", description: STRONG_BULLETS }] },
-      jobDescription: "We need a senior iOS engineer with SwiftUI and CI experience. ".repeat(3),
-      atsMissingKeywords: [],
+      posting: { jobTitle: "iOS Engineer", hardSkills: ["SwiftUI"], softSkills: [], mustHaves: [] },
+      workload: [{ checkId: "c1", targetId: "w1", index: 0, reason: "tailored" }],
     }, "PRO")
     expect(chat.mock.calls.length).toBeGreaterThan(0)
-    const sent = String(chat.mock.calls[0]?.[0]?.messages?.[1]?.content ?? "")
-    // Either branch: the module builds the Spanish prompt by default.
-    expect(sent).toMatch(/FOCUS|FOCO/)
-    // A genuinely empty answer is still allowed to be empty — never-empty retries
-    // it once, and the user's own strong bullets are not overwritten with churn.
-    expect(r.experiences.flatMap((e) => e.changedBullets)).toEqual([])
+    // Una respuesta genuinamente vacía sigue pudiendo ser vacía: never-empty la
+    // reintenta una vez y las líneas fuertes del usuario no se pisan con ruido.
+    expect(r.rewrites).toEqual([])
     expect(r.summary).toBeNull()
   })
 
-  it("tailor-cv still runs when the posting asks for something the CV lacks", async () => {
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
-      summary: null, experiences: [], missingSkills: ["Kubernetes"],
-    })))
+  it("tailor-cv: sin trabajo asignado no gasta la llamada", async () => {
+    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({ summary: null, rewrites: [] })))
     const c: IAIClient = { chat, embed: vi.fn() }
     await new AIService(c, logger).tailorCV("u1", {
       sectionData: { workExperience: [{ id: "w1", description: STRONG_BULLETS }] },
-      jobDescription: "We need a senior iOS engineer with Kubernetes experience. ".repeat(3),
-      atsMissingKeywords: ["Kubernetes"],
+      posting: { jobTitle: "iOS Engineer", hardSkills: [], softSkills: [], mustHaves: [] },
+      workload: [],
     }, "PRO")
-    expect(chat.mock.calls.length).toBeGreaterThan(0)
+    expect(chat).not.toHaveBeenCalled()
   })
 
   it.skip("a focus does NOT bypass the gate when the defect is already fixed", async () => {
