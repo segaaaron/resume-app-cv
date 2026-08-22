@@ -25,7 +25,7 @@ import { useShallow } from "zustand/react/shallow"
 // Same normalization the matcher used to decide "demonstrated", so an accented
 // Spanish skill matches the stored verdict instead of silently missing it.
 import { computeCredibility } from "@/lib/ats/credibility"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Check, MessageSquare, TrendingUp, Clock, FileSearch, Sparkles, ChevronRight, Stethoscope } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Check, MessageSquare, TrendingUp, Clock, FileSearch, Sparkles, ChevronRight, MessageSquareQuote } from "lucide-react"
 import { useTailorCV } from "./hooks/useTailorCV"
 import AtsSafeDownload from "./AtsSafeDownload"
 import { getTemplateAtsSafety } from "@/lib/ats/template-ats-safety"
@@ -1437,14 +1437,58 @@ export default function ATSScorePanel() {
                 captura, en otro sitio. El puntaje ya contesta si pasás el filtro,
                 el dial ya dice si estás listo, y el párrafo de abajo da los
                 matices — que es lo que este análisis sí aporta. */}
-            {report?.verdict && (() => {
-              return (
-                <div className="rounded-xl border p-3.5" style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Stethoscope className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--a-ai)" }} />
-                    <p className="flex-1 text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--a-ai)" }}>{t("verdict_title")}</p>
+            {report?.verdict && (
+              /**
+               * ES UNA CITA, NO UN DATO — y por eso se ve distinta.
+               *
+               * Alrededor hay tarjetas de datos: números, conteos, chequeos con su
+               * peso. Ésta es la única prosa del panel: la lectura de una persona
+               * sobre el CV. Tratarla con la misma caja blanca de las demás la
+               * hacía parecer otro dato más, y se leía en diagonal.
+               *
+               * EL ICONO ERA UN ESTETOSCOPIO. No dice nada de un reclutador —
+               * decía «diagnóstico médico», que es de otro mundo. `MessageSquareQuote`
+               * dice lo que esto es: alguien opinó sobre tu CV.
+               *
+               * La comilla grande no es decoración: ancla la lectura como cita y
+               * es lo que separa esta tarjeta del resto de un vistazo. Va detrás
+               * del texto, en violeta muy tenue, sin robarle contraste.
+               */
+              <div
+                className="relative overflow-hidden rounded-xl border p-4"
+                style={{
+                  borderColor: "var(--a-ai-soft)",
+                  background: "var(--a-surface)",
+                  boxShadow: "var(--a-sh-sm)",
+                }}
+              >
+                {/* La comilla de apertura, como marca de agua. `aria-hidden` porque
+                    no aporta nada al lector de pantalla: el texto ya se lee. */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -top-2 right-2 select-none font-serif text-[86px] leading-none"
+                  style={{ color: "var(--a-ai-soft)" }}
+                >
+                  &rdquo;
+                </span>
+
+                <div className="relative">
+                  <div className="mb-2.5 flex items-center gap-1.5">
+                    <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--a-ai)" }} />
+                    <p
+                      className="flex-1 text-[10px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--a-ai-ink)" }}
+                    >
+                      {t("verdict_title")}
+                    </p>
                   </div>
-                  <p className="text-[11.5px] leading-relaxed" style={{ color: "var(--a-ink-2)" }}>{report.verdict}</p>
+
+                  {/* PROSA, NO DATO: un punto más grande y con más aire que el
+                      resto del panel. Se lee de corrido; lo demás se escanea. */}
+                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--a-ink-2)" }}>
+                    {report.verdict}
+                  </p>
+
                   {/* LO QUE FALTABA: decir que esto NO mueve el número, y una salida.
                       Era un párrafo que nombraba defectos («bullets mal escritos»,
                       «duplicación en el resumen») y no llevaba a ninguna parte: el
@@ -1452,21 +1496,30 @@ export default function ATSScorePanel() {
                       Los puntos que nombra ya son chequeos de «lo que mira la
                       persona» —peso 0— así que el botón abre el ejecutor filtrado
                       justo ahí, como opcionales. */}
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.06em]" style={{ background: "var(--a-surface-3)", color: "var(--a-muted-2)" }}>
+                  <div
+                    className="mt-3 flex flex-wrap items-center gap-2 border-t pt-2.5"
+                    style={{ borderColor: "var(--a-border)" }}
+                  >
+                    <span
+                      className="text-[9.5px] font-bold uppercase tracking-[0.06em]"
+                      style={{ color: "var(--a-muted-2)" }}
+                    >
                       {t("verdict_no_score")}
                     </span>
                     {!!report && solvableChecks(report).some((c) => c.section === "tips") && (
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => { setFocusCheckId(null); setTailorFilter("tips"); setTailorOpen(true) }}
-                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold" style={{ background: "var(--a-ai-soft)", color: "var(--a-ai-ink)" }}>
+                        className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10.5px] font-bold transition-transform hover:scale-[1.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                        style={{ background: "var(--a-ai-soft)", color: "var(--a-ai-ink)", outlineColor: "var(--a-ai)" }}
+                      >
                         <Sparkles className="h-2.5 w-2.5" /> {t("verdict_open_tips")}
                       </button>
                     )}
                   </div>
                 </div>
-              )
-            })()}
+              </div>
+            )}
 
             {/* Score breakdown — per-category coverage. Lives under ① as score
                 detail (not a "fix"), computed server-side, applicable categories only. */}

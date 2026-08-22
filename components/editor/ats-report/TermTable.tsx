@@ -167,7 +167,10 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                               borderColor: "var(--a-border-2)",
                               color: "var(--a-ink-2)",
                               background: "var(--a-surface-2)",
-                              outlineColor: "var(--a-accent)",
+                              // El anillo de foco tiene que VERSE: `--a-accent`
+                              // da 2.41:1 sobre blanco y desaparecía. La tinta
+                              // del mismo acento da 6.81:1.
+                              outlineColor: "var(--a-accent-ink)",
                             }}
                           >
                             <Plus className="h-3.5 w-3.5" />

@@ -96,6 +96,46 @@ describe("los acentos que ya tenían tinta siguen cumpliendo", () => {
   it("--a-ai-ink sobre --a-ai-soft", () => {
     expect(contrast(token("ai-ink"), token("ai-soft"))).toBeGreaterThanOrEqual(AA)
   })
+
+  /**
+   * EL HUECO QUE ESTE BLOQUE CIERRA. La primera versión de este guard cubría los
+   * tokens de tinta y los tres semánticos, y dejaba fuera `--a-ai` y
+   * `--a-accent` — que también se usaban como color de TEXTO. Medido después:
+   * `--a-ai` daba 4.23:1 sobre blanco, y era el color del título «VEREDICTO DEL
+   * RECLUTADOR», en mayúsculas de 10px. Un guard incompleto da la misma falsa
+   * confianza que no tenerlo.
+   *
+   * Los de relleno (`--a-ai`, `--a-accent`) pintan iconos y puntos: les basta
+   * 3:1 como forma. Para texto están sus `-ink`, y ésa es la regla que el bloque
+   * de abajo hace cumplir en los componentes.
+   */
+  for (const kind of ["ai", "accent"]) {
+    it(`--a-${kind}-ink se lee sobre la superficie blanca`, () => {
+      const r = contrast(token(`${kind}-ink`), token("surface"))
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+    })
+  }
+
+  /**
+   * `--a-ai` (violeta) llega a 4.23:1 y sirve de relleno; `--a-accent` (el cian
+   * de marca, claro por diseño) se queda en 2.41:1 y NO sirve ni de forma. No se
+   * oscurece —es la identidad— pero tampoco se usa donde haga falta contraste:
+   * su único uso era el anillo de foco de teclado, donde desaparecía. Ahí va la
+   * tinta.
+   */
+  it("--a-ai sirve de relleno visible", () => {
+    expect(contrast(token("ai"), token("surface"))).toBeGreaterThanOrEqual(3)
+  })
+
+  it("el anillo de foco de teclado se distingue del fondo", () => {
+    for (const f of ["components/editor/ats-report/TermTable.tsx"]) {
+      const src = readFileSync(join(process.cwd(), f), "utf8")
+      for (const m of src.matchAll(/outlineColor:\s*"var\(--a-([a-z0-9-]+)\)"/g)) {
+        const r = contrast(token(m[1]), token("surface"))
+        expect(r, `--a-${m[1]} como foco: ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
 })
 
 describe("ningún componente pinta texto semántico sobre su fondo suave sin la tinta", () => {
@@ -117,6 +157,13 @@ describe("ningún componente pinta texto semántico sobre su fondo suave sin la 
     it(f.split("/").pop()!, () => {
       const src = readFileSync(join(process.cwd(), f), "utf8")
       for (const kind of ["ok", "warn", "bad"]) {
+        expect(src, `${f} · ${kind}`).not.toContain(
+          `background: "var(--a-${kind}-soft)", color: "var(--a-${kind})"`,
+        )
+      }
+      // Y los acentos: `--a-ai` / `--a-accent` sobre su fondo suave es texto por
+      // debajo del mínimo. Para texto van los `-ink`.
+      for (const kind of ["ai", "accent"]) {
         expect(src, `${f} · ${kind}`).not.toContain(
           `background: "var(--a-${kind}-soft)", color: "var(--a-${kind})"`,
         )
