@@ -1439,55 +1439,81 @@ export default function ATSScorePanel() {
                 matices — que es lo que este análisis sí aporta. */}
             {report?.verdict && (
               /**
-               * ES UNA CITA, NO UN DATO — y por eso se ve distinta.
+               * LA ÚNICA VOZ HUMANA DEL PANEL, y tiene que verse como tal.
                *
-               * Alrededor hay tarjetas de datos: números, conteos, chequeos con su
-               * peso. Ésta es la única prosa del panel: la lectura de una persona
-               * sobre el CV. Tratarla con la misma caja blanca de las demás la
-               * hacía parecer otro dato más, y se leía en diagonal.
+               * Dos rondas de captura para llegar acá. Primero era una caja
+               * blanca con un icono de ESTETOSCOPIO —que decía «diagnóstico
+               * médico», de otro mundo—. Después una caja blanca con una comilla
+               * gris en la esquina, que es peor: un adorno pegado no es una
+               * identidad, y entre diez tarjetas blancas seguía leyéndose en
+               * diagonal.
                *
-               * EL ICONO ERA UN ESTETOSCOPIO. No dice nada de un reclutador —
-               * decía «diagnóstico médico», que es de otro mundo. `MessageSquareQuote`
-               * dice lo que esto es: alguien opinó sobre tu CV.
+               * EL RECURSO ES LA SUPERFICIE, NO EL ADORNO. En un panel entero de
+               * crema y blanco, lo único que distingue algo sin gritar es
+               * cambiarle el fondo. Va sobre el navy de la marca, y con eso el
+               * cian —que sobre blanco se queda en 2.41:1 y no sirve ni de
+               * forma— pasa a 7.73:1: el acento por fin se usa donde funciona.
                *
-               * La comilla grande no es decoración: ancla la lectura como cita y
-               * es lo que separa esta tarjeta del resto de un vistazo. Va detrás
-               * del texto, en violeta muy tenue, sin robarle contraste.
+               * Y la cita va en SERIF. El resto del panel es sans porque son
+               * datos que se escanean; esto es prosa que se lee de corrido, y la
+               * serif lo dice antes de que el usuario lea la primera palabra.
                */
-              <div
-                className="relative overflow-hidden rounded-xl border p-4"
+              <figure
+                className="relative m-0 overflow-hidden rounded-2xl"
                 style={{
-                  borderColor: "var(--a-ai-soft)",
-                  background: "var(--a-surface)",
-                  boxShadow: "var(--a-sh-sm)",
+                  background: "linear-gradient(155deg, var(--a-quote-bg) 0%, var(--a-quote-bg-2) 100%)",
+                  boxShadow: "var(--a-sh-md)",
                 }}
               >
-                {/* La comilla de apertura, como marca de agua. `aria-hidden` porque
-                    no aporta nada al lector de pantalla: el texto ya se lee. */}
+                {/* LA COMILLA VA AL CIERRE, Y ENTERA.
+                    Arriba a la derecha con 150px se salía del contenedor y
+                    `overflow-hidden` la partía: en pantalla se veían dos trazos
+                    diagonales sueltos que parecían un glifo roto. Visto en el
+                    navegador y comparado contra dos alternativas —apertura arriba
+                    a la izquierda, y sin comilla—: ésta gana porque el cierre es
+                    donde una cita termina de verdad, y ahí no le compite al texto.
+                    Opacidad baja a propósito: es una firma, no un elemento que
+                    haya que leer. */}
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute -top-2 right-2 select-none font-serif text-[86px] leading-none"
-                  style={{ color: "var(--a-ai-soft)" }}
+                  className="pointer-events-none absolute bottom-[38px] right-3 select-none font-serif text-[110px] leading-[0.7]"
+                  style={{ color: "var(--a-quote-accent)", opacity: 0.1 }}
                 >
                   &rdquo;
                 </span>
 
-                <div className="relative">
-                  <div className="mb-2.5 flex items-center gap-1.5">
-                    <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--a-ai)" }} />
-                    <p
-                      className="flex-1 text-[10px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--a-ai-ink)" }}
+                {/* Un hilo de luz arriba. Le da borde a la tarjeta sin dibujar
+                    uno, que sobre un fondo oscuro siempre se ve sucio. */}
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-px"
+                  style={{ background: "linear-gradient(90deg, transparent, var(--a-quote-accent), transparent)", opacity: 0.5 }}
+                />
+
+                <div className="relative p-4">
+                  <figcaption className="mb-3 flex items-center gap-2">
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: "rgba(0,212,255,.14)", color: "var(--a-quote-accent)" }}
+                    >
+                      <MessageSquareQuote className="h-3.5 w-3.5" />
+                    </span>
+                    <span
+                      className="text-[9.5px] font-bold uppercase tracking-[0.14em]"
+                      style={{ color: "var(--a-quote-accent)" }}
                     >
                       {t("verdict_title")}
-                    </p>
-                  </div>
+                    </span>
+                  </figcaption>
 
-                  {/* PROSA, NO DATO: un punto más grande y con más aire que el
-                      resto del panel. Se lee de corrido; lo demás se escanea. */}
-                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--a-ink-2)" }}>
-                    {report.verdict}
-                  </p>
+                  <blockquote className="m-0">
+                    <p
+                      className="font-serif text-[13.5px] leading-[1.65]"
+                      style={{ color: "var(--a-quote-ink)" }}
+                    >
+                      {report.verdict}
+                    </p>
+                  </blockquote>
 
                   {/* LO QUE FALTABA: decir que esto NO mueve el número, y una salida.
                       Era un párrafo que nombraba defectos («bullets mal escritos»,
@@ -1497,12 +1523,12 @@ export default function ATSScorePanel() {
                       persona» —peso 0— así que el botón abre el ejecutor filtrado
                       justo ahí, como opcionales. */}
                   <div
-                    className="mt-3 flex flex-wrap items-center gap-2 border-t pt-2.5"
-                    style={{ borderColor: "var(--a-border)" }}
+                    className="mt-3.5 flex flex-wrap items-center gap-2 border-t pt-3"
+                    style={{ borderColor: "rgba(246,243,236,.14)" }}
                   >
                     <span
-                      className="text-[9.5px] font-bold uppercase tracking-[0.06em]"
-                      style={{ color: "var(--a-muted-2)" }}
+                      className="text-[9px] font-bold uppercase tracking-[0.1em]"
+                      style={{ color: "var(--a-quote-muted)" }}
                     >
                       {t("verdict_no_score")}
                     </span>
@@ -1510,15 +1536,19 @@ export default function ATSScorePanel() {
                       <button
                         type="button"
                         onClick={() => { setFocusCheckId(null); setTailorFilter("tips"); setTailorOpen(true) }}
-                        className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10.5px] font-bold transition-transform hover:scale-[1.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                        style={{ background: "var(--a-ai-soft)", color: "var(--a-ai-ink)", outlineColor: "var(--a-ai)" }}
+                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-transform hover:scale-[1.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                        style={{
+                          background: "var(--a-quote-accent)",
+                          color: "var(--a-quote-bg)",
+                          outlineColor: "var(--a-quote-accent)",
+                        }}
                       >
-                        <Sparkles className="h-2.5 w-2.5" /> {t("verdict_open_tips")}
+                        <Sparkles className="h-3 w-3" /> {t("verdict_open_tips")}
                       </button>
                     )}
                   </div>
                 </div>
-              </div>
+              </figure>
             )}
 
             {/* Score breakdown — per-category coverage. Lives under ① as score

@@ -138,6 +138,44 @@ describe("los acentos que ya tenían tinta siguen cumpliendo", () => {
   })
 })
 
+describe("la superficie oscura de la cita", () => {
+  /**
+   * El veredicto va sobre el navy de la marca porque en un panel entero de crema
+   * es lo único que se distingue sin gritar. Una superficie oscura tiene su
+   * propio riesgo: es fácil dejar un gris que se hunde en el fondo.
+   *
+   * Se mide contra los DOS extremos del gradiente. Un color que cumple sobre el
+   * navy claro puede no cumplir sobre el profundo, y el texto cruza los dos.
+   */
+  for (const bg of ["quote-bg", "quote-bg-2"]) {
+    it(`--a-quote-ink sobre --a-${bg}`, () => {
+      const r = contrast(token("quote-ink"), token(bg))
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+    })
+
+    it(`--a-quote-muted sobre --a-${bg}`, () => {
+      const r = contrast(token("quote-muted"), token(bg))
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+    })
+
+    /**
+     * EL CIAN DE MARCA, POR FIN DONDE FUNCIONA. Sobre blanco se queda en 2.41:1
+     * y no sirve ni de forma; sobre el navy da 7.73:1. El mismo color, y la
+     * diferencia es dónde se lo pone.
+     */
+    it(`--a-quote-accent sobre --a-${bg}`, () => {
+      const r = contrast(token("quote-accent"), token(bg))
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+    })
+  }
+
+  /** El botón invierte: fondo cian, texto navy. También tiene que leerse. */
+  it("el botón de la cita se lee invertido", () => {
+    const r = contrast(token("quote-bg"), token("quote-accent"))
+    expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+  })
+})
+
 describe("ningún componente pinta texto semántico sobre su fondo suave sin la tinta", () => {
   /**
    * Comprueba una AUSENCIA: el par «fondo suave + color de relleno» no puede
