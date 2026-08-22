@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from "vitest"
 
 vi.mock("@/lib/db", () => ({ db: {} }))
 
-import { analyzeAts } from "@/lib/ats/analyzer"
+import { extractTopKeywords, normalize } from "@/lib/ats/analyzer"
+import { partitionByPresence } from "@/lib/ats/core/matching"
 
 const RESUME = [
   "Ana Rivas - Sales Lead",
@@ -25,11 +26,23 @@ const RESUME = [
 
 const JD = "Looking for a Sales Lead with Kubernetes and analytics experience across sales teams."
 
+/**
+ * ── POR QUÉ ESTE ARCHIVO CAMBIÓ DE OBJETIVO (2026-08-22) ───────────────────
+ *
+ * Apuntaba a `analyzeAts().breakdown.keywords`, y ese motor se borró: no lo
+ * llamaba ningún producto y adentro llevaba la regla de páginas que la
+ * investigación desmintió.
+ *
+ * Lo que estos casos prueban NO era del motor: `extractTopKeywords` alimenta hoy
+ * el motor ATS de la CARTA, y `partitionByPresence` es la función compartida con
+ * el matcher PRO. Las dos siguen vivas, así que los casos se reapuntan a ellas en
+ * vez de irse a la basura con el envoltorio.
+ */
 function keywordsOf(resumeText: string, jobDescription: string) {
-  return analyzeAts({ resumeText, jobDescription, locale: "en" }).breakdown.keywords
+  return partitionByPresence(extractTopKeywords(jobDescription), normalize(resumeText))
 }
 
-describe("analyzeAts — keywords shown to the user", () => {
+describe("las keywords que se le muestran al usuario", () => {
   // The bug: extractTopKeywords keyed its frequency map on singularize(raw),
   // which strips "es"/"s" blindly — "sales" became "sal", "kubernetes" became
   // "kubernet" — and those keys were returned and rendered on the public
@@ -62,8 +75,10 @@ describe("analyzeAts — keywords shown to the user", () => {
     expect(k.missing).not.toContain("kubernetes")
   })
 
-  it("returns a score without throwing on an empty CV", () => {
-    const r = analyzeAts({ resumeText: "", jobDescription: JD, locale: "en" })
-    expect(typeof r.scoreOverall).toBe("number")
+  /** El caso del CV vacío probaba el punto de entrada borrado; lo que queda vivo
+   *  es que la extracción no reviente con una vacante sin nada útil. */
+  it("no revienta con una vacante vacía", () => {
+    expect(keywordsOf("", "").matched).toEqual([])
   })
+
 })

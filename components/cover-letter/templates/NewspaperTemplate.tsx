@@ -58,7 +58,7 @@ export default function NewspaperTemplate({ content, colorScheme, candidate }: T
 
       {content.subject && (
         <p className="text-[10px] italic text-gray-500 mb-3">
-          Asunto: <span className="font-semibold not-italic text-gray-700">{content.subject}</span>
+          {t("subject_label")}: <span className="font-semibold not-italic text-gray-700">{content.subject}</span>
         </p>
       )}
 

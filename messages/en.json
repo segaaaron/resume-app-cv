@@ -1889,7 +1889,7 @@
       "section_search_blurb": "An ATS does not read like a person: title, contact, dates and headings all have to be extractable.",
       "section_hard_blurb": "The skills the posting asks for by name. This is where most of the score lives.",
       "section_soft_blurb": "The soft skills the posting asks for. Evidence them inside a bullet rather than listing them as adjectives.",
-      "section_other_blurb": "Trade and company vocabulary. It helps you get noticed, but it does not move the score.",
+      "section_other_blurb": "Skills you list that THIS posting does not name. They do not move the score — the score is against this posting — but they help you turn up in searches.",
       "section_format_blurb": "That the file parses whole, and that a person can read it without effort.",
       "section_tips_blurb": "What a recruiter looks at after the filter. It does not move the score because it applies to every posting.",
       "section_moves_score": "moves the score",
@@ -1941,7 +1941,27 @@
         "role_under": "{job} has only {count}; for its age, {min}–{max}",
         "employment_gap": "{months} months between {after} and {before} go unexplained",
         "dates_mixed_bare": "These roles carry a bare year — the month is missing",
-        "dates_mixed_bare_detail": "The ATS works out your tenure from the dates, and a bare year leaves it twelve months of slack. Add the month to each of these and the check closes itself."
+        "dates_mixed_bare_detail": "The ATS works out your tenure from the dates, and a bare year leaves it twelve months of slack. Add the month to each of these and the check closes itself.",
+        "title_mismatch": "The posting looks for “{wanted}” and your CV does not say it that way",
+        "title_mismatch_detail": "The job title is the first thing the filter reads. If it is the same work, write “{wanted}” verbatim in your headline or your most recent role — never claim a title you did not hold.",
+        "cut_bullet": "This line is surplus in {job}: it carries {count} and {max} get read",
+        "cut_bullet_detail": "It is one of the weakest in the role — no strong verb, no result, or repeating the line next to it. Cutting it is what makes your best lines get read.",
+        "cut_irrelevant": "This line says nothing this posting asks for ({job})",
+        "cut_irrelevant_detail": "It lands none of the words the posting asks for, and the role already carries {count} lines when {max} get read. It is the first one to go.",
+        "merge_pair_offtarget": "In {job}, two lines telling the same work — and neither says what this role asks for",
+        "passive_voice": "This line in {job} is in passive voice: the work shows, you do not",
+        "passive_voice_detail": "“Was implemented” or “were developed” describe what happened without saying who did it. On a résumé, authorship is what is being bought.",
+        "keyword_stuffing": "“{term}” appears {count} times: {share}% of your résumé",
+        "keyword_stuffing_detail": "Past a point it stops reading as your work and starts reading as a résumé written for the machine. Which of those mentions is the spare one is yours to say: cutting the wrong one costs you the match.",
+        "photo_market": "Your résumé carries a photo — and that depends on where you apply",
+        "photo_market_detail": "In Mexico, Brazil and Argentina a photo is standard. In the US and UK many employers discard résumés with photos out of legal caution, and 68% of companies with a global footprint prefer no photo even where local custom accepts it. There is no single right answer: it depends where you send this résumé, and only you know that.",
+        "personal_data": "Your résumé includes a personal detail several markets ask you to leave out",
+        "personal_data_birth_date": "Date of birth. In the US and UK it is omitted to avoid age bias; in much of Latin America including it is normal.",
+        "personal_data_age": "Your age. Same reasoning as date of birth: omitted where law protects against age bias.",
+        "personal_data_marital_status": "Marital status. Not included in the US, UK or Canada; still used in parts of Latin America and Europe.",
+        "personal_data_nationality": "Nationality. Include it only when the posting asks about work authorisation; otherwise leave it out.",
+        "personal_data_id_number": "A national ID or passport number. It does not belong on a résumé: it is sensitive, and no hiring process needs it before an offer.",
+        "personal_data_gender": "Gender. Omitted in markets where law protects against bias."
       },
       "anatomy_now": "Now",
       "anatomy_after": "After",
@@ -2023,7 +2043,8 @@
       "term_meta_jd": "asked {jd}×",
       "term_meta_jd_unknown": "could not count it",
       "term_meta_cv": "you say it {cv}×",
-      "check_blocks_anyway": "no points — blocks you anyway"
+      "check_blocks_anyway": "no points — blocks you anyway",
+      "fix_replace_with": "Write one about {term}"
     },
     "cv_review": {
       "title": "AI Resume Review",
@@ -2072,7 +2093,8 @@
       "legend_action": "One-click fix",
       "legend_tip": "Manual tip",
       "diff_changes": "Changes",
-      "options_title": "Choose a version"
+      "options_title": "Choose a version",
+      "confirm_figure": "Check the figure: we proposed it from what you describe, and only you know the real number. Correct it before applying if it does not fit."
     },
     "ai_profile_fill": {
       "title": "AI Assistant",

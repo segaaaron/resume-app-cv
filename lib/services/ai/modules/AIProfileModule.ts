@@ -7,6 +7,7 @@ import {
   buildResumeContext,
   logAIUsage,
 } from "@/lib/ai-client"
+import { aiTellWords } from "../shared/cv-writing-doctrine"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
@@ -47,7 +48,7 @@ export class AIProfileModule {
     // run before any of the extraction machinery below, which needs a résumé
     // they do not have and do not want.
     if (input.mode) {
-      return await this.runMode(userId, input.mode, prompt, language, plan, sectionData)
+      return await this.runMode(userId, input.mode, prompt, language, plan, sectionData, { terms: input.postingTerms, title: input.postingTitle })
     }
 
     const sd = sectionData ?? {}
@@ -138,7 +139,7 @@ Rules:
 - ALWAYS use the exact ids from the section listing above. Use only the ids listed; never make one up.
 - Improved descriptions integrate what the candidate said + what already existed, cohesively and professionally.
 - Do not hard-code data (dates, companies, metrics) the candidate didn't mention.
-- Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release. Avoid AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven".
+- Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release. Avoid AI-tell words: ${aiTellWords("en")}.
 
 ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-second read):
 - Every bullet OPENS with a strong action verb (Built, Led, Reduced, Increased, Designed, Launched, Delivered, Automated, Migrated, Improved, Cut, Grew). NEVER open with a duty phrase ("Responsible for", "Helped with", "Worked on", "Involved in") or a pronoun.
@@ -206,7 +207,7 @@ Reglas:
 - Usa SIEMPRE los ids exactos del listado de secciones de arriba. Usá sólo los ids listados; nunca uses uno que no esté ahí.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
 - No afirmes datos (fechas, empresas, métricas) que el candidato no mencionó.
-- Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados".
+- Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: ${aiTellWords("es")}.
 
 ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundos de un reclutador):
 - Cada bullet ABRE con un verbo de acción fuerte (Desarrollé, Lideré, Reduje, Aumenté, Diseñé, Lancé, Entregué, Automaticé, Migré, Mejoré, Recorté). NUNCA abras con una frase de tarea ("Responsable de", "Ayudé con", "Trabajé en", "Encargado de") ni con un pronombre.
@@ -469,8 +470,15 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
     language: string,
     plan: string,
     sectionData?: Record<string, unknown>,
+    /** La vacante que el usuario está trabajando, cuando ya analizó una. */
+    posting?: { terms?: string[]; title?: string },
   ): Promise<FillProfileResult> {
-    const { system, user, maxTokens, writesProse } = buildModePrompt(mode, prompt, language, sectionData)
+    const { system, user, maxTokens, writesProse } = buildModePrompt(mode, prompt, language, sectionData, {
+      // La vacante que el usuario está trabajando, cuando ya analizó una. Falla
+      // abierto: sin oferta, el prompt es exactamente el de antes.
+      terms: posting?.terms,
+      title: posting?.title,
+    })
     // The prompt file declares what the task IS; this is the one place that maps
     // that to a model, so the prompt text stays free of the client and its db.
     const model = writesProse ? AI_MODEL_PROSE : AI_MODEL

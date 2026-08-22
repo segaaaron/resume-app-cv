@@ -51,7 +51,7 @@ export default function MinimalLineTemplate({ content, colorScheme, candidate }:
 
       {content.subject && (
         <p className="text-[11px] mb-6 text-gray-600">
-          <span className="font-medium">Asunto:</span> {content.subject}
+          <span className="font-medium">{t("subject_label")}:</span> {content.subject}
         </p>
       )}
 

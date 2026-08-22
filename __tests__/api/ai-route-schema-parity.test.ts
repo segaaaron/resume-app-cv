@@ -28,7 +28,6 @@ const ROUTE_TO_INPUT: Record<string, string> = {
   "generate-summary": "GenerateSummaryInput",
   "improve-bullet": "ImproveBulletInput",
   "improve-cover-letter": "ImproveCoverLetterInput",
-  "improve-summary": "ImproveSummaryInput",
   "review-cv": "ReviewCVInput",
   "skill-bullet": "SkillBulletInput",
   "tailor-cv": "TailorCVInput",
@@ -99,6 +98,10 @@ describe("AI route schemas accept every field their module reads", () => {
     // A new route added without a mapping here would silently escape the guard.
     const mapped = Object.keys(ROUTE_TO_INPUT)
     expect(mapped).toContain("generate-cover-letter")
-    expect(mapped.length).toBeGreaterThanOrEqual(11)
+    // 10 desde que se borró `improve-summary` (2026-08-22): ninguna pantalla lo
+    // llamaba y el resumen lo reescribe el ejecutor, que además sabe qué pide la
+    // vacante. El número está clavado a propósito — que baje tiene que ser una
+    // decisión, no un descuido.
+    expect(mapped.length).toBeGreaterThanOrEqual(10)
   })
 })

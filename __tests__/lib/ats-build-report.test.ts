@@ -9,6 +9,8 @@ import {
   isReadyToSend,
   openChecks,
   tailorWorkload,
+  applyAllPlan,
+  weavableTerms,
   REPORT_SECTIONS,
 } from "@/lib/ats/report"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
@@ -483,5 +485,262 @@ describe("qué puede llamarse crítico", () => {
     const c = allChecks(r).find((x) => x.id === "search.no_email")
     expect(c?.state).toBe("crit")
     expect(c?.weight).toBe(0)
+  })
+})
+
+/**
+ * LA SECCIÓN QUE COBRABA SIN DECIR POR QUÉ.
+ *
+ * «Searchability 25% — no me dice nada de cómo subirlo» (CEO, con captura,
+ * 2026-08-22). Los seis chequeos de `search` son condicionales y en un CV limpio
+ * no dispara ninguno: quedaba el número solo. Lo que ese número mide es el
+ * CARGO, y era lo único que no se decía.
+ */
+describe("el cargo de la vacante contra el del CV", () => {
+  const conTitulo = (coveragePct: number, extra: Partial<BuildReportInput> = {}) =>
+    input({
+      categories: [
+        { category: "title", coveragePct, weight: .15, share: .15, points: 4, recoverable: 11, basis: "chosen" },
+      ],
+      posting: { jobTitle: "iOS Developer", hardSkills: [], softSkills: [], mustHaves: [] },
+      cvTitles: ["Mobile Engineer", "Web Developer"],
+      ...extra,
+    })
+
+  it("con el cargo lejos, emite un hallazgo que lo nombra", () => {
+    const c = allChecks(buildAtsReport(conTitulo(25))).find((x) => x.id === "search.title")
+    expect(c).toBeDefined()
+    expect(c?.params?.wanted).toBe("iOS Developer")
+    expect(c?.params?.current).toBe("Mobile Engineer")
+    expect(c?.evidence).toEqual(["Mobile Engineer", "Web Developer"])
+  })
+
+  it("dice los puntos que están en juego, no cero", () => {
+    const c = allChecks(buildAtsReport(conTitulo(25))).find((x) => x.id === "search.title")
+    expect(c?.weight).toBe(11)
+  })
+
+  it("con el cargo ya cubierto, calla", () => {
+    const c = allChecks(buildAtsReport(conTitulo(100))).find((x) => x.id === "search.title")
+    expect(c).toBeUndefined()
+  })
+
+  it("sin vacante extraída, calla — no inventa un cargo objetivo", () => {
+    const c = allChecks(buildAtsReport(conTitulo(25, { posting: undefined }))).find((x) => x.id === "search.title")
+    expect(c).toBeUndefined()
+  })
+})
+
+/**
+ * UN PUESTO, UNA VOZ.
+ *
+ * Reportado con captura: seis tarjetas para tres puestos —«lleva 11 viñetas» y
+ * «lleva 11; para su antigüedad, 4-6»—, las dos sin salida. El dato es uno.
+ */
+describe("el volumen de viñetas se dice una sola vez y con tijera", () => {
+  const once = () => Array.from({ length: 11 }, (_, i) => `Línea ${i} del puesto con contenido suficiente`)
+  const conPuesto = () =>
+    input({
+      writing: emptyWriting({
+        bulletBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, kind: "too_many" }] as WritingChecks["bulletBalance"],
+        bulletRanking: [{
+          targetId: "job-1",
+          jobTitle: "iOS Developer",
+          strongest: once().slice(0, 6).map((text, index) => ({ index, text, score: 1 })),
+          weakest: once().slice(6).map((text, i) => ({ index: i + 6, text, score: 0 })),
+          weakestHidden: 0,
+        }] as unknown as WritingChecks["bulletRanking"],
+      }),
+      roleBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, min: 4, max: 6 }],
+    })
+
+  it("emite exactamente el excedente, ni una tarjeta más", () => {
+    const cortes = allChecks(buildAtsReport(conPuesto())).filter((c) => c.id.startsWith("tips.cut."))
+    expect(cortes.length).toBe(5)
+  })
+
+  it("y calla las dos tarjetas que decían el mismo dato sin salida", () => {
+    const ids = allChecks(buildAtsReport(conPuesto())).map((c) => c.id)
+    expect(ids).not.toContain("tips.balance.job-1")
+    expect(ids).not.toContain("tips.role_range.job-1")
+  })
+
+  it("cada corte nombra su línea y trae acción", () => {
+    const cortes = allChecks(buildAtsReport(conPuesto())).filter((c) => c.id.startsWith("tips.cut."))
+    for (const c of cortes) {
+      expect(c.evidence?.[0]).toBeTruthy()
+      expect(c.action?.targetId).toBe("job-1")
+      expect(typeof c.action?.index).toBe("number")
+    }
+  })
+
+  it("«aplicar todo» NUNCA borra una línea del CV", () => {
+    const report = buildAtsReport(conPuesto())
+    const plan = applyAllPlan(report, new Set(), new Set())
+    expect(plan.checkIds.filter((id) => id.startsWith("tips.cut."))).toEqual([])
+  })
+})
+
+/**
+ * «LOS ATS NO SUBEN CASI TODOS LOS SKILLS QUE TENGO» (CEO, 2026-08-22).
+ *
+ * La tabla de términos se armaba SÓLO con lo que la vacante pide, así que todo lo
+ * que el candidato sabe y esta oferta no nombra no aparecía en ninguna parte. Y
+ * la sección donde eso vive —«Otras palabras clave»— existía desde el rediseño
+ * con su texto explicativo y CERO contenido: ningún productor le mandaba un
+ * término. Un balde declarado y nunca llenado.
+ */
+describe("las habilidades propias que la vacante no pide", () => {
+  const conSkills = (over: Partial<BuildReportInput> = {}) =>
+    buildAtsReport(input({
+      matchedKeywords: ["Swift"],
+      missingKeywords: ["GraphQL"],
+      cvSkills: ["Swift", "Kotlin", "Fastlane"],
+      resumeText: "Swift Kotlin Fastlane",
+      evidenceText: "Kotlin",
+      ...over,
+    }))
+
+  it("aparecen, y en la sección que no mueve el puntaje", () => {
+    const otros = conSkills().terms.filter((t) => t.section === "other").map((t) => t.term)
+    expect(otros).toEqual(["Kotlin", "Fastlane"])
+  })
+
+  it("no se duplica lo que la vacante SÍ pide", () => {
+    const swift = conSkills().terms.filter((t) => t.term === "Swift")
+    expect(swift.length).toBe(1)
+    expect(swift[0].section).toBe("hard")
+  })
+
+  it("se distingue la que una viñeta respalda de la que sólo está en la lista", () => {
+    const otros = conSkills().terms.filter((t) => t.section === "other")
+    expect(otros.find((t) => t.term === "Kotlin")?.listOnly).toBe(false)
+    expect(otros.find((t) => t.term === "Fastlane")?.listOnly).toBe(true)
+  })
+
+  /**
+   * No mueven el puntaje, así que NO son trabajo del ejecutor. Meterlas ahí le
+   * daría al usuario renglones que no pueden mover el número — el mismo defecto
+   * de contar lo que no se cobra, del otro lado.
+   */
+  it("y nunca entran al trabajo del ejecutor", () => {
+    const r = conSkills()
+    const terms = weavableTerms(r).map((t) => t.term)
+    expect(terms).not.toContain("Kotlin")
+    expect(terms).not.toContain("Fastlane")
+  })
+})
+
+/**
+ * CORTAR SEGÚN LA POSICIÓN, NO SEGÚN LA REDACCIÓN.
+ *
+ *   «Según la posición que se ingresa, elimina bullets que no son necesarios
+ *    para esa posición... da sugerencias de eliminar y reemplazar por otro
+ *    bullet acorde a la posición.» (CEO, 2026-08-22)
+ *
+ * El ranking de `bullet-strength` mide verbo, cifra y largo: no sabe nada de la
+ * oferta. Con once líneas podía proponer cortar una bien escrita sobre Swift y
+ * dejar viva una que no le sirve a este puesto.
+ */
+describe("qué línea se ofrece cortar primero", () => {
+  const seis = (n: number) => Array.from({ length: n }, (_, i) => `Línea ${i} con contenido suficiente para el puesto`)
+
+  /** Once líneas: seis se quedan, cinco sobran. Dos no aterrizan ningún término. */
+  const conRelevancia = () =>
+    buildAtsReport(input({
+      missingKeywords: ["GraphQL", "Swift"],
+      jobDescription: "Buscamos GraphQL GraphQL GraphQL y Swift",
+      writing: emptyWriting({
+        bulletRanking: [{
+          targetId: "job-1",
+          jobTitle: "iOS Developer",
+          strongest: seis(6).map((text, index) => ({ index, text, score: 1 })),
+          // Las flojas por REDACCIÓN, de la más floja a la menos floja.
+          weakest: [6, 7, 8, 9, 10].map((index) => ({ index, text: `Línea ${index} con contenido suficiente para el puesto`, score: 0 })),
+          weakestHidden: 0,
+        }] as unknown as WritingChecks["bulletRanking"],
+      }),
+      roleBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, min: 4, max: 6 }],
+      // La 9 y la 10 son las únicas que NO aterrizan un término de la vacante.
+      bullets: [6, 7, 8, 9, 10].map((index) => ({
+        targetId: "job-1", index, text: `Línea ${index} con contenido suficiente para el puesto`,
+        verb: true, metric: false, words: 8,
+        keywords: index >= 9 ? [] : ["Swift"],
+      })),
+    }))
+
+  it("las que no dicen nada de lo que la vacante pide van primero", () => {
+    const cortes = allChecks(conRelevancia()).filter((c) => c.id.startsWith("tips.cut."))
+    expect(cortes[0].id).toBe("tips.cut.job-1.9")
+    expect(cortes[1].id).toBe("tips.cut.job-1.10")
+  })
+
+  it("y se les dice esa razón, no «es de las más flojas»", () => {
+    const cortes = allChecks(conRelevancia()).filter((c) => c.id.startsWith("tips.cut."))
+    expect(cortes[0].titleKey).toBe("check.cut_irrelevant")
+    expect(cortes.find((c) => c.id === "tips.cut.job-1.6")?.titleKey).toBe("check.cut_bullet")
+  })
+
+  /** Cortar deja un hueco. Lo que va en su lugar sale del informe, no del aire. */
+  it("cada corte propone con qué reemplazarla: el término más pedido que falta", () => {
+    const cortes = allChecks(conRelevancia()).filter((c) => c.id.startsWith("tips.cut."))
+    expect(cortes[0].params?.replacement).toBe("GraphQL")
+  })
+
+  it("sin términos faltantes no promete un reemplazo", () => {
+    const r = buildAtsReport(input({
+      missingKeywords: [],
+      writing: emptyWriting({
+        bulletRanking: [{
+          targetId: "job-1", jobTitle: "iOS Developer",
+          strongest: seis(6).map((text, index) => ({ index, text, score: 1 })),
+          weakest: [{ index: 6, text: "Línea 6 con contenido suficiente", score: 0 }],
+          weakestHidden: 0,
+        }] as unknown as WritingChecks["bulletRanking"],
+      }),
+    }))
+    const cortes = allChecks(r).filter((c) => c.id.startsWith("tips.cut."))
+    expect(cortes.length).toBeGreaterThan(0)
+    expect(cortes[0].params?.replacement).toBeUndefined()
+  })
+})
+
+/**
+ * QUÉ FUSIÓN OFRECER PRIMERO — LA QUE LE SIRVE A ESTE PUESTO.
+ *
+ *   «Para unir algo, la IA que sugiera cosas según el puesto que solicita.»
+ *   (CEO, 2026-08-22)
+ *
+ * QUIÉN propone el par lo sigue decidiendo el coseno de embeddings, que es la
+ * única señal que separó los pares reales de los distintos. Lo que faltaba era
+ * CUÁL PRIMERO: fusionar libera un renglón, y conviene liberarlo donde ninguna
+ * de las dos líneas le habla a la vacante.
+ */
+describe("el orden de las fusiones lo decide la vacante", () => {
+  const b = (index: number, keywords: string[]) => ({
+    targetId: "job-1", index, text: `Línea ${index}`, verb: true, metric: false, words: 8, keywords,
+  })
+  const r = () =>
+    buildAtsReport(input({
+      writing: emptyWriting({
+        mergeCandidates: [
+          // Primero en la entrada, pero las dos SÍ le hablan al puesto.
+          { targetId: "job-1", jobTitle: "iOS", indexes: [0, 1], texts: ["Línea 0", "Línea 1"] },
+          // Segundo en la entrada, y ninguna de las dos aporta al puesto.
+          { targetId: "job-1", jobTitle: "iOS", indexes: [2, 3], texts: ["Línea 2", "Línea 3"] },
+        ] as unknown as WritingChecks["mergeCandidates"],
+      }),
+      bullets: [b(0, ["Swift"]), b(1, ["Swift"]), b(2, []), b(3, [])],
+    }))
+
+  it("el par que no le sirve al puesto se ofrece primero", () => {
+    const ids = allChecks(r()).filter((c) => c.id.startsWith("tips.merge.")).map((c) => c.id)
+    expect(ids[0]).toBe("tips.merge.job-1.2.3")
+  })
+
+  it("y la tarjeta dice esa razón, no sólo «se parecen»", () => {
+    const cards = allChecks(r()).filter((c) => c.id.startsWith("tips.merge."))
+    expect(cards[0].titleKey).toBe("check.merge_pair_offtarget")
+    expect(cards[1].titleKey).toBe("check.merge_pair")
   })
 })

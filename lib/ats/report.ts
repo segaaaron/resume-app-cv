@@ -121,6 +121,29 @@ export interface ReportCheck {
    * razón — meterlo ahí sería etiquetar mal para ahorrarse un campo.
    */
   fixHint?: string
+  /**
+   * ESTO INFORMA. NO HAY NADA QUE APLICAR, Y ES A PROPÓSITO.
+   *
+   * ── POR QUÉ HIZO FALTA UN TERCER ESTADO (CEO, 2026-08-22) ────────────────
+   *
+   *   «Agregá esta parte pero sólo como información, sin que se pueda ejecutar
+   *    algún cambio.»
+   *
+   * Hasta acá un hallazgo era `tailor` (lo escribe el modelo), `auto` (lo aplica
+   * el código) o `user` (sólo él tiene el dato que falta). Los tres asumen que
+   * hay UNA respuesta correcta y que alguien la va a escribir.
+   *
+   * La foto en el CV no tiene respuesta correcta: en EE.UU. descarta por
+   * precaución legal, en México es estándar. Depende de a dónde se postule, y eso
+   * no lo sabemos. Con `owner: "user"` la tarjeta le prometía «ponelo en el
+   * editor y el chequeo se cierra solo» — y este chequeo no se cierra nunca,
+   * porque no hay nada que cerrar.
+   *
+   * Un informativo no lleva botón, no pesa en el puntaje, no cuenta como trabajo
+   * pendiente y no dispara el aviso de «hallazgo sin salida»: su salida es
+   * saberlo.
+   */
+  informational?: boolean
 }
 
 export interface ReportSection {
@@ -320,7 +343,9 @@ export function findDuplicateCheckIds(report: AtsReport): string[] {
 
 /** Lo que todavía no está resuelto. Es lo único que se muestra como pendiente. */
 export function openChecks(report: AtsReport): ReportCheck[] {
-  return allChecks(report).filter((c) => c.state !== "pass")
+  // Un informativo no es trabajo abierto: no hay nada que hacer con él, así que
+  // contarlo inflaría «te quedan N pendientes» con algo que nunca baja.
+  return allChecks(report).filter((c) => c.state !== "pass" && !c.informational)
 }
 
 /** Los que descalifican. Con uno abierto, el CV no está listo para mandar. */
@@ -385,7 +410,16 @@ export function applyAllPlan(
   addedTerms?: ReadonlySet<string>,
 ): { checkIds: string[]; terms: string[] } {
   return {
-    checkIds: solvableChecks(report).filter((c) => !appliedIds.has(c.id)).map((c) => c.id),
+    /**
+     * CORTAR NUNCA ENTRA EN «APLICAR TODO».
+     *
+     * Todo lo demás que este botón hace se puede deshacer mirando el diff; borrar
+     * una línea del CV de alguien en un clic masivo, no. `tips.cut.*` propone
+     * cuál sobra y esa propuesta se acepta de a una, con la línea a la vista.
+     */
+    checkIds: solvableChecks(report)
+      .filter((c) => !appliedIds.has(c.id) && !c.id.startsWith("tips.cut."))
+      .map((c) => c.id),
     // Los «sólo en la lista» NO se filtran por `addedTerms`: ese conjunto marca
     // lo agregado a Habilidades, y estos YA estaban ahí — lo que les falta es la
     // viñeta, que es otro trabajo.
@@ -393,8 +427,15 @@ export function applyAllPlan(
   }
 }
 
+/**
+ * LO QUE ESTA VACANTE PIDE Y EL CV NO DICE. `other` queda fuera, y no es un
+ * detalle: esa sección son las habilidades PROPIAS del candidato que la oferta no
+ * nombra. No mueven el puntaje, así que meterlas acá le daría trabajo al ejecutor
+ * —y renglones a «aplicar todo»— que no puede mover el número. Un balde que
+ * cuenta lo que no cobra es el mismo defecto, del otro lado.
+ */
 export function missingTerms(report: AtsReport): ReportTerm[] {
-  return report.terms.filter((t) => t.jd > 0 && t.cv === 0)
+  return report.terms.filter((t) => t.section !== "other" && t.jd > 0 && t.cv === 0)
 }
 
 /**
@@ -411,7 +452,7 @@ export function missingTerms(report: AtsReport): ReportTerm[] {
  * captura: diez habilidades listadas y ninguna forma visible de resolverlas.
  */
 export function unbackedTerms(report: AtsReport): ReportTerm[] {
-  return report.terms.filter((t) => t.jd > 0 && t.cv > 0 && t.listOnly)
+  return report.terms.filter((t) => t.section !== "other" && t.jd > 0 && t.cv > 0 && t.listOnly)
 }
 
 /**
@@ -474,5 +515,8 @@ export function isActionable(check: ReportCheck): boolean {
   // términos, que entran al modal como tarjeta propia en vez de como un ítem del
   // chequeo — contarlos en los dos lados era el doble conteo que este panel ya
   // pagó una vez.
+  // Un informativo tiene salida por definición: su salida es saberlo. Sin esto
+  // la tarjeta pintaría «diagnóstico sin puerta» sobre algo que nunca la tuvo.
+  if (check.informational) return true
   return check.owner === "user" || check.owner === "tailor" || !!check.action
 }

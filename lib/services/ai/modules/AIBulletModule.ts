@@ -6,12 +6,13 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, resolveLanguage, hasHardCodedFact, losesStatedFigure } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hasHardCodedFact, hardCodedFactKind, proposesRangeFigure, losesStatedFigure } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit, isCosmeticReword, addsNoInformation, dropsContentWithoutGain } from "../shared/text-similarity"
 import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
+import { reportGuardDrops } from "../shared/guard-metrics"
 import { assessDescription, isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
 import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 import { hasCliche } from "../shared/cliches"
@@ -258,7 +259,7 @@ TRANSFORMATION RULES:
    - Operations/Process: Reduced, Standardized, Implemented, Centralized, Increased, Structured
    - Sales/Business/Marketing: Grew, Closed, Negotiated, Expanded, Positioned, Captured, Generated
 4. ATS: ${atsRule}
-5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never supply one yourself.
+5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never supply one yourself.
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
 7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. Either end on a concrete result the source states (a number, a named system, a real outcome) or end on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
 8. LEAVE STRONG BULLETS ALONE. If a bullet already opens with a strong action verb AND names specific work (real tools, systems, or outcomes), it is already good — OMIT it. Do NOT reword it just to phrase it differently or "tighten" it: swapping "enhance"→"expand" or dropping "strengthen team performance" makes it DIFFERENT, not better, and quietly loses detail the candidate stated. Only rewrite such a bullet if you can ADD a concrete result, number, or keyword the source supports. When in doubt, leave it.
@@ -293,7 +294,7 @@ REGLAS DE TRANSFORMACIÓN:
    - Operaciones/Procesos: Reduje, Estandaricé, Implementé, Centralicé, Incrementé, Estructuré
    - Ventas/Negocio/Marketing: Crecí, Cerré, Negocié, Expandí, Posicioné, Capturé, Generé
 4. ATS: ${atsRuleEs}
-5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo pongas vos.
+5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo pongas vos.
 6. Cada entrada reemplaza exactamente UN bullet original: da su "index" y prefija el texto con "• ". Nunca fusiones, dividas ni reordenes bullets.
 7. TERMINA EN SUSTANCIA. Nunca cierres un bullet con una cola de impacto vaga que no nombra nada concreto — colas prohibidas: "para mejorar X", "para asegurar/garantizar/fortalecer Y", "contribuyendo a la eficiencia", "asegurando el desarrollo", "mejorando la experiencia", "optimizando el rendimiento", y cualquier "…para <verbo> <sustantivo abstracto>" añadido para sonar impactante. Termina en un resultado concreto que el source declare (una cifra, un sistema nombrado, un resultado real) o termina en la acción concreta misma. Un bullet más corto que se detiene en el trabajo real gana a uno rellenado con una cláusula de propósito hueca.
 8. DEJA EN PAZ LOS BULLETS YA FUERTES. Si un bullet ya empieza con un verbo de acción fuerte Y nombra trabajo específico (herramientas, sistemas o resultados reales), ya está bien — OMÍTELO. NO lo reescribas solo para decirlo distinto o "condensarlo": cambiar "mejorar"→"ampliar" o eliminar "fortalecer el rendimiento del equipo" lo hace DIFERENTE, no mejor, y pierde en silencio detalle que el candidato declaró. Reescribe un bullet así SOLO si puedes AGREGAR un resultado concreto, cifra o keyword que el source respalde. Ante la duda, déjalo.
@@ -361,6 +362,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       let droppedHardCoded = 0
       let droppedTrivial = 0
       let droppedDuplicate = 0
+      // Separados del "trivial" a propósito: son los dos motivos CAROS. Meterlos
+      // en la misma bolsa hacía imposible ver si el prompt empezó a comerse
+      // cifras o términos de la vacante, que es lo que baja el puntaje.
+      let droppedFigure = 0
+      let droppedTerm = 0
 
       // Every entry is addressed by index, so a rejected entry is simply absent —
       // no "" padding to keep positions aligned, and no way for a drop to shift
@@ -378,9 +384,29 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         // count, and let apply-all silently pick whichever came last.
         if (seenIndices.has(index)) { droppedDuplicate++; continue }
 
-        // Placeholders are now banned outright, so allowPlaceholders is off: a
-        // suggestion carrying "[N users]" is a hard-coded fact like any other.
-        if (hasHardCodedFact(suggested, source)) { droppedHardCoded++; continue }
+        /**
+         * POSTURA A (ver «LA POLÍTICA DE LA CIFRA» en `ai-helpers`).
+         *
+         * Esto reescribe una viñeta que ESCRIBIÓ EL CANDIDATO, así que hay un
+         * relato detrás y la doctrina autoriza proponer el tamaño como rango que
+         * él confirma. Antes esto devolvía un booleano y tiraba la reescritura
+         * entera: le pedíamos el rango en el prompt y le borrábamos la respuesta.
+         *
+         * Placeholder y marca no declarada se siguen descartando sin preguntar:
+         * ésos no son una propuesta, son un dato falso sobre él.
+         */
+        const factKind = hardCodedFactKind(suggested, source)
+        if (factKind === "placeholder" || factKind === "brand") { droppedHardCoded++; continue }
+        /**
+         * Y la cifra sólo sobrevive SI ES UN RANGO A CONFIRMAR.
+         *
+         * «Entre 50 y 100 transacciones por día» es una pregunta que él contesta;
+         * «reduje las fallas un 40%» es una afirmación que nunca hizo. La
+         * doctrina distingue las dos con esas palabras — el guard no lo hacía, y
+         * por eso tenía que elegir entre tirar la propuesta legítima (lo que
+         * hacía) o dejar pasar un resultado fabricado.
+         */
+        if (factKind === "figure" && !proposesRangeFigure(suggested)) { droppedHardCoded++; continue }
         if (isTrivialEdit(original, suggested)) { droppedTrivial++; continue }
         // Same guard Review uses: a synonym-only swap ("enhance"→"improve") on an
         // otherwise-identical bullet reads the same on both sides — drop it rather
@@ -427,7 +453,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
          * botón rotulado como mejora y pierde lo único de esa línea que un
          * reclutador puede pesar.
          */
-        if (losesStatedFigure(original, suggested)) { droppedTrivial++; continue }
+        if (losesStatedFigure(original, suggested)) { droppedFigure++; continue }
         /**
          * NI DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.
          *
@@ -441,7 +467,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
          * cuenta la cobertura: el guard y el puntaje no pueden discrepar.
          * Sin vacante analizada la lista viene vacía y esto no descarta nada.
          */
-        if (droppedPostingTerms(original, suggested, postingTerms).length > 0) { droppedTrivial++; continue }
+        if (droppedPostingTerms(original, suggested, postingTerms).length > 0) { droppedTerm++; continue }
 
         seenIndices.add(index)
 
@@ -454,6 +480,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           .map((a) => ({ ...a, text: a.text.trim() }))
           .filter((a) => a.text
             && a.text !== suggested
+            // En las alternativas sí se descarta la cifra propuesta: el usuario
+            // elige una de tres con un clic, y confirmar un rango por cada opción
+            // convierte una decisión en tres. La recomendada ya trae esa puerta.
             && !hasHardCodedFact(a.text, source)
             && !isTrivialEdit(original, a.text)
             && !losesStatedFigure(original, a.text)
@@ -462,6 +491,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           .slice(0, 2)
 
         improvements.push({
+          ...(factKind === "figure" ? { needsFigureConfirm: true } : {}),
           index,
           text: suggested,
           why: why?.trim() || undefined,
@@ -469,15 +499,29 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         })
       }
 
-      if (droppedHardCoded > 0 || droppedTrivial > 0 || droppedDuplicate > 0) {
-        this.logger.warn("[AIService.improveBullet] dropped suggestions", {
-          droppedHardCoded,
-          droppedTrivial,
-          droppedDuplicate,
-          kept: improvements.length,
-          returnedByModel: (parsed.improvements as unknown[]).length,
-        })
-      }
+      /**
+       * LO QUE LOS GUARDS TIRAN, VISIBLE.
+       *
+       * ── EL HUECO (pase de QA, 2026-08-22) ────────────────────────────────
+       *
+       * Esto salía por `logger.warn`, que va a la consola del contenedor. El
+       * propio comentario de `guard-metrics` lo dice: nadie los leyó nunca. El
+       * instrumento que los pone en el panel de admin existe desde la sesión
+       * pasada y estaba cableado a UNO de los cuatro endpoints que filtran.
+       *
+       * Sin esto, «el usuario ve menos sugerencias» y no hay forma de saber si
+       * es porque su CV ya está bien o porque nos estamos comiendo su trabajo —
+       * que es exactamente la pregunta que el CEO hizo.
+       */
+      reportGuardDrops({
+        endpoint: "improve-bullet",
+        offered: (parsed.improvements as unknown[]).length,
+        kept: improvements.length,
+        hardCoded: droppedHardCoded,
+        figureLoss: droppedFigure,
+        trivial: droppedTrivial + droppedDuplicate,
+        termLoss: droppedTerm,
+      })
       return improvements
     }
 

@@ -74,7 +74,7 @@ export default function DiagonalTemplate({ content, colorScheme, candidate }: Te
 
         {content.subject && (
           <p className="text-[11px] font-semibold mb-4 text-gray-700">
-            Asunto: <span className="font-normal">{content.subject}</span>
+            {t("subject_label")}: <span className="font-normal">{content.subject}</span>
           </p>
         )}
 

@@ -11,6 +11,10 @@ const schema = z.object({
   indexes: z.tuple([z.number().int().min(0).max(200), z.number().int().min(0).max(200)]),
   sectionData: z.record(z.string(), z.unknown()),
   language: z.enum(["es", "en"]).optional(),
+  // Los términos que la vacante pide: fusionar es la única acción que BORRA
+  // texto, y sin esto el modelo unía sin saber qué no puede soltar. Mismo tope
+  // que `postingTermsForPrompt` produce.
+  postingTerms: z.array(z.string().max(120)).max(30).optional(),
 })
 
 export async function POST(req: Request) {

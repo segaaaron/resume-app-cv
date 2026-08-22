@@ -120,7 +120,19 @@ describe("ningún módulo que reescribe el CV se salta la regla de la cifra", ()
     AITailorModule: "escribe el reemplazo de una viñeta contra la vacante",
     AIReviewModule: "propone el reemplazo que el botón del panel escribe",
     AIBulletModule: "reescribe una viñeta desde el editor",
-    AISummaryModule: "reescribe el resumen, que el matcher lee como cualquier viñeta",
+    /**
+     * ── AISummaryModule SALIÓ DE ESTA LISTA (2026-08-22) ─────────────────────
+     *
+     * Estaba acá por `improveSummary`, que REESCRIBÍA un resumen existente: ahí
+     * sí había términos que soltar. Ese endpoint se borró —ninguna pantalla lo
+     * llamaba y el ejecutor ya reescribe el resumen sabiendo qué pide la
+     * vacante—, y lo que queda en el módulo es `generateSummary`, que escribe
+     * desde CERO: no hay texto previo del que perder un término.
+     *
+     * Sigue recibiendo `postingTerms` (lo comprueba el test de más abajo) y su
+     * prompt le exige usar sólo los que el perfil respalde. Lo que ya no aplica
+     * es el guard de PÉRDIDA, porque no hay de dónde perder.
+     */
   }
   for (const [m, porque] of Object.entries(CONTRA_LA_VACANTE)) {
     it(`${m} protege los términos de la vacante — ${porque}`, () => {
@@ -153,5 +165,66 @@ describe("ningún módulo que reescribe el CV se salta la regla de la cifra", ()
     const code = src("AIBulletModule")
     const alts = code.slice(code.indexOf("const alternatives"), code.indexOf(".slice(0, 2)"))
     expect(alts, "una alternativa puede borrar la cifra").toContain("losesStatedFigure")
+  })
+})
+
+/**
+ * LA OTRA MITAD DE LA REGLA DE LA CIFRA: NO BORRARLA ≠ NO PROPONERLA.
+ *
+ * ── LA CONTRADICCIÓN (barrido, 2026-08-22) ─────────────────────────────────
+ *
+ * Todo lo de arriba vigila que nadie BORRE una cifra del candidato. Faltaba lo
+ * simétrico, y era una contradicción de fondo con la doctrina que le mandamos al
+ * modelo: «proponé el tamaño medible como RANGO que él confirma en un clic».
+ *
+ * Seis de siete módulos usaban `hasHardCodedFact`, un booleano: cualquier número
+ * ausente de la fuente tiraba la respuesta ENTERA. Le pedíamos el rango y le
+ * borrábamos la respuesta. Y tailor hacía el error opuesto: dejaba pasar
+ * CUALQUIER cifra con un chip de «confirmá», incluido un resultado exacto que el
+ * candidato nunca contó — un chip no vuelve legítimo un hecho fabricado.
+ *
+ * ── LAS DOS POSTURAS VÁLIDAS, Y HAY QUE ELEGIR UNA ─────────────────────────
+ *
+ *  A. El texto nace de un RELATO del candidato → `hardCodedFactKind`, la cifra
+ *     sobrevive sólo si viene como rango, y viaja `needsFigureConfirm` hasta una
+ *     pantalla que pregunta.
+ *  B. El texto se escribe DE CERO, sin relato que medir → se descarta, y el
+ *     prompt tiene que DECIR esa acotación, o el modelo obedece a la doctrina y
+ *     nosotros lo castigamos en silencio.
+ *
+ * Este registro obliga a que el octavo módulo elija, en vez de heredar la
+ * postura de la línea que alguien copió.
+ */
+const POSTURA: Record<string, { postura: "A" | "B"; razon: string }> = {
+  AITailorModule: { postura: "A", razon: "reescribe la viñeta que él escribió: hay relato que medir" },
+  AIBulletModule: { postura: "A", razon: "lo mismo, desde el editor" },
+  // Faltaba, y era el más caro de olvidar: su preview es lo que el botón del
+  // panel escribe en el CV. Se descubrió contando qué módulo usaba qué guard,
+  // no leyendo el registro — un registro incompleto no avisa de lo que le falta.
+  AIReviewModule: { postura: "A", razon: "su preview reescribe la línea del candidato y el panel la aplica" },
+  AIMergeBulletsModule: { postura: "B", razon: "funde dos líneas suyas; una cifra nueva no sale de ningún relato" },
+  AISkillBulletModule: { postura: "B", razon: "escribe una línea de cero; el prompt declara la acotación" },
+  AICoverLetterModule: { postura: "B", razon: "la carta no puede afirmar cifras que el CV no trae" },
+}
+
+describe("cada módulo declara qué hace con una cifra propuesta", () => {
+  for (const [m, { postura }] of Object.entries(POSTURA)) {
+    it(`${m} sigue la postura ${postura}`, () => {
+      const code = src(m)
+      if (postura === "A") {
+        expect(code, "descarta la cifra que la doctrina autoriza").toContain("hardCodedFactKind")
+        expect(code, "deja pasar cualquier cifra, no sólo el rango").toContain("proposesRangeFigure")
+      } else {
+        expect(code, "usa el camino que pregunta sin tener pantalla que pregunte").toContain("hasHardCodedFact")
+      }
+    })
+  }
+
+  /**
+   * Y la postura B tiene que estar DICHA en el prompt. Un módulo que descarta en
+   * silencio lo que la doctrina autoriza es la contradicción, no su arreglo.
+   */
+  it("los que descartan la cifra lo declaran en su prompt", () => {
+    expect(src("AISkillBulletModule")).toContain("NARROWING FOR THIS ONE BULLET")
   })
 })

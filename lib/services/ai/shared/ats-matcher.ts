@@ -48,6 +48,16 @@ export interface SectionPresence {
   education: boolean
 }
 
+/**
+ * Red de seguridad, NO un tope de producto.
+ *
+ * Lo que se reporta sale de lo que la vacante pide, y eso ya viene acotado por el
+ * schema de extracción (30 duras, 20 blandas, 20 requisitos). Este número está
+ * por encima de ese techo a propósito: existe para que una respuesta absurda no
+ * llegue entera a la pantalla, no para decidir cuánto ve el usuario.
+ */
+const MAX_REPORTED = 40
+
 export interface ATSMatchResult {
   score: number
   subScores: ATSSubScores
@@ -407,10 +417,31 @@ export function computeATSMatch(
       title,
       sections: sectionsPct,
     },
-    matchedKeywords: dedupe(hard.matched).slice(0, 12),
-    missingKeywords: hard.missing.slice(0, 8),
-    missingMustHaves: must.missing.slice(0, 6),
-    missingSoftSkills: soft.missing.slice(0, 6),
+    /**
+     * ── LOS CORTES QUE ESCONDÍAN EL TRABAJO (reportado, 2026-08-22) ──────────
+     *
+     *   «Los ATS no suben casi todos los skills que tengo, solo me marca estos.»
+     *   «Cuando lo hago correr de nuevo me salen otras opciones.»
+     *
+     * Estas listas nacieron alimentando una tarjeta chica y hoy alimentan el
+     * informe entero: la tabla de términos, el trabajo del ejecutor y «aplicar
+     * todo». Con 8 faltantes visibles de 15 reales, el usuario resolvía ocho,
+     * volvía a analizar y aparecían los siete que nunca vio — indistinguible de
+     * un panel que fabrica trabajo nuevo en cada vuelta.
+     *
+     * Y el puntaje SÍ los contaba: `hard.pct` se calcula sobre el conjunto
+     * completo. O sea que el número cobraba exactamente lo que la lista escondía,
+     * que es lo único que este panel no puede hacer.
+     *
+     * El universo ya está acotado río arriba —la extracción de la vacante no
+     * devuelve más de lo que su schema admite—, así que acá no hace falta un
+     * tope: cortar de nuevo sólo puede esconder. `MAX_REPORTED` queda como red
+     * contra una respuesta absurda, por encima de cualquier vacante real.
+     */
+    matchedKeywords: dedupe(hard.matched).slice(0, MAX_REPORTED),
+    missingKeywords: hard.missing.slice(0, MAX_REPORTED),
+    missingMustHaves: must.missing.slice(0, MAX_REPORTED),
+    missingSoftSkills: soft.missing.slice(0, MAX_REPORTED),
     // The stuffing answer. Dumping every missing keyword into Skills still
     // moves the score — coverage only asks whether the word is there — but now
     // all of them come back listed-only, and the user sees exactly which
@@ -421,8 +452,8 @@ export function computeATSMatch(
     // may duplicate or OMIT one — a real risk of a button that edits the wrong
     // thing. Fixed at the source rather than in the render, so every consumer of
     // these lists gets one entry per requirement.
-    demonstratedKeywords: dedupe([...hard.demonstrated, ...soft.demonstrated]).slice(0, 12),
-    listedOnlyKeywords: dedupe([...hard.listedOnly, ...soft.listedOnly]).slice(0, 12),
+    demonstratedKeywords: dedupe([...hard.demonstrated, ...soft.demonstrated]).slice(0, MAX_REPORTED),
+    listedOnlyKeywords: dedupe([...hard.listedOnly, ...soft.listedOnly]).slice(0, MAX_REPORTED),
   }
 }
 

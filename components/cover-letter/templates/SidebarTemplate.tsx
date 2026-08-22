@@ -74,7 +74,7 @@ export default function SidebarTemplate({ content, colorScheme, candidate }: Tem
 
         {content.subject && (
           <p className="text-[11px] font-semibold mb-4">
-            <span className="text-gray-500 font-normal">Asunto: </span>{content.subject}
+            <span className="text-gray-500 font-normal">{t("subject_label")}: </span>{content.subject}
           </p>
         )}
 

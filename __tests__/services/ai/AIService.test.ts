@@ -457,8 +457,19 @@ describe("AIService", () => {
       }, "PRO")
 
       expect(typeof result.score).toBe("number")
-      // Processed set is capped at 12 hard skills → matched + missing ≤ 12.
-      expect(result.matchedKeywords.length + result.missingKeywords.length).toBeLessThanOrEqual(12)
+      /**
+       * ── QUÉ CAMBIÓ ACÁ, Y POR QUÉ (2026-08-22) ──────────────────────────
+       *
+       * Este test nació para una cosa —una extracción larga NO puede tumbar el
+       * análisis— y de paso fijó el corte de 12 en la SALIDA. Ese corte era el
+       * defecto reportado: «los ATS no suben casi todos los skills que tengo,
+       * sólo me marca estos». El puntaje se calculaba sobre las 18 y la pantalla
+       * listaba 12, así que el número cobraba lo que la lista escondía.
+       *
+       * La intención original se conserva y se afirma más fuerte: no revienta, y
+       * ahora además NO ESCONDE — las 18 que el modelo devolvió se reportan.
+       */
+      expect(result.matchedKeywords.length + result.missingKeywords.length).toBe(many.length)
     })
 
     it("matches a skill listed past the 12th — the full skills list feeds the ATS haystack", async () => {

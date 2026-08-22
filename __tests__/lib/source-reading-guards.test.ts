@@ -80,11 +80,12 @@ const REGISTRO: Record<string, { max: number; razon: string }> = {
   "lib/ats-panel-memory.test.ts": { max: 1, razon: "la copia del estado final existe en los dos idiomas" },
   "lib/ats-no-duplicate-sections.test.ts": { max: 1, razon: "el panel no conserva ningún bloque propio" },
   "lib/impact-scoring.test.ts": { max: 1, razon: "la banda de cuantificación tiene un solo dueño, no una copia en el panel" },
-  "lib/doctrine-ownership.test.ts": { max: 3, razon: "los tres prompts que escriben prosa del CV citan la doctrina compartida" },
+  "lib/doctrine-ownership.test.ts": { max: 12, razon: "los SIETE prompts que escriben prosa del CV citan la doctrina compartida, y ninguno lleva su copia de la lista de palabras-IA" },
   "lib/grounding-covers-the-work.test.ts": { max: 2, razon: "el grounding del ejecutor ya no recorta a ciegas los puestos" },
   "lib/no-invention-framing.test.ts": { max: 1, razon: "la extracción conserva el no-inventes; los seis de prosa no" },
   "lib/modal-stacking.test.ts": { max: 7, razon: "ningún modal vuelve a elegir su capa a mano; el defecto es una clase que NO debe estar" },
   "lib/figure-guard-ownership.test.ts": { max: 14, razon: "la regla de la cifra es una llamada AUSENTE en el módulo que se la salta" },
+  "lib/language-parity.test.ts": { max: 8, razon: "un bloque de prompt escrito en una sola rama es una AUSENCIA: del lado que falta no hay comportamiento que ejecutar" },
   "lib/dial-tone.test.ts": { max: 1, razon: "el tono no puede volver a recibir los críticos; se vigila la FIRMA, que es una ausencia" },
 }
 

@@ -3,7 +3,6 @@ import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL_PROSE,
   AI_TEMPERATURE_GENERATIVE,
-  AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
   logAIUsage,
 } from "@/lib/ai-client"
@@ -15,17 +14,14 @@ import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { askUntilAnswered, retryNudge } from "../shared/never-empty"
-import { cvValueBar, noHardCodedFactsRule } from "../shared/cv-writing-doctrine"
+import { aiTellWords, cvValueBar, noHardCodedFactsRule } from "../shared/cv-writing-doctrine"
 import { buildModePrompt } from "./profile-modes"
 import { computeCostUsd } from "../shared/cost-tracker"
-import { isTrivialEdit } from "../shared/text-similarity"
-import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
-import { assessSummary, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
+import { extractProfileMetrics } from "../shared/summary-quality"
 import { clicheBanList } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
   type GenerateSummaryInput,
-  type ImproveSummaryInput,
   type SummaryVersionType,
   type VersionsResult,
 } from "../shared/ai-types"
@@ -122,7 +118,7 @@ ABSOLUTE RULES:
 • No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
 • Never leave a bracket like [X%]: unfilled, in a CV it reads as unfinished.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
-• Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
+• Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: ${aiTellWords("en")}. Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
 
 
 ${numbersRuleEN}
@@ -165,7 +161,7 @@ REGLAS ABSOLUTAS:
 • Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
 • Nunca dejes un corchete tipo [X%]: sin rellenar, en un CV se lee como algo sin terminar.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
-• Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
+• Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: ${aiTellWords("es")}. Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
 
 
 ${numbersRuleES}
@@ -303,330 +299,4 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     })
   }
 
-  async improveSummary(userId: string, input: ImproveSummaryInput, plan: string): Promise<VersionsResult> {
-    const { summary, userDescription, sectionData, language: rawLanguage } = input
-    const postingTerms = input.postingTerms ?? []
-    const { language, langInstruction } = resolveLanguage(rawLanguage)
-
-    const hasSummary = summary && typeof summary === "string" && summary.trim().length > 10
-    const hasDescription = userDescription && typeof userDescription === "string" && userDescription.trim().length >= 5
-
-    if (!hasSummary && !hasDescription) throw new AppError("missing_content", 400)
-
-    if (hasSummary) {
-      const validation = validateAIInput(summary!, AI_INPUT_LIMITS.summary)
-      if (!validation.valid) throw new AppError("invalid_input", 400)
-    }
-    if (hasDescription) {
-      const validation = validateAIInput(userDescription!, AI_INPUT_LIMITS.userDescription)
-      if (!validation.valid) throw new AppError("invalid_input", 400)
-    }
-
-    // Decide in code whether there is anything to improve, before spending a
-    // call. The prompt's STEP 0 asks the model this same question and the model
-    // never says yes — measured 0/5 on a summary meeting every criterion it
-    // lists. This endpoint returns 3 versions or nothing, and "nothing" reads to
-    // the model like failing the task, so it always writes three. The criteria
-    // are mechanical; a regex answers them exactly, for free, every time.
-    // Only when the user is polishing an existing summary — a userDescription
-    // means they are asking for a rewrite from new input, which is not a
-    // quality question.
-    //
-    // The figures are the candidate's wherever they typed them: the CV, the
-    // summary in front of them, or the box they described themselves in. This
-    // used to read sectionData alone, so a user with no CV who wrote "cut churn
-    // 30%" stated a figure the check could not see.
-    const metrics = [
-      ...extractProfileMetrics(sectionData),
-      ...extractMetricsFromText(summary),
-      ...extractMetricsFromText(userDescription),
-    ]
-
-    if (hasSummary && !hasDescription) {
-      const quality = assessSummary(summary!, metrics.length > 0)
-      if (quality.alreadyGood) {
-        // Deliberately before enforceAIQuota: no model was called, so this must
-        // not burn one of an UNSUBSCRIBED user's two uses, and must not write an
-        // AI_USED audit entry — that record exists to prove a paid service was
-        // delivered, and here none was.
-        return { versions: [summary!.trim()], status: "already_optimized" }
-      }
-    }
-
-    await enforceAIQuota(userId, "improve-summary", plan)
-
-    const resumeContext = sectionData ? buildResumeContext(sectionData, language) : ""
-    // Same treatment generate-summary gets: hand the model the figures the
-    // algorithm found instead of leaving it to hunt through prose. Measured
-    // live, without this the first attempt dropped them and the retry had to
-    // rescue it in 5 of 6 runs.
-    const { block: metricBlock, rule: numbersRule } = buildMetricGuidance(metrics, language)
-
-    const criticalEN = `${cvValueBar("en")}
-
-${noHardCodedFactsRule("en")}
-
-Preserve every figure the original states. Never write a bracket placeholder like [X%] — it goes into the CV as-is and reads as unfinished.
-
-HUMAN VOICE (avoid AI-detection): vary sentence length and structure; natural, conversational tone, not a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Anchor to concrete specifics from the source, not vague adjectives.
-
-`
-    const criticalES = `${cvValueBar("es")}
-
-${noHardCodedFactsRule("es")}
-
-Conservá cada cifra que el original declara. Nunca escribas un corchete tipo [X%] — entra en el CV tal cual y se lee como un CV sin terminar.
-
-VOZ HUMANA (evita detección de IA): variá el largo y la estructura de las frases; tono natural y conversacional, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Anclá a datos concretos del source, no a adjetivos vagos.
-
-`
-
-    const prompt = language === "en"
-      ? hasSummary
-        ? criticalEN + `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) a strong action verb or role title at the start, (b) the profile's metrics, IF the profile states any — a summary with no numbers still passes this check when the profile gives none, (c) no clichés ("passionate", "team player", "looking for"), (d) no personal pronouns. If ALL applicable criteria are met → return {"status": "already_optimized", "versions": []} immediately. A summary that is already good is a correct and expected outcome.
-
-TASK: Analyze the current summary and identify its weaknesses. Generate 3 improved versions, each with a different positioning.
-
-${hasDescription ? `Candidate instruction: "${userDescription!.trim()}"` : ""}
-${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
-${metricBlock}
-
-Current summary to improve:
-"${summary!.trim()}"
-
-DIAGNOSIS (use internally to guide writing):
-• Detect: clichés, weak phrases, passive voice, low-impact verbs
-• Identify: hidden achievements that can be amplified using only figures the profile already states
-• Extract: candidate's real differentiator in their sector
-
-GENERATE 3 IMPROVED VERSIONS:
-
-Version 1 — EXECUTIVE (exactly 3 sentences): Emphasis on business impact, leadership and quantifiable results. Direct tone, no filler. Positions as senior expert.
-
-Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional expertise specific to the sector. Includes key tools, methodologies or technologies from the CV or original summary.
-
-Version 3 — VALUE PROPOSITION (3 sentences): Combines most impactful past achievement + differential skill + value the candidate will bring to the next company. Dynamic and forward-looking tone.
-
-${cvValueBar("en")}
-
-${noHardCodedFactsRule("en")}
-
-ABSOLUTE RULES:
-• Preserve every metric the original states. Never leave a bracket.
-• PROHIBITED — every one is checked and rejected; a version carrying any is discarded: ${clicheBanList("en")}.
-• No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
-• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove.
-
-${numbersRule}
-
-Respond ONLY with valid JSON. Each entry is the complete text itself, not a label:
-{"versions": ["<the complete executive summary>", "<the complete specialist summary>", "<the complete value-proposition summary>"]}`
-        : criticalEN + `TASK: Create a high-impact professional summary from scratch based on the candidate's description. Return 3 distinct versions.
-
-Candidate description: "${userDescription!.trim()}"
-${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
-${metricBlock}
-
-GENERATE 3 VERSIONS:
-
-Version 1 — EXECUTIVE (3 sentences): Positioning as a senior expert in their area. Emphasis on impact and leadership.
-
-Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional stack or the most specific area of expertise the candidate mentions.
-
-Version 3 — VALUE PROPOSITION (3 sentences): Focuses on what the candidate brings to their next team. Combines skills + vision of future value.
-
-RULES:
-• Never leave a bracket standing in for a figure.
-• No personal pronouns. Impact verbs first. Never these, they are checked and rejected: ${clicheBanList("en")}.
-• Each version must sound authentic — personal, not generic.
-
-${numbersRule}
-
-Respond ONLY with valid JSON. Each entry is the complete text itself, not a label:
-{"versions": ["<the complete executive summary>", "<the complete specialist summary>", "<the complete value-proposition summary>"]}`
-      : hasSummary
-        ? criticalES + `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) las métricas del perfil, SI el perfil declara alguna — un resumen sin números pasa igual este check cuando el perfil no da ninguna, (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) sin pronombres personales. Si TODOS los criterios aplicables se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente. Que el resumen ya esté bien es una respuesta correcta y esperada.
-
-TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versiones mejoradas, cada una con posicionamiento diferente.
-
-${hasDescription ? `Instrucción del candidato: "${userDescription!.trim()}"` : ""}
-${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
-${metricBlock}
-
-Resumen actual a mejorar:
-"${summary!.trim()}"
-
-DIAGNÓSTICO (usa internamente para guiar las versiones):
-• Detecta: clichés, frases débiles, voz pasiva, verbos sin impacto
-• Identifica: logros ocultos que pueden amplificarse usando solo cifras que el perfil ya declara
-• Extrae: diferenciador real del candidato en su sector
-
-GENERA 3 VERSIONES MEJORADAS:
-
-Versión 1 — EJECUTIVA (3 oraciones exactas): Énfasis en impacto de negocio, liderazgo y resultados cuantificables. Tono directo, sin relleno. Posiciona como experto senior.
-
-Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en expertise técnico/funcional específico del sector. Incluye herramientas, metodologías o tecnologías clave mencionadas en el CV o resumen original.
-
-Versión 3 — PROPUESTA DE VALOR (3 oraciones): Combina logro más impactante del pasado + habilidad diferencial + valor que aportará a la próxima empresa. Tono dinámico y propositivo.
-
-${cvValueBar("es")}
-
-${noHardCodedFactsRule("es")}
-
-REGLAS ABSOLUTAS:
-• Conservá cada métrica que el original declara. Nunca dejes un corchete.
-• PROHIBIDO — estas frases se comprueban y se rechazan; una versión que lleve cualquiera se descarta: ${clicheBanList("es")}.
-• Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
-• Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó.
-
-${numbersRule}
-
-Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí, no una etiqueta:
-{"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
-        : criticalES + `TAREA: Crea un resumen profesional de alto impacto desde cero, basado en la descripción del candidato. Devuelve 3 versiones distintas.
-
-Descripción del candidato: "${userDescription!.trim()}"
-${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
-${metricBlock}
-
-GENERA 3 VERSIONES:
-
-Versión 1 — EJECUTIVA (3 oraciones): Posicionamiento como experto senior en su área. Énfasis en impacto y liderazgo.
-
-Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en stack técnico/funcional o área de expertise más específica que menciona el candidato.
-
-Versión 3 — PROPUESTA DE VALOR (3 oraciones): Enfoca en qué aporta el candidato a su próximo equipo. Combina habilidades + visión de valor futuro.
-
-REGLAS:
-• Nunca dejes un corchete en lugar de una cifra.
-• Sin pronombres personales. Verbos de impacto al inicio. Nunca estas, se comprueban y se rechazan: ${clicheBanList("es")}.
-• Cada versión debe sonar auténtica — personal, no genérica.
-
-${numbersRule}
-
-Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí, no una etiqueta:
-{"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
-
-    // Same rule as generate: an empty answer is retried before anyone is told
-    // the AI could not do it. What differs is the fallback — here the user
-    // already HAS a summary, so the honest filling is to leave it alone and say
-    // it is already fine, never to replace it with something weaker.
-    const askImprove = (attempt: number) => this.aiClient.chat({
-      model: AI_MODEL_PROSE,
-      max_tokens: 700,
-      // improve-summary uses 0.3 — must stay close to the existing summary and
-      // avoid hard-coding metrics or technologies.
-      temperature: AI_TEMPERATURE_STRUCTURED,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            (language === "en"
-              ? "You are an Elite Career Consultant specialized in writing high-impact professional summaries for résumés. " +
-                "You turn generic summaries into text that makes the candidate stand out through concrete achievements and impactful language. " +
-                "You ONLY work with professional résumé summaries and real work profiles. " +
-                "You never write bracket placeholders. " +
-                "If the content is unrelated to a professional profile, respond only with: {\"versions\": []} and nothing else. "
-              : "Eres un Consultor de Carrera de Élite especializado en redacción de resúmenes profesionales de alto impacto para CVs. " +
-                "Transformas resúmenes genéricos en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
-                "SOLO trabajas con resúmenes profesionales de CV y perfiles laborales reales. " +
-                "Nunca escribís placeholders entre corchetes. " +
-                "Si el contenido no tiene relación con un perfil profesional, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
-            langInstruction,
-        },
-        { role: "user", content: attempt === 0 ? prompt : prompt + retryNudge(language) },
-      ],
-    })
-
-    const readImprove = (r: Awaited<ReturnType<typeof askImprove>>) =>
-      parseAIJson<{ versions?: unknown; status?: unknown }>(r.choices[0]?.message?.content ?? "")
-
-    const improved = await askUntilAnswered({
-      ask: askImprove,
-      isAnswered: (r) => {
-        const p = readImprove(r)
-        // "Already optimised" IS an answer: the model read the summary and
-        // judged it good. Retrying that would spend a call to hear it again.
-        if (p.status === "already_optimized") return true
-        return Array.isArray(p.versions) && p.versions.some((v) => typeof v === "string" && v.trim())
-      },
-      fallback: () => null,
-      onFilled: (how) => this.logger.warn("[AISummary] improve-summary filled a hole", { how }),
-    })
-
-    // Twice empty on a summary that exists. The user keeps what they have and is
-    // told it needs no change — which is true, in the sense that matters to
-    // them: we have nothing better to offer. An error here would take their use
-    // and their two-minute cooldown and hand back a red toast.
-    if (!improved) {
-      this.logger.warn("[AISummary] improve came back empty twice, keeping the user's summary")
-      return { status: "already_optimized", versions: [] }
-    }
-    const response = improved
-    const parsed = readImprove(response)
-
-    if (parsed.status === "already_optimized") {
-      this.logSummaryUsage(userId, "improve-summary", plan, response.usage, null)
-      return { status: "already_optimized", versions: [] }
-    }
-
-    // The same gate generate-summary goes through. Source = everything the
-    // candidate stated: the summary they wrote, how they described themselves,
-    // and the CV. Anything outside it is hard-coded.
-    const gated = await gateSummaryVersions(this.aiClient, this.logger, {
-      rawVersions: parsed.versions,
-      source: [summary ?? "", userDescription ?? "", resumeContext].join("\n"),
-      metrics,
-      basePrompt: prompt,
-      langInstruction,
-      language,
-      temperature: AI_TEMPERATURE_STRUCTURED,
-      maxTokens: 700,
-      endpoint: "improve-summary",
-    })
-
-    this.logSummaryUsage(userId, "improve-summary", plan, response.usage, gated.retryUsage)
-
-    // Fail-safe: if every version was dropped, fall back to the original
-    // summary unchanged when we have one. Otherwise return empty + already_optimized.
-    if (gated.versions.length === 0) {
-      if (hasSummary && summary) {
-        return { versions: [summary.trim()], status: "already_optimized" }
-      }
-      return { versions: [], status: "already_optimized" }
-    }
-
-    // Echo detection unified with bullets and cover letter: drop any version that
-    // barely changes the original (≥90% similar via the same TRIVIAL_EDIT_SIMILARITY
-    // threshold). If none survive → already_optimized; otherwise return only the
-    // versions that are a real improvement — never a near-copy of the original.
-    if (hasSummary && summary) {
-      /**
-       * Y NINGUNA VERSIÓN PUEDE DEJAR AFUERA UN TÉRMINO DE LA VACANTE.
-       *
-       * «El ATS manda: todo lo que tenga el ATS debe consultar al ATS» (CEO,
-       * 2026-08-22). El resumen es texto del CV: el matcher lo lee como
-       * cualquier viñeta, así que una versión que se lleva puesto «Salesforce»
-       * baja el puntaje igual — y este endpoint reescribía sin haber visto nunca
-       * la oferta. Su fase 1 le pedía al modelo deducir «las keywords ATS del
-       * sector»: nombres plausibles para el oficio, no los que ESTA vacante pide.
-       *
-       * Mismo `termPresent` que usa el matcher: el guard y el puntaje no pueden
-       * discrepar. Sin vacante analizada la lista viene vacía y no filtra nada.
-       */
-      const meaningful = gated.versions.filter(
-        (v) => !isTrivialEdit(summary, v.text)
-          && droppedPostingTerms(summary, v.text, postingTerms).length === 0,
-      )
-      if (meaningful.length === 0) {
-        return { versions: [], status: "already_optimized" }
-      }
-      return toVersionsResult(meaningful)
-    }
-    // Spell-checked before it reaches the CV: this is our text, not the
-    // user's, so a typo here is ours to fix rather than to report back at them.
-    const cleanText = await cleanGeneratedText(gated.versions.map((v) => v.text), language)
-    return toVersionsResult(gated.versions.map((v, i) => ({ ...v, text: cleanText[i] ?? v.text })))
-  }
 }

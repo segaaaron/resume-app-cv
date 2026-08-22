@@ -50,6 +50,18 @@ interface SuggestionDiffModalProps {
    * turning into another call.
    */
   options?: Array<{ text: string; label: string; why: string; active: boolean; onPick: () => void }>
+  /**
+   * La reescritura PROPONE un tamaño que el CV no dice todavía.
+   *
+   * ── LA CONTRADICCIÓN QUE ESTO CIERRA (2026-08-22) ────────────────────────
+   *
+   * La doctrina autoriza al modelo a proponer la cifra como RANGO que el
+   * candidato confirma en un clic. El guard, en cambio, descartaba la
+   * reescritura entera por traer un número — o sea que le pedíamos algo y le
+   * tirábamos la respuesta. Ahora sobrevive, pero NO se aplica en silencio: acá
+   * se dice que ese número lo pone él.
+   */
+  needsFigureConfirm?: boolean
 }
 
 const FIELD_KEYS: Record<SuggestionField, string> = {
@@ -70,6 +82,7 @@ export default function SuggestionDiffModal({
   currentValue,
   afterValue: afterFromCaller,
   options,
+  needsFigureConfirm,
 }: SuggestionDiffModalProps) {
   const t = useTranslations("editor.cv_review")
 
@@ -118,6 +131,14 @@ export default function SuggestionDiffModal({
                 {t("diff_title")} — {t(FIELD_KEYS[suggestion.field])}
               </div>
               <div className="text-[11px] sm:text-[11.5px] text-[#6B7A8C] mt-[2px] leading-snug">{suggestion.reason}</div>
+              {needsFigureConfirm && (
+                <div
+                  className="mt-1.5 inline-block rounded-lg px-2 py-1 text-[10.5px] font-semibold leading-snug"
+                  style={{ background: "#FEF3C7", color: "#854D0E" }}
+                >
+                  {t("confirm_figure")}
+                </div>
+              )}
             </div>
           </div>
         </div>

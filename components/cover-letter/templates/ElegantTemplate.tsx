@@ -129,7 +129,7 @@ export default function ElegantTemplate({ content, colorScheme, candidate }: Tem
           {/* Subject line — bold, colored label, standard ES format */}
           {content.subject && (
             <div style={{ fontSize: "11pt", fontWeight: 700, marginBottom: "12pt", lineHeight: 1.4 }}>
-              <span style={{ color: hex }}>Asunto: </span>
+              <span style={{ color: hex }}>{t("subject_label")}: </span>
               <span>{content.subject}</span>
             </div>
           )}

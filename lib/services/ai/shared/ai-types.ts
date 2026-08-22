@@ -43,6 +43,15 @@ export const BulletImprovementSchema = z.object({
    */
   why: z.string().max(160).optional().catch(undefined),
   /**
+   * La reescritura PROPONE un tamaño que el CV todavía no dice.
+   *
+   * Lo pone el servidor después de los guards, nunca el modelo: es el resultado
+   * de `hardCodedFactKind`, no una afirmación de la respuesta. Viaja hasta la
+   * pantalla para que ésta PREGUNTE en vez de que nosotros demos por cierto un
+   * número que el candidato no escribió — ni lo tiremos, que era lo que pasaba.
+   */
+  needsFigureConfirm: z.boolean().optional().catch(undefined),
+  /**
    * The same bullet argued from a different angle — the technical work, the
    * business outcome, or the leadership in it.
    *
@@ -760,6 +769,16 @@ export interface FillProfileInput {
   language?: string
   /** Absent = the original extraction path, unchanged. */
   mode?: FillProfileMode
+  /**
+   * Los términos de la vacante que el usuario está trabajando, si analizó una.
+   *
+   * «El ATS manda: todo lo que tenga el ATS debe consultar al ATS.» El asistente
+   * escribe dentro del mismo CV que el panel puntúa, así que sin esto escribía
+   * la viñeta correcta para el oficio y equivocada para el puesto.
+   */
+  postingTerms?: string[]
+  /** El cargo de la oferta: para qué puesto se está escribiendo. */
+  postingTitle?: string
 }
 
 /**
@@ -777,6 +796,7 @@ export type TailorReason =
   | "dilutes"       // el puesto carga más líneas de las que un reclutador lee
   | "cliche"        // frase hecha que no dice nada
   | "orphan"        // la cola de la línea de arriba, partida al importar
+  | "passive"       // el trabajo aparece y el autor no: voz pasiva
   | "critical"      // lo señaló el análisis del reclutador
   | "tailored"      // no tiene defecto: se adapta a ESTA vacante
 

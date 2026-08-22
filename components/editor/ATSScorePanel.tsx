@@ -63,11 +63,12 @@ import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/
  * Derivarlo evita un campo más que mantener en sincronía, y si el id cambia sin
  * que esto cambie, el peor caso es una guía genérica — nunca una equivocada.
  */
-function reasonOf(checkId: string): "no_metric" | "duplicate" | "dilutes" | "cliche" | "orphan" | "critical" | "tailored" {
+function reasonOf(checkId: string): "no_metric" | "duplicate" | "dilutes" | "cliche" | "orphan" | "passive" | "critical" | "tailored" {
   if (checkId.startsWith("tips.near_dup")) return "duplicate"
   if (checkId.startsWith("tips.dilutes")) return "dilutes"
   if (checkId.startsWith("tips.merge")) return "duplicate"
   if (checkId.startsWith("format.orphan")) return "orphan"
+  if (checkId.startsWith("tips.passive")) return "passive"
   if (checkId.startsWith("tips.recruiter")) return "critical"
   if (checkId.startsWith("tips.credibility.empty_lines")) return "cliche"
   return "no_metric"
@@ -130,6 +131,8 @@ export default function ATSScorePanel() {
    */
   /** Cómo parsea la plantilla elegida: decide si hace falta ofrecer la copia plana. */
   const templateSafety = getTemplateAtsSafety(useResumeStore((st) => st.config?.templateId))
+  /** Para el aviso informativo de la foto: qué es normal depende del país. */
+  const photoUrl = useResumeStore((st) => st.config?.photoUrl)
 
   const [appliedSigs, setAppliedSigs] = useState<string[]>([])
   // Por selector y no por `getState()`: así es reactivo si el editor cambia de
@@ -199,6 +202,14 @@ export default function ATSScorePanel() {
     /** The same work argued from another angle, so disliking one ends in a choice, not another call. */
     options?: Array<{ text: string; angle: string; why: string }>
     /**
+     * La reescritura PROPONE un tamaño que el CV todavía no dice, como rango.
+     *
+     * Antes ni llegaba: el guard descartaba la reescritura entera por traer un
+     * número, contradiciendo la doctrina que le pide proponerlo. Ahora llega, y
+     * el modal PREGUNTA en vez de aplicarlo como si fuera un hecho suyo.
+     */
+    needsFigureConfirm?: boolean
+    /**
      * A merge: the second line this replacement absorbs, deleted on confirm.
      *
      * Rides the SAME confirm path as every other bullet write rather than getting
@@ -210,6 +221,15 @@ export default function ATSScorePanel() {
     removeCurrent?: string
     /** Marked applied on confirm, so the same offer cannot appear twice. */
     appliedKey?: string
+    /**
+     * El hallazgo del informe que esto cierra.
+     *
+     * `appliedKey` vive en `appliedItems`, que es OTRO conjunto de estado: cerrar
+     * ahí no retira la tarjeta del ejecutor, que lee `appliedCheckIds`. La fusión
+     * aceptada dejaba su propia tarjeta en pantalla ofreciendo fusionar dos
+     * líneas que ya eran una.
+     */
+    appliedCheckId?: string
   } | null>(null)
   const [improvingKey, setImprovingKey] = useState<string | null>(null)
 
@@ -241,7 +261,31 @@ export default function ATSScorePanel() {
    */
   const [mergingKey, setMergingKey] = useState<string | null>(null)
 
-  async function runMerge(c: { targetId: string; indexes: [number, number]; texts: [string, string] }) {
+  /**
+   * FUSIONAR DOS LÍNEAS.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   * «No me deja hacer merge, ¿a qué se debe eso?» — dos veces, en dos tarjetas.
+   * Y era exacto: el modelo contestaba que no («las leí y cuentan trabajos
+   * distintos»), la respuesta salía por un toast de dos segundos… y la tarjeta
+   * seguía ahí, con su botón, ofreciendo lo mismo. Apretaba otra vez y recibía
+   * la misma negativa. Desde afuera eso no se lee como una respuesta: se lee
+   * como un botón roto.
+   *
+   * Dos huecos, y el segundo es peor:
+   *
+   *  1. `markFixApplied(key)` cerraba la clave VIEJA (`merge-…`), que es de otro
+   *     conjunto de estado. El hallazgo del informe (`tips.merge.…`) no se
+   *     enteraba, así que la tarjeta nunca se retiraba.
+   *  2. `if (!res.ok) return` — silencio absoluto. Un 429 por cooldown o un 403
+   *     de plan dejaban la pantalla igual que si nada hubiera pasado. Ningún
+   *     endpoint de IA entrega un hueco: si no se puede, se dice.
+   */
+  async function runMerge(
+    c: { targetId: string; indexes: [number, number]; texts: [string, string] },
+    checkId?: string,
+  ) {
     const key = `merge-${c.targetId}-${c.indexes[0]}-${c.indexes[1]}`
     setMergingKey(key)
     try {
@@ -253,15 +297,29 @@ export default function ATSScorePanel() {
           indexes: c.indexes,
           sectionData,
           language: cvLanguage,
+          // Fusionar borra una línea. Sin los términos de la vacante, la fusión
+          // podía comerse justo la palabra que traía la coincidencia — y las
+          // duras pesan .45. Mismo contrato que usan tailor e improve-bullet.
+          postingTerms: postingTermsForPrompt(report?.posting?.hardSkills, report?.posting?.softSkills),
         }),
       })
-      if (!res.ok) return
+      if (!res.ok) {
+        // El uso ya se gastó o el plan no alcanza; en las dos el usuario tiene
+        // derecho a saber por qué no pasó nada. El silencio de antes se leía
+        // como un botón roto, que es exactamente lo que se reportó.
+        reportUxFailure("bullet_merge_failed", { status: res.status })
+        toast.error(t("toast_change_error"))
+        return
+      }
       const data: { status: "ok"; text: string } | { status: "not_mergeable" } = await res.json()
       if (data.status !== "ok") {
         // An honest no. The two lines turned out to be about different work, and
         // forcing them together would have distorted one of them.
         toast.info(t("merge_not_mergeable"))
         markFixApplied(key)
+        // Y LA TARJETA SE RETIRA. Una negativa que deja el mismo botón en pantalla
+        // invita a apretarlo otra vez para recibir la misma negativa.
+        if (checkId) setAppliedCheckIds((prev) => new Set(prev).add(checkId))
         return
       }
       setBulletFix({
@@ -273,6 +331,7 @@ export default function ATSScorePanel() {
         why: t("merge_why"),
         removeIndex: c.indexes[1],
         removeCurrent: c.texts[1],
+        appliedCheckId: checkId,
         // Carried into the confirm modal so ACCEPTING is what retires the pair —
         // not merely asking for it. Cancelling must leave the offer standing.
         appliedKey: key,
@@ -363,6 +422,7 @@ export default function ATSScorePanel() {
         recommended: first.text,
         recommendedWhy: first.why,
         options: first.alternatives,
+        ...(first.needsFigureConfirm ? { needsFigureConfirm: true } : {}),
       })
     } catch {
       toast.error(t("metricless_improve_error"))
@@ -551,6 +611,7 @@ export default function ATSScorePanel() {
       markContentOptimized(`opt_bullet_${targetId}`, nextDescription)
       markFixApplied(`bullet-${targetId}-${index}`)
       if (bulletFix.appliedKey) markFixApplied(bulletFix.appliedKey)
+      if (bulletFix.appliedCheckId) setAppliedCheckIds((prev) => new Set(prev).add(bulletFix.appliedCheckId as string))
       toast.success(t("toast_change_applied"))
       if (written.removed > 0) toast.info(t("dedupe_done", { count: written.removed }))
       void runRescore()
@@ -770,9 +831,11 @@ export default function ATSScorePanel() {
           // única fuente honesta para «¿parsea a dos columnas?» y «¿el contacto
           // sobrevivió?»: son preguntas sobre el archivo, no sobre los datos.
           isAlreadyAccepted: alreadyAccepted,
+          // La foto vive en la config del CV, no en sus datos. Sólo informa.
+          hasPhoto: !!photoUrl,
         })
       : null),
-    [atsResult, liveWritingChecks, liveContentQuality, sectionData, input, credibility, alreadyAccepted],
+    [atsResult, liveWritingChecks, liveContentQuality, sectionData, input, credibility, alreadyAccepted, photoUrl],
   )
 
   const [tailorOpen, setTailorOpen] = useState(false)
@@ -883,9 +946,12 @@ export default function ATSScorePanel() {
       const c = liveWritingChecks.mergeCandidates.find(
         (m) => `tips.merge.${m.targetId}.${m.indexes[0]}.${m.indexes[1]}` === checkId,
       )
-      if (c) void runMerge(c)
+      if (c) void runMerge(c, checkId)
       return
     }
+
+    // Mismo destino desde el otro botón: nada de esta familia se reescribe.
+    if (checkId.startsWith("tips.cut.")) { removeCheckLine(checkId); return }
 
     const resolution = resolutions.find((r) => r.checkId === checkId)
 
@@ -927,7 +993,27 @@ export default function ATSScorePanel() {
       const claimed = (report?.terms ?? []).filter((x) => x.cv > 0).map((x) => x.term)
       const lost = postingTermsLost(resolution.before ?? "", resolution.text, claimed)
       if (lost.length > 0) { toast.error(t("rewrite_loses_terms", { terms: lost.slice(0, 3).join(", ") })); return }
-      if (writeBullet(action.targetId, action.index, resolution.before ?? "", resolution.text, true)) done()
+      if (writeBullet(action.targetId, action.index, resolution.before ?? "", resolution.text, true)) {
+        /**
+         * LA BLANDA QUE ACABA DE QUEDAR DEMOSTRADA, ACREDITADA YA.
+         *
+         * ── EL DEFECTO (reportado con captura, 2026-08-22) ─────────────────
+         *
+         * «Si arreglo algo no sube mi soft skill.» La tarjeta muestra el chip
+         * «demuestra: comunicación clara» —se lo pedimos POR NOMBRE al modelo—,
+         * el usuario aplicaba, y el porcentaje de blandas no se movía: el
+         * re-cálculo determinista arrastra `demonstratedSoftSkills` del último
+         * análisis completo, porque juzgar una viñeta cuesta una llamada. El
+         * crédito local existía desde antes (`creditSoftSkill`) y lo llamaba UN
+         * solo camino, el de la tarjeta suelta del riel. Éste —el del ejecutor,
+         * que es por donde pasa casi todo— nunca lo llamó.
+         *
+         * No hace falta un modelo para saber qué demuestra esa línea: pedimos
+         * esa habilidad por su nombre y él aceptó la frase que la demuestra.
+         */
+        if (resolution.demonstrates) creditSoftSkill(resolution.demonstrates)
+        done()
+      }
       return
     }
     if (action.kind === "rewrite_summary") {
@@ -958,6 +1044,9 @@ export default function ATSScorePanel() {
     // Reordenar no es unificar fechas: comparte el tipo de acción para tener
     // botón, pero ejecuta otra cosa. Se rutea por id, como la fusión.
     if (checkId === "format.chronology") { reorderRoles(); done(); return }
+    // Cortar es determinista, pero no silencioso: abre la confirmación que
+    // muestra la línea entera. El `done()` lo hace ella al confirmar.
+    if (checkId.startsWith("tips.cut.")) { removeCheckLine(checkId); return }
     if (action.kind === "fix_dates") { if (fixDates()) done(); return }
     if (action.kind === "remove_duplicates") { if (removeDuplicateBullets()) done(); return }
     if (action.kind === "add_skill" && action.value) { if (addKeywordToSkills(action.value)) done(); return }
@@ -1032,7 +1121,34 @@ export default function ATSScorePanel() {
   // Remove a bullet that doesn't earn its place — a real solution, not a tweak.
   // Confirmed in a preview modal first (safety); the index is re-verified against
   // the live text so an edit between analyze and remove never deletes the wrong line.
-  const [pendingRemove, setPendingRemove] = useState<{ targetId: string; index: number; text: string } | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<{ targetId: string; index: number; text: string; checkId?: string } | null>(null)
+
+  /**
+   * CORTAR UNA LÍNEA, PEDIDO DESDE UNA TARJETA.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   * «Si tengo más viñetas de lo normal debería sugerirme borrar las más débiles.»
+   * El flujo de borrado estaba ESCRITO Y MUERTO: `setPendingRemove` no se llamaba
+   * desde ningún lado y `onRemove` nunca se le pasaba al ejecutor, así que el
+   * botón «Borrar» de `FixCard` no podía renderizarse nunca y el diálogo de
+   * confirmación no podía abrirse nunca. Código completo, inalcanzable.
+   *
+   * El texto sale de la EVIDENCIA del hallazgo y cae al CV vivo sólo si falta:
+   * el índice es pista, el texto es identidad, y `confirmRemoveBullet` resuelve
+   * por texto antes de escribir.
+   */
+  function removeCheckLine(checkId: string): void {
+    if (!report) return
+    const check = allChecks(report).find((c) => c.id === checkId)
+    const a = check?.action
+    if (!a?.targetId || typeof a.index !== "number") return
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    const live = parseBullets(work.find((j) => j.id === a.targetId)?.description ?? "")[a.index] ?? ""
+    const text = check?.evidence?.[0]?.trim() || live
+    if (!text) return
+    setPendingRemove({ targetId: a.targetId, index: a.index, text, checkId })
+  }
   function confirmRemoveBullet() {
     if (!pendingRemove) return
     const { targetId, index, text } = pendingRemove
@@ -1046,12 +1162,16 @@ export default function ATSScorePanel() {
         reportUxFailure("bullet_remove_line_gone", { jobFound: !!job, index, bullets: bullets.length, textLen: text.length })
         toast.info(t("bullet_line_gone"))
         markFixApplied(`bullet-${targetId}-${index}`)
+        if (pendingRemove.checkId) setAppliedCheckIds((prev) => new Set(prev).add(pendingRemove.checkId as string))
         void runRescore()
         return
       }
       const next = bullets.filter((_, i) => i !== at).map(formatBullet).join("\n")
       updateSectionData("workExperience", work.map((j) => (j.id === targetId ? { ...j, description: next } : j)))
       markFixApplied(`bullet-${targetId}-${index}`)
+      // El hallazgo que pidió el corte queda cerrado. Sin esto la tarjeta sigue
+      // ofreciendo cortar una línea que ya no existe.
+      if (pendingRemove.checkId) setAppliedCheckIds((prev) => new Set(prev).add(pendingRemove.checkId as string))
       toast.success(t("bullet_removed"))
       void runRescore()
     } catch {
@@ -1296,7 +1416,22 @@ export default function ATSScorePanel() {
           <div className="-mx-1 mb-3 overflow-hidden rounded-2xl">
             <ReportRail
               report={report}
-              onSolve={(checkId) => { setFocusCheckId(checkId ?? null); setTailorOpen(true) }}
+              /**
+               * EL FILTRO SE REINICIA AL ABRIR SOBRE UN HALLAZGO.
+               *
+               * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────
+               *
+               * «Al seleccionar el icono de IA me lleva a tailor pero está
+               * vacío: no sé qué voy a mejorar.» `tailorFilter` es estado del
+               * panel y quedaba pegado en lo último que alguien eligió —«tips»,
+               * o la sección de un término—. Abrir sobre una viñeta con el
+               * filtro puesto en otra sección mostraba la lista filtrada a cero:
+               * el modal se abría en la nada, sobre un hallazgo que existía.
+               *
+               * Quien apunta a UN hallazgo pide ver ESE hallazgo. El filtro es
+               * una vista, no una preferencia que sobreviva al próximo clic.
+               */
+              onSolve={(checkId) => { setTailorFilter("all"); setFocusCheckId(checkId ?? null); setTailorOpen(true) }}
               onFix={fixCheck}
               onAddTerm={(term) => { addKeywordToSkills(term) }}
               /**
@@ -1617,6 +1752,11 @@ export default function ATSScorePanel() {
           appliedIds={appliedCheckIds}
           onApply={applyCheck}
           onUndo={undoCheck}
+          onRemove={removeCheckLine}
+          /* Lo que va en lugar de la línea cortada. Reusa el MISMO camino que
+             teje un término dentro de una viñeta — no hay un segundo escritor:
+             un segundo escritor es una segunda forma de perder datos. */
+          onReplaceWithTerm={(term) => { void weaveSkill(term, undefined, false) }}
           onApplyAll={() => {
             if (!report) return
             // La lista sale de `applyAllPlan`, que es una función pura y por eso
@@ -1669,6 +1809,9 @@ export default function ATSScorePanel() {
             reason: bulletFix.why?.trim() || t("content_quality_hint"),
           }}
           currentValue={bulletFix.current}
+          /* Sólo sobre la recomendada: las alternativas se filtran contra la
+             cifra propuesta, así que elegir una de ellas retira la pregunta. */
+          needsFigureConfirm={bulletFix.needsFigureConfirm && bulletFix.improved === bulletFix.recommended}
           /* The same work from another angle. One rewrite leaves a yes/no, and
              "no" used to mean asking the model again — the loop. Picking swaps
              what the preview above shows, so the decision ends here. */

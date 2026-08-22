@@ -6,6 +6,7 @@ import { Z_MODAL } from "@/lib/ui/z-layers"
 import { useTranslations } from "next-intl"
 import { Loader2, Sparkles, X } from "lucide-react"
 import {
+  applyAllPlan,
   recoverablePoints,
   resolutionFor,
   solvableChecks,
@@ -51,6 +52,8 @@ interface Props {
   onApply: (checkId: string) => void
   onUndo: (checkId: string) => void
   onRemove?: (checkId: string) => void
+  /** Y con qué reemplazarla: un término que la vacante pide y el CV no dice. */
+  onReplaceWithTerm?: (term: string) => void
   onApplyAll: () => void
   onClose: () => void
   /** Abre enfocando un hallazgo puntual, cuando se entró desde el riel. */
@@ -74,7 +77,7 @@ interface Props {
 }
 
 export default function TailorModal({
-  report, resolutions, appliedIds, onApply, onUndo, onRemove, onApplyAll, onClose, focusCheckId, focusTerm, initialFilter, onWeaveTerm, onAddTerm, addedTerms, busyTerm, busy,
+  report, resolutions, appliedIds, onApply, onUndo, onRemove, onReplaceWithTerm, onApplyAll, onClose, focusCheckId, focusTerm, initialFilter, onWeaveTerm, onAddTerm, addedTerms, busyTerm, busy,
 }: Props) {
   const t = useTranslations("editor.ats")
   const [filter, setFilter] = useState<Filter>(initialFilter ?? "all")
@@ -120,6 +123,20 @@ export default function TailorModal({
   )
   const pending = workload.filter((c) => !appliedIds.has(c.id))
   const pendingTotal = pending.length + terms2.length
+  /**
+   * LO QUE «APLICAR TODO» APLICA DE VERDAD, contado por quien lo aplica.
+   *
+   * `pendingTotal` es todo el trabajo abierto, y ahí adentro viven las propuestas
+   * de CORTE, que el botón masivo no toca a propósito: borrar líneas del CV de
+   * alguien no se hace en un clic sin ver cuáles. Contarlas en la etiqueta era el
+   * mismo defecto que este panel ya pagó tres veces — un número que cuenta lo que
+   * la función SABE en vez de lo que la función HACE.
+   */
+  const applyAll = useMemo(
+    () => applyAllPlan(report, appliedIds, addedTerms),
+    [report, appliedIds, addedTerms],
+  )
+  const applyAllTotal = applyAll.checkIds.length + applyAll.terms.length
   const gain = useMemo(() => recoverablePoints(report), [report])
   const terms = useMemo(() => report.terms.map((x) => x.term), [report.terms])
 
@@ -234,12 +251,12 @@ export default function TailorModal({
           {/* APLICAR TODO APLICA TODO. Decía «aplicar las 5» con 10 pendientes:
               el mismo hueco que el botón del riel, un nivel más abajo. Los
               términos entran acá porque son la palanca más grande del puntaje. */}
-          {pendingTotal > 0 && (
+          {applyAllTotal > 0 && (
             <button type="button" onClick={onApplyAll} disabled={busy}
               className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-60"
               style={{ background: "var(--a-ai)" }}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              {t("tailor_apply_all", { count: pendingTotal })}
+              {t("tailor_apply_all", { count: applyAllTotal })}
             </button>
           )}
         </div>
@@ -260,6 +277,7 @@ export default function TailorModal({
               onApply={onApply}
               onUndo={onUndo}
               onRemove={onRemove}
+              onReplace={onReplaceWithTerm}
               focused={focusCheckId === c.id}
               busy={busy}
             />

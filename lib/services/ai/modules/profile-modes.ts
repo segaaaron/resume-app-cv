@@ -171,7 +171,46 @@ Nombralas en ESPAÑOL, salvo las que tengan nombre oficial en otro idioma.`
  * only one that can be tempted to embellish it. It may not: the line between
  * "shaped what they said" and "wrote a job for them" is the whole product.
  */
-function bullets(role: string, told: string, language: string, declared: string): Built {
+/**
+ * PARA QUÉ PUESTO SE ESTÁ ESCRIBIENDO — la mitad que le faltaba al asistente.
+ *
+ * ── LA ORDEN (CEO, 2026-08-22) ─────────────────────────────────────────────
+ *
+ *   «Debería saber la IA qué tipo de información debe generar, de alto impacto
+ *    para el usuario.»
+ *
+ * Este prompt escribe viñetas que terminan en el MISMO CV que el panel puntúa, y
+ * no sabía nada de la oferta: nombraba el contenido del oficio —que es su
+ * valor— pero no podía elegir CUÁL parte de ese oficio nombrar. De dos verdades
+ * igual de reales sobre el mismo trabajo, elegir la que la vacante busca es la
+ * diferencia entre una línea que suma y una que ocupa un renglón.
+ *
+ * Las dos mitades, y la segunda es la que impide el daño: se le DICE cuáles son
+ * los términos, y se le dice que sólo puede usar los que el relato del candidato
+ * respalde de verdad. Sin eso, «apuntá a esta vacante» se lee como permiso para
+ * afirmar lo que la vacante quiere oír — que es la invención que este producto
+ * pasó meses sacando.
+ */
+function postingFocus(posting: { terms?: string[]; title?: string } | undefined, en: boolean): string {
+  const terms = (posting?.terms ?? []).filter((t) => t.trim()).slice(0, 20)
+  const title = (posting?.title ?? "").trim()
+  if (terms.length === 0 && !title) return ""
+  const head = en
+    ? `THE JOB THIS CV IS AIMED AT${title ? `: ${title}` : ""}`
+    : `EL PUESTO AL QUE APUNTA ESTE CV${title ? `: ${title}` : ""}`
+  const body = terms.length > 0
+    ? (en
+      ? `Terms this posting asks for by name: ${terms.join(", ")}.
+Of everything true you could write about the work they described, prefer what this posting is looking for, and use the posting's own words for it — that is what makes the line searchable.
+USE ONLY the terms their account genuinely backs. A term this candidate did not do is a false fact about them, and aiming at a posting is never a licence to claim one. If none of them fits what they told you, write the line without any of them: that is a correct answer.`
+      : `Términos que esta vacante pide por nombre: ${terms.join(", ")}.
+De todo lo verdadero que podrías escribir sobre el trabajo que describió, preferí lo que esta vacante busca, y nombralo con las palabras de la vacante — eso es lo que vuelve la línea buscable.
+USÁ SÓLO los términos que su relato respalde de verdad. Un término que este candidato no hizo es un dato falso sobre él, y apuntar a una vacante nunca es permiso para afirmarlo. Si ninguno encaja con lo que contó, escribí la línea sin ninguno: ésa es una respuesta correcta.`)
+    : ""
+  return `\n${head}\n${body}\n`
+}
+
+function bullets(role: string, told: string, language: string, declared: string, posting?: { terms?: string[]; title?: string }): Built {
   const system = language === "en"
     ? `You are a senior résumé writer who specialises in the trade the candidate names. You write the bullets THEY would write if they knew how a CV is read.
 
@@ -189,9 +228,9 @@ ${declared}
 
 USE THEM. These are not yours to hard-code; they are already on the page in their own hand, and a bullet that describes the work without naming the tool they use for it throws away the keyword the CV was supposed to carry. Naming the tool costs nothing and is the difference between a line a parser skips and one it matches — same facts either way, and only one of them is searchable. Name a declared tool ONLY where it genuinely belongs to the activity they described; never scatter the list across every line.
 ` : ""}
+${postingFocus(posting, true)}
 SHAPE:
 - ONE bullet per activity they mentioned. Never merge two, never add a fourth they did not mention.
-- Open with a first-person past-tense action verb.
 - Never name the job title or the employer inside a bullet: the CV heading already carries them.
 
 ${proseRules("en")}
@@ -213,9 +252,9 @@ ${declared}
 
 USALAS. No son tuyas para quemar: ya están escritas por él en su CV, y una viñeta que describe el trabajo sin nombrar la herramienta con la que lo hace tira a la basura la keyword que ese CV tenía que llevar. Nombrar la herramienta no cuesta nada y es la diferencia entre una línea que el parser saltea y una que matchea — los mismos hechos en las dos, y sólo una es buscable. Nombrá una herramienta declarada SÓLO donde de verdad pertenece a la actividad que él contó; nunca repartas la lista por todas las líneas.
 ` : ""}
+${postingFocus(posting, false)}
 FORMA:
 - UNA viñeta por cada actividad que mencionó. No fusiones dos ni agregues una cuarta que no mencionó.
-- Abre con un verbo en PRIMERA persona del pasado simple: la forma -é/-í (Ejecuté, Atendí, Registré, Coordiné). NUNCA la forma -ó de tercera persona, que se lee como si otro escribiera sobre él.
 - Nunca nombres el puesto ni la empresa dentro de la viñeta: el encabezado del CV ya los muestra.
 
 ${proseRules("es")}
@@ -269,6 +308,8 @@ export function buildModePrompt(
   prompt: string,
   language: string,
   sectionData?: Record<string, unknown>,
+  /** La vacante que el usuario está trabajando, si ya analizó una. */
+  posting?: { terms?: string[]; title?: string },
 ): Built {
   const text = prompt.trim()
   if (mode === "certifications") return certifications(text, language)
@@ -278,7 +319,7 @@ export function buildModePrompt(
     // role reads as "unspecified" to the model rather than breaking the prompt.
     const role = at > 0 ? text.slice(0, at).trim() : ""
     const told = at > 0 ? text.slice(at + 1).trim() : text
-    return bullets(role, told, language, declaredTools(sectionData))
+    return bullets(role, told, language, declaredTools(sectionData), posting)
   }
   return seed(text, language)
 }

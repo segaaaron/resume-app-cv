@@ -291,9 +291,27 @@ export default function CoverLetterEditor({
    * el selector. Que la petición falle NO lo es, y por eso se registra en vez de
    * confundirse con lo anterior.
    */
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+  /**
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   *   «Tenía uno que decía "Miguel Saravia", ahí mismo en el dashboard lo cambié
+   *    a "Miguel Saravia Netflix", y en cover letter no lo reconoció.»
+   *
+   * Dos causas, las dos reales:
+   *
+   *  1. `/api/resumes` responde `Cache-Control: private, max-age=10,
+   *     stale-while-revalidate=60`. Ese encabezado está bien para el tablero —
+   *     una lista que se relee sola—, pero acá el usuario acaba de ESCRIBIR ese
+   *     nombre y el navegador le devuelve la copia vieja hasta 70 segundos. Un
+   *     selector que muestra un nombre que el usuario ya cambió se lee como que
+   *     el CV no se guardó.
+   *  2. La lista se pedía UNA vez, al montar. Renombrar en otra pestaña y volver
+   *     acá no la refrescaba nunca: esta pantalla no se vuelve a montar.
+   *
+   * Por eso `cache: "no-store"` (sólo acá, el tablero conserva el suyo) y una
+   * relectura cuando la pestaña vuelve a primer plano.
+   */
+  const loadResumes = useCallback(async (signal?: { cancelled: boolean }) => {
       const collected: { id: string; title: string }[] = []
       let cursor: string | null = null
       for (let page = 0; page < MAX_RESUME_PAGES; page++) {
@@ -302,7 +320,7 @@ export default function CoverLetterEditor({
           : `/api/resumes?limit=${RESUMES_PER_PAGE}`
         let parsed: ListPage<{ id: string; title: string }> | null = null
         try {
-          const res = await apiFetch(url, { silent: true })
+          const res = await apiFetch(url, { silent: true, cache: "no-store" })
           if (!res.ok) return reportUxFailure("cover_letter_resume_list_failed", { status: res.status })
           parsed = parseListPage(await res.json().catch(() => null))
         } catch {
@@ -316,10 +334,23 @@ export default function CoverLetterEditor({
         // nadie lo sepa: el mismo silencio que causó este bug, más chico.
         if (page === MAX_RESUME_PAGES - 1) reportUxFailure("cover_letter_resume_list_truncated")
       }
-      if (!cancelled) setResumes(collected)
-    })()
-    return () => { cancelled = true }
+      if (!signal?.cancelled) setResumes(collected)
   }, [])
+
+  useEffect(() => {
+    const signal = { cancelled: false }
+    void loadResumes(signal)
+    // Volver a esta pestaña después de renombrar en el tablero tiene que traer
+    // el nombre nuevo. `visibilitychange` y no `focus`: un clic dentro de la
+    // propia página también dispara `focus` y esto no es una lista que cambie
+    // sola — pedirla en cada clic sería tráfico por nada.
+    const onVisible = () => { if (document.visibilityState === "visible") void loadResumes() }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      signal.cancelled = true
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+  }, [loadResumes])
 
   const dirtyRef = useRef(dirty)
   useEffect(() => { dirtyRef.current = dirty }, [dirty])

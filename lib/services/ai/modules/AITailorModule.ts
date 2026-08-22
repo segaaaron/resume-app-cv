@@ -40,7 +40,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, hardCodedFactKind, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hardCodedFactKind, proposesRangeFigure, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
@@ -90,6 +90,23 @@ const REASON_GUIDE: Record<TailorReason, { en: string; es: string }> = {
   orphan: {
     en: "is the tail of the line above it, split by a page break — write it as one sentence",
     es: "es la cola de la línea de arriba, partida por un salto de página — escribila como una sola oración",
+  },
+  /**
+   * ── POR QUÉ HIZO FALTA SU PROPIO MOTIVO (2026-08-22) ──────────────────────
+   *
+   * La voz pasiva entró como chequeo nuevo, y `reasonOf` —que traduce el id del
+   * hallazgo al motivo que viaja al modelo— no la conocía: caía al `return`
+   * final y el ejecutor recibía la línea etiquetada «no dice ningún tamaño del
+   * trabajo». Le pedíamos una cifra a una línea cuyo defecto era que borraba al
+   * autor.
+   *
+   * Es exactamente lo que el CEO viene señalando toda la sesión: un chequeo que
+   * corre por su cuenta sin decirle al ejecutor qué encontró. El panel señala, el
+   * ejecutor arregla — y sólo puede arreglar lo que el panel le nombra bien.
+   */
+  passive: {
+    en: "is written in the passive voice — the work shows and the person who did it disappears. Rewrite it in the first person, active, with the verb the work deserves",
+    es: "está escrita en voz pasiva — el trabajo aparece y quien lo hizo desaparece. Reescribila en primera persona, activa, con el verbo que le corresponde",
   },
   critical: {
     en: "the recruiter analysis flagged it as costing the interview",
@@ -245,7 +262,7 @@ Return a JSON object:
 Rules:
 - Echo "checkId" EXACTLY as given. Never make one up, never rewrite a line that is not on the list.
 - Use the • prefix. Name what the work consists of in this trade's words.
-- Human voice: vary sentence length and structure; natural, not press-release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source.
+- Human voice: vary sentence length and structure; natural, not press-release. Keep each rewrite anchored to a concrete detail already in the source.
 - "metricHint" names WHAT TO MEASURE on that exact line — never a number, never hard-code one — and only when the line has no figure. "demonstrates" is the soft skill that line now proves. Both travel WITH the line; never as a separate task.
 - Include an entry ONLY for a line you can materially improve. Omit every other one. If none qualify, return an empty array — that is a correct and expected answer.`
       : `Eres un estratega experto en currículos. Recibís líneas que YA tienen diagnóstico. Escribí sus reemplazos.
@@ -286,7 +303,7 @@ Devuelve un objeto JSON:
 Reglas:
 - Copiá "checkId" EXACTO como se te dio. Nunca uses uno que no esté en la lista, nunca reescribas una línea que no está en la lista.
 - Usá el prefijo •. Nombrá en qué consiste el trabajo con las palabras de ese oficio.
-- Voz humana: variá el largo y la estructura de las frases; natural, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantené cada reescritura anclada a un dato concreto ya presente en el source.
+- Voz humana: variá el largo y la estructura de las frases; natural, no nota de prensa. Mantené cada reescritura anclada a un dato concreto ya presente en el source.
 - "metricHint" dice QUÉ MEDIR en esa línea exacta — nunca una cifra, nunca la quemes — y sólo cuando la línea no tiene número. "demonstrates" es la blanda que esa línea pasa a probar. Las dos VIAJAN CON LA LÍNEA; nunca como tarea aparte.
 - Incluí una entrada SÓLO por una línea que puedas mejorar de verdad. Omití todas las demás. Si ninguna califica, devolvé un array vacío — es una respuesta correcta y esperada.`
 
@@ -397,6 +414,20 @@ Reglas:
          */
         const kind = hardCodedFactKind(text, groundingSource)
         if (kind === "placeholder" || kind === "brand") { droppedHardCoded++; continue }
+        /**
+         * Y ACÁ ESTABA EL ERROR OPUESTO, encontrado en el mismo barrido.
+         *
+         * Este módulo fue el primero en dejar pasar la cifra con el chip
+         * «confirmá la cifra» — pero dejaba pasar CUALQUIERA, incluido un
+         * resultado exacto que el candidato nunca contó («reduje las fallas un
+         * 40%»). Un chip de confirmación no vuelve legítimo un hecho fabricado:
+         * la mayoría aplica sin leer, y lo que queda escrito en el CV es una
+         * afirmación que no puede defender en la entrevista.
+         *
+         * La doctrina ya lo decía: RANGO que confirma, nunca número exacto
+         * presentado como hecho.
+         */
+        if (kind === "figure" && !proposesRangeFigure(text)) { droppedHardCoded++; continue }
 
         // Una reescritura que habla DE la persona en tercera persona se lee como
         // una carta que escribió otro, dentro de su propio historial.

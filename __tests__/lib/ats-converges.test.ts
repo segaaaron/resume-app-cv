@@ -66,6 +66,10 @@ const reportFor = (bullets: string[]) =>
 const dilutes = (bullets: string[]) =>
   allChecks(reportFor(bullets)).filter((c) => c.id.startsWith("tips.dilutes"))
 
+/** Las que el panel propone CORTAR: la salida del problema de volumen. */
+const cuts = (bullets: string[]) =>
+  allChecks(reportFor(bullets)).filter((c) => c.id.startsWith("tips.cut"))
+
 describe("el ranking por sí solo nunca se vacía — por eso hacía falta una vara", () => {
   /**
    * Esto documenta el MOTOR, no un defecto: `rankRoleBullets` contesta «cuáles
@@ -86,15 +90,51 @@ describe("el panel no pide reescribir lo que reescribir no arregla", () => {
   /**
    * EL ERROR SIMÉTRICO. Callar un defecto real sería peor que el bucle: el
    * usuario se queda con una línea mala y sin quien se la arregle.
+   *
+   * ── POR QUÉ LA SALIDA CAMBIÓ DE PUERTA (2026-08-22) ───────────────────────
+   *
+   * Antes esa línea recibía una tarjeta de REESCRITURA. Pero un puesto de nueve
+   * líneas donde se leen seis tiene un problema de VOLUMEN antes que de
+   * redacción: reescribir la peor no saca a ninguna del fondo del ranking. El
+   * CEO lo pidió así, con captura: «si tengo más viñetas de lo normal debería
+   * sugerirme borrar las más débiles o las que no cuadran».
+   *
+   * Así que el hallazgo sigue existiendo y sigue NOMBRANDO la línea — lo que
+   * cambia es la tijera en vez del lápiz.
    */
-  it("pero una línea con un defecto real sí lo genera", () => {
+  it("pero una línea con un defecto real sigue teniendo salida — cortarla", () => {
     const conDefecto = [...NUEVE_BUENAS.slice(0, 8), "Responsable de ventas"]
-    expect(dilutes(conDefecto).length).toBe(1)
+    const c = cuts(conDefecto)
+    expect(c.length).toBeGreaterThan(0)
+    expect(c.flatMap((x) => x.evidence ?? [])).toContain("Responsable de ventas")
   })
 
-  it("y la tarea nombra sólo las líneas mejorables, no las nueve", () => {
+  it("y ninguna línea recibe las dos cosas a la vez", () => {
     const conDefecto = [...NUEVE_BUENAS.slice(0, 8), "Responsable de ventas"]
-    expect(dilutes(conDefecto)[0].evidence).toEqual(["Responsable de ventas"])
+    const cortadas = new Set(cuts(conDefecto).flatMap((c) => c.evidence ?? []))
+    for (const d of dilutes(conDefecto)) {
+      for (const e of d.evidence ?? []) expect(cortadas.has(e)).toBe(false)
+    }
+  })
+})
+
+/**
+ * CORTAR TERMINA. Es la diferencia con el ranking: cada corte baja el conteo, así
+ * que la próxima ronda propone MENOS. Se corre el bucle de verdad.
+ */
+describe("la propuesta de corte converge", () => {
+  it("aplicar los cortes deja el puesto sin ninguna tarjeta de corte", () => {
+    let lineas = [...NUEVE_BUENAS]
+    let rondas = 0
+    while (cuts(lineas).length > 0 && rondas < 10) {
+      const cortar = new Set(cuts(lineas).flatMap((c) => c.evidence ?? []))
+      const antes = lineas.length
+      lineas = lineas.filter((l) => !cortar.has(l))
+      expect(lineas.length).toBeLessThan(antes)
+      rondas++
+    }
+    expect(cuts(lineas)).toEqual([])
+    expect(lineas.length).toBe(KEEP_PER_ROLE)
   })
 })
 

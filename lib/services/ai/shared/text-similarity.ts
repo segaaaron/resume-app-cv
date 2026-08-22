@@ -146,6 +146,65 @@ function nearlySameLine(original: string, suggested: string): boolean {
   return kept / Math.max(o.length, contentWords(suggested).length) >= SAME_LINE_CONTENT_RATIO
 }
 
+/**
+ * UNA PALABRA CAMBIADA, Y NADA MÁS: el sinónimo que se escapaba por corta.
+ *
+ * ── EL LÍMITE QUE ESTO CIERRA (medido, 2026-08-22) ─────────────────────────
+ *
+ * El umbral de similitud es una FRACCIÓN, así que depende del largo: cambiar
+ * «app» por «aplicación» da 0.758 en una línea de 6 palabras —pasa— y 0.900 en
+ * la misma frase de 15 —se caza—. O sea que el sinónimo se colaba justo en las
+ * líneas cortas, que son donde el panel más empuja.
+ *
+ * El comentario de arriba lo dejó declarado y midió por qué no se bajaba el
+ * umbral: en 0.5 se llevaba puestas SIETE reescrituras buenas. La salida no era
+ * mover el umbral, era hacer otra pregunta.
+ *
+ * Ésta: ¿cambió EXACTAMENTE una palabra con contenido, y el resto de la frase
+ * quedó igual? Eso es un sinónimo por definición, mida lo que mida la línea. Una
+ * mejora real agrega información —el objeto, la herramienta, el resultado— y con
+ * ella agrega palabras; si sólo sustituyó una, no dijo nada nuevo.
+ *
+ * Falla del lado seguro por partida doble: exige que el largo casi no cambie, y
+ * NO se aplica cuando la palabra nueva trae una cifra (ahí sí hay dato nuevo).
+ * El arreglo de una apertura débil ya salió antes por su propia puerta.
+ */
+function swapsOneWord(original: string, suggested: string): boolean {
+  const o = contentWords(original)
+  const s = contentWords(suggested)
+  if (o.length === 0 || Math.abs(o.length - s.length) > 1) return false
+  const oSet = new Set(o)
+  const sSet = new Set(s)
+  const added = s.filter((w) => !oSet.has(w) && ![...oSet].some((x) => sameStem(w, x)))
+  const removed = o.filter((w) => !sSet.has(w) && ![...sSet].some((x) => sameStem(w, x)))
+  if (added.length !== 1 || removed.length !== 1) return false
+  // Una cifra es información nueva, no un sinónimo.
+  if (/\d/.test(added[0])) return false
+  /**
+   * CORREGIR UNA ERRATA NO ES REFORMULAR — y lo cazó la suite, no yo.
+   *
+   * La primera versión de esta regla tiraba «Objetive-C» → «Objective-C»: una
+   * palabra cambiada, el resto igual. Y una errata cuesta la KEYWORD ENTERA —el
+   * matcher busca la palabra bien escrita y no la encuentra—, así que descartar
+   * esa corrección es de lo más caro que este guard podría hacer.
+   *
+   * Se separan midiendo cuánto se parecen las DOS PALABRAS entre sí. Medido:
+   *
+   *   erratas   navite/native 0.667 · debeloper/developer 0.889 · objetive-c 0.909
+   *   sinónimos app/aplicación 0.200 · realicé/efectué 0.143 · atendí/asistí 0.333
+   *
+   * Dos bandas que no se tocan, con un hueco de 0.33 en medio. El corte va en
+   * 0.5: bien lejos de las dos.
+   */
+  return normalizedSimilarity(removed[0], added[0]) < TYPO_FIX_SIMILARITY
+}
+
+/**
+ * Cuánto se parecen dos palabras para considerar que una corrige a la otra.
+ * Derivado de la medición de arriba, no elegido a ojo.
+ */
+const TYPO_FIX_SIMILARITY = 0.5
+
 export function isCosmeticReword(original: string, suggested: string): boolean {
   if (!suggested.trim()) return false
   /**
@@ -163,6 +222,8 @@ export function isCosmeticReword(original: string, suggested: string): boolean {
    * similitud en palabras en vez de caracteres, y lo cazó la suite.
    */
   if (fixesWeakOpener(original, suggested)) return false
+  // Una sola palabra sustituida y el resto intacto: sinónimo, mida lo que mida.
+  if (swapsOneWord(original, suggested)) return true
   if (!nearlySameLine(original, suggested)) return false
 
   const o = wordsOf(original)
@@ -278,7 +339,13 @@ export function dropsContentWithoutGain(original: string, suggested: string): bo
  * the raw material of padding. Only used to decide whether ADDED words said
  * anything; never to compare meaning.
  */
-const FILLER_WORDS = new Set([
+/**
+ * Exportada para que la memoria de «ya aplicado» juzgue con la MISMA lista.
+ *
+ * Sin esto comparaba también las funcionales, y una reescritura que cambia «con»
+ * por «usando» —lo más normal del mundo— se leía como una línea distinta.
+ */
+export const FILLER_WORDS = new Set([
   // es
   "para", "por", "con", "de", "del", "la", "el", "los", "las", "un", "una", "y", "o", "que", "su", "sus",
   "mejorar", "mejorando", "asegurando", "garantizando", "optimizar", "optimizando", "manteniendo",

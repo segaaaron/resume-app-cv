@@ -1889,7 +1889,7 @@
       "section_search_blurb": "Un ATS no lee como una persona: el cargo, el contacto, las fechas y los encabezados tienen que poder extraerse.",
       "section_hard_blurb": "Las habilidades que la vacante pide por nombre. Es donde vive la mayor parte del puntaje.",
       "section_soft_blurb": "Las blandas que pide la vacante. Se demuestran dentro de una viñeta, no se listan como adjetivos.",
-      "section_other_blurb": "Vocabulario del oficio y de la empresa. Ayuda a que te noten, pero no mueve el puntaje.",
+      "section_other_blurb": "Habilidades que declarás y que ESTA vacante no nombra. No mueven el puntaje —el puntaje es contra esta oferta— pero suman para que te encuentren en búsquedas.",
       "section_format_blurb": "Que el archivo se parsee entero y que una persona pueda leerlo sin esfuerzo.",
       "section_tips_blurb": "Lo que mira un reclutador después del filtro. No mueve el puntaje porque aplica a cualquier vacante.",
       "section_moves_score": "mueve el puntaje",
@@ -1941,7 +1941,27 @@
         "role_under": "{job} tiene sólo {count}; para su antigüedad, {min}–{max}",
         "employment_gap": "Hay {months} meses entre {after} y {before} sin explicar",
         "dates_mixed_bare": "Estos puestos llevan sólo el año — les falta el mes",
-        "dates_mixed_bare_detail": "El ATS calcula tu antigüedad desde las fechas, y un año pelado le deja doce meses de margen. Poné el mes en cada una de estas y el chequeo se cierra solo."
+        "dates_mixed_bare_detail": "El ATS calcula tu antigüedad desde las fechas, y un año pelado le deja doce meses de margen. Poné el mes en cada una de estas y el chequeo se cierra solo.",
+        "title_mismatch": "La vacante busca «{wanted}» y tu CV no lo dice así",
+        "title_mismatch_detail": "El cargo es lo que el filtro lee primero. Si el trabajo es el mismo, escribí «{wanted}» tal cual en tu titular o en el puesto más reciente — no inventes un cargo que no tuviste.",
+        "cut_bullet": "Esta línea sobra en {job}: lleva {count} y se leen {max}",
+        "cut_bullet_detail": "Es de las más flojas del puesto — sin verbo fuerte, sin resultado o repitiendo lo de al lado. Cortarla hace que se lean tus mejores líneas.",
+        "cut_irrelevant": "Esta línea no le habla a esta vacante ({job})",
+        "cut_irrelevant_detail": "No dice ninguna de las palabras que la oferta pide, y el puesto ya lleva {count} líneas cuando se leen {max}. Es la primera candidata a salir.",
+        "merge_pair_offtarget": "En {job}, dos líneas que cuentan lo mismo y ninguna dice lo que este puesto pide",
+        "passive_voice": "Esta línea de {job} está en voz pasiva: el trabajo aparece, vos no",
+        "passive_voice_detail": "«Se implementó» o «fue desarrollado» describen lo que pasó sin decir quién lo hizo. En un CV la autoría es lo que se está comprando.",
+        "keyword_stuffing": "«{term}» aparece {count} veces: el {share}% de tu CV",
+        "keyword_stuffing_detail": "A partir de cierto punto deja de leerse como tu trabajo y empieza a leerse como un CV escrito para la máquina. Cuál de esas apariciones sobra lo sabés vos: quitar la equivocada te cuesta la coincidencia.",
+        "photo_market": "Tu CV lleva foto — y eso depende del país al que te postules",
+        "photo_market_detail": "En México, Brasil y Argentina la foto es estándar. En EE.UU. y Reino Unido muchas empresas descartan el CV con foto por precaución legal, y el 68% de las compañías con presencia global prefiere CVs sin foto incluso donde la costumbre local la acepta. No hay una respuesta correcta: depende de a dónde mandes este CV, y eso lo sabés vos.",
+        "personal_data": "Tu CV incluye un dato personal que en varios mercados se pide no poner",
+        "personal_data_birth_date": "La fecha de nacimiento. En EE.UU. y Reino Unido se omite para evitar sesgo por edad; en varios países de LATAM es normal incluirla.",
+        "personal_data_age": "La edad. Mismo criterio que la fecha de nacimiento: se omite donde la ley protege contra el sesgo por edad.",
+        "personal_data_marital_status": "El estado civil. En EE.UU., Reino Unido y Canadá no se incluye; en parte de LATAM y Europa todavía se usa.",
+        "personal_data_nationality": "La nacionalidad. Sólo se pone cuando la vacante pide permiso de trabajo; si no, se omite.",
+        "personal_data_id_number": "Un número de documento (DNI, CI, RUT, CURP, pasaporte). No se pone en un CV: es un dato sensible y no lo pide ningún proceso de selección hasta la contratación.",
+        "personal_data_gender": "El género. Se omite en los mercados donde la ley protege contra el sesgo."
       },
       "anatomy_now": "Ahora",
       "anatomy_after": "Después",
@@ -2023,7 +2043,8 @@
       "term_meta_jd": "lo pide {jd}",
       "term_meta_jd_unknown": "no lo pude contar",
       "term_meta_cv": "lo decís {cv}",
-      "check_blocks_anyway": "no suma puntos — te frena igual"
+      "check_blocks_anyway": "no suma puntos — te frena igual",
+      "fix_replace_with": "Escribir una sobre {term}"
     },
     "cv_review": {
       "title": "Revisión IA del CV",
@@ -2072,7 +2093,8 @@
       "legend_action": "Arreglo en un clic",
       "legend_tip": "Consejo manual",
       "diff_changes": "Cambios",
-      "options_title": "Elige una versión"
+      "options_title": "Elige una versión",
+      "confirm_figure": "Revisá la cifra: la propusimos a partir de lo que contás, y sólo vos sabés el número real. Corregila antes de aplicar si no cuadra."
     },
     "ai_profile_fill": {
       "title": "Ayúdate con la IA",

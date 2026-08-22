@@ -95,3 +95,57 @@ describe("la doctrina misma es genérica", () => {
     })
   }
 })
+
+/**
+ * LOS QUE FALTABAN, Y LA LISTA QUE ESTABA CATORCE VECES.
+ *
+ * ── EL PASE DE QA (2026-08-22) ─────────────────────────────────────────────
+ *
+ * Este guard cubría TRES módulos. Los que quedaban afuera escribían igual dentro
+ * del CV del usuario, y uno de ellos —`AISkillBulletModule`, el del botón que el
+ * panel más empuja— tenía sus reglas de redacción escritas a mano CUATRO veces
+ * (dos modos × dos idiomas) y CONTRADECÍA la doctrina vigente: prohibía la cifra
+ * en absoluto mientras la doctrina la autoriza como rango confirmable.
+ *
+ * Y la lista de palabras-IA prohibidas estaba copiada en CATORCE lugares de
+ * siete módulos — en dos de ellos, dos veces dentro del MISMO prompt, porque ese
+ * prompt además inyecta `proseRules`, que ya la dice. Una lista repetida no
+ * obliga más: gasta tokens y se desincroniza a la primera edición.
+ */
+const TODOS_LOS_QUE_ESCRIBEN = [
+  "lib/services/ai/modules/AIBulletModule.ts",
+  "lib/services/ai/modules/AITailorModule.ts",
+  "lib/services/ai/modules/AIReviewModule.ts",
+  "lib/services/ai/modules/AISummaryModule.ts",
+  "lib/services/ai/modules/AIMergeBulletsModule.ts",
+  "lib/services/ai/modules/AISkillBulletModule.ts",
+  "lib/services/ai/modules/profile-modes.ts",
+]
+
+describe("y ninguno lleva su propia copia de las reglas", () => {
+  for (const m of TODOS_LOS_QUE_ESCRIBEN) {
+    it(`${m.split("/").pop()} cita la doctrina compartida`, () => {
+      expect(read(m)).toContain("cv-writing-doctrine")
+    })
+  }
+
+  it("la lista de palabras-IA vive en un solo lugar", () => {
+    const copiada = TODOS_LOS_QUE_ESCRIBEN.filter((m) => {
+      const src = read(m)
+      return /Spearheaded[\s\S]{0,90}Leveraged/.test(src) || /Orquestó[\s\S]{0,90}Apalancó/.test(src)
+    })
+    expect(copiada).toEqual([])
+  })
+
+  /**
+   * Una prohibición ABSOLUTA de la cifra contradice la doctrina. Si un módulo
+   * necesita restringirla para su caso, tiene que decir que es una ACOTACIÓN de
+   * esa línea — una excepción declarada no es una contradicción, y el modelo no
+   * gasta razonamiento tratando de reconciliar dos órdenes opuestas.
+   */
+  it("una restricción de cifra se declara como acotación", () => {
+    const src = read("lib/services/ai/modules/AISkillBulletModule.ts")
+    expect(src).toContain("NARROWING FOR THIS ONE BULLET")
+    expect(src).toContain("ACOTACIÓN SÓLO PARA ESTE BULLET")
+  })
+})

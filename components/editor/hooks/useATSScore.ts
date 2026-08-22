@@ -5,6 +5,9 @@ import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
 import { useState, useCallback, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { normalizeTerm } from "@/lib/ats/vocabulary"
+import { postingTermsForPrompt } from "@/lib/ats/rewrite-keeps-match"
+import { useAtsPostingStore } from "@/stores/atsPostingStore"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { useTranslations, useLocale } from "next-intl"
@@ -15,7 +18,6 @@ import { useCvLanguage } from "./useCvLanguage"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
-import type { EngineSimulation } from "@/lib/ats/engines"
 import { track } from "@/lib/analytics/track"
 import { scoreBucket } from "@/lib/analytics/user-type"
 import { useEditorPro } from "../EditorContext"
@@ -160,8 +162,6 @@ export interface VerifyResult {
     length: { score: number; recommendation: string }
     contact: { score: number; hasEmail: boolean; hasPhone: boolean; hasLinkedIn: boolean }
   }
-  /** Per-engine verdicts of the REAL extracted PDF text. */
-  engines?: EngineSimulation
   extractedText: string
   wordCount: number
 }
@@ -376,6 +376,22 @@ export function useATSScore() {
         // reading the posting slightly differently.
         if (data?.extractedKeywords) {
           keywordCacheRef.current = { postingKey: `${mode}:${text}`, keywords: data.extractedKeywords }
+          /**
+           * Y LA VACANTE SE PUBLICA PARA EL RESTO DEL EDITOR.
+           *
+           * El asistente escribe viñetas y el resumen que terminan en el MISMO
+           * CV, y no tenía forma de saber contra qué puesto se está postulando:
+           * escribía bien, pero al aire. Este hook lo monta un solo componente,
+           * así que su estado no llegaba a ningún otro lado.
+           *
+           * Va con el `resumeId` del análisis: un CV distinto no hereda la
+           * oferta del anterior.
+           */
+          useAtsPostingStore.getState().setPosting({
+            terms: postingTermsForPrompt(data.extractedKeywords.hardSkills, data.extractedKeywords.softSkills),
+            jobTitle: typeof data.extractedKeywords.jobTitle === "string" ? data.extractedKeywords.jobTitle : "",
+            resumeId: useResumeStore.getState().resumeId ?? null,
+          })
         }
         await onSuccess()
         track("ai_ats_scored", { plan, score_bucket: scoreBucket(typeof data?.score === "number" ? data.score : 0) })
@@ -406,8 +422,27 @@ export function useATSScore() {
    * rescore without re-creating it, and it never renders anything on its own.
    */
   const locallyProvenRef = useRef<string[]>([])
+  /**
+   * SE ACREDITA NORMALIZADO, PORQUE ASÍ SE PREGUNTA DEL OTRO LADO.
+   *
+   * ── EL DEFECTO (encontrado en el pase de QA, 2026-08-22) ──────────────────
+   *
+   * «Si arreglo algo no sube mi soft skill.» El crédito local se guardaba TAL
+   * CUAL venía —«Clear communication»— y del otro lado el matcher pregunta
+   * `demonstratedByEvidence.has(normalizeTerm(k))`, con el conjunto que la
+   * pasada de evidencia llena con `normalizeTerm(...)` (`soft-skill-evidence`,
+   * ~184). Un término sin normalizar no puede acertar nunca: el crédito viajaba
+   * hasta el servidor, entraba al conjunto y no coincidía con nada.
+   *
+   * Silencioso en las dos direcciones: nadie ve un `has()` que devuelve false, y
+   * el usuario sólo ve que el porcentaje no se mueve después de aceptar la
+   * frase que la aplicación misma le escribió para demostrar esa habilidad.
+   *
+   * Se normaliza ACÁ, en el único punto por donde entra, y no en cada llamador:
+   * un segundo llamador que se olvide reintroduce el defecto entero.
+   */
   const creditSoftSkill = useCallback((skill: string) => {
-    const s = skill.trim()
+    const s = normalizeTerm(skill)
     if (s && !locallyProvenRef.current.includes(s)) locallyProvenRef.current.push(s)
   }, [])
 

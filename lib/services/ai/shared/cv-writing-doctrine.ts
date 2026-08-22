@@ -149,6 +149,32 @@ Si el trabajo realmente tenía un número y no lo dio, proponé el rango y marca
  * The wording rules that survive across every surface: how a CV line opens, how
  * long it runs, and the words that mark text as machine-written.
  */
+/**
+ * LAS MARCAS DE IA, EN UN SOLO LUGAR.
+ *
+ * ── EL DEFECTO (pase de QA, 2026-08-22) ────────────────────────────────────
+ *
+ * La misma lista —"Spearheaded", "Leveraged", "Orchestrated", "Utilized",
+ * "Synergy"— estaba copiada a mano en SEIS prompts: improve-bullet (2),
+ * generate/improve-summary (4) y skill-bullet (4 más, ya retiradas). En
+ * improve-bullet aparecía DOS VECES en el mismo prompt, porque ese prompt
+ * además inyecta `proseRules`, que ya la dice.
+ *
+ * Una lista repetida seis veces no obliga seis veces: gasta tokens, y a la
+ * primera vez que alguien agregue una palabra en un sitio, los otros cinco
+ * prompts quedan diciendo otra cosa. Que es exactamente cómo esta doctrina se
+ * desincronizó antes.
+ *
+ * El resumen NO puede usar `proseRules` entero —habla de viñetas, de "al menos
+ * 16 palabras" y de un solo tiempo verbal, que no aplican a un párrafo—, así que
+ * la pieza compartida es la lista, no el bloque.
+ */
+export function aiTellWords(language: string): string {
+  return language === "en"
+    ? `"Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven"`
+    : `"Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados"`
+}
+
 export function proseRules(language: string): string {
   return language === "en"
     ? `HOW IT MUST READ:
@@ -157,7 +183,7 @@ export function proseRules(language: string): string {
 - ONE tense across every line: simple past throughout. Mixing "Handled" with "Was handling" in the same block reads as careless.
 - FIRST PERSON, implied. The line is the candidate speaking about their own work, never a third party describing them. Never write it as though someone else were reporting on them.
 - Vary length and sentence shape across lines; three identical rhythms read as generated.
-- Banned as empty: "to optimise the process", "ensuring quality", "performing related tasks", "results-driven", "team player", "proactive", "hard-working". Also the AI tells: "spearheaded", "leveraged", "orchestrated", "utilised", "synergy".
+- Banned as empty: "to optimise the process", "ensuring quality", "performing related tasks", "results-driven", "team player", "proactive", "hard-working". Also the AI tells: ${aiTellWords("en")}.
 - Plain "• " bullets. No tables, columns, emoji or brackets — a "[X%]" left in a CV reads as unfinished.`
     : `CÓMO TIENE QUE LEERSE:
 - Abre con un verbo de acción fuerte en pasado, primera persona implícita — nunca un pronombre, y nunca ninguna de estas aperturas de tarea: ${bannedOpeners("es")}. Cada una le entrega a otro la autoría del trabajo. Verbos del peso correcto: ${strongOpeners("es")} — son ejemplos del REGISTRO, no un menú para elegir; el verbo correcto es el que nombra lo que ESTE candidato hizo de verdad.
@@ -165,7 +191,7 @@ export function proseRules(language: string): string {
 - UN SOLO tiempo verbal en todas las líneas: pretérito perfecto simple en PRIMERA persona, la forma -é/-í ("Ejecuté", "Definí", "Coordiné"). Mezclar "Realicé" con "Aplicaba" en el mismo bloque se lee como descuido.
 - NUNCA la forma -ó de tercera persona ("Ejecutó", "Definió", "Coordinó"): eso se lee como si otra persona escribiera un informe sobre el candidato, y una línea de CV la escribe él sobre su propio trabajo. Medido en un CV real: tailor devolvió "Ejecutó suites con Selenium…" y "Definió alcance…" dentro del CV del propio candidato.
 - Variá el largo y la forma de la frase entre líneas; tres ritmos idénticos se leen como generados.
-- Prohibidas por vacías: "para optimizar el proceso", "asegurando la calidad", "realizando tareas afines", "orientado a resultados", "trabajo en equipo", "proactivo". También las marcas de IA: "orquestó", "apalancó", "utilizó", "sinergia".
+- Prohibidas por vacías: "para optimizar el proceso", "asegurando la calidad", "realizando tareas afines", "orientado a resultados", "trabajo en equipo", "proactivo". También las marcas de IA: ${aiTellWords("es")}.
 - Viñetas "• " simples. Sin tablas, columnas, emojis ni corchetes — un "[X%]" olvidado en un CV se lee como algo sin terminar.`
 }
 

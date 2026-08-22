@@ -26,6 +26,8 @@ import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule } from "../sha
 import { parseBullets } from "../shared/bullets"
 import { contentDroppedFrom } from "../shared/text-similarity"
 import { clicheBanList } from "../shared/cliches"
+import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
+import { reportGuardDrops } from "../shared/guard-metrics"
 import { cleanGeneratedText } from "../shared/clean-output"
 
 export interface MergeBulletsInput {
@@ -34,6 +36,24 @@ export interface MergeBulletsInput {
   indexes: [number, number]
   sectionData: Record<string, unknown>
   language?: "es" | "en"
+  /**
+   * Los términos que ESTA vacante pide, del informe.
+   *
+   * ── EL HUECO (pase de QA, 2026-08-22) ────────────────────────────────────
+   *
+   * Fusionar es la ÚNICA operación del panel que borra texto del CV: entran dos
+   * líneas y sale una. Y este input no tenía siquiera un campo para la oferta,
+   * así que el modelo unía sin saber qué palabras no puede soltar. Las duras
+   * pesan .45 —más que cualquier otra cosa del informe— y una fusión que se come
+   * «Swift» cuesta más puntos de los que la fusión puede devolver.
+   *
+   * Es el MISMO hueco que la auditoría pasada encontró en improve-bullet e
+   * improve-summary. Se arreglaron los dos y nadie miró al tercero, que encima
+   * es el único que borra.
+   *
+   * Falla abierto: sin vacante el guard no corre y el comportamiento es el viejo.
+   */
+  postingTerms?: string[]
 }
 
 export type MergeBulletsResult =
@@ -239,6 +259,7 @@ BULLET B: ${b}`
      */
     if (losesStatedFigure(`${a}\n${b}`, text)) {
       this.logger.warn("[AIService.mergeBullets] merged bullet dropped a stated figure — discarded", { targetId })
+      reportGuardDrops({ endpoint: "merge-bullets", offered: 1, kept: 0, hardCoded: 0, figureLoss: 1, trivial: 0, termLoss: 0 })
       return { status: "not_mergeable" }
     }
 
@@ -252,7 +273,16 @@ BULLET B: ${b}`
      * "mixed together with no CV value" case: two lines went in and what came out
      * says less than they did.
      */
-    const dropped = [...contentDroppedFrom(a, text), ...contentDroppedFrom(b, text)]
+    /**
+     * Y LA COINCIDENCIA CON LA VACANTE, que es lo que el usuario vino a comprar.
+     *
+     * `contentDroppedFrom` mide palabras del CV; esto mide las de la OFERTA. No
+     * es un sexto heurístico: usa las mismas dos funciones que el matcher
+     * (`termPresent`/`normalizeTerm`), así que el guard y el puntaje no pueden
+     * discrepar por construcción.
+     */
+    const lostTerms = droppedPostingTerms(`${a}\n${b}`, text, input.postingTerms ?? [])
+    const dropped = [...contentDroppedFrom(a, text), ...contentDroppedFrom(b, text), ...lostTerms]
     if (dropped.length > 0) {
       /**
        * ONE retry, saying exactly what went missing.
@@ -271,9 +301,21 @@ BULLET B: ${b}`
       const note = language === "en"
         ? `Your last answer dropped these words from the two lines: ${missed}. They are facts the candidate wrote. Write the merge again with every one of them in it.`
         : `Tu respuesta anterior perdió estas palabras de las dos líneas: ${missed}. Son datos que escribió el candidato. Escribí la fusión de nuevo con todas ellas adentro.`
-      const second = await this.retryMerge(note, callOnce, usages, a, b, targetId)
+      const second = await this.retryMerge(note, callOnce, usages, a, b, targetId, input.postingTerms ?? [])
       if (second) return { status: "ok", text: (await cleanGeneratedText([second], language, sectionData))[0] ?? second }
       this.logger.warn("[AIService.mergeBullets] merged bullet dropped content twice — discarded", { targetId, dropped: dropped.slice(0, 5) })
+      // Y al panel de admin, no sólo a la consola del contenedor: una fusión
+      // descartada le costó al usuario un uso y un cooldown para que sus dos
+      // líneas se queden como estaban.
+      reportGuardDrops({
+        endpoint: "merge-bullets",
+        offered: 1,
+        kept: 0,
+        hardCoded: 0,
+        figureLoss: 0,
+        trivial: lostTerms.length > 0 ? 0 : 1,
+        termLoss: lostTerms.length > 0 ? 1 : 0,
+      })
       return { status: "not_mergeable" }
     }
 
@@ -298,6 +340,7 @@ BULLET B: ${b}`
     a: string,
     b: string,
     targetId: string,
+    postingTerms: readonly string[],
   ): Promise<string | null> {
     try {
       const completion = await call(note)
@@ -313,6 +356,7 @@ BULLET B: ${b}`
       if (out.length < Math.max(a.length, b.length)) return null
       if (losesStatedFigure(`${a}\n${b}`, out)) return null
       if (contentDroppedFrom(a, out).length || contentDroppedFrom(b, out).length) return null
+      if (droppedPostingTerms(`${a}\n${b}`, out, postingTerms).length > 0) return null
       this.logger.info("[AIService.mergeBullets] second attempt kept every word", { targetId })
       return out
     } catch {

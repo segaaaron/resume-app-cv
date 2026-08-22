@@ -18,6 +18,9 @@ import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
 import type { CategoryBreakdown } from "./score-breakdown"
 import type { WritingChecks } from "./writing-checks"
 import { refineMissingRequirements } from "./requirement-satisfied"
+import { findPersonalData } from "./personal-data"
+import { findStuffedTerms } from "./keyword-density"
+import { findPassiveBullets } from "./passive-voice"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
 import { hasAnyMetric } from "@/lib/services/ai/shared/ai-helpers"
 import { WEAK_OPENERS } from "@/lib/services/ai/shared/bullet-quality"
@@ -52,6 +55,26 @@ function resumeTextOf(sectionData: Record<string, unknown>): string {
   const certs = sectionData.certifications
   if (Array.isArray(certs)) {
     for (const c of certs as Array<{ name?: string }>) parts.push(c.name ?? "")
+  }
+  /**
+   * Y LAS SECCIONES PROPIAS DEL USUARIO.
+   *
+   * Este texto es el que contesta «tu CV lo dice N veces» en la tabla de
+   * términos — el número que hace el informe auditable. Su CV tiene una sección
+   * llamada «AREAS OF EXPERTISE» con nueve tecnologías impresas en el PDF, y acá
+   * no entraba ninguna: la tabla decía «lo decís 0» sobre algo que él ve en su
+   * propia pantalla. El mismo agujero que tenía el haystack del matcher.
+   */
+  const custom = sectionData.customSections
+  if (Array.isArray(custom)) {
+    for (const c of custom as Array<{ title?: string; items?: Array<{ title?: string; subtitle?: string; description?: string }> }>) {
+      parts.push(c.title ?? "")
+      for (const i of c.items ?? []) parts.push(i.title ?? "", i.subtitle ?? "", i.description ?? "")
+    }
+  }
+  const projects = sectionData.projects
+  if (Array.isArray(projects)) {
+    for (const p of projects as Array<{ name?: string; description?: string }>) parts.push(p.name ?? "", p.description ?? "")
   }
   return parts.filter(Boolean).join("\n")
 }
@@ -172,6 +195,36 @@ const ROLE_RANGE: Array<{ maxAgeYears: number; min: number; max: number }> = [
   { maxAgeYears: Infinity, min: 2, max: 3 }, // los viejos
 ]
 
+/**
+ * Los cargos que el CV declara, del titular al puesto más viejo.
+ *
+ * Mismo orden y mismas dos fuentes que `buildCVTitles`, que es lo que el matcher
+ * mira para puntuar `title`. Que el chequeo y el puntaje lean lo mismo no es una
+ * comodidad: si acá nombráramos otro campo, la tarjeta le diría que cambie algo
+ * que el número no está mirando.
+ */
+/**
+ * Sólo la experiencia laboral. Una habilidad que aparece acá está DEMOSTRADA; la
+ * misma sólo en la lista es una afirmación. Es la distinción que el matcher ya
+ * hace para las duras, aplicada con el mismo criterio a las propias.
+ */
+function evidenceTextOf(sectionData: Record<string, unknown>): string {
+  const work = Array.isArray(sectionData.workExperience)
+    ? (sectionData.workExperience as Array<{ jobTitle?: string; description?: string }>)
+    : []
+  return work.map((j) => `${j.jobTitle ?? ""} ${j.description ?? ""}`).join("\n")
+}
+
+function cvTitles(sectionData: Record<string, unknown>): string[] {
+  const pd = sectionData.personalDetails as { jobTitle?: string } | undefined
+  const work = Array.isArray(sectionData.workExperience)
+    ? (sectionData.workExperience as Array<{ jobTitle?: string }>)
+    : []
+  return [pd?.jobTitle ?? "", ...work.map((w) => w?.jobTitle ?? "")]
+    .map((x) => x.trim())
+    .filter(Boolean)
+}
+
 function roleBalance(sectionData: Record<string, unknown>): Array<{ targetId: string; jobTitle: string; count: number; min: number; max: number }> {
   const work = Array.isArray(sectionData.workExperience)
     ? (sectionData.workExperience as Array<{ id?: string; jobTitle?: string; description?: string; endDate?: string; currentlyWorking?: boolean }>)
@@ -243,6 +296,14 @@ export interface PanelReportInput {
    * siempre. Se filtra acá, en la entrada al informe, y no en cada tarjeta.
    */
   isAlreadyAccepted?: (text?: string | null) => boolean
+  /**
+   * Si el CV lleva foto cargada.
+   *
+   * Viene del panel y no de `sectionData` porque la foto vive en la CONFIG del
+   * currículum (`config.photoUrl`), no en sus datos. Se usa sólo para informar —
+   * lo que en México es estándar, en EE.UU. descarta— y nunca para puntuar.
+   */
+  hasPhoto?: boolean
 }
 
 /** Traduce la respuesta del servidor + los chequeos vivos a UN informe. */
@@ -381,6 +442,27 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
     typos: result.typoWarnings ?? [],
     credibility: input.credibility,
     structure: structureOf(sectionData),
+    cvTitles: cvTitles(sectionData),
+    // Sus habilidades, para la sección que existía vacía. Sin tope de producto:
+    // el CV ya acota cuántas puede tener y esconder parte de su propia lista es
+    // el defecto que esto viene a cerrar.
+    cvSkills: ((sectionData.skills as Array<{ name?: string }> | undefined) ?? [])
+      .map((x) => (x?.name ?? "").trim())
+      .filter(Boolean),
+    evidenceText: evidenceTextOf(sectionData),
+    personalData: findPersonalData(sectionData, input.hasPhoto ?? false),
+    // El relleno se mide contra los términos que la VACANTE pide: repetir una
+    // palabra cualquiera es un problema de redacción y ya tiene dueño.
+    stuffedTerms: findStuffedTerms(
+      resumeTextOf(sectionData),
+      [...(result.extractedKeywords?.hardSkills ?? []), ...(result.extractedKeywords?.softSkills ?? [])],
+    ),
+    passiveBullets: findPassiveBullets(
+      (Array.isArray(sectionData.workExperience)
+        ? (sectionData.workExperience as Array<{ id?: string; jobTitle?: string; description?: string }>)
+        : []
+      ).map((j) => ({ id: j.id, jobTitle: j.jobTitle, bullets: parseBullets(j.description ?? "") })),
+    ),
     roleBalance: roleBalance(sectionData),
     gaps: employmentGaps(sectionData),
   })

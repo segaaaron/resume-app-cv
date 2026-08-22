@@ -27,6 +27,7 @@
 // Determinista y sin modelo: decidir QUÉ mostrar es aritmética sobre lo que ya
 // se calculó. El modelo sólo hace falta para ESCRIBIR.
 
+import { FILLER_WORDS } from "@/lib/services/ai/shared/text-similarity"
 import { normalizeTerm } from "./vocabulary"
 
 export type PlanSource = "critical" | "bullet" | "merge" | "soft" | "structure"
@@ -61,17 +62,48 @@ export interface PlanInput {
 export function textSignature(text: string): string {
   const words = normalizeTerm(text)
     .split(" ")
-    .filter((w) => w.length > 3)
+    // `normalizeTerm` CONSERVA punto, barra y guion —los necesita para «node.js»
+    // o «CI/CD»—, así que el punto final de una frase quedaba pegado y volvía
+    // «mensual.» distinto de «mensual». Esta firma promete reconocer el texto
+    // «aunque vuelva con otras comas»; sin esto no lo hacía con el punto final.
+    .map((w) => w.replace(/^[.\-/]+|[.\-/]+$/g, ""))
+    // > 2 y no > 3. Medido: con el corte en 3 se caían «red», «web», «app», «QA»
+    // — justo las palabras que DISTINGUEN dos viñetas del mismo puesto («la capa
+    // de red» vs «la capa de dominio»), y sin ellas las dos firmas quedaban
+    // idénticas y la segunda línea se suprimía como si fuera la primera.
+    .filter((w) => w.length > 2)
   return [...new Set(words)].sort().slice(0, 24).join(" ")
 }
 
 /**
  * ¿Este texto es, en lo que importa, uno que el usuario ya aceptó?
  *
- * Umbral alto (80% de las palabras con contenido) a propósito: descartar de más
- * le esconde una mejora real. La dirección segura del error es mostrar de más,
- * no de menos — pero mostrar EXACTAMENTE lo mismo otra vez es lo que hartó al
- * usuario, y eso es lo que esto corta.
+ * ── EL DEFECTO MEDIDO (2026-08-22) ─────────────────────────────────────────
+ *
+ * Esto comparaba la PROPORCIÓN de palabras compartidas con un corte en 0.80, y
+ * suprimía viñetas que no tenían nada que ver:
+ *
+ *   «…en SwiftUI para el flujo de PAGOS»  vs  «…para el flujo de ONBOARDING» → 0.833
+ *   «pruebas unitarias sobre la capa de RED» vs «…de DOMINIO»                → 0.833
+ *   «Atendí clientes en ventanilla del banco» vs la misma más larga          → 0.667
+ *
+ * Las dos bandas —la misma línea reescrita (0.80-0.833) y dos líneas distintas
+ * (0.667-0.833)— SE SOLAPAN. Ningún umbral las separa; el proyecto ya aprendió
+ * eso mismo con `sharesSubject` y los pares de fusión. La proporción era la
+ * pregunta equivocada.
+ *
+ * ── LA PREGUNTA CORRECTA: ¿SUSTITUYÓ O AMPLIÓ? ─────────────────────────────
+ *
+ * Una reescritura de la MISMA línea conserva todo lo que decía y agrega: no
+ * pierde ninguna palabra con contenido. Dos líneas DISTINTAS se diferencian
+ * justamente porque una SUSTITUYE un término por otro — pagos por onboarding,
+ * red por dominio. Eso es binario, no gradual, y no depende de un umbral.
+ *
+ * Falla hacia MOSTRAR DE MÁS, que es la dirección que el propio diseño de esta
+ * memoria declara como segura: esconderle una mejora real es peor que ofrecerle
+ * algo que ya vio. Y «esto no cambia nada» tiene otro dueño río arriba
+ * —`isTrivialEdit` / `isCosmeticReword`—, que es quien corta las variantes
+ * cosméticas de un texto ya aceptado.
  */
 export function matchesApplied(text: string, appliedSignatures: string[]): boolean {
   const sig = textSignature(text)
@@ -81,8 +113,14 @@ export function matchesApplied(text: string, appliedSignatures: string[]): boole
   return appliedSignatures.some((prev) => {
     const prevWords = prev.split(" ").filter(Boolean)
     if (prevWords.length === 0) return false
-    const shared = prevWords.filter((w) => words.has(w)).length
-    return shared / Math.max(words.size, prevWords.length) >= 0.8
+    // Si algo que el texto aceptado decía ya NO está, esta línea habla de otra
+    // cosa: no es la misma con otras comas.
+    // Sólo las palabras con CONTENIDO: cambiar «con» por «usando» es reescritura,
+    // no otra línea. Es la misma lista que usa `addsNoInformation`, no una copia.
+    const perdidas = prevWords.filter((w) => !words.has(w) && !FILLER_WORDS.has(w))
+    if (perdidas.length > 0) return false
+    // Y lo que se agregó no puede ser media línea nueva: eso ya es otro aporte.
+    return prevWords.length / words.size >= 0.7
   })
 }
 

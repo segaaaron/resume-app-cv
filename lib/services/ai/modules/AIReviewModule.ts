@@ -15,7 +15,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
-import { parseAIJson, safeParseAIJson, resolveLanguage, hasHardCodedFact, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
+import { parseAIJson, safeParseAIJson, resolveLanguage, hardCodedFactKind, proposesRangeFigure, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword, isTrivialEdit } from "../shared/text-similarity"
@@ -144,7 +144,14 @@ const DOCTRINE_FINGERPRINT = createHash("sha256")
   )
   .digest("hex")
   .slice(0, 8)
-const ANALYSIS_REVISION = `v3-${DOCTRINE_FINGERPRINT}`
+/**
+ * v4: el prompt del reclutador pasó a RECIBIR los términos por los que la vacante
+ * puntúa. La huella de la doctrina no cubre ese cambio —la doctrina no se tocó—,
+ * así que sin este bump el caché seguiría sirviendo el análisis viejo y el arreglo
+ * no llegaría nunca a un CV ya analizado. Es exactamente el defecto que costó una
+ * sesión entera: «si tocás un prompt y la pantalla no cambia, sospechá del caché».
+ */
+const ANALYSIS_REVISION = `v4-${DOCTRINE_FINGERPRINT}`
 
 export class AIReviewModule {
   /**
@@ -347,6 +354,26 @@ export class AIReviewModule {
     /** Lo que la vacante pide. Viaja hasta el guard que impide bajar el puntaje. */
     postingTerms: readonly string[] = [],
   ): Promise<CvAnalysis | null> {
+    /**
+     * LOS TÉRMINOS QUE LA VACANTE PIDE, DICHOS AL MODELO.
+     *
+     * ── EL HUECO (barrido, 2026-08-22) ────────────────────────────────────
+     *
+     * Este módulo YA recibía `postingTerms`… y los usaba sólo en el GUARD: si la
+     * reescritura soltaba uno, se descartaba. Pero al modelo nunca se le decía
+     * cuáles eran. Le pasábamos el texto crudo del aviso y lo castigábamos por no
+     * adivinar qué palabras, de todas ésas, son las que puntúan.
+     *
+     * Es literalmente el defecto que este proyecto ya nombró: «un guard que
+     * descarta lo que pierde un término, sobre un modelo que nunca supo cuáles
+     * eran, sólo produce reescrituras descartadas. Las dos mitades van juntas».
+     * Se arregló en tailor y en improve-bullet; acá quedó vivo.
+     */
+    const terms = postingTerms.filter((t) => t.trim()).slice(0, 30)
+    const termsLine = terms.length === 0 ? "" : (en
+      ? `\n=== TERMS THIS POSTING SCORES ON ===\n${terms.join(", ")}\nA rewrite that drops one of these costs the candidate the match it was carrying. Keep the ones the line already earns; never claim one the résumé does not back.`
+      : `\n=== TÉRMINOS POR LOS QUE ESTA VACANTE PUNTÚA ===\n${terms.join(", ")}\nUna reescritura que suelte uno de éstos le cuesta al candidato la coincidencia que traía. Conservá los que la línea ya tenga; nunca afirmes uno que el CV no respalde.`)
+
     // Same resume, same posting, same language → the answer we already gave.
     // No call, no tokens, no quota: it is the identical question.
     // ANALYSIS_REVISION is part of the key on purpose. The cache answers "same
@@ -425,6 +452,7 @@ Judge this RESUME for the JOB below the way you would in a 7-second screen, then
 
 === JOB ===
 ${jobContext}
+${termsLine}
 
 === RESUME ===
 ${resumeText}
@@ -495,6 +523,7 @@ Evalúa este CV para el PUESTO de abajo como lo harías en un escaneo de 7 segun
 
 === PUESTO ===
 ${jobContext}
+${termsLine}
 
 === CV ===
 ${resumeText}
@@ -742,8 +771,6 @@ ${untrustedDataRule(true)}
 === JOB DESCRIPTION ===
 ${jobDescriptionTruncated}
 
-=== CANDIDATE RESUME (context only) ===
-${resumeText}
 
 Return JSON with this exact shape:
 {
@@ -751,16 +778,14 @@ Return JSON with this exact shape:
   "softSkills": ["<soft skill the job requires>", ...],
   "jobTitle": "<the role title from the job description>",
   "mustHaves": ["<hard requirement: years of experience, degree, certification, license>", ...],
-  "summary": "<1-2 sentence qualitative summary of how the resume fits — do NOT state a numeric score>",
 }
 
 Rules:
 - hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management"). Max ~12 hard skills.
 - mustHaves: an ALTERNATIVE LIST IS ONE REQUIREMENT. If the posting says "Degree in Business Engineering, Business Administration, Marketing or related", that is a SINGLE mustHaves entry written as one string — never three entries, one per career. Split apart, each is judged on its own and at most one can ever be met, so the others are reported as unmet for every candidate alive. Same for "Excel or Google Sheets". Only split when the posting truly demands BOTH ("Excel AND SQL").
 - Extract ONLY what the job description actually asks for. Do not hard-code requirements.
-- WRITE EVERY ITEM IN THE RESUME'S LANGUAGE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
-- Every suggestion carries an "action" — the tool that performs it, which the user gets as a working button: add_skill (put the exact skill in "value"), rewrite_bullet (give the job ID shown as "ID:x" in the resume and the bullet's 0-based index), rewrite_summary, fix_dates, remove_duplicates, or manual when nothing in the editor can do it in one click. A wrong action is worse than manual.
-- If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
+- WRITE EVERY ITEM IN THE OUTPUT LANGUAGE STATED ABOVE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
+- If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
       : `Extrae los requisitos de contratación de esta descripción de puesto. NO puntúes ni califiques nada — solo extrae y aconseja.
 ${untrustedDataRule(false)}
@@ -768,8 +793,6 @@ ${untrustedDataRule(false)}
 === DESCRIPCIÓN DEL PUESTO ===
 ${jobDescriptionTruncated}
 
-=== CV DEL CANDIDATO (contexto solo para sugerencias) ===
-${resumeText}
 
 Devuelve JSON con esta forma exacta:
 {
@@ -777,16 +800,14 @@ Devuelve JSON con esta forma exacta:
   "softSkills": ["<habilidad blanda que pide el puesto>", ...],
   "jobTitle": "<el título del puesto según la descripción>",
   "mustHaves": ["<requisito duro: años de experiencia, título, certificación, licencia>", ...],
-  "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV — NO indiques un número de score>",
 }
 
 Reglas:
 - hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos"). Máx ~12 hard skills.
 - mustHaves: UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO. Si el aviso dice "Licenciatura en Ingeniería Comercial, Administración de Empresas, Marketing o carreras afines", eso es UNA sola entrada de mustHaves escrita como una sola cadena — nunca tres entradas, una por carrera. Separadas, cada una se juzga sola y como mucho puede cumplirse una: las demás figuran como incumplidas para cualquier candidato del planeta. Lo mismo con "Excel o Google Sheets". Separá sólo cuando el aviso exige AMBAS ("Excel Y SQL").
 - Extrae SOLO lo que la descripción realmente pide. No agregues requisitos que no estén.
-- ESCRIBE CADA ÍTEM EN EL IDIOMA DEL CV, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
-- Cada sugerencia lleva una "action" — la herramienta que la ejecuta, que el usuario recibe como botón real: add_skill (pon la habilidad exacta en "value"), rewrite_bullet (da el ID del puesto que aparece como "ID:x" en el CV y el índice 0-based del bullet), rewrite_summary, fix_dates, remove_duplicates, o manual cuando nada en el editor pueda hacerlo en un clic. Una acción equivocada es peor que manual.
-- Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
+- ESCRIBE CADA ÍTEM EN EL IDIOMA DE SALIDA INDICADO ARRIBA, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
+- Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
     // Role-only mode: infer the STANDARD requirements for the target role (no
@@ -798,8 +819,6 @@ Reglas:
 === TARGET ROLE ===
 ${roleTitle ?? ""}
 
-=== CANDIDATE RESUME (context only) ===
-${resumeText}
 
 Return JSON with this exact shape:
 {
@@ -807,21 +826,18 @@ Return JSON with this exact shape:
   "softSkills": ["<soft skill the role standardly requires>", ...],
   "jobTitle": "<canonical title for this role>",
   "mustHaves": ["<standard hard requirement: typical years, degree, certification, license>", ...],
-  "summary": "<1-2 sentence qualitative summary of how the resume fits this role — do NOT state a numeric score>",
 }
 
 Rules:
 - Only STANDARD requirements for this role. Max ~12 hard skills.
 - Do NOT add niche or company-specific requirements — only what a typical posting for this role lists.
-- If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
+- If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
       : `Infiere los requisitos ESTÁNDAR de contratación para el rol objetivo de abajo — las habilidades técnicas, blandas, requisitos duros y el título canónico que una oferta típica de este rol listaría. Básate SOLO en expectativas comunes y bien establecidas de este rol. NO quemes requisitos de nicho, específicos de una empresa ni inusuales. Si el rol es demasiado vago o no es un rol real, devuelve off_topic.
 
 === ROL OBJETIVO ===
 ${roleTitle ?? ""}
 
-=== CV DEL CANDIDATO (contexto solo para sugerencias) ===
-${resumeText}
 
 Devuelve JSON con esta forma exacta:
 {
@@ -829,13 +845,12 @@ Devuelve JSON con esta forma exacta:
   "softSkills": ["<habilidad blanda que el rol pide estándarmente>", ...],
   "jobTitle": "<título canónico de este rol>",
   "mustHaves": ["<requisito duro estándar: años típicos, título, certificación, licencia>", ...],
-  "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV con este rol — NO indiques un número de score>",
 }
 
 Reglas:
 - Solo requisitos ESTÁNDAR de este rol. Máx ~12 hard skills.
 - NO quemes requisitos de nicho/específicos de empresa — solo lo que una oferta típica del rol lista.
-- Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
+- Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
     const prompt = useRole ? rolePrompt : jdPrompt
@@ -883,31 +898,45 @@ Reglas:
      * the posting text itself, and only editing the posting buys a fresh read.
      */
     /**
-     * The CV is part of the key because the CV is part of the INPUT.
+     * LA CLAVE CUBRE TODO LO QUE LA RESPUESTA MIRA — y ya no mira el CV.
      *
-     * This prompt receives the candidate's résumé (lines 529/553/582/604: "=== CANDIDATE
-     * RESUME ===") and its answer depends on it — the summary describes THIS CV's
-     * fit, and every item is written in THIS CV's language. Keyed on the posting
-     * alone, the second person to analyse the same posting was served the reading
-     * of someone else's résumé: a "fit" sentence about a document they never
-     * wrote, and requirements translated into a language they may not use.
+     * ── LA REGLA, QUE SIGUE INTACTA ───────────────────────────────────────────
      *
-     * Nobody would have seen it as an error — the list looks plausible either way
-     * — which is exactly why it had to be found by reading the key against the
-     * prompt rather than by using the product.
+     * Una clave de caché tiene que cubrir cada entrada de la que depende la
+     * respuesta. Antes el CV entraba en la clave porque el CV entraba en el
+     * PROMPT: el `summary` describía el encaje de ESE CV y los ítems se escribían
+     * en el idioma de ESE CV. Con la clave por vacante sola, el segundo usuario
+     * recibía la lectura del currículum de un desconocido.
      *
-     * The rule, and it is not negotiable: a cache key must cover every input the
-     * answer depends on. Reuse is what is left over after correctness, never
-     * before it. The cost is real and accepted — the same posting with a different
-     * CV now costs a call — and the refund below still covers the case that
-     * actually repeats: the same CV analysed again.
+     * ── QUÉ CAMBIÓ, Y POR QUÉ ERA UN DEFECTO Y NO UN COSTO ────────────────────
+     *
+     *   «Cuando lo hago correr de nuevo me salen otras opciones» (CEO, 2026-08-22)
+     *   «El mismo CV: 100 y después 70» (CEO, 2026-08-21)
+     *
+     * Con el CV en la clave, EDITAR EL CV re-extraía la vacante. Y la extracción
+     * no es determinista —la temperatura se descarta en los modelos de
+     * razonamiento—, así que volvía con otra lista de requisitos: otro
+     * DENOMINADOR. El usuario mejoraba su CV y el suelo se movía bajo sus pies,
+     * sin nada en pantalla que lo explicara.
+     *
+     * Este prompt YA NO RECIBE EL CV: lo tenía marcado como «contexto» y sólo
+     * podía sesgar qué requisitos elegía. Sin CV no queda ninguna lectura personal
+     * que compartir — es una extracción pura de la oferta, que es exactamente lo
+     * que vuelve legítimo compartirla. El idioma sigue en la clave porque sigue
+     * decidiendo la salida (`langInstruction`).
+     *
+     * Efectos, los tres: el denominador deja de moverse mientras el usuario
+     * trabaja · la misma vacante se extrae UNA vez para todos · el prompt baja
+     * hasta 12.000 caracteres por llamada.
      */
     const keywordsKey = answerHash(
       AI_MODEL,
       en ? "en" : "es",
       useRole ? "role" : "jd",
+      // v2: la clave cambió de forma al salir el CV. Un prefijo distinto evita que
+      // una fila vieja —extraída CON el currículum de alguien— siga contestando.
+      "v2-posting-only",
       useRole ? (roleTitle ?? "").trim() : jobDescriptionTruncated,
-      createHash("sha256").update(resumeText).digest("hex"),
     )
     let keywordsFromStore = false
     if (!extraction) {
@@ -1398,7 +1427,7 @@ ${alreadyGoodRule("en")}
 For IMPROVEMENTS only: evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
 - field: ONE of these exact values: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (replace current content) or "append" (add to current content)
-- preview: the IMPROVED text, judged by the bar above — and this includes the summary, which is where the failure is easiest to miss: a summary that only re-lists the words already in the CV ("Cashier with experience in till counts, customer service and bill payments") reads as a table of contents, not a profile. It must say what the work consists of, in the trade's own words — it must name the content of the work in that trade's vocabulary, and a reader must learn from it something the job title did not say. A preview whose only words are the candidate's own, reordered, does not qualify: omit it instead. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max ${MAX_PREVIEW_CHARS} characters. It must read as human-written: natural voice (not a press release), and none of the AI-tell words ("Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy").
+- preview: the IMPROVED text, judged by the bar above — and this includes the summary, which is where the failure is easiest to miss: a summary that only re-lists the words already in the CV ("Cashier with experience in till counts, customer service and bill payments") reads as a table of contents, not a profile. It must say what the work consists of, in the trade's own words — it must name the content of the work in that trade's vocabulary, and a reader must learn from it something the job title did not say. A preview whose only words are the candidate's own, reordered, does not qualify: omit it instead. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max ${MAX_PREVIEW_CHARS} characters. It must read as human-written: natural voice (not a press release).
 - reason: max 12 words explaining the change
 - targetId: REQUIRED whenever field starts with "workExperience." — use the item's exact id (shown as ID:xxx in the resume above). Without it the suggestion is discarded, because we would not know which job to apply it to.
 
@@ -1468,7 +1497,7 @@ ${alreadyGoodRule("es")}
 Solo para IMPROVEMENTS: evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
 - field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (reemplazar el contenido actual) o "append" (agregar al contenido actual)
-- preview: el texto MEJORADO, juzgado por la vara de arriba — y esto incluye el resumen, que es donde más fácil se pasa por alto: un resumen que sólo vuelve a listar las palabras que ya están en el CV ("Cajera con experiencia en arqueo de caja, atención a clientes y cobro de servicios") se lee como un índice, no como un perfil. Tiene que decir en qué consiste el trabajo, con las palabras del oficio — tiene que nombrar el contenido del trabajo con el vocabulario de ese oficio, y quien lo lee tiene que aprender algo que el nombre del puesto no decía. Un preview cuyas únicas palabras son las del propio candidato, reordenadas, no califica: omitilo. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo ${MAX_PREVIEW_CHARS} caracteres. Debe sonar escrito por una persona: voz natural (no nota de prensa), sin palabras-IA ("Orquestó", "Apalancó", "Utilizó", "sinergia").
+- preview: el texto MEJORADO, juzgado por la vara de arriba — y esto incluye el resumen, que es donde más fácil se pasa por alto: un resumen que sólo vuelve a listar las palabras que ya están en el CV ("Cajera con experiencia en arqueo de caja, atención a clientes y cobro de servicios") se lee como un índice, no como un perfil. Tiene que decir en qué consiste el trabajo, con las palabras del oficio — tiene que nombrar el contenido del trabajo con el vocabulario de ese oficio, y quien lo lee tiene que aprender algo que el nombre del puesto no decía. Un preview cuyas únicas palabras son las del propio candidato, reordenadas, no califica: omitilo. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo ${MAX_PREVIEW_CHARS} caracteres. Debe sonar escrito por una persona: voz natural (no nota de prensa).
 - reason: máximo 12 palabras explicando el cambio
 - targetId: OBLIGATORIO cuando field empieza por "workExperience." — usa el id exacto del item (lo ves como ID:xxx en el CV de arriba). Sin él la sugerencia se descarta, porque no sabríamos a qué trabajo aplicarla.
 
@@ -1711,9 +1740,22 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         return { ...item, suggestion: undefined, location: loc }
       }
 
-      // Fail-safe: if preview seems to have hard-coded data not present in the
-      // resume context, drop the suggestion and keep only the advisory text.
-      if (hasHardCodedFact(cleanedPreview, resumeContext)) {
+      /**
+       * POSTURA A (ver «LA POLÍTICA DE LA CIFRA» en `ai-helpers`).
+       *
+       * Este preview REESCRIBE una línea que escribió el candidato, así que hay
+       * un relato detrás y la doctrina autoriza proponer el tamaño como rango
+       * que él confirma. Descartarlo entero contradecía el prompt que le
+       * mandamos tres pantallas más arriba.
+       *
+       * Placeholder y marca no declarada se siguen tirando sin preguntar, y una
+       * cifra EXACTA que él nunca contó también: un rango es una pregunta, un
+       * número exacto es una afirmación que no puede defender.
+       */
+      const previewKind = hardCodedFactKind(cleanedPreview, resumeContext)
+      const fabricatedFact = previewKind === "placeholder" || previewKind === "brand"
+        || (previewKind === "figure" && !proposesRangeFigure(cleanedPreview))
+      if (fabricatedFact) {
         this.logger.warn("[AIService.reviewCV] dropped hard-coded suggestion", {
           field,
           previewSample: cleanedPreview.slice(0, 120),
@@ -1879,7 +1921,14 @@ function buildCVTitles(data: Record<string, unknown>): string {
  * computeATSMatch only, never a prompt, so completeness costs nothing. The prompt
  * keeps its caps, which is what they were for.
  */
-function buildAtsHaystack(data: Record<string, unknown>, resumeText: string): string {
+/**
+ * Exportada SÓLO para que su guard pueda EJECUTARLA.
+ *
+ * El defecto que cierra es una omisión —una sección del CV que este string no
+ * mira—, y un test que lee el código no puede contestar «¿aparece el dato?».
+ * Éste mete un marcador en cada sección del schema y comprueba que salga.
+ */
+export function buildAtsHaystack(data: Record<string, unknown>, resumeText: string): string {
   const parts: string[] = [resumeText]
 
   const push = (label: string, values: string[]) => {
@@ -1909,6 +1958,48 @@ function buildAtsHaystack(data: Record<string, unknown>, resumeText: string): st
     ),
   )
   push("Languages", ((data.languages as Array<{ name?: string }> | undefined) ?? []).map((l) => l?.name ?? ""))
+  /**
+   * ── LO QUE EL CV MUESTRA Y EL MATCHER NO VEÍA (reportado con captura, 2026-08-22) ──
+   *
+   *   «Esta parte de skills y áreas de expertise... ¿por qué sólo agarra unos
+   *    cuantos?»
+   *
+   * Su CV tiene una sección propia titulada «AREAS OF EXPERTISE» con TypeScript,
+   * Dart, XCTest, Cocoa Touch, VIPER y seis más. Está impresa en el PDF, la lee
+   * cualquier persona… y este haystack —lo único que contesta «¿el candidato
+   * tiene esta habilidad?»— no la miraba. Resultado: el panel le decía que le
+   * faltaban keywords que su propio CV muestra en pantalla.
+   *
+   * Y el mismo agujero se lo comían `volunteer`, `references` y `hobbies`.
+   *
+   * NO ES UN CASO RARO: `customSections` es la única forma que tiene el producto
+   * de guardar una sección que el importador no supo mapear, así que TODO CV
+   * importado con una sección no estándar cae acá. Es el mismo defecto que este
+   * proyecto ya pagó dos veces —las skills cortadas en la 12ª y las viñetas
+   * truncadas del prompt—: una lista completa cuesta cero porque este string no
+   * va a ningún prompt, sólo a `computeATSMatch`.
+   *
+   * El guard `ats-haystack-covers-the-cv.test.ts` enumera las claves del schema
+   * y falla cuando alguien agrega una sección nueva sin decidir de qué lado va.
+   */
+  push(
+    "Custom sections",
+    ((data.customSections as Array<{ title?: string; items?: Array<{ title?: string; subtitle?: string; description?: string }> }> | undefined) ?? [])
+      .flatMap((c) => [c?.title ?? "", ...(c?.items ?? []).flatMap((i) => [i?.title ?? "", i?.subtitle ?? "", i?.description ?? ""])]),
+  )
+  push(
+    "Volunteer",
+    ((data.volunteer as Array<{ role?: string; organization?: string; description?: string }> | undefined) ?? [])
+      .flatMap((v) => [v?.role ?? "", v?.organization ?? "", v?.description ?? ""]),
+  )
+  // Sólo la empresa: el nombre y los datos de contacto de un tercero no son
+  // habilidades del candidato y no tienen por qué entrar a ninguna comparación.
+  push(
+    "References",
+    ((data.references as Array<{ company?: string }> | undefined) ?? []).map((r) => r?.company ?? ""),
+  )
+  push("Interests", [typeof data.hobbies === "string" ? data.hobbies : ""])
+
   // Roles past the prompt's tenth are still the candidate's experience.
   push(
     "Experience",

@@ -216,5 +216,34 @@ export function buildResumeContext(
     })
   }
 
+  /**
+   * LAS SECCIONES QUE EL USUARIO SE ARMÓ, que el modelo tampoco veía.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   * Un CV real con una sección propia «AREAS OF EXPERTISE» —TypeScript, Dart,
+   * XCTest, VIPER y seis más, impresas en el PDF— llegaba al modelo SIN ellas.
+   * El analista le recomendaba agregar cosas que su CV ya muestra, y las
+   * viñetas se escribían sin la mitad de su vocabulario técnico.
+   *
+   * `customSections` no es un caso de borde: es donde el importador deja toda
+   * sección que no supo mapear, así que cualquier CV importado con una sección
+   * no estándar caía acá.
+   *
+   * Acotado como todo lo demás de este contexto —el techo global sigue siendo
+   * `AI_INPUT_LIMITS.resumeContext`—: cuatro secciones, ocho ítems cada una.
+   */
+  const customSections = (sectionData as { customSections?: Array<{ title?: string; items?: Array<{ title?: string; subtitle?: string; description?: string }> }> }).customSections
+  if (customSections?.length) {
+    customSections.slice(0, 4).forEach((c) => {
+      const rows = (c.items ?? []).slice(0, 8)
+        .map((i) => [i.title, i.subtitle, i.description].map((x) => (x ?? "").trim()).filter(Boolean).join(" · "))
+        .filter(Boolean)
+      if (rows.length === 0) return
+      lines.push(`${(c.title ?? "").trim() || (en ? "Other section" : "Otra sección")}:`)
+      rows.forEach((r) => lines.push(`  - ${r.slice(0, 200)}`))
+    })
+  }
+
   return lines.join("\n")
 }

@@ -84,7 +84,7 @@ export default function GradientHorizonTemplate({ content, colorScheme, candidat
 
         {content.subject && (
           <p className="text-[11px] mb-4 text-gray-700">
-            <span className="font-semibold">Asunto:</span> {content.subject}
+            <span className="font-semibold">{t("subject_label")}:</span> {content.subject}
           </p>
         )}
 

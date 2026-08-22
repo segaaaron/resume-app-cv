@@ -15,7 +15,6 @@ export type Role = "USER" | "SUPER_ADMIN"
 export type AiEndpointName =
   | "fill-profile"
   | "improve-bullet"
-  | "improve-summary"
   | "generate-summary"
   | "tailor-cv"
   | "skill-bullet"
@@ -29,7 +28,6 @@ export type AiEndpointName =
 export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "fill-profile",
   "improve-bullet",
-  "improve-summary",
   "generate-summary",
   "tailor-cv",
   "skill-bullet",
@@ -62,7 +60,6 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
  */
 export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "improve-bullet": 50,
-  "improve-summary": 20,
   "generate-summary": 20,
   "generate-cover-letter": 20,
   "improve-cover-letter": 20,
@@ -289,7 +286,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     aiLimitsByEndpoint: {
       "fill-profile": -1,
       "improve-bullet": -1,
-      "improve-summary": -1,
       "generate-summary": -1,      "tailor-cv": -1,
       "skill-bullet": -1,
       "merge-bullets": -1,
@@ -312,7 +308,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     aiLimitsByEndpoint: {
       "fill-profile": 0,
       "improve-bullet": 0,
-      "improve-summary": 0,
       "generate-summary": 0,      "tailor-cv": 0,
       "skill-bullet": 0,
       "merge-bullets": 0,
@@ -333,7 +328,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     aiLimitsByEndpoint: {
       "fill-profile": 0,
       "improve-bullet": 0,
-      "improve-summary": 0,
       "generate-summary": 0,      "tailor-cv": 0,
       "skill-bullet": 0,
       "merge-bullets": 0,
@@ -352,7 +346,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     aiLimitsByEndpoint: {
       "fill-profile": -1,
       "improve-bullet": -1,
-      "improve-summary": -1,
       "generate-summary": -1,      "tailor-cv": 0,
       "skill-bullet": 0,
       "merge-bullets": 0,
@@ -370,7 +363,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     aiLimitsByEndpoint: {
       "fill-profile": -1,
       "improve-bullet": -1,
-      "improve-summary": -1,
       "generate-summary": -1,      "tailor-cv": -1,
       "skill-bullet": -1,
       "merge-bullets": -1,

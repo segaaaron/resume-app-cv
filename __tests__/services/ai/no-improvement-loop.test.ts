@@ -51,10 +51,6 @@ describe("no improvement loop — strong content never reaches the model", () =>
     "• Reduced build times from 12 to 4 minutes by parallelising CI jobs.",
   ].join("\n")
 
-  const STRONG_SUMMARY =
-    "Senior iOS engineer with seven years building consumer apps, leading the SwiftUI migration " +
-    "across four products and cutting crash rates by 30% while mentoring a team of five developers."
-
   /**
    * The rule changed, and this is the change.
    *
@@ -85,11 +81,14 @@ describe("no improvement loop — strong content never reaches the model", () =>
     expect(r.improvements).toEqual([])
   })
 
-  it("improve-summary: refuses without calling the model", async () => {
-    const r = await new AIService(client, logger).improveSummary("u1", { summary: STRONG_SUMMARY, sectionData: {} }, "PRO")
-    expect(r.status).toBe("already_optimized")
-    expect(calls()).toBe(0)
-  })
+  /**
+   * Acá había un caso de `improve-summary`. El endpoint se borró (2026-08-22,
+   * orden del CEO): ninguna pantalla lo llamaba, no alimentaba el puntaje ni
+   * ninguna métrica, y el resumen ya lo reescribe el EJECUTOR con la acción
+   * `rewrite_summary` — que además lo hace sabiendo qué pide la vacante, cosa
+   * que este endpoint no sabía. Un segundo escritor del mismo campo, trabajando
+   * por su cuenta, era justamente lo que no puede haber.
+   */
 
   it("improve-bullet still calls the model when there IS a defect", async () => {
     const weak = "• Responsible for the payments module."

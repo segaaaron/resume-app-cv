@@ -22,7 +22,17 @@ const MOD = readFileSync(join(process.cwd(), "lib/services/ai/modules/AIReviewMo
 describe("la revision del analisis sigue a la doctrina", () => {
   it("la clave se deriva de la doctrina, no de una constante a mano", () => {
     expect(MOD).toContain("const DOCTRINE_FINGERPRINT = createHash")
-    expect(MOD).toContain("const ANALYSIS_REVISION = `v3-${DOCTRINE_FINGERPRINT}`")
+    /**
+     * La FORMA, no el número. Este assert clavaba «v3» y por eso rompía cada vez
+     * que alguien bumpeaba la revisión por una razón legítima —un cambio de
+     * prompt que la huella de la doctrina no cubre—, que es justamente lo que
+     * este archivo quiere que la gente HAGA. Un guard que castiga la conducta
+     * correcta enseña a editarlo en vez de a pensarlo.
+     *
+     * Lo que sí se vigila sigue intacto: que la revisión SE DERIVE de la huella y
+     * no sea una constante escrita a mano.
+     */
+    expect(MOD).toMatch(/const ANALYSIS_REVISION = `v\d+-\$\{DOCTRINE_FINGERPRINT\}`/)
   })
 
   it("la huella cubre las tres piezas que el prompt inyecta", () => {

@@ -15,6 +15,7 @@
 import { useState, useMemo } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useAtsPostingStore } from "@/stores/atsPostingStore"
 import { useShallow } from "zustand/react/shallow"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
@@ -139,6 +140,23 @@ export default function AIProfileInterview() {
   const locale = useLocale()
   const router = useRouter()
   const cvLanguage = useCvLanguage()
+  /**
+   * La vacante que el panel publicó, si el usuario ya analizó una PARA ESTE CV.
+   *
+   * `termsFor(resumeId)` es la única lectura pública a propósito: sin esa
+   * comprobación, un CV nuevo heredaría la oferta del anterior y el asistente le
+   * escribiría viñetas apuntando a un puesto que no es el suyo — peor que no
+   * apuntar a ninguno.
+   */
+  const postingResumeId = useResumeStore((st) => st.resumeId) ?? null
+  const postingTermsAll = useAtsPostingStore((st) => st.terms)
+  const postingScopeId = useAtsPostingStore((st) => st.resumeId)
+  const postingJobTitle = useAtsPostingStore((st) => st.jobTitle)
+  const posting = useMemo(() => (
+    postingResumeId && postingScopeId === postingResumeId
+      ? { terms: postingTermsAll, title: postingJobTitle }
+      : { terms: undefined as string[] | undefined, title: undefined as string | undefined }
+  ), [postingResumeId, postingScopeId, postingTermsAll, postingJobTitle])
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
   const { sectionData, updateSectionData, save, resumeId } = useResumeStore(
@@ -478,7 +496,22 @@ export default function AIProfileInterview() {
       const res = await apiFetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, mode: "bullets", language: cvLanguage }),
+        /**
+         * CON LA VACANTE, cuando el usuario ya analizó una.
+         *
+         * «El ATS manda: todo lo que tenga el ATS debe consultar al ATS.» Este
+         * botón escribe viñetas que terminan en el mismo CV que el panel puntúa,
+         * y hasta ahora escribía sin saber a qué puesto apunta: nombraba bien el
+         * trabajo del oficio y no podía elegir la parte del oficio que ESTA
+         * oferta busca. `termsFor` devuelve vacío si el análisis fue de otro CV.
+         */
+        body: JSON.stringify({
+          prompt,
+          mode: "bullets",
+          language: cvLanguage,
+          postingTerms: posting.terms,
+          postingTitle: posting.title,
+        }),
       })
       if (res.status === 429 || res.status === 403) {
         await handleApiError(res, {
@@ -586,7 +619,9 @@ export default function AIProfileInterview() {
       const res = await apiFetch("/api/ai/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectionData, language: cvLanguage }),
+        // El resumen también apunta al puesto: la ruta ya aceptaba `postingTerms`
+        // y este llamador nunca se los mandó.
+        body: JSON.stringify({ sectionData, language: cvLanguage, postingTerms: posting.terms }),
       })
       if (res.status === 429 || res.status === 403) {
         await handleApiError(res, {

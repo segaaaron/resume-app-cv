@@ -35,6 +35,8 @@ interface Props {
   onUndo: (checkId: string) => void
   /** Sólo para viñetas: a veces la línea no se arregla, se corta. */
   onRemove?: (checkId: string) => void
+  /** Y lo que va en su lugar: un término de la vacante, escrito por el ejecutor. */
+  onReplace?: (term: string) => void
   focused?: boolean
   /**
    * Su lugar en la lista, como en el diseño. Numerar no es decoración: convierte
@@ -53,7 +55,7 @@ interface Props {
 }
 
 export default function FixCard({
-  check, resolution, terms, applied, onApply, onUndo, onRemove, focused, order, busy,
+  check, resolution, terms, applied, onApply, onUndo, onRemove, onReplace, focused, order, busy,
 }: Props) {
   const t = useTranslations("editor.ats")
   const sev = SEVERITY_STYLE[applied ? "pass" : check.state === "crit" ? "crit" : "warn"]
@@ -63,6 +65,17 @@ export default function FixCard({
   const isBullet = check.action?.kind === "rewrite_bullet"
   /** La fusión viaja como `rewrite_bullet`, pero une dos líneas — no reescribe una. */
   const isMerge = check.id.startsWith("tips.merge")
+  /**
+   * CORTAR NO ES REESCRIBIR, y acá la diferencia es la que cierra el bucle.
+   *
+   * Un puesto con once líneas tiene un problema de VOLUMEN: reescribir la peor no
+   * saca a ninguna del último puesto —otra ocupa su lugar— y el panel devuelve la
+   * misma cantidad para siempre. Estas tarjetas ofrecen la tijera y nada más: es
+   * la única acción que baja el conteo, y por eso la única que termina.
+   */
+  const isCut = check.id.startsWith("tips.cut")
+  /** El término que la vacante pide y el CV no dice, para ofrecer el reemplazo. */
+  const replacement = typeof check.params?.replacement === "string" ? check.params.replacement : ""
   /**
    * Hay hallazgos que no traen texto escrito y aun así se resuelven: fusionar dos
    * líneas es unirlas, no reescribirlas, y el trabajo lo hace otro camino. Sin
@@ -238,6 +251,29 @@ export default function FixCard({
           </>
         ) : (
           <>
+            {/* La tarjeta de corte NO ofrece reescribir: ver arriba. */}
+            {isCut ? (
+              <>
+                {onRemove && (
+                  <button type="button" onClick={() => onRemove(check.id)} disabled={busy}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white transition-opacity disabled:opacity-60"
+                    style={{ background: "var(--a-bad)" }}>
+                    <Trash2 className="h-3 w-3" /> {t("fix_remove")}
+                  </button>
+                )}
+                {/* CORTAR DEJA UN HUECO. Decirle «cortá» sin decirle «poné esto»
+                    es media instrucción — y lo que va en su lugar no se
+                    improvisa: es un término que ESTA vacante pide y su CV no
+                    dice, escrito por el ejecutor con la línea a la vista. */}
+                {replacement && onReplace && (
+                  <button type="button" onClick={() => onReplace(replacement)} disabled={busy}
+                    className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
+                    style={{ borderColor: "var(--a-ai)", color: "var(--a-ai-ink)", background: "var(--a-ai-soft)" }}>
+                    <Sparkles className="h-3 w-3" /> {t("fix_replace_with", { term: replacement })}
+                  </button>
+                )}
+              </>
+            ) : (
             <button type="button" onClick={() => onApply(check.id)} disabled={busy || !actionable}
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white transition-opacity disabled:opacity-60"
               style={{ background: "var(--a-ai)" }}>
@@ -254,9 +290,10 @@ export default function FixCard({
                 : isBullet ? t("fix_apply_bullet")
                 : t("fix_apply")}
             </button>
+            )}
             {/* Borrar es una salida legítima: una línea que no gana su renglón
                 resta más de lo que suma, y reescribirla no la salva. */}
-            {isBullet && onRemove && (
+            {!isCut && isBullet && onRemove && (
               <button type="button" onClick={() => onRemove(check.id)}
                 className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
                 style={{ borderColor: "var(--a-border)", color: "var(--a-bad)" }}>

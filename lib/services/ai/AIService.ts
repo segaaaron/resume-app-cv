@@ -32,7 +32,6 @@ import type {
   GenerateSummaryInput,
   ImproveBulletInput,
   ImproveCoverLetterInput,
-  ImproveSummaryInput,
   ReviewCVInput,
   ReviewCVResult,
   TailorCVInput,
@@ -106,10 +105,6 @@ export class AIService {
 
   generateSummary(userId: string, input: GenerateSummaryInput, plan: string): Promise<VersionsResult> {
     return this.summaryModule.generateSummary(userId, input, plan)
-  }
-
-  improveSummary(userId: string, input: ImproveSummaryInput, plan: string): Promise<VersionsResult> {
-    return this.summaryModule.improveSummary(userId, input, plan)
   }
 
   atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {

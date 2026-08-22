@@ -86,7 +86,7 @@ export default function TimelineTemplate({ content, colorScheme, candidate }: Te
 
         {content.subject && (
           <p className="text-[11px] font-semibold mb-4" style={{ color: colorScheme }}>
-            Asunto: <span className="font-normal text-gray-700">{content.subject}</span>
+            {t("subject_label")}: <span className="font-normal text-gray-700">{content.subject}</span>
           </p>
         )}
 

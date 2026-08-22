@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { AlertCircle, AlertTriangle, Check, ChevronDown, Sparkles, Wrench } from "lucide-react"
+import { AlertCircle, AlertTriangle, Check, ChevronDown, Sparkles, Trash2, Wrench } from "lucide-react"
 import { isActionable, type ReportCheck } from "@/lib/ats/report"
 
 /**
@@ -95,8 +95,11 @@ export default function CheckRow({ check, onSolve, onFix, busy }: Props) {
   // `open` de arriba es si la fila está desplegada; esto es si el hallazgo sigue
   // sin resolver. Dos preguntas distintas que compartían nombre.
   const unresolved = check.state !== "pass"
-  const canSolve = check.owner === "tailor" && !!onSolve && unresolved
-  const canFix = check.owner === "auto" && !!onFix && !!check.action && unresolved
+  // Nada que aplicar sobre un informativo: existe para que él decida con el dato.
+  const canSolve = !check.informational && check.owner === "tailor" && !!onSolve && unresolved
+  const canFix = !check.informational && check.owner === "auto" && !!onFix && !!check.action && unresolved
+  /** Cortar una línea de sobra: determinista como los demás `auto`, pero destructivo. */
+  const isCut = check.id.startsWith("tips.cut")
 
   return (
     <div
@@ -189,7 +192,8 @@ export default function CheckRow({ check, onSolve, onFix, busy }: Props) {
 
           {/* Sólo el candidato sabe el mes que falta o la cifra real. Decírselo es
               la salida; ofrecerle un botón que lo adivine, no. */}
-          {check.owner === "user" && (
+          {/* Un informativo no promete que el chequeo se cierre: no se cierra. */}
+          {check.owner === "user" && !check.informational && (
             <p
               className="mt-2 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug"
               style={{ background: "var(--a-warn-soft)", color: "var(--a-ink-2)" }}
@@ -208,8 +212,11 @@ export default function CheckRow({ check, onSolve, onFix, busy }: Props) {
           className="flex w-full items-center gap-1.5 border-t px-3 py-2 text-[11.5px] font-semibold transition-colors disabled:opacity-60"
           style={{ borderColor: "var(--a-border)", color: "var(--a-accent-ink)", background: "var(--a-accent-soft)" }}
         >
-          <Wrench className="h-3 w-3 shrink-0" />
-          {t("check_fix_now")}
+          {/* EL BOTÓN DICE LO QUE HACE. «Arreglar» sobre una propuesta de corte
+              prometía una reparación y abría un borrado: la misma pregunta mal
+              hecha que ya se pagó en la tarjeta de fusión. */}
+          {isCut ? <Trash2 className="h-3 w-3 shrink-0" /> : <Wrench className="h-3 w-3 shrink-0" />}
+          {isCut ? t("fix_remove") : t("check_fix_now")}
         </button>
       )}
 

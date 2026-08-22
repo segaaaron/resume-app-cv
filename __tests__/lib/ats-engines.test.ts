@@ -141,10 +141,15 @@ describe("robustness + determinism", () => {
     expect(a).toBe(b)
   })
 
-  it("analyzeAts now exposes the engine simulation", async () => {
-    const { analyzeAts } = await import("@/lib/ats/analyzer")
-    const res = analyzeAts({ resumeText: CLEAN, jobDescription: "Sales Lead", locale: "en" })
-    expect(res.engines.engines).toHaveLength(5)
-    expect(res.engines.cleanCount).toBe(5)
+  /**
+   * Acá había un caso que afirmaba que `analyzeAts` exponía la simulación. Ese
+   * motor se borró por no tener un solo consumidor de producto; la simulación la
+   * consume `AtsEngineChecker` llamando directo a `simulateAtsEngines`, que es lo
+   * que los catorce casos de arriba ya prueban.
+   */
+  it("un CV limpio pasa los cinco motores", () => {
+    const sim = simulateAtsEngines(CLEAN, "en")
+    expect(sim.engines).toHaveLength(5)
+    expect(sim.cleanCount).toBe(5)
   })
 })

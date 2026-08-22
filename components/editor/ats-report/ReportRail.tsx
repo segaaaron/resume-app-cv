@@ -184,8 +184,12 @@ export default function ReportRail({
             {termsOf(section.id).length > 0 && (
               <TermTable
                 terms={termsOf(section.id)}
-                onAdd={onAddTerm}
-                onWeave={onWeaveTerm}
+                /* «Otras palabras clave» son habilidades que él YA tiene y que
+                   esta vacante no pide: no hay nada que agregar ni que tejer, y
+                   un botón ahí prometería puntos que esa sección declara que no
+                   da. Se muestran para que vea que el análisis sí las ve. */
+                onAdd={section.id === "other" ? undefined : onAddTerm}
+                onWeave={section.id === "other" ? undefined : onWeaveTerm}
                 addedTerms={addedTerms}
                 busyTerm={busyTerm}
               />

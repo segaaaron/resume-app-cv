@@ -98,3 +98,40 @@ describe("la huella del caché cubre las dos ramas", () => {
     expect(bloque, "la huella no cubre el inglés").toContain('("en")')
   })
 })
+
+/**
+ * LO QUE SE AGREGÓ A LOS PROMPTS ESTA SESIÓN, EN LAS DOS RAMAS.
+ *
+ * ── POR QUÉ SE VIGILA UNO POR UNO (CEO, 2026-08-22) ────────────────────────
+ *
+ *   «¿Todo esto aplica para los 2 idiomas?»
+ *
+ * El conteo de arriba compara cuántas veces cada módulo cita la doctrina por
+ * rama, y eso NO alcanza para un bloque nuevo: un texto escrito sólo en inglés
+ * no mueve ese contador. El defecto sería una rama que existe y otra que no —
+ * una omisión, sin comportamiento que observar del lado que falta, y en
+ * producción se ve como «a mí el asistente no me apunta al puesto» sólo para los
+ * usuarios del otro idioma.
+ */
+describe("los bloques nuevos existen en español y en inglés", () => {
+  const mod = (f: string) => readFileSync(join(process.cwd(), "lib/services/ai/modules", f), "utf8")
+
+  const PARES: Array<[string, string, string, string]> = [
+    ["AIReviewModule.ts", "los términos por los que puntúa la vacante",
+      "TERMS THIS POSTING SCORES ON", "TÉRMINOS POR LOS QUE ESTA VACANTE PUNTÚA"],
+    ["profile-modes.ts", "el puesto al que apunta el CV",
+      "THE JOB THIS CV IS AIMED AT", "EL PUESTO AL QUE APUNTA ESTE CV"],
+    ["profile-modes.ts", "y la mitad que impide inventar para agradarle a la vacante",
+      "USE ONLY the terms their account genuinely backs", "USÁ SÓLO los términos que su relato respalde"],
+    ["AISkillBulletModule.ts", "la acotación de la cifra",
+      "NARROWING FOR THIS ONE BULLET", "ACOTACIÓN SÓLO PARA ESTE BULLET"],
+  ]
+
+  for (const [file, que, en, es] of PARES) {
+    it(`${file}: ${que}`, () => {
+      const src = mod(file)
+      expect(src, `falta la rama inglesa: ${en}`).toContain(en)
+      expect(src, `falta la rama española: ${es}`).toContain(es)
+    })
+  }
+})

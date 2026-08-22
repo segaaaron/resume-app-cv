@@ -39,7 +39,8 @@
 import type { CvFixAction } from "@/lib/services/ai/shared/ai-types"
 import type { ReportPosting } from "./report"
 import { verdictContradictions } from "./verdict-contradiction"
-import { isImprovableLine } from "./bullet-strength"
+import { isImprovableLine, rankRoleBullets, KEEP_PER_ROLE } from "./bullet-strength"
+import { normalizeTerm } from "./vocabulary"
 import type { CategoryBreakdown, ScoreCategory } from "./score-breakdown"
 import type { BareYearRole, WritingChecks } from "./writing-checks"
 import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
@@ -132,6 +133,38 @@ export interface BuildReportInput {
    * Así que aparecen sólo cuando hay medición real. Es nuestra evidencia más
    * fuerte y nadie más la tiene: renderizamos el PDF y leemos lo que sale.
    */
+  /**
+   * Los cargos que el CV declara, del más reciente al más viejo.
+   *
+   * `title` es el 25% de «¿te encuentran?» y era la única categoría que puntuaba
+   * sin emitir un solo hallazgo: el usuario leía «Searchability 25%» y debajo no
+   * había nada que hacer. Para decirle qué cambiar hay que nombrar lo que HOY
+   * dice su CV, no sólo lo que la vacante pide.
+   */
+  cvTitles?: readonly string[]
+  /**
+   * Las habilidades que el CV declara, tal como el usuario las escribió.
+   *
+   * ── EL DEFECTO (reportado, 2026-08-22) ────────────────────────────────────
+   *
+   *   «Los ATS no suben casi todos los skills que tengo, sólo me marca estos.»
+   *
+   * Y era cierto: la tabla de términos se arma SÓLO con lo que la vacante pide.
+   * Todo lo que el candidato sabe y esta oferta no nombra no aparecía en ninguna
+   * parte del informe — ni como algo que tiene, ni como algo que no cuenta acá.
+   *
+   * La sección «Otras palabras clave» existía para esto desde el rediseño, con
+   * su texto explicativo escrito («vocabulario del oficio: ayuda a que te
+   * encuentren, no mueve el puntaje») y CERO contenido: ningún productor le
+   * mandaba nunca un término. Un balde declarado y jamás llenado.
+   */
+  cvSkills?: readonly string[]
+  /** Foto cargada y datos personales que en varios mercados se piden NO poner. */
+  personalData?: { hasPhoto: boolean; sensitive: readonly string[] }
+  /** Términos que el CV repite tanto que se lee escrito para la máquina. */
+  stuffedTerms?: readonly { term: string; count: number; sharePct: number }[]
+  /** Viñetas escritas en pasiva: el trabajo existe y el autor desaparece. */
+  passiveBullets?: readonly { targetId: string; jobTitle: string; index: number; text: string }[]
   /** Puestos fuera del rango de viñetas que su antigüedad admite. */
   roleBalance?: readonly { targetId: string; jobTitle: string; count: number; min: number; max: number }[]
   /** Huecos de empleo de seis meses o más. */
@@ -140,6 +173,8 @@ export interface BuildReportInput {
   jobDescription?: string
   /** El texto del CV, para el mismo conteo del otro lado. */
   resumeText?: string
+  /** Sólo la experiencia laboral: una habilidad que aparece acá está DEMOSTRADA. */
+  evidenceText?: string
   /**
    * Las viñetas con su anatomía ya medida.
    *
@@ -192,6 +227,47 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   // Las fechas nombran los puestos. "Tus fechas mezclan formatos" mandaba al
   // usuario a buscar el problema puesto por puesto — la parte que una persona
   // hace peor sobre su propio CV.
+  /**
+   * EL CARGO. La única parte de «¿te encuentran?» que mueve el número, y no
+   * emitía ni un hallazgo.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   * «Searchability 25% — no me dice nada de cómo subirlo.» Y era literal: los
+   * seis chequeos de esta sección son condicionales (fechas mezcladas, educación
+   * incompleta, erratas, contacto, secciones vacías) y en un CV limpio no
+   * dispara ninguno. La sección quedaba con su párrafo introductorio, un 25% y
+   * cero salidas — un número que cobra sin decir por qué.
+   *
+   * Lo que ese 25% mide es la coincidencia de CARGO: la vacante busca «iOS
+   * Developer» y el CV se titula de otra manera. Es lo más barato de arreglar de
+   * todo el panel —una línea de texto— y era lo único que no se decía.
+   *
+   * `owner: "user"`: cambiarle el titular a alguien es escribir sobre su
+   * identidad profesional. Se le dice qué cargo busca la vacante y qué dice hoy
+   * su CV; la palabra la elige él.
+   */
+  const wantedTitle = input.posting?.jobTitle?.trim() ?? ""
+  const titleCoverage = coverageOf(input.categories, "title")
+  if (wantedTitle && titleCoverage !== null && titleCoverage < 100) {
+    push({
+      id: "search.title",
+      section: "search",
+      // El peso REAL, no 0. Es la mitad del defecto: la tarjeta que sí puede
+      // mover el número tiene que decir cuánto, o se lee como un consejo más.
+      weight: recoverableOf(input.categories, "title"),
+      state: titleCoverage < 50 ? "crit" : "warn",
+      titleKey: "check.title_mismatch",
+      detailKey: "check.title_mismatch_detail",
+      params: { wanted: wantedTitle, current: input.cvTitles?.[0]?.trim() || "" },
+      owner: "user",
+      // Lo que HOY dice el CV, nombrado. Sin esto el aviso manda a buscar el
+      // problema puesto por puesto, que es la parte que una persona hace peor
+      // sobre su propio CV.
+      evidence: (input.cvTitles ?? []).filter((x) => x.trim()).slice(0, 4),
+    })
+  }
+
   const dates = input.writing.dateInconsistency
   if (dates) {
     push({
@@ -432,13 +508,50 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
    * coseno porque «¿es el mismo trabajo?» es una pregunta temática, y la decide
    * quien hizo el trabajo, no el modelo.
    */
-  for (const m of input.writing.mergeCandidates) {
+  /**
+   * Y EL ORDEN LO DECIDE LA VACANTE, no sólo el parecido.
+   *
+   * ── LA ORDEN (CEO, 2026-08-22) ────────────────────────────────────────────
+   *
+   *   «Para unir algo, la IA que sugiera cosas según el puesto que solicita; así
+   *    será mejor unir cosas, pero en base a la IA.»
+   *
+   * QUIÉN propone el par ya lo decide un modelo: el coseno de embeddings, que
+   * mide relación temática —«¿es el mismo trabajo?»— y es la única señal que
+   * separó los pares reales de los distintos (medido: reales 0.498–0.632,
+   * distintos 0.325–0.551; ningún umbral de palabras compartidas lo lograba).
+   * Eso NO cambia.
+   *
+   * Lo que faltaba es CUÁL PRIMERO. Fusionar libera un renglón, y el renglón se
+   * libera para esta vacante: el par que más conviene unir es aquel cuyas DOS
+   * líneas no dicen nada de lo que la oferta pide. Unir dos líneas que sí le
+   * hablan al puesto gasta la acción en el lugar equivocado.
+   *
+   * La señal sale del mismo sitio que todo lo demás del informe —los términos
+   * que cada viñeta aterriza, contados por el matcher que puntúa— y cuesta cero
+   * llamadas.
+   */
+  const bulletKeywordCount = new Map<string, number>()
+  for (const b of input.bullets ?? []) bulletKeywordCount.set(`${b.targetId}.${b.index}`, b.keywords.length)
+  const sirveAlPuesto = (targetId: string, index: number) => (bulletKeywordCount.get(`${targetId}.${index}`) ?? 0) > 0
+
+  const mergeOrdenado = [...input.writing.mergeCandidates].sort((a, b) => {
+    const pa = (sirveAlPuesto(a.targetId, a.indexes[0]) ? 1 : 0) + (sirveAlPuesto(a.targetId, a.indexes[1]) ? 1 : 0)
+    const pb = (sirveAlPuesto(b.targetId, b.indexes[0]) ? 1 : 0) + (sirveAlPuesto(b.targetId, b.indexes[1]) ? 1 : 0)
+    return pa - pb
+  })
+
+  for (const m of mergeOrdenado) {
+    // Cuántas de las dos le hablan a esta vacante. Lo dice la tarjeta: «ninguna
+    // de las dos dice lo que el puesto pide» es una razón que el candidato puede
+    // juzgar; «se parecen» no le dice si le conviene.
+    const sirven = (sirveAlPuesto(m.targetId, m.indexes[0]) ? 1 : 0) + (sirveAlPuesto(m.targetId, m.indexes[1]) ? 1 : 0)
     push({
       id: `tips.merge.${m.targetId}.${m.indexes[0]}.${m.indexes[1]}`,
       section: "tips",
       state: "warn",
       weight: 0,
-      titleKey: "check.merge_pair",
+      titleKey: sirven === 0 && (input.bullets ?? []).length > 0 ? "check.merge_pair_offtarget" : "check.merge_pair",
       params: { job: m.jobTitle },
       owner: "tailor",
       action: { kind: "rewrite_bullet", targetId: m.targetId, index: m.indexes[0] },
@@ -453,6 +566,174 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
    * decidir cuál cortar — la parte que una persona hace peor sobre su propio CV.
    * Acá van las que diluyen, dichas por su nombre.
    */
+  /**
+   * QUÉ CORTAR, DICHO POR SU NOMBRE — y con el botón que lo corta.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   * «Si tengo más bullets de lo normal debería sugerirme borrar los más débiles
+   * o los que no cuadran para esta posición.» En pantalla había lo contrario:
+   * DOS tarjetas por puesto diciendo el mismo dato con otras palabras —«iOS
+   * Developer lleva 11 viñetas» y «iOS Developer lleva 11; para su antigüedad,
+   * 4-6»— las dos con «esto sólo lo sabés vos: escribilo en el editor». Seis
+   * tarjetas para tres puestos, ninguna con salida.
+   *
+   * Un puesto con once líneas tiene un problema de VOLUMEN y se arregla
+   * CORTANDO. Eso ya estaba escrito acá; lo que faltaba era la tijera.
+   *
+   * ── POR QUÉ ESTO SÍ CONVERGE, Y EL RANKING NO ─────────────────────────────
+   *
+   * `tips.dilutes` ofrecía REESCRIBIR las últimas del ranking, y reescribir no
+   * saca a una línea del último puesto: otra ocupa su lugar y el panel devuelve
+   * la misma cantidad para siempre — el bucle infinito que ya se pagó una vez.
+   *
+   * Cortar sí cierra: se emite EXACTAMENTE el excedente (`count - max`), cada
+   * línea que se corta baja el conteo, y al llegar al tope no queda ninguna. El
+   * número de tarjetas sólo puede bajar.
+   */
+  const cutIndexes = new Map<string, Set<number>>()
+  /**
+   * EL TOPE DEPENDE DE LA ANTIGÜEDAD, y por eso el ranking hay que pedirlo con
+   * el tope de ESE puesto.
+   *
+   * `writing.bulletRanking` ordena con el tope global (6), así que un puesto de
+   * hace diez años con cinco líneas —donde se leen tres— no aparecía ahí y se
+   * quedaba con la tarjeta sin salida que se reportó: «iOS Developer lleva 5;
+   * para su antigüedad, 3-4». Rankear de nuevo con el tope de la banda es
+   * gratis: `rankRoleBullets` es puro y las líneas ya viajan en el informe.
+   */
+  const rankWithKeep = (targetId: string, jobTitle: string, keep: number) => {
+    const lines = (input.bullets ?? [])
+      .filter((b) => b.targetId === targetId)
+      .sort((a, b) => a.index - b.index)
+      .map((b) => b.text)
+    if (lines.length === 0) return null
+    return rankRoleBullets([{ id: targetId, jobTitle, bullets: lines }], keep)[0] ?? null
+  }
+
+  /** Cada puesto que carga de más, con el tope que le corresponde. Una entrada por puesto. */
+  const overloaded = new Map<string, { jobTitle: string; count: number; max: number }>()
+  for (const r of input.writing.bulletRanking) {
+    overloaded.set(r.targetId, {
+      jobTitle: r.jobTitle,
+      count: r.strongest.length + r.weakest.length + r.weakestHidden,
+      max: KEEP_PER_ROLE,
+    })
+  }
+  for (const b of input.roleBalance ?? []) {
+    if (b.count <= b.max) continue
+    // El más exigente de los dos topes manda: el de la banda es el que el
+    // reclutador aplica, y es siempre igual o más estricto que el global.
+    const prev = overloaded.get(b.targetId)
+    overloaded.set(b.targetId, {
+      jobTitle: b.jobTitle || prev?.jobTitle || "",
+      count: b.count,
+      max: Math.min(b.max, prev?.max ?? b.max),
+    })
+  }
+
+  for (const [targetId, role] of overloaded) {
+    const { jobTitle, count, max } = role
+    const surplus = count - max
+    if (surplus <= 0) continue
+    const ranked = rankWithKeep(targetId, jobTitle, max)
+      ?? input.writing.bulletRanking.find((x) => x.targetId === targetId)
+      ?? null
+    if (!ranked) continue
+    /**
+     * PRIMERO LO QUE NO SIRVE PARA ESTA VACANTE, DESPUÉS LO FLOJO.
+     *
+     * ── LA ORDEN (CEO, 2026-08-22) ────────────────────────────────────────
+     *
+     *   «Según la posición que se ingresa, elimina bullets que no son
+     *    necesarios para esa posición... da sugerencias de eliminar y
+     *    reemplazar por otro bullet acorde a la posición.»
+     *
+     * El ranking de `bullet-strength` mide REDACCIÓN —verbo, cifra, largo— y no
+     * sabe nada de la oferta. Así que con once líneas podía proponer cortar una
+     * bien escrita sobre Swift y dejar una floja que no le sirve a este puesto.
+     * Cortar es la decisión más cara del panel: la que se corta primero tiene
+     * que ser la que NO le habla a esta vacante.
+     *
+     * La relevancia ya está calculada y auditada: `report.bullets[].keywords`
+     * son los términos de la oferta que esa línea aterriza, contados con el
+     * mismo matcher que puntúa. Cero llamadas al modelo, cero heurística nueva.
+     */
+    const landsNothing = new Set(
+      (input.bullets ?? [])
+        .filter((b) => b.targetId === targetId && b.keywords.length === 0)
+        .map((b) => b.index),
+    )
+    const porRelevancia = [...ranked.weakest].sort((a, b) => {
+      const ra = landsNothing.has(a.index) ? 0 : 1
+      const rb = landsNothing.has(b.index) ? 0 : 1
+      return ra - rb // el orden dentro de cada grupo lo conserva `sort` (es estable)
+    })
+    /**
+     * Y NO SE OFRECE CORTAR UNA LÍNEA QUE OTRA TARJETA YA RECLAMÓ.
+     *
+     * ── MEDIDO (2026-08-22, buscándolo a propósito) ──────────────────────────
+     *
+     * Un puesto recargado con dos líneas casi iguales producía DOS tarjetas sobre
+     * el mismo renglón: «fusionala con la 2» y «cortala». Consejos que se
+     * anulan: si la corta, la fusión queda sin objeto; si la fusiona, el corte
+     * apunta a una línea que ya no existe. Es anterior a los chequeos de hoy — el
+     * corte por relevancia lo heredó del corte por ranking.
+     *
+     * NO se pierde el corte: se SALTEA esa línea y se toma la siguiente del
+     * ranking, así que el excedente se sigue cubriendo entero y el puesto llega
+     * igual a su tope. Duplicar y fusionar también bajan el conteo, así que el
+     * volumen queda resuelto por el camino que ya tenía dueño.
+     */
+    const yaReclamadas = new Set(
+      checks
+        .filter((c) => c.action?.kind === "rewrite_bullet" && c.action.targetId === targetId && typeof c.action.index === "number")
+        .map((c) => c.action?.index as number),
+    )
+    const r = { targetId, jobTitle, weakest: porRelevancia.filter((w) => !yaReclamadas.has(w.index)) }
+    const cuts = r.weakest.slice(0, surplus)
+    if (cuts.length === 0) continue
+
+    /**
+     * CON QUÉ REEMPLAZARLA, y sin escribir nada que el candidato no pueda
+     * respaldar.
+     *
+     * Cortar deja un hueco, y decirle «cortá» sin decirle «poné esto» es media
+     * instrucción. Lo que va en su lugar NO se improvisa: es un término que ESTA
+     * vacante pide y su CV no dice, tomado del mismo informe, y lo escribe el
+     * ejecutor con la maquinaria que ya existe (la misma que teje un término
+     * dentro de una viñeta). El candidato confirma; nadie afirma nada por él.
+     *
+     * Si no falta ningún término, no se sugiere reemplazo: la línea sobra por
+     * volumen y basta con cortarla.
+     */
+    const faltante = [...input.missingKeywords]
+      .sort((a, b) => countOccurrences(input.jobDescription ?? "", b) - countOccurrences(input.jobDescription ?? "", a))[0]
+    cutIndexes.set(r.targetId, new Set(cuts.map((c) => c.index)))
+    for (const w of cuts) {
+      push({
+        id: `tips.cut.${r.targetId}.${w.index}`,
+        section: "tips",
+        state: "warn",
+        weight: 0,
+        // Dos títulos, porque son dos diagnósticos distintos: «no le habla a esta
+        // vacante» es una razón que el candidato puede juzgar; «es de las más
+        // flojas» es otra. Decir la equivocada le hace borrar la línea que no era.
+        titleKey: landsNothing.has(w.index) ? "check.cut_irrelevant" : "check.cut_bullet",
+        detailKey: landsNothing.has(w.index) ? "check.cut_irrelevant_detail" : "check.cut_bullet_detail",
+        params: { job: r.jobTitle, count, max, ...(faltante ? { replacement: faltante } : {}) },
+        // `auto` y no `user`: cortar una línea es determinista —no hace falta
+        // modelo ni cuota—, y `user` habría pintado «esto sólo lo sabés vos:
+        // escribilo en el editor», que es la frase sin salida que se reportó.
+        // La decisión sigue siendo suya: el corte pasa por una confirmación que
+        // muestra la línea entera antes de tocarla.
+        owner: "auto",
+        action: { kind: "rewrite_bullet", targetId: r.targetId, index: w.index },
+        evidence: [w.text],
+      })
+    }
+  }
+
   for (const r of input.writing.bulletRanking) {
     /**
      * SÓLO LAS QUE UNA REESCRITURA PUEDE ARREGLAR — no las últimas del ranking.
@@ -467,7 +748,20 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
      * arregla cortando, no reescribiendo. Eso ya tiene dueño: `tips.balance` y
      * `tips.role_range`, sin botón, porque cuál cortar lo decide él.
      */
-    const mejorables = r.weakest.filter((w) => isImprovableLine(w.text))
+    // UNA VIÑETA, UN LUGAR. Una línea que ya tiene tarjeta de CORTE no puede
+    // tener además tarjeta de REESCRITURA: son dos consejos opuestos sobre el
+    // mismo renglón, y quien los lee no sabe cuál de los dos le hicimos caso.
+    /**
+     * Mismo criterio que el corte: si otra tarjeta ya reclamó la línea, ésta no
+     * la vuelve a nombrar. Antes sólo cedía ante el corte, y quedaba pisando a
+     * los duplicados y a la fusión — el mismo defecto una fila más abajo.
+     */
+    const reclamadasAqui = new Set(
+      checks
+        .filter((c) => c.action?.kind === "rewrite_bullet" && c.action.targetId === r.targetId && typeof c.action.index === "number")
+        .map((c) => c.action?.index as number),
+    )
+    const mejorables = r.weakest.filter((w) => !reclamadasAqui.has(w.index) && isImprovableLine(w.text))
     if (mejorables.length === 0) continue
     push({
       id: `tips.dilutes.${r.targetId}`,
@@ -483,6 +777,9 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   }
 
   for (const b of input.writing.bulletBalance) {
+    // El puesto que ya recibió tarjetas de CORTE no vuelve a recibir el aviso de
+    // volumen: es el mismo dato dicho dos veces, y la segunda vez sin salida.
+    if (b.kind !== "none" && cutIndexes.has(b.targetId)) continue
     push({
       id: `tips.balance.${b.targetId}`,
       section: "tips",
@@ -501,6 +798,10 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   }
 
   for (const r of input.roleBalance ?? []) {
+    // Y la TERCERA voz sobre el mismo puesto. «Lleva 11 viñetas» y «lleva 11;
+    // para su antigüedad, 4-6» son la misma frase con un dato más: el rango ya
+    // viaja dentro de la tarjeta de corte, que además tiene tijera.
+    if (r.count > r.max && cutIndexes.has(r.targetId)) continue
     push({
       id: `tips.role_range.${r.targetId}`,
       section: "tips",
@@ -545,6 +846,103 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       weight: 0,
       titleKey: "check.no_link",
       owner: "user",
+    })
+  }
+
+  /**
+   * VOZ PASIVA: el trabajo sin dueño. Se reescribe, así que lleva botón.
+   *
+   * Es la misma pérdida que las aperturas débiles por otra puerta gramatical: la
+   * frase existe, la acción existe, y el candidato no aparece en ninguna parte.
+   */
+  /**
+   * UNA VIÑETA, UN LUGAR — y este chequeo llega último, así que cede.
+   *
+   * ── MEDIDO AL AGREGARLO (2026-08-22) ─────────────────────────────────────
+   *
+   * «Fue desarrollada la capa de red…» recibía DOS tarjetas: una de fusión y una
+   * de pasiva. Dos consejos distintos sobre el mismo renglón, y quien los lee no
+   * sabe a cuál le hizo caso — el defecto que este panel ya pagó tres veces.
+   *
+   * La precedencia es por ORDEN DE EMISIÓN y no por una regla nueva: duplicados,
+   * fusión, corte y dilución ya reclamaron sus líneas más arriba. La pasiva es
+   * un defecto de REDACCIÓN, y cuando el ejecutor reescribe esa línea por
+   * cualquiera de los otros motivos la arregla igual — la doctrina le exige
+   * primera persona activa en todo lo que escribe.
+   */
+  const reclamadas = new Set(
+    checks
+      .filter((c) => c.action?.kind === "rewrite_bullet" && c.action.targetId && typeof c.action.index === "number")
+      .map((c) => `${c.action?.targetId}.${c.action?.index}`),
+  )
+  for (const b of input.passiveBullets ?? []) {
+    if (reclamadas.has(`${b.targetId}.${b.index}`)) continue
+    push({
+      id: `tips.passive.${b.targetId}.${b.index}`,
+      section: "tips",
+      state: "warn",
+      weight: 0,
+      titleKey: "check.passive_voice",
+      detailKey: "check.passive_voice_detail",
+      params: { job: b.jobTitle },
+      owner: "tailor",
+      action: { kind: "rewrite_bullet", targetId: b.targetId, index: b.index },
+      evidence: [b.text],
+    })
+  }
+
+  /**
+   * RELLENO DE KEYWORDS, MEDIDO.
+   *
+   * El aviso viejo miraba el PUNTAJE —un proxy malo: castigaba al CV honesto que
+   * de verdad cubre la vacante y dejaba pasar al que repite un término catorce
+   * veces por debajo del techo—. Acá se mide la conducta: cuántas veces lo dice y
+   * qué proporción del texto ocupa, con los dos números a la vista para que él
+   * pueda comprobarlo leyendo.
+   *
+   * `owner: "user"` y sin botón a propósito: cuál de esas apariciones sobra lo
+   * sabe quien hizo el trabajo. Quitar la equivocada le cuesta la coincidencia.
+   */
+  for (const t of input.stuffedTerms ?? []) {
+    push({
+      id: `tips.stuffing.${t.term.toLowerCase().replace(/\s+/g, "_")}`,
+      section: "tips",
+      state: "warn",
+      weight: 0,
+      titleKey: "check.keyword_stuffing",
+      detailKey: "check.keyword_stuffing_detail",
+      params: { term: t.term, count: t.count, share: t.sharePct },
+      owner: "user",
+    })
+  }
+
+  /**
+   * FOTO Y DATOS PERSONALES — INFORMATIVOS, sin botón. Ver `personal-data.ts`:
+   * no existe una respuesta correcta que el producto pueda aplicar solo, porque
+   * la misma foto es un acierto o un descarte según a dónde se postule.
+   */
+  if (input.personalData?.hasPhoto) {
+    push({
+      id: "tips.photo",
+      section: "tips",
+      state: "warn",
+      weight: 0,
+      titleKey: "check.photo_market",
+      detailKey: "check.photo_market_detail",
+      owner: "user",
+      informational: true,
+    })
+  }
+  for (const kind of input.personalData?.sensitive ?? []) {
+    push({
+      id: `tips.personal_data.${kind}`,
+      section: "tips",
+      state: "warn",
+      weight: 0,
+      titleKey: "check.personal_data",
+      detailKey: `check.personal_data_${kind}`,
+      owner: "user",
+      informational: true,
     })
   }
 
@@ -663,6 +1061,34 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     ...input.matchedSoftSkills.map((t) => termOf(t, true, "soft")),
     ...input.missingSoftSkills.map((t) => termOf(t, false, "soft")),
   ]
+
+  /**
+   * LO QUE EL CANDIDATO SABE Y ESTA OFERTA NO PIDE.
+   *
+   * No mueve el puntaje y la sección lo dice en voz alta —`SECTION_CATEGORY.other`
+   * es `null`—, porque el puntaje es CONTRA ESTA VACANTE y no un inventario. Pero
+   * callarlo dejaba al usuario creyendo que el análisis no ve sus habilidades.
+   *
+   * Se compara con `normalizeTerm`, la misma función con la que el matcher
+   * decide presencia: si acá dijéramos «esto la vacante no lo pide» sobre algo
+   * que el matcher SÍ contó, el informe se contradiría solo.
+   */
+  const asked = new Set(terms.map((t) => normalizeTerm(t.term)))
+  for (const skill of input.cvSkills ?? []) {
+    const name = skill.trim()
+    const norm = normalizeTerm(name)
+    if (!norm || asked.has(norm)) continue
+    asked.add(norm)
+    terms.push({
+      term: name,
+      section: "other",
+      jd: countOccurrences(input.jobDescription ?? "", name),
+      cv: Math.max(1, countOccurrences(input.resumeText ?? "", name)),
+      // Sin viñeta detrás, una habilidad de la lista es una afirmación. Se dice
+      // con la misma vara que las duras: aparece en la experiencia o no.
+      listOnly: countOccurrences(input.evidenceText ?? "", name) === 0,
+    })
+  }
 
   // ── viñetas ────────────────────────────────────────────────────────────────
   //

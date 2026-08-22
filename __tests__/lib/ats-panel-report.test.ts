@@ -314,12 +314,23 @@ describe("el equilibrio de viñetas depende de la antigüedad", () => {
     expect(allChecks(r).map((c) => c.id)).not.toContain("tips.role_range.j1")
   })
 
-  it("y son demasiadas en uno de hace diez años", () => {
+  /**
+   * ── EL AVISO SE CONVIRTIÓ EN TIJERA (2026-08-22) ─────────────────────────
+   *
+   * Antes esto emitía `tips.role_range.j1` —«lleva 6; para su antigüedad, 2-3»—
+   * con la nota «esto sólo lo sabés vos». El CEO lo reportó con captura: un
+   * dato repetido y sin salida. Ahora el mismo puesto recibe UNA tarjeta por
+   * línea de sobra, con la línea nombrada y el botón que la corta.
+   */
+  it("y en uno de hace diez años el excedente se ofrece para cortar, con su línea", () => {
     const r = buildPanelReport(input({
       sectionData: { workExperience: [{ id: "j1", jobTitle: "Cajero", endDate: `06/${year - 10}`, description: Array.from({ length: 6 }, (_, i) => `• línea ${i}`).join("\n") }] },
     }))
-    const c = allChecks(r).find((x) => x.id === "tips.role_range.j1")
-    expect(c?.titleKey).toBe("check.role_over")
+    const cortes = allChecks(r).filter((x) => x.id.startsWith("tips.cut.j1."))
+    expect(cortes.length).toBe(3)
+    for (const c of cortes) expect(c.evidence?.[0]).toMatch(/^línea \d$/)
+    // Y la voz vieja, la que no llevaba a ningún lado, se calla.
+    expect(allChecks(r).map((c) => c.id)).not.toContain("tips.role_range.j1")
   })
 
   /** El piso importa igual: un puesto con una línea se lee como si no hubiera hecho nada. */
