@@ -95,7 +95,7 @@ export default function ExecSovereignTemplate() {
   const SideHead = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 12px" }}>
       <span style={{ color: gold, fontSize: 13 }}>{icon}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: cream }}>
+      <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: cream }}>
         {children}
       </span>
       <span style={{ flex: 1, height: 1, background: lineS }} />
@@ -104,7 +104,7 @@ export default function ExecSovereignTemplate() {
   const MainHead = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 14px" }}>
       <span style={{ color: gold, fontSize: 13 }}>{icon}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: cream }}>
+      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: cream }}>
         {children}
       </span>
       <span style={{ flex: 1, height: 1, background: line }} />
@@ -178,7 +178,7 @@ export default function ExecSovereignTemplate() {
             {lastLine}
           </h1>
           {pd.jobTitle && (
-            <div style={{ fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: gold, marginTop: 8 }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: gold, marginTop: 8 }}>
               {pd.jobTitle}
             </div>
           )}

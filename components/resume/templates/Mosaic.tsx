@@ -79,7 +79,7 @@ export default function MosaicTemplate() {
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
           <p style={{
-            fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.22em",
+            fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.18em",
             textTransform: "uppercase", color: "rgba(255,255,255,0.6)",
             marginBottom: 4,
           }}>

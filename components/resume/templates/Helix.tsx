@@ -123,7 +123,7 @@ export default function HelixTemplate() {
           {pd.jobTitle && (
             <p style={{
               color, fontSize: "8.5px", fontWeight: 600,
-              textAlign: "center", letterSpacing: "0.22em",
+              textAlign: "center", letterSpacing: "0.18em",
               textTransform: "uppercase", marginBottom: 18, padding: "0 12px",
             }}>
               {pd.jobTitle}
@@ -229,7 +229,7 @@ export default function HelixTemplate() {
                 {[pd.firstName, pd.lastName].filter(Boolean).join(" ")}
               </h1>
               {pd.jobTitle && (
-                <p style={{ fontSize: "9.5px", fontWeight: 600, color: "#777", letterSpacing: "0.22em", textTransform: "uppercase", marginTop: 3 }}>
+                <p style={{ fontSize: "9.5px", fontWeight: 600, color: "#777", letterSpacing: "0.18em", textTransform: "uppercase", marginTop: 3 }}>
                   {pd.jobTitle}
                 </p>
               )}
@@ -400,7 +400,7 @@ function HelixSection({ id, title, color, children }: { id: string; title: strin
           <polygon points="8,0 16,8 8,16 0,8" fill={color} opacity="0.15" />
           <polygon points="8,3 13,8 8,13 3,8" fill={color} />
         </svg>
-        <span style={{ fontSize: "9.5px", fontWeight: 900, letterSpacing: "0.26em", textTransform: "uppercase", color }}>
+        <span style={{ fontSize: "9.5px", fontWeight: 900, letterSpacing: "0.18em", textTransform: "uppercase", color }}>
           <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
         </span>
         <div style={{ flex: 1, height: 1, backgroundColor: `${color}2a` }} />

@@ -177,7 +177,7 @@ export default function ThompsonTemplate() {
           {pd.jobTitle && (
             <p style={{
               fontSize: "8px", color: "rgba(255,255,255,0.45)",
-              fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase",
+              fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
             }}>
               {pd.jobTitle}
             </p>

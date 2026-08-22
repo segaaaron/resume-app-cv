@@ -68,7 +68,7 @@ export default function TplFashionTemplate() {
   if (pd.website) contacts.push([<Globe key="g" />, pd.website])
 
   const FaH = ({ id, children }: { id: string; children: React.ReactNode }) => (
-    <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: blush, margin: "18px 0 12px", fontWeight: 600 }}>
+    <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: blush, margin: "18px 0 12px", fontWeight: 600 }}>
       <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
@@ -93,7 +93,7 @@ export default function TplFashionTemplate() {
           <line x1="116" y1="22" x2="100" y2="26" stroke={ink} strokeWidth="1.4" />
           <circle cx="116" cy="22" r="2" fill="none" stroke={ink} strokeWidth="1.2" />
         </svg>
-        <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: blush, marginBottom: 8 }}>
+        <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: blush, marginBottom: 8 }}>
           {pd.jobTitle || (config.language === "en" ? "Fashion Designer" : "Diseñador de Moda")}
         </div>
         <h1 style={{ fontFamily: SERIF, fontSize: 58, fontWeight: 600, margin: 0, lineHeight: 0.96, letterSpacing: "0.01em" }}>

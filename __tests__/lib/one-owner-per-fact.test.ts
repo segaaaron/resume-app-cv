@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest"
-import { readFileSync } from "node:fs"
 import { buildAtsReport, type BuildReportInput } from "@/lib/ats/build-report"
 import { allChecks, missingTerms, unbackedTerms, weavableTerms, solvableChecks, tailorWorkload } from "@/lib/ats/report"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
@@ -116,20 +115,13 @@ describe("cada término se cuenta una sola vez como trabajo", () => {
 })
 
 /**
- * EL PANEL NO PUEDE ENUMERAR TÉRMINOS POR SU CUENTA.
+ * LA BARRA DE CONTEXTO YA NO EXISTE, así que no hay nada que vigilar.
  *
- * Éste sí mira el código, y es a propósito: comprueba una AUSENCIA, y de un
- * componente que no existe no hay comportamiento que ejecutar. Es la única forma
- * de que una cuarta copia no vuelva a aparecer sin que nadie se entere.
+ * Acá se comprobaba que `KeywordContextPanel` diera el agregado y no volviera a
+ * listar los términos uno por uno. El componente se borró entero: un porcentaje
+ * sin un solo botón no ayudaba a nadie, y lo que resumía ya lo dice la tabla con
+ * su conteo auditable y su acción.
+ *
+ * Que ningún componente nuevo vuelva a enumerar términos lo cubren los tests de
+ * arriba, que ejecutan el informe.
  */
-describe("nadie más enumera términos", () => {
-  const ctx = readFileSync("components/editor/ats-report/KeywordContextPanel.tsx", "utf8")
-
-  it("la barra de contexto da la proporción, no la lista", () => {
-    // Contesta «qué parte de lo que decís está probado» — nadie más lo hace.
-    expect(ctx).toContain("evidenced")
-    // Y no vuelve a pintar los términos uno por uno.
-    expect(ctx).not.toContain("listOnly.slice")
-    expect(ctx).not.toContain("ctx_list_only")
-  })
-})

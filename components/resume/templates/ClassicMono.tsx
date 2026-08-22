@@ -46,7 +46,7 @@ export default function ClassicMonoTemplate() {
             {pd.firstName || "First"}<br />{pd.lastName || "Last"}
           </h1>
           {pd.jobTitle && (
-            <div style={{ fontSize: 9.5, letterSpacing: "0.22em", color: sub, marginTop: 8, textTransform: "uppercase" }}>{pd.jobTitle}</div>
+            <div style={{ fontSize: 9.5, letterSpacing: "0.18em", color: sub, marginTop: 8, textTransform: "uppercase" }}>{pd.jobTitle}</div>
           )}
         </div>
 
@@ -115,7 +115,7 @@ export default function ClassicMonoTemplate() {
           display: "flex", justifyContent: "space-between", alignItems: "center",
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
-          <div style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "0.3em", fontSize: 11 }}>CURRICULUM VITAE</div>
+          <div style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "0.18em", fontSize: 11 }}>CURRICULUM VITAE</div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, opacity: 0.7 }}>{now} / {monthStr}</div>
         </div>
 
@@ -172,7 +172,7 @@ export default function ClassicMonoTemplate() {
 function SideSection({ title, rule, sub, children }: { title: string; rule: string; sub: string; children: React.ReactNode }) {
   return (
     <div style={{ marginTop: 28 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.22em", color: sub, textTransform: "uppercase", paddingBottom: 8, borderBottom: `1px solid ${rule}`, marginBottom: 10 }}>{title}</div>
+      <div style={{ fontSize: 9, letterSpacing: "0.18em", color: sub, textTransform: "uppercase", paddingBottom: 8, borderBottom: `1px solid ${rule}`, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
   )
@@ -191,7 +191,7 @@ function MainBlock({ title, rule, children }: { title: string; rule: string; acc
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
-        <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, letterSpacing: "0.22em", textTransform: "uppercase", margin: 0, fontWeight: 600 }}>{title}</h2>
+        <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", margin: 0, fontWeight: 600 }}>{title}</h2>
         <div style={{ flex: 1, height: 1, background: rule }} />
       </div>
       <ul style={{ margin: 0, padding: 0, listStyle: "none", color: "#3a3a3a" }}>{children}</ul>

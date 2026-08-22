@@ -124,7 +124,7 @@ export default function LumiereTemplate() {
         {pd.jobTitle && (
           <p style={{
             fontSize: 10.5, fontWeight: 400, color: "#999",
-            letterSpacing: "0.42em", textTransform: "uppercase", marginBottom: 18,
+            letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 18,
           }}>
             {pd.jobTitle}
           </p>
@@ -332,7 +332,7 @@ function LumiereSection({ id, title, color, children }: { id: string; title: str
       <div className="resume-section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <div style={{ flex: 1, height: 0.5, backgroundColor: color, opacity: 0.28 }} />
         <DiamondOrnament color={color} />
-        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.38em", textTransform: "uppercase", color }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color }}>
           <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
           {title}
         </span>
@@ -348,7 +348,7 @@ function LumiereSide({ id, title, color, children }: { id: string; title: string
   return (
     <div style={{ marginBottom: 18 }}>
       <div className="resume-section-title" style={{ marginBottom: 10 }}>
-        <p style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", color, marginBottom: 6 }}>
+        <p style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color, marginBottom: 6 }}>
           <SectionIcon sectionId={id} color={color} size={10} strokeWidth={2.25} />
           {title}
         </p>

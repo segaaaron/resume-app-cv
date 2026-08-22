@@ -80,7 +80,7 @@ export default function ShowMarquisTemplate() {
     </div>
   )
   const Mini = ({ children, mt = 18 }: { children: React.ReactNode; mt?: number }) => (
-    <div style={{ fontSize: 10.5, letterSpacing: "0.24em", textTransform: "uppercase", color: accent, fontWeight: 700, margin: "0 0 11px", marginTop: mt }}>
+    <div style={{ fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 700, margin: "0 0 11px", marginTop: mt }}>
       {children}
     </div>
   )
@@ -122,7 +122,7 @@ export default function ShowMarquisTemplate() {
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg, ${green} 42%, rgba(19,53,43,0.65) 60%, rgba(19,53,43,0.25) 100%)` }} />
         <div style={{ position: "relative", padding: "44px 48px", color: ivory }}>
           {pd.jobTitle && (
-            <div style={{ fontSize: 11, letterSpacing: "0.4em", color: accent, marginBottom: 14, textTransform: "uppercase" }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", color: accent, marginBottom: 14, textTransform: "uppercase" }}>
               {pd.jobTitle}
             </div>
           )}

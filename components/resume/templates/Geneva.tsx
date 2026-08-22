@@ -36,7 +36,7 @@ export default function GenevaTemplate() {
     <div style={{ marginBottom: 14 }}>
       <h2 style={{
         textAlign: "center", fontSize: "9.5px", fontWeight: 700,
-        letterSpacing: "0.25em", textTransform: "uppercase", color: "#1f2937",
+        letterSpacing: "0.18em", textTransform: "uppercase", color: "#1f2937",
         marginBottom: 8,
       }}>
         {title}
@@ -98,7 +98,7 @@ export default function GenevaTemplate() {
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <h1 style={{
           fontWeight: 700, fontSize: "28px",
-          letterSpacing: "0.3em", textTransform: "uppercase",
+          letterSpacing: "0.18em", textTransform: "uppercase",
           color: "#111827", lineHeight: 1.1, marginBottom: 6,
         }}>
           {[pd.firstName, pd.lastName].filter(Boolean).join(" ") || "YOUR NAME"}

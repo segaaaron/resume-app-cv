@@ -55,7 +55,7 @@ export default function ShowCameoTemplate() {
 
   const H = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 9px" }}>
-      <span style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", textTransform: "uppercase", color: accent, fontWeight: 600 }}>
+      <span style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 600 }}>
         <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
       </span>
       <span style={{ flex: 1, height: 1, background: `${accent}33` }} />
@@ -103,7 +103,7 @@ export default function ShowCameoTemplate() {
         {pd.firstName || "Your"} <span style={{ fontStyle: "italic", color: accent }}>{pd.lastName || "Name"}</span>
       </h1>
       {pd.jobTitle && (
-        <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.4em", color: mute, margin: "10px 0 8px", textTransform: "uppercase" }}>
+        <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", color: mute, margin: "10px 0 8px", textTransform: "uppercase" }}>
           {pd.jobTitle}
         </div>
       )}

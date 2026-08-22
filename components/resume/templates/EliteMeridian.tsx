@@ -50,12 +50,12 @@ export default function EliteMeridianTemplate() {
   const NumSec = ({ n, label }: { n: string; label: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 15px" }}>
       <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: teal }}>{n}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: navy }}>{label}</span>
+      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: navy }}>{label}</span>
       <span style={{ flex: 1, height: 1, background: "#e3eaea", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
   const MiniLabel = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.28em", textTransform: "uppercase", color: teal, marginBottom: 12, fontWeight: 600 }}>
+    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: teal, marginBottom: 12, fontWeight: 600 }}>
       {children}
     </div>
   )
@@ -113,7 +113,7 @@ export default function EliteMeridianTemplate() {
           </div>
           <div>
             {pd.jobTitle && (
-              <div style={{ fontSize: 11, letterSpacing: "0.32em", color: teal, marginBottom: 8, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.18em", color: teal, marginBottom: 8, textTransform: "uppercase" }}>
                 {pd.jobTitle}
               </div>
             )}

@@ -98,7 +98,7 @@ export default function ExecCitadelTemplate() {
   const SectionHead = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 13px" }}>
       <span style={{ color: goldText, fontSize: 13 }}>{icon}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: cream }}>
+      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: cream }}>
         {children}
       </span>
       <span style={{ flex: 1, height: 1, background: line }} />
@@ -152,7 +152,7 @@ export default function ExecCitadelTemplate() {
           {fullName}
         </h1>
         {pd.jobTitle && (
-          <div style={{ fontSize: 11.5, letterSpacing: "0.42em", textTransform: "uppercase", color: goldText, margin: "10px 0 12px" }}>
+          <div style={{ fontSize: 11.5, letterSpacing: "0.18em", textTransform: "uppercase", color: goldText, margin: "10px 0 12px" }}>
             {pd.jobTitle}
           </div>
         )}

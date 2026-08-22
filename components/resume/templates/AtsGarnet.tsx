@@ -22,7 +22,7 @@ export default function AtsGarnet() {
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, borderBottom: `2px solid ${c}`, paddingBottom: 14 }}>
           <div>
             <h1 style={{ margin: 0, fontFamily: GARA, fontSize: 44, fontWeight: 500, letterSpacing: "0.01em", lineHeight: 1 }}>{d.fullName}</h1>
-            {d.jobTitle && <div style={{ fontSize: 11.5, letterSpacing: "0.24em", textTransform: "uppercase", color: c, marginTop: 8, fontWeight: 700 }}>{d.jobTitle}</div>}
+            {d.jobTitle && <div style={{ fontSize: 11.5, letterSpacing: "0.18em", textTransform: "uppercase", color: c, marginTop: 8, fontWeight: 700 }}>{d.jobTitle}</div>}
           </div>
           <div style={{ display: "flex", gap: 7 }}>{(["code", "layers", "target"] as IconKey[]).map((k) => <AIco key={k} k={k} c={c} size={28} variant="soft" shape="circle" />)}</div>
         </div>

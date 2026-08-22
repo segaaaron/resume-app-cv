@@ -184,7 +184,7 @@ export default function TplGazetteTemplate() {
           {fullName}
         </h1>
         {pd.jobTitle && (
-          <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.3em", color: accent, marginTop: 8, textTransform: "uppercase" }}>
+          <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.18em", color: accent, marginTop: 8, textTransform: "uppercase" }}>
             {pd.jobTitle}
           </div>
         )}
@@ -193,7 +193,7 @@ export default function TplGazetteTemplate() {
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 14px" }}>
               <span style={{ flex: 1, height: 1, background: accent, opacity: 0.5 }} />
-              <span style={{ fontSize: 11, letterSpacing: "0.25em", color: accent }}>
+              <span style={{ fontSize: 11, letterSpacing: "0.18em", color: accent }}>
                 {labelFor("summary").toUpperCase()}
               </span>
               <span style={{ flex: 1, height: 1, background: accent, opacity: 0.5 }} />
@@ -207,7 +207,7 @@ export default function TplGazetteTemplate() {
         {visible("workExperience") && workExperience.length > 0 && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <span style={{ fontSize: 11, letterSpacing: "0.25em", color: accent, textTransform: "uppercase" }}>
+              <span style={{ fontSize: 11, letterSpacing: "0.18em", color: accent, textTransform: "uppercase" }}>
                 {labelFor("workExperience")}
               </span>
               <span style={{ flex: 1, borderTop: `1px dotted ${accent}` }} />
@@ -242,7 +242,7 @@ export default function TplGazetteTemplate() {
         {visible("certifications") && certifications.length > 0 && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 12px" }}>
-              <span style={{ fontSize: 11, letterSpacing: "0.25em", color: accent, textTransform: "uppercase" }}>
+              <span style={{ fontSize: 11, letterSpacing: "0.18em", color: accent, textTransform: "uppercase" }}>
                 {labelFor("certifications")}
               </span>
               <span style={{ flex: 1, borderTop: `1px dotted ${accent}` }} />

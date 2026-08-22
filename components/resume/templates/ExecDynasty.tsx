@@ -102,7 +102,7 @@ export default function ExecDynastyTemplate() {
   const SectionHead = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 13px" }}>
       <span style={{ color: gold, fontSize: 13 }}>{icon}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: cream }}>
+      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: cream }}>
         {children}
       </span>
       <span style={{ flex: 1, height: 1, background: line }} />
@@ -157,7 +157,7 @@ export default function ExecDynastyTemplate() {
           {fullName}
         </h1>
         {pd.jobTitle && (
-          <div style={{ fontSize: 11, letterSpacing: "0.42em", textTransform: "uppercase", color: gold, margin: "9px 0 6px" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: gold, margin: "9px 0 6px" }}>
             {pd.jobTitle}
           </div>
         )}

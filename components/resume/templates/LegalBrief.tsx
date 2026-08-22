@@ -44,7 +44,7 @@ export default function LegalBriefTemplate() {
       <div style={{ paddingLeft: 24 }}>
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 18 }}>
-          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.3em", color: red, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.18em", color: red, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
             ★ ★ ★ MEMORIAL CURRICULAR ★ ★ ★
           </div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 700, margin: "10px 0 4px", letterSpacing: "0.02em", textTransform: "uppercase" }}>
@@ -55,7 +55,7 @@ export default function LegalBriefTemplate() {
               {pd.jobTitle}
             </div>
           )}
-          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.3em", marginTop: 6 }}>—— § ——</div>
+          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.18em", marginTop: 6 }}>—— § ——</div>
         </div>
 
         {/* Summary */}

@@ -7,7 +7,7 @@ import { fmtDesc } from "@/lib/utils"
 
 function SH({ children, ink }: { children: React.ReactNode; ink: string }) {
   return (
-    <h2 style={{ fontSize: 13, letterSpacing: "0.22em", margin: "0 0 14px", paddingBottom: 6, borderBottom: `2px solid ${ink}`, textTransform: "uppercase", fontWeight: 700, color: ink }}>
+    <h2 style={{ fontSize: 13, letterSpacing: "0.18em", margin: "0 0 14px", paddingBottom: 6, borderBottom: `2px solid ${ink}`, textTransform: "uppercase", fontWeight: 700, color: ink }}>
       {children}
     </h2>
   )
@@ -39,7 +39,7 @@ export default function CoralSidebarTemplate() {
     }}>
       {/* Main column */}
       <main style={{ padding: "48px 40px" }}>
-        <div style={{ fontSize: 12, letterSpacing: "0.3em", color: coral, marginBottom: 6, textTransform: "uppercase" }}>
+        <div style={{ fontSize: 12, letterSpacing: "0.18em", color: coral, marginBottom: 6, textTransform: "uppercase" }}>
           {pd.jobTitle || "Curriculum 2026"}
         </div>
         <h1 style={{ fontSize: 56, lineHeight: 0.95, margin: 0, letterSpacing: "-0.025em", fontWeight: 800 }}>
@@ -111,7 +111,7 @@ export default function CoralSidebarTemplate() {
 
         {/* Contact */}
         <div>
-          <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}>Contact</div>
+          <div style={{ fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.8 }}>Contact</div>
           <div style={{ height: 1, background: cream, opacity: 0.4, margin: "6px 0 10px" }} />
           <div style={{ fontSize: 11.5, lineHeight: 1.9 }}>
             {pd.email && <div>{pd.email}</div>}
@@ -124,7 +124,7 @@ export default function CoralSidebarTemplate() {
         {/* Skills */}
         {visible("skills") && skills.length > 0 && (
           <div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</div>
             <div style={{ height: 1, background: cream, opacity: 0.4, margin: "6px 0 10px" }} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
               {skills.map((sk) => (
@@ -137,7 +137,7 @@ export default function CoralSidebarTemplate() {
         {/* Education */}
         {visible("education") && education.length > 0 && (
           <div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</div>
             <div style={{ height: 1, background: cream, opacity: 0.4, margin: "6px 0 10px" }} />
             {education.map((edu) => (
               <div key={edu.id} style={{ marginBottom: 10 }}>
@@ -151,7 +151,7 @@ export default function CoralSidebarTemplate() {
         {/* Languages */}
         {visible("languages") && languages.length > 0 && (
           <div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</div>
             <div style={{ height: 1, background: cream, opacity: 0.4, margin: "6px 0 10px" }} />
             <div style={{ fontSize: 11.5, lineHeight: 1.85 }}>
               {languages.map((lang) => (

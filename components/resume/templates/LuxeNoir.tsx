@@ -144,7 +144,7 @@ function LxHead({ gold, line, children }: { gold: string; line: string; children
           fontFamily: "inherit",
           fontSize: 10,
           fontWeight: 600,
-          letterSpacing: "0.26em",
+          letterSpacing: "0.18em",
           textTransform: "uppercase",
           color: gold,
           whiteSpace: "nowrap",
@@ -258,7 +258,7 @@ export default function LuxeNoirTemplate() {
             style={{
               fontFamily: "inherit",
               fontSize: 10,
-              letterSpacing: "0.5em",
+              letterSpacing: "0.18em",
               color: gold,
               margin: "14px 0 7px",
               paddingLeft: "0.5em",

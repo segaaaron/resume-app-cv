@@ -38,17 +38,23 @@ describe("el catálogo y el score no se contradicen", () => {
 })
 
 describe("la copia en texto plano se ofrece sólo a quien la necesita", () => {
-  it("depende de la plantilla, no se pinta siempre", () => {
-    const src = read(PANEL)
-    expect(src).toContain("getTemplateAtsSafety")
-    expect(src).toMatch(/templateSafety === "caution"\s*\?\s*<AtsSafeDownload \/>/)
+  /**
+   * SE SIMPLIFICÓ AL BORRAR EL BLOQUE DE VERIFICACIÓN.
+   *
+   * Antes esto vivía dentro de aquel bloque y tenía dos mitades: la descarga para
+   * quien usa dos columnas, y un mensaje verde —«tu plantilla ya parsea limpio»—
+   * para el resto. Ese mensaje era ruido: le decía a la mayoría que todo estaba
+   * bien en un panel cuyo trabajo es señalar lo que no lo está, y encima aparecía
+   * junto a un aviso que decía lo contrario.
+   *
+   * Queda la mitad que ES una acción: la descarga, y sólo para quien la necesita.
+   */
+  it("sólo se pinta con una plantilla que penaliza", () => {
+    const panel = read("components/editor/ATSScorePanel.tsx")
+    expect(panel).toMatch(/templateSafety === "caution" &&[\s\S]{0,120}AtsSafeDownload/)
   })
 
-  it("a quien ya tiene una plantilla limpia se le dice, en los dos idiomas", () => {
-    expect(read(PANEL)).toContain('t("template_already_ats")')
-    for (const loc of ["es", "en"]) {
-      const m = JSON.parse(read(`messages/${loc}.json`)).editor.ats
-      expect(m.template_already_ats, loc).toBeTruthy()
-    }
+  it("y no queda el mensaje que le decía a todos que todo estaba bien", () => {
+    expect(read("components/editor/ATSScorePanel.tsx")).not.toContain("template_already_ats")
   })
 })

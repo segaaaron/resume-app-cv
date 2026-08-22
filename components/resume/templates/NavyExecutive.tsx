@@ -11,7 +11,7 @@ const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, adva
 function Sec({ title, gold, children }: { title: string; gold: string; children: React.ReactNode }) {
   return (
     <div style={{ marginTop: 22 }}>
-      <div style={{ fontSize: 10, letterSpacing: "0.25em", color: gold, marginBottom: 8, textTransform: "uppercase" }}>{title}</div>
+      <div style={{ fontSize: 10, letterSpacing: "0.18em", color: gold, marginBottom: 8, textTransform: "uppercase" }}>{title}</div>
       <div style={{ fontSize: 10.5, color: "#dde3ea", lineHeight: 1.7 }}>{children}</div>
     </div>
   )

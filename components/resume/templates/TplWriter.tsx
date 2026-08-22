@@ -68,7 +68,7 @@ export default function TplWriterTemplate() {
   if (pd.website) contacts.push([<Globe key="g" />, pd.website])
 
   const WrH = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: acc, margin: "18px 0 12px", fontWeight: 600 }}>
+    <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: acc, margin: "18px 0 12px", fontWeight: 600 }}>
       {children}
     </div>
   )
@@ -94,7 +94,7 @@ export default function TplWriterTemplate() {
         <path d="M12 52 l-6 6" stroke={acc} strokeWidth="1.6" strokeLinecap="round" />
       </svg>
 
-      <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: acc, marginBottom: 14 }}>
+      <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: acc, marginBottom: 14 }}>
         {pd.jobTitle || (config.language === "en" ? "Author · Copywriter" : "Autor · Copywriter")}
       </div>
       <h1 style={{ fontSize: 72, fontWeight: 500, margin: 0, lineHeight: 0.9, letterSpacing: "-0.01em" }}>

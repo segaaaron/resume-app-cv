@@ -134,7 +134,7 @@ export default function TplCommunicatorTemplate() {
           </g>
         </svg>
 
-        <div style={{ fontSize: 12, letterSpacing: "0.3em", opacity: 0.85, marginBottom: 12 }}>
+        <div style={{ fontSize: 12, letterSpacing: "0.18em", opacity: 0.85, marginBottom: 12 }}>
           ◗ {config.language === "en" ? "COMMUNICATIONS" : "COMUNICACIONES"}
         </div>
         <h1 style={{ fontSize: 46, fontWeight: 700, margin: 0, lineHeight: 0.98, letterSpacing: "-0.02em" }}>{fullName}</h1>

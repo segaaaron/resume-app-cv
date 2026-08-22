@@ -54,12 +54,12 @@ export default function EliteCuveeTemplate() {
   const NumSec = ({ n, label }: { n: string; label: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "26px 0 16px" }}>
       <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: gold }}>{n}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#15171c" }}>{label}</span>
+      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#15171c" }}>{label}</span>
       <span style={{ flex: 1, height: 1, background: `${gold}40`, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
   const MiniLabel = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.28em", textTransform: "uppercase", color: gold, marginBottom: 12, fontWeight: 600 }}>
+    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: gold, marginBottom: 12, fontWeight: 600 }}>
       {children}
     </div>
   )
@@ -96,7 +96,7 @@ export default function EliteCuveeTemplate() {
       {/* LEFT */}
       <div style={{ padding: "50px 44px 40px 50px", position: "relative" }}>
         {pd.jobTitle && (
-          <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.44em", color: gold, marginBottom: 22, textTransform: "uppercase" }}>
+          <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", color: gold, marginBottom: 22, textTransform: "uppercase" }}>
             {pd.jobTitle}
           </div>
         )}

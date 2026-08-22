@@ -84,7 +84,7 @@ export default function LarssonTemplate() {
           {/* Contact */}
           <div>
             <p style={{
-              fontSize: "7px", fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase",
+              fontSize: "7px", fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase",
               color: "rgba(255,255,255,0.35)", marginBottom: 10,
             }}>
               Contact
@@ -117,7 +117,7 @@ export default function LarssonTemplate() {
           {visible("education") && education.length > 0 && (
             <div>
               <p style={{
-                fontSize: "7px", fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase",
+                fontSize: "7px", fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase",
                 color: "rgba(255,255,255,0.35)", marginBottom: 10,
               }}>
                 {label("education")}
@@ -148,7 +148,7 @@ export default function LarssonTemplate() {
           {visible("skills") && skills.length > 0 && (
             <div>
               <p style={{
-                fontSize: "7px", fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase",
+                fontSize: "7px", fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase",
                 color: "rgba(255,255,255,0.35)", marginBottom: 10,
               }}>
                 {label("skills")}
@@ -168,7 +168,7 @@ export default function LarssonTemplate() {
           {visible("languages") && languages.length > 0 && (
             <div>
               <p style={{
-                fontSize: "7px", fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase",
+                fontSize: "7px", fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase",
                 color: "rgba(255,255,255,0.35)", marginBottom: 10,
               }}>
                 {label("languages")}

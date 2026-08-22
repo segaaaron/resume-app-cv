@@ -169,7 +169,7 @@ export default function TplFilmmakerTemplate() {
           </g>
         </svg>
 
-        <div style={{ fontSize: 12, letterSpacing: "0.35em", color: accent, marginBottom: 12 }}>
+        <div style={{ fontSize: 12, letterSpacing: "0.18em", color: accent, marginBottom: 12 }}>
           ● {config.language === "en" ? "SCENE 01 — DIRECTOR" : "ESCENA 01 — DIRECTOR/A"}
         </div>
         <h1 style={{ fontSize: 56, fontWeight: 700, margin: 0, lineHeight: 0.92, letterSpacing: "-0.03em", color: "#15171c" }}>

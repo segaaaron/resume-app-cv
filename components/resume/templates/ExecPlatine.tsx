@@ -117,7 +117,7 @@ export default function ExecPlatineTemplate() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
         <div>
           {pd.jobTitle && (
-            <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.3em", color: plat, marginBottom: 14 }}>
+            <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.18em", color: plat, marginBottom: 14 }}>
               {pd.jobTitle.toUpperCase()}
             </div>
           )}

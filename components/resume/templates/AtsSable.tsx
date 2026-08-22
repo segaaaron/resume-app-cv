@@ -26,7 +26,7 @@ export default function AtsSable() {
         <div style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", display: "grid", placeItems: "center", fontFamily: SPEC, fontSize: 21, fontWeight: 600, flexShrink: 0 }}>{initials}</div>
         <div style={{ flex: 1 }}>
           <h1 style={{ margin: 0, fontFamily: SPEC, fontSize: 32, fontWeight: 600, letterSpacing: "-0.01em" }}>{d.fullName}</h1>
-          {d.jobTitle && <div style={{ fontSize: 11, letterSpacing: "0.22em", textTransform: "uppercase", color: "#9dc4b8", marginTop: 5 }}>{d.jobTitle}</div>}
+          {d.jobTitle && <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9dc4b8", marginTop: 5 }}>{d.jobTitle}</div>}
         </div>
         {d.contacts.length > 0 && <AContact items={d.contacts.slice(0, 3)} color="#ffffff" variant="plain" size={12} font={SSANS} fs={9.7} ink="#d5e5df" dir="column" gap="6px" />}
       </div>

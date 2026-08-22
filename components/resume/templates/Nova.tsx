@@ -55,7 +55,7 @@ export default function NovaTemplate() {
         {/* Left — white, name */}
         <div style={{ flex: 1, padding: "32px 36px 24px", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <p style={{
-            fontSize: "8px", fontWeight: 700, letterSpacing: "0.3em",
+            fontSize: "8px", fontWeight: 700, letterSpacing: "0.18em",
             textTransform: "uppercase", color: "#9ca3af", marginBottom: 8,
           }}>
             Curriculum Vitae

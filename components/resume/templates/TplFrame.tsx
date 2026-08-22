@@ -84,11 +84,11 @@ export default function TplFrameTemplate() {
         printColorAdjust: "exact",
       }}
     >
-      <div style={{ position: "absolute", top: 30, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.85)", fontSize: 11, letterSpacing: "0.5em", textTransform: "uppercase", zIndex: 2 }}>
+      <div style={{ position: "absolute", top: 30, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.85)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", zIndex: 2 }}>
         {config.language === "en" ? "Curriculum Vitae" : "Currículum Vitae"}
       </div>
       {pd.website && (
-        <div style={{ position: "absolute", bottom: 26, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.85)", fontSize: 11, letterSpacing: "0.3em", zIndex: 2 }}>
+        <div style={{ position: "absolute", bottom: 26, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.85)", fontSize: 11, letterSpacing: "0.18em", zIndex: 2 }}>
           {pd.website}
         </div>
       )}

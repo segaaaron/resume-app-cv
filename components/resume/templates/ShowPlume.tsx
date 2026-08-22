@@ -44,7 +44,7 @@ export default function ShowPlumeTemplate() {
   const place = [pd.city, pd.country].filter(Boolean).join(", ")
 
   const PlH = ({ id, children }: { id: string; children: React.ReactNode }) => (
-    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", textTransform: "uppercase", color: accent, margin: "16px 0 11px", fontWeight: 600 }}>
+    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, margin: "16px 0 11px", fontWeight: 600 }}>
       <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
@@ -68,7 +68,7 @@ export default function ShowPlumeTemplate() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 30 }}>
         <div style={{ flex: 1 }}>
           {pd.jobTitle && (
-            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.4em", color: accent, marginBottom: 12, textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", color: accent, marginBottom: 12, textTransform: "uppercase" }}>
               {pd.jobTitle}
             </div>
           )}

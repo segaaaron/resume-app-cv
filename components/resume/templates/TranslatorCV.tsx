@@ -54,7 +54,7 @@ export default function TranslatorCVTemplate() {
     }}>
       {/* Centered header */}
       <header style={{ textAlign: "center", borderBottom: `1px solid ${ink}`, paddingBottom: 14 }}>
-        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, letterSpacing: "0.4em", color: red, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, letterSpacing: "0.18em", color: red, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
           CURRICULUM VITÆ · {new Date().getFullYear()}
         </div>
         <h1 style={{

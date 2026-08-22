@@ -188,7 +188,7 @@ export default function VitaeTemplate() {
             </span>
           </div>
           {pd.jobTitle && (
-            <p style={{ color: "#8a9ab0", fontSize: "10.5px", fontWeight: 600, letterSpacing: "0.28em", textTransform: "uppercase" }}>
+            <p style={{ color: "#8a9ab0", fontSize: "10.5px", fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase" }}>
               {pd.jobTitle}
             </p>
           )}

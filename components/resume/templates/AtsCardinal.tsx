@@ -26,7 +26,7 @@ export default function AtsCardinal() {
           <AIco k="shield" c={c} size={38} variant="soft" shape="circle" />
         </div>
         <h1 style={{ margin: 0, fontFamily: MERRI, fontSize: 33, fontWeight: 700, letterSpacing: "-0.01em" }}>{d.fullName}</h1>
-        {d.jobTitle && <div style={{ fontSize: 11.5, letterSpacing: "0.3em", textTransform: "uppercase", color: c, marginTop: 8, fontWeight: 700 }}>{d.jobTitle}</div>}
+        {d.jobTitle && <div style={{ fontSize: 11.5, letterSpacing: "0.18em", textTransform: "uppercase", color: c, marginTop: 8, fontWeight: 700 }}>{d.jobTitle}</div>}
         {d.contacts.length > 0 && (
           <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
             <AContact items={d.contacts} color={c} variant="plain" size={13} font={LATO} fs={10.4} gap="5px 18px" />

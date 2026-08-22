@@ -74,10 +74,8 @@ const REGISTRO: Record<string, { max: number; razon: string }> = {
   // Ejecutarlo exigiría montar el panel entero con su store y su sesión para
   // leer un árbol de componentes que no depende de datos.
   "lib/ats-block-ownership.test.ts": { max: 3, razon: "el panel monta el riel y el modal, y ningún bloque propio" },
-  "lib/ats-template-consistency.test.ts": { max: 2, razon: "la plantilla se lee de una sola fuente" },
   "lib/analysis-cache-revision.test.ts": { max: 2, razon: "la huella del caché se deriva de la doctrina, no se escribe a mano" },
   "lib/prompt-length-guard.test.ts": { max: 3, razon: "el recorte ocurre antes de armar el prompt, fuera del alcance del test" },
-  "lib/one-owner-per-fact.test.ts": { max: 1, razon: "la barra de contexto da el agregado y no vuelve a listar términos" },
   "lib/ats-one-truth.test.ts": { max: 1, razon: "la herramienta pública conserva la matriz que el panel ya no usa" },
   "lib/ats-panel-memory.test.ts": { max: 1, razon: "la copia del estado final existe en los dos idiomas" },
   "lib/ats-no-duplicate-sections.test.ts": { max: 1, razon: "el panel no conserva ningún bloque propio" },

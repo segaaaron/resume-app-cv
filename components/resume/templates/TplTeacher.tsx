@@ -126,7 +126,7 @@ export default function TplTeacherTemplate() {
           </g>
         </svg>
 
-        <div style={{ fontSize: 12, letterSpacing: "0.3em", color: accent, marginBottom: 12, fontStyle: "italic" }}>
+        <div style={{ fontSize: 12, letterSpacing: "0.18em", color: accent, marginBottom: 12, fontStyle: "italic" }}>
           ✎ {config.language === "en" ? "EDUCATOR" : "EDUCADOR/A"}
         </div>
         <h1 style={{ fontSize: 44, fontWeight: 700, margin: 0, lineHeight: 1, letterSpacing: "-0.01em" }}>{fullName}</h1>

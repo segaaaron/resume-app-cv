@@ -102,7 +102,7 @@ export default function TplPhotographerTemplate() {
           </g>
           <circle cx="50" cy="50" r="13" fill="none" stroke="#fff" strokeWidth="1.6" />
         </svg>
-        <div style={{ fontSize: 11, letterSpacing: "0.4em", color: "#888", marginBottom: 14 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.18em", color: "#888", marginBottom: 14 }}>
           f/1.8 · ISO 100 · {(pd.jobTitle || "PHOTOGRAPHER").toUpperCase()}
         </div>
         <h1 style={{ fontSize: 52, fontWeight: 700, margin: 0, lineHeight: 0.94, letterSpacing: "-0.03em" }}>

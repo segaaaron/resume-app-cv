@@ -53,12 +53,12 @@ export default function EliteCadenceTemplate() {
   const NumSec = ({ n, label }: { n: string; label: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 15px" }}>
       <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: am }}>{n}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#15171c" }}>{label}</span>
+      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#15171c" }}>{label}</span>
       <span style={{ flex: 1, height: 1, background: "#f4f2ee", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
   const MiniLabel = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.28em", textTransform: "uppercase", color: am, marginBottom: 12, fontWeight: 600 }}>
+    <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: am, marginBottom: 12, fontWeight: 600 }}>
       {children}
     </div>
   )
@@ -92,7 +92,7 @@ export default function EliteCadenceTemplate() {
         {/* LEFT */}
         <div style={{ paddingRight: 0 }}>
           {pd.jobTitle && (
-            <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: "0.3em", color: am, marginBottom: 16, textTransform: "uppercase" }}>
+            <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: "0.18em", color: am, marginBottom: 16, textTransform: "uppercase" }}>
               ● {pd.jobTitle}
             </div>
           )}

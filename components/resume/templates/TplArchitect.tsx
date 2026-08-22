@@ -69,7 +69,7 @@ export default function TplArchitectTemplate() {
       <div style={{ position: "absolute", top: 22, right: 24, fontSize: 9, color: steel, letterSpacing: "0.1em" }}>DWG · 001 · A4</div>
 
       <div style={{ borderBottom: `2px solid ${blue}`, paddingBottom: 18, marginBottom: 20, position: "relative", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-        <div style={{ fontSize: 10, letterSpacing: "0.3em", color: steel, marginBottom: 10 }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.18em", color: steel, marginBottom: 10 }}>
           — {(pd.jobTitle || "ARCHITECT").toUpperCase()} · LICENSED
         </div>
         <h1 style={{ fontFamily: "inherit", fontSize: 46, fontWeight: 700, margin: 0, color: blue, lineHeight: 1, letterSpacing: "-0.02em" }}>

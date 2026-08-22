@@ -68,7 +68,7 @@ export default function AuroraTemplate() {
           {pd.jobTitle && (
             <p style={{
               fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.72)",
-              letterSpacing: "0.26em", textTransform: "uppercase", marginBottom: 14,
+              letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 14,
             }}>
               {pd.jobTitle}
             </p>
@@ -318,7 +318,7 @@ function AuroraSection({ id, title, color, children }: { id: string; title: stri
       <div className="resume-section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <SectionIcon sectionId={id} color={color} size={14} strokeWidth={2.25} />
         <span style={{
-          fontSize: "9.5px", fontWeight: 900, letterSpacing: "0.26em",
+          fontSize: "9.5px", fontWeight: 900, letterSpacing: "0.18em",
           textTransform: "uppercase", color,
         }}>
           {title}
@@ -335,7 +335,7 @@ function AuroraSide({ id, title, color, children }: { id: string; title: string;
     <div style={{ marginBottom: 16 }}>
       <p className="resume-section-title" style={{
         display: "flex", alignItems: "center", gap: 5,
-        fontSize: "8.5px", fontWeight: 800, letterSpacing: "0.25em",
+        fontSize: "8.5px", fontWeight: 800, letterSpacing: "0.18em",
         textTransform: "uppercase", color, marginBottom: 10,
       }}>
         <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />

@@ -110,7 +110,7 @@ export default function TplSaharaTemplate() {
     >
       {/* Main */}
       <div style={{ padding: "50px 44px" }}>
-        <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.35em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>
+        <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>
           {config.language === "en" ? "Curriculum Vitae" : "Currículum Vitae"}
         </div>
         <h1 style={{ fontFamily: SERIF, fontSize: 60, fontWeight: 600, margin: 0, lineHeight: 0.95, letterSpacing: "-0.01em", color: ink }}>

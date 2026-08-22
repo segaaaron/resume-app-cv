@@ -161,7 +161,7 @@ export default function ExecPorcelainTemplate() {
           <div
             style={{
               fontSize: 10.5,
-              letterSpacing: "0.55em",
+              letterSpacing: "0.18em",
               color: champ,
               marginBottom: 16,
               paddingLeft: "0.55em",

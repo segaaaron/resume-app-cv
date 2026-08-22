@@ -179,7 +179,7 @@ export default function ExecNocturneTemplate() {
           {firstLine} <span style={{ fontStyle: "italic", color: rose }}>{lastLine}</span>
         </h1>
         {pd.jobTitle && (
-          <div style={{ fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: rose, margin: "8px 0 12px" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: rose, margin: "8px 0 12px" }}>
             {pd.jobTitle}
           </div>
         )}

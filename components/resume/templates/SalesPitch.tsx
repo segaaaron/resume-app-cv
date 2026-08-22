@@ -75,7 +75,7 @@ export default function SalesPitchTemplate() {
         {/* Hero */}
         <div style={{
           fontFamily: "ui-monospace, monospace", fontSize: 11,
-          letterSpacing: "0.25em", color: accent,
+          letterSpacing: "0.18em", color: accent,
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
           {config.language === "en" ? "THE OPPORTUNITY" : "LA OPORTUNIDAD"}

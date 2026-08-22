@@ -36,7 +36,7 @@ export default function OnyxTemplate() {
   const SideLabel = ({ id, title }: { id: string; title: string }) => (
     <div style={{ marginBottom: 10 }}>
       <p style={{
-        fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.22em",
+        fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.18em",
         textTransform: "uppercase", color: accent, marginBottom: 5,
       }}>
         <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}

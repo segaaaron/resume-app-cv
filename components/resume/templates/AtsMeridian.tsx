@@ -22,7 +22,7 @@ export default function AtsMeridian() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 18 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 40, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1 }}>{d.fullName}</h1>
-            {d.jobTitle && <div style={{ fontSize: 12.5, letterSpacing: "0.26em", textTransform: "uppercase", marginTop: 9, color: "#a9c2e0" }}>{d.jobTitle}</div>}
+            {d.jobTitle && <div style={{ fontSize: 12.5, letterSpacing: "0.18em", textTransform: "uppercase", marginTop: 9, color: "#a9c2e0" }}>{d.jobTitle}</div>}
           </div>
           <AIco k="code" c="#fff" variant="outline" size={46} shape="rounded" style={{ borderColor: "rgba(255,255,255,0.4)" }} />
         </div>

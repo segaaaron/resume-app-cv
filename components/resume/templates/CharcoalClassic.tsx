@@ -9,7 +9,7 @@ const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, adva
 function SideSection({ title, ink, rule, children }: { title: string; ink: string; rule: string; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: 24 }}>
-      <h3 style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.22em", margin: "0 0 8px", paddingBottom: 6, borderBottom: `1px solid ${rule}`, textTransform: "uppercase", color: ink, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</h3>
+      <h3 style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", margin: "0 0 8px", paddingBottom: 6, borderBottom: `1px solid ${rule}`, textTransform: "uppercase", color: ink, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</h3>
       <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 10.5 }}>{children}</ul>
     </section>
   )
@@ -18,7 +18,7 @@ function SideSection({ title, ink, rule, children }: { title: string; ink: strin
 function MainBlock({ title, ink, children }: { title: string; ink: string; rule: string; accent: string; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: 24 }}>
-      <h2 style={{ fontFamily: "inherit", fontSize: 14, letterSpacing: "0.22em", margin: "0 0 12px", textTransform: "uppercase", paddingBottom: 8, borderBottom: `1px solid ${ink}`, color: ink }}>{title}</h2>
+      <h2 style={{ fontFamily: "inherit", fontSize: 14, letterSpacing: "0.18em", margin: "0 0 12px", textTransform: "uppercase", paddingBottom: 8, borderBottom: `1px solid ${ink}`, color: ink }}>{title}</h2>
       {children}
     </section>
   )
@@ -66,7 +66,7 @@ export default function CharcoalClassicTemplate() {
             {(pd.firstName || "First").toUpperCase()} {(pd.lastName || "Last").toUpperCase()}
           </h1>
           {pd.jobTitle && (
-            <div style={{ fontSize: 10.5, letterSpacing: "0.28em", color: "#bdbdbd", marginTop: 6 }}>{pd.jobTitle.toUpperCase()}</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.18em", color: "#bdbdbd", marginTop: 6 }}>{pd.jobTitle.toUpperCase()}</div>
           )}
           <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 10, color: "#dcdcdc", flexWrap: "wrap" }}>
             {pd.phone && <span>📞 {pd.phone}</span>}

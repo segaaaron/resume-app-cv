@@ -232,8 +232,6 @@ export interface PanelReportInput {
   content: ATSContentQuality
   sectionData: Record<string, unknown>
   jobDescription: string
-  /** Lo que midió el parser sobre el PDF real, si el usuario lo verificó. */
-  verified?: BuildReportInput["verified"]
   /** La credibilidad, ya calculada por el panel. Acá no se recalcula. */
   credibility?: { score: number; findings: readonly { key: string; band: string; count: number }[] }
   /**
@@ -350,6 +348,5 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
     structure: structureOf(sectionData),
     roleBalance: roleBalance(sectionData),
     gaps: employmentGaps(sectionData),
-    verified: input.verified,
   })
 }

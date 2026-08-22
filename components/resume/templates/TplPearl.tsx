@@ -52,7 +52,7 @@ export default function TplPearlTemplate() {
       style={{
         fontFamily: "inherit",
         fontSize: 11,
-        letterSpacing: "0.25em",
+        letterSpacing: "0.18em",
         textTransform: "uppercase",
         color: accent,
         margin: "18px 0 12px",
@@ -145,7 +145,7 @@ export default function TplPearlTemplate() {
             style={{
               fontFamily: "inherit",
               fontSize: 12.5,
-              letterSpacing: "0.35em",
+              letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: accent,
               marginTop: 12,

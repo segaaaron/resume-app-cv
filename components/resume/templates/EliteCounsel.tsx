@@ -51,7 +51,7 @@ export default function EliteCounselTemplate() {
 
   const SecRule = ({ label }: { label: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "26px 0 16px" }}>
-      <span style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.28em", color: gold, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", color: gold, textTransform: "uppercase" }}>{label}</span>
       <span style={{ flex: 1, height: 1, background: `${gold}66`, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
@@ -88,7 +88,7 @@ export default function EliteCounselTemplate() {
       {/* LEFT editorial column */}
       <div style={{ padding: "54px 44px 40px 50px", position: "relative" }}>
         {pd.jobTitle && (
-          <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.46em", color: gold, marginBottom: 26, textTransform: "uppercase" }}>
+          <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", color: gold, marginBottom: 26, textTransform: "uppercase" }}>
             {pd.jobTitle}
           </div>
         )}
@@ -196,7 +196,7 @@ export default function EliteCounselTemplate() {
 
         {contactRows.length > 0 && (
           <>
-            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", color: gold, marginBottom: 14, textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", color: gold, marginBottom: 14, textTransform: "uppercase" }}>
               {config.language === "en" ? "Chambers" : "Contacto"}
             </div>
             <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 11, fontSize: 11.5, color: "#6e7075", marginBottom: 26 }}>
@@ -212,7 +212,7 @@ export default function EliteCounselTemplate() {
 
         {visible("skills") && skills.length > 0 && (
           <>
-            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", color: gold, marginBottom: 14, textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", color: gold, marginBottom: 14, textTransform: "uppercase" }}>
               {labelFor("skills")}
             </div>
             <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#6e7075", marginBottom: 22 }}>
@@ -228,7 +228,7 @@ export default function EliteCounselTemplate() {
 
         {visible("certifications") && certifications.length > 0 && (
           <>
-            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", color: gold, marginBottom: 12, textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.18em", color: gold, marginBottom: 12, textTransform: "uppercase" }}>
               {labelFor("certifications")}
             </div>
             <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 6, fontSize: 11.5, color: "#6e7075", marginBottom: 18 }}>

@@ -25,11 +25,10 @@ import { useShallow } from "zustand/react/shallow"
 // Same normalization the matcher used to decide "demonstrated", so an accented
 // Spanish skill matches the stored verdict instead of silently missing it.
 import { computeCredibility } from "@/lib/ats/credibility"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Check, MessageSquare, TrendingUp, Clock, FileSearch, Sparkles, ChevronRight, MessageSquareQuote } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Check, MessageSquare, TrendingUp, Clock, Sparkles, MessageSquareQuote } from "lucide-react"
 import { useTailorCV } from "./hooks/useTailorCV"
 import AtsSafeDownload from "./AtsSafeDownload"
 import { getTemplateAtsSafety } from "@/lib/ats/template-ats-safety"
-import { verifyGapCause, FAITHFUL_MAX_DELTA } from "@/lib/ats/verify-gap"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion } from "./SuggestionDiffModal"
@@ -105,7 +104,6 @@ export default function ATSScorePanel() {
     analyze,
     rescore,
     creditSoftSkill,
-    verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
   } = useATSScore()
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
@@ -723,19 +721,10 @@ export default function ATSScorePanel() {
           // Lo que un parser REAL extrajo, cuando el usuario lo verificó. Es la
           // única fuente honesta para «¿parsea a dos columnas?» y «¿el contacto
           // sobrevivió?»: son preguntas sobre el archivo, no sobre los datos.
-          verified: verifyResult
-            ? {
-                formatIssues: verifyResult.breakdown.format.issues,
-                missingSections: verifyResult.breakdown.sections.missing,
-                hasEmail: verifyResult.breakdown.contact.hasEmail,
-                hasPhone: verifyResult.breakdown.contact.hasPhone,
-                wordCount: verifyResult.wordCount,
-              }
-            : undefined,
           isAlreadyAccepted: alreadyAccepted,
         })
       : null),
-    [atsResult, liveWritingChecks, liveContentQuality, sectionData, input, credibility, verifyResult, alreadyAccepted],
+    [atsResult, liveWritingChecks, liveContentQuality, sectionData, input, credibility, alreadyAccepted],
   )
 
   const [tailorOpen, setTailorOpen] = useState(false)
@@ -1277,138 +1266,38 @@ export default function ATSScorePanel() {
               {/* The real-PDF verification is our strongest evidence and it costs a
                   render of the actual file — it belongs to the résumé pass, not to
                   the third posting of the afternoon. Kept whole, one click away. */}
-              {(<>
-              {/* Verify against your real PDF — the SAME ATS metric, measured on the
-                  actual exported file instead of the structured estimate. Fused into
-                  the score so the user sees ONE metric (estimated → verified), never
-                  two competing numbers. The real parse is the truth of the file, and
-                  nothing is hidden: the engine matrix + extracted text stay expandable. */}
-              <div className="mt-2.5 w-full rounded-xl border p-3" style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}>
-                {!verifyResult ? (
-                  <div className="flex items-center gap-2">
-                    <FileSearch className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                    <p className="text-[10.5px] text-slate-600 leading-snug flex-1 text-left">{t("verify_hint")}</p>
-                    <button type="button" onClick={() => void verifyReal()} disabled={verifyLoading}
-                      className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border border-indigo-200 rounded-full px-2.5 py-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                      {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />}
-                      {verifyLoading ? t("verify_loading") : t("verify_button")}
-                    </button>
-                  </div>
-                ) : (() => {
-                  const delta = (report?.score ?? 0) - verifyResult.realScore
-                  const faithful = delta < FAITHFUL_MAX_DELTA
-                  /**
-                   * DE QUÉ ES LA DIFERENCIA — y por qué no se puede afirmar.
-                   *
-                   * Los dos números NO salen del mismo motor: el de arriba es
-                   * `computeATSMatch` sobre los datos estructurados, el de abajo es
-                   * `analyzeAts` sobre el texto extraído del PDF. Son dos varas
-                   * distintas a propósito (directiva en `ats-matcher.ts:9`), así que
-                   * restarlas y llamar «lo que pierde tu diseño» al resultado es
-                   * atribuir una causa que nadie midió.
-                   *
-                   * Reportado por el CEO el 2026-08-21 con una plantilla de UNA
-                   * columna leyendo «cambiá a una plantilla de una columna». El
-                   * mismo defecto ya se había arreglado en la copia en texto plano
-                   * de veinte líneas más abajo — y quedó vivo acá.
-                   *
-                   * Ahora: el consejo del diseño sale SÓLO si el diseño penaliza, y
-                   * si no, se nombra lo que el parser realmente no encontró.
-                   */
-                  const parseIssues = [
-                    ...verifyResult.breakdown.format.issues,
-                    ...verifyResult.breakdown.sections.missing,
-                  ].slice(0, 3)
-                  const cause = verifyGapCause({
-                    estimated: report?.score ?? 0,
-                    real: verifyResult.realScore,
-                    templateSafety,
-                    parseIssues,
-                  })
-                  const email = ((sectionData.personalDetails as { email?: string })?.email ?? "").trim().toLowerCase()
-                  const contactLost = !!email && !!verifyResult.extractedText && !verifyResult.extractedText.toLowerCase().includes(email)
-                  return (
-                  <div className="space-y-2">
-                    {/* SAME metric, two ways: estimated (from your data) → verified (real file). */}
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="text-center">
-                        <div className="text-[8.5px] font-bold uppercase tracking-wide text-slate-400">{t("score_estimated")}</div>
-                        <div className="text-[17px] font-black text-slate-400 tabular-nums leading-none mt-0.5">{report?.score ?? 0}</div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
-                      <div className="text-center">
-                        <div className="text-[8.5px] font-bold uppercase tracking-wide text-indigo-500">{t("score_verified")}</div>
-                        <div className={`text-[22px] font-black tabular-nums leading-none mt-0.5 ${faithful ? "text-emerald-600" : "text-amber-600"}`}>{verifyResult.realScore}</div>
-                      </div>
-                    </div>
-                    <div className={`flex items-start gap-2 rounded-xl px-3 py-2 ${faithful ? "bg-emerald-50 ring-1 ring-emerald-200" : "bg-amber-50 ring-1 ring-amber-200"}`}>
-                      {faithful ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />}
-                      <p className={`text-[11px] leading-snug text-left ${faithful ? "text-emerald-800" : "text-amber-800"}`}>{cause === "faithful"
-                        ? t("verify_faithful")
-                        : cause === "layout"
-                          ? t("verify_loss", { delta })
-                          : cause === "parse"
-                            ? t("verify_loss_reading")
-                            : t("verify_loss_scale")}</p>
-                    </div>
-                    {cause === "parse" && (
-                      <ul className="space-y-1 pl-1 text-left">
-                        {parseIssues.map((x) => (
-                          <li key={x} className="flex items-start gap-1.5 text-[10.5px] leading-snug text-amber-900/80">
-                            <span className="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-amber-500" />
-                            {x}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {contactLost && (
-                      <div className="flex items-start gap-2 rounded-xl bg-rose-50 ring-1 ring-rose-200 px-3 py-2">
-                        <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-rose-800 leading-snug text-left">{t("verify_contact_lost")}</p>
-                      </div>
-                    )}
-                    {/* Nothing hidden: per-engine parse + the exact extracted text, expandable. */}
-                    <details className="group">
-                      <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-800 select-none text-left">{t("verify_detail_label")}</summary>
-                      <div className="mt-2 space-y-2">
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400 mb-1 text-left">{t("verify_extracted_label")}</p>
-                          <pre className="text-[10px] leading-relaxed text-slate-600 bg-white/70 border border-indigo-100 rounded-lg p-2.5 max-h-52 overflow-auto whitespace-pre-wrap break-words text-left">{verifyResult.extractedText}</pre>
-                        </div>
-                        {/**
-                          * La copia en texto plano se ofrece SÓLO a quien la
-                          * necesita.
-                          *
-                          * Reportado: un usuario con una plantilla ATS —una
-                          * columna, sin penalización alguna— igual veía "tu
-                          * versión ATS para las máquinas" y un botón para
-                          * descargar otra. Se lee como "la plantilla que elegiste
-                          * no sirve para ATS", justo lo contrario de lo que el
-                          * catálogo le vendió y de lo que el score calcula. El
-                          * comentario del propio componente lo dice: fue escrito
-                          * para quien usa DOS columnas.
-                          *
-                          * Con una plantilla que ya parsea limpio no hay nada que
-                          * ofrecer: se lo decimos y listo.
-                          */}
-                        {templateSafety === "caution"
-                          ? <AtsSafeDownload />
-                          : (
-                            <p className="text-[10px] leading-relaxed text-emerald-700 bg-emerald-50/60 border border-emerald-100 rounded-lg px-2.5 py-2 text-left">
-                              {t("template_already_ats")}
-                            </p>
-                          )}
-                      </div>
-                    </details>
-                    <button type="button" onClick={() => void verifyReal()} disabled={verifyLoading}
-                      className="w-full inline-flex items-center justify-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-all disabled:opacity-50">
-                      {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />} {t("verify_reverify")}
-                    </button>
-                  </div>
-                  )
-                })()}
-              </div>
-              </>)}
+              {/* ── EL BLOQUE DE «VERIFICAR CONTRA TU PDF REAL» SE FUE ───────────
+                  «¿Cuál es la necesidad de tener eso, en qué me ayuda?» (CEO,
+                  2026-08-21). En nada, y esa era la respuesta honesta.
+
+                  Mostraba dos números —el estimado sobre los datos y el medido
+                  sobre el PDF— y le pedía al usuario que los interpretara. Cuando
+                  no coincidían nombraba el síntoma («faltan encabezados de
+                  sección») en vez de la causa, se contradecía dos líneas más
+                  abajo diciendo «tu plantilla parsea limpio», y dejaba el
+                  hallazgo de verdad —el texto que el parser saca— escondido tras
+                  un desplegable.
+
+                  Y LO DE FONDO: el usuario no tiene por qué descubrir que NUESTRA
+                  plantilla le rompe el CV. Eso es trabajo nuestro. La diferencia
+                  que este bloque medía en su CV salía de `letterSpacing` en las
+                  plantillas de la familia ATS: el cargo se exportaba como
+                  «I N G E N I E R O» y ningún filtro lo encuentra. Se arregla en
+                  la plantilla y se vigila con un guard, no se le delega al
+                  candidato en un botón. */}
+
+              {/* LA COPIA EN TEXTO PLANO SE QUEDA, y sola.
+                  Vivía dentro del bloque de verificación y se fue con él por
+                  arrastre. No corresponde: esto NO es un número que el usuario
+                  tenga que interpretar, es una DESCARGA —su CV en la forma más
+                  portable— y sólo se le ofrece a quien la necesita de verdad, el
+                  que eligió una plantilla de dos columnas. Con una que ya parsea
+                  limpio no hay nada que ofrecer, así que no se pinta. */}
+              {templateSafety === "caution" && (
+                <div className="mt-2.5">
+                  <AtsSafeDownload />
+                </div>
+              )}
             </div>
 
             {/* The recruiter pass failed. Said plainly, with a way out — the

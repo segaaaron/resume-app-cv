@@ -18,7 +18,6 @@ import CheckRow from "./CheckRow"
 import ReportSectionCard from "./ReportSectionCard"
 import TermTable from "./TermTable"
 import BulletQualityPanel from "./BulletQualityPanel"
-import KeywordContextPanel from "./KeywordContextPanel"
 
 /**
  * EL INFORME. Lo único que este riel lee es `report`.
@@ -102,23 +101,16 @@ export default function ReportRail({
           El puntaje contesta «¿pasa el filtro?». Esta contesta «¿le cree quien lo
           lee?» — y no trae hallazgos propios: casi todo lo que penaliza ya está
           abajo como chequeo con su botón. Acá va la conclusión, no la lista. */}
-      {report.credibility.band !== null && (
-        <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
-          style={{ background: "var(--a-surface)", border: "1px solid var(--a-border)" }}>
-          <span className="text-[19px] font-bold tabular-nums"
-            style={{ color: report.credibility.score >= 80 ? "var(--a-ok)" : report.credibility.score >= 60 ? "var(--a-warn)" : "var(--a-bad)" }}>
-            {report.credibility.score}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--a-muted-2)" }}>
-              {t("credibility_title")}
-            </span>
-            <span className="block text-[11.5px] font-semibold" style={{ color: "var(--a-ink-2)" }}>
-              {t(`cred_band_${report.credibility.band}`)}
-            </span>
-          </span>
-        </div>
-      )}
+      {/* LA NOTA DE CREDIBILIDAD SE FUE DEL RIEL.
+          Era un segundo puntaje al lado del principal —un «95» con la etiqueta
+          «lo que concluye quien lo lee»— sin un solo botón. Dos números que
+          cuentan cosas distintas, uno al lado del otro, se leen como una
+          contradicción aunque los dos sean ciertos: el defecto que este panel ya
+          pagó tres veces.
+
+          El cálculo NO se borra: los hallazgos de credibilidad que tienen algo
+          que arreglar siguen entrando al informe como chequeos, con su sección y
+          su salida. Lo que se va es el número suelto. */}
 
       {/* Pasado el umbral el riesgo cambia de dueño: deja de ser el filtro y pasa
           a ser la persona que lee al final. */}
@@ -193,7 +185,11 @@ export default function ReportRail({
             )}
             {/* Afirmado contra probado: vive en «duras» porque es sobre esas
                 habilidades que un reclutador pregunta en la entrevista. */}
-            {section.id === "hard" && <KeywordContextPanel terms={report.terms} />}
+            {/* LA BARRA «AFIRMADO CONTRA PROBADO» SE FUE. Cero botones, cero
+                acciones: un porcentaje y una barra que el usuario no podía usar
+                para nada. Lo que ese número resumía —qué términos están sólo en
+                la lista— ya vive en la tabla de acá abajo, agrupado y CON el
+                botón que los resuelve. */}
             {/* La calidad de las viñetas es lo que mira la persona, no el filtro:
                 por eso vive en la sección que declara no mover el número. */}
             {section.id === "tips" && <BulletQualityPanel report={report} onSolve={(id) => onSolve(id)} />}

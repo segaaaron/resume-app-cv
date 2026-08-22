@@ -81,14 +81,14 @@ export default function ShowSoireeTemplate() {
 
   const SoH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0 13px" }}>
-      <span style={{ fontSize: 11, letterSpacing: "0.26em", textTransform: "uppercase", color: accent, fontWeight: 600 }}>
+      <span style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 600 }}>
         <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
       </span>
       <span style={{ flex: 1, height: 1, background: `${accent}33` }} />
     </div>
   )
   const SoMini = ({ children, mt = 20 }: { children: React.ReactNode; mt?: number }) => (
-    <div style={{ fontSize: 10, letterSpacing: "0.26em", textTransform: "uppercase", color: accent, fontWeight: 600, margin: "0 0 11px", marginTop: mt }}>
+    <div style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 600, margin: "0 0 11px", marginTop: mt }}>
       {children}
     </div>
   )
@@ -114,7 +114,7 @@ export default function ShowSoireeTemplate() {
 
       <div style={{ padding: "52px 40px 40px 48px", position: "relative" }}>
         {pd.jobTitle && (
-          <div style={{ fontSize: 11, letterSpacing: "0.46em", color: accent, marginBottom: 16, textTransform: "uppercase" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.18em", color: accent, marginBottom: 16, textTransform: "uppercase" }}>
             {pd.jobTitle}
           </div>
         )}

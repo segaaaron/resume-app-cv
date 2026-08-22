@@ -180,7 +180,7 @@ export default function TplDoctorTemplate() {
 
       {/* MAIN */}
       <div style={{ padding: "44px 40px 40px" }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: teal, marginBottom: 8, fontWeight: 600 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: teal, marginBottom: 8, fontWeight: 600 }}>
           {pd.jobTitle || (config.language === "en" ? "Physician" : "Médico")}
         </div>
         <h1 style={{ fontSize: 40, fontWeight: 700, margin: 0, color: "#10403f", lineHeight: 1, letterSpacing: "-0.02em" }}>{fullName}</h1>

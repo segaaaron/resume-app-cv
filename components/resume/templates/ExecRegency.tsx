@@ -81,7 +81,7 @@ export default function ExecRegencyTemplate() {
   const SectionHead = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 11, margin: "0 0 14px" }}>
       <span style={{ color: gold, fontSize: 14, display: "grid", placeItems: "center" }}>{icon}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 14, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: cream }}>
+      <span style={{ fontFamily: "inherit", fontSize: 14, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: cream }}>
         {children}
       </span>
       <span style={{ flex: 1, height: 1, background: line, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
@@ -136,7 +136,7 @@ export default function ExecRegencyTemplate() {
         </h1>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 12, flexWrap: "wrap", gap: 10 }}>
           {pd.jobTitle && (
-            <div style={{ fontSize: 12.5, letterSpacing: "0.34em", textTransform: "uppercase", color: gold }}>
+            <div style={{ fontSize: 12.5, letterSpacing: "0.18em", textTransform: "uppercase", color: gold }}>
               {pd.jobTitle}
             </div>
           )}

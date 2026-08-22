@@ -149,7 +149,7 @@ export default function ExecCobaltTemplate() {
   const Sec = ({ k, children }: { k: GlyphKey; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 11, margin: "0 0 14px" }}>
       <Tile k={k} sz={28} />
-      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 600, letterSpacing: "0.22em", textTransform: "uppercase", color: ice }}>
+      <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: ice }}>
         {children}
       </span>
       <span style={{ flex: 1, height: 1, background: line }} />
@@ -183,7 +183,7 @@ export default function ExecCobaltTemplate() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 28, alignItems: "center", marginBottom: 12 }}>
         <div>
           {pd.jobTitle && (
-            <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.34em", textTransform: "uppercase", color: silver, marginBottom: 12 }}>
+            <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: silver, marginBottom: 12 }}>
               {pd.jobTitle}
             </div>
           )}

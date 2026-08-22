@@ -47,7 +47,7 @@ export default function TplAtelierTemplate() {
   const place = [pd.city, pd.country].filter(Boolean).join(", ")
 
   const AtH = ({ id, children }: { id: string; children: React.ReactNode }) => (
-    <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", color: accent, margin: "20px 0 12px", fontWeight: 600 }}>
+    <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, margin: "20px 0 12px", fontWeight: 600 }}>
       <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
@@ -70,10 +70,10 @@ export default function TplAtelierTemplate() {
     >
       {/* Masthead */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `2px solid ${ink}`, paddingBottom: 10, marginBottom: 8 }}>
-        <span style={{ fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase" }}>
           {config.language === "en" ? "Portfolio · 2026" : "Portafolio · 2026"}
         </span>
-        <span style={{ fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase" }}>№ 07</span>
+        <span style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase" }}>№ 07</span>
       </div>
 
       <h1 style={{ fontFamily: SERIF, fontSize: 92, lineHeight: 0.92, margin: "14px 0 0", fontWeight: 400, letterSpacing: "-0.02em", color: ink }}>

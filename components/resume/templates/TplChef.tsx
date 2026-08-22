@@ -79,7 +79,7 @@ export default function TplChefTemplate() {
 
   // Section heading (dotted accent rule)
   const ChefH = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: accent, fontWeight: 600, margin: "18px 0 12px", fontFamily: "inherit" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 600, margin: "18px 0 12px", fontFamily: "inherit" }}>
       <span>{children}</span>
       <span style={{ flex: 1, borderTop: `1px dotted ${accent}88` }} />
     </div>
@@ -123,7 +123,7 @@ export default function TplChefTemplate() {
           </g>
         </svg>
 
-        <div style={{ fontFamily: SERIF, fontSize: 14, letterSpacing: "0.4em", color: accent, marginBottom: 12 }}>
+        <div style={{ fontFamily: SERIF, fontSize: 14, letterSpacing: "0.18em", color: accent, marginBottom: 12 }}>
           ★ {config.language === "en" ? "CHEF ★ MENU 2026" : "CHEF ★ CARTA 2026"}
         </div>
         <h1 style={{ fontFamily: SERIF, fontSize: 50, fontWeight: 600, margin: 0, lineHeight: 0.96 }}>

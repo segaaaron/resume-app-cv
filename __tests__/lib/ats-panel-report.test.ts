@@ -282,25 +282,23 @@ describe("lo que se puede afirmar desde los datos, y lo que no", () => {
   })
 })
 
-describe("lo que midió el parser real", () => {
-  /**
-   * EL CASO MÁS CARO DEL PANEL: el email está en el CV y el parser no lo saca del
-   * PDF. El candidato manda una postulación a la que nadie puede responder.
-   */
-  it("delata un contacto que el CV tiene y el PDF no entrega", () => {
-    const r = buildPanelReport(input({
-      sectionData: { personalDetails: { email: "a@b.com", phone: "+591" } },
-      verified: { formatIssues: [], missingSections: [], hasEmail: false, hasPhone: true, wordCount: 500 },
-    }))
-    const c = allChecks(r).find((x) => x.id === "search.email_not_extracted")
-    expect(c?.state).toBe("crit")
-  })
-
-  it("sin verificación, no inventa ninguno de esos hallazgos", () => {
-    const r = buildPanelReport(input({ sectionData: { personalDetails: { email: "a@b.com", phone: "+591" } } }))
-    expect(allChecks(r).map((c) => c.id)).not.toContain("search.email_not_extracted")
-  })
-})
+/**
+ * LO QUE SE PERDIÓ AL BORRAR LA VERIFICACIÓN DEL PDF, dicho y no escondido.
+ *
+ * Acá vivía el caso más caro que el panel sabía detectar: el email ESTÁ en el CV
+ * y el parser no lo saca del PDF exportado — el candidato manda una postulación
+ * a la que nadie puede responder. Se detectaba con `search.email_not_extracted`,
+ * que sólo existía si había una medición sobre el archivo real.
+ *
+ * La causa que hacía desaparecer texto del PDF —`letterSpacing` por encima de lo
+ * que el extractor tolera— ya no puede ocurrir: se corrigió en las 62 plantillas
+ * que la tenían y hay un guard que lo impide (`template-parseable-text`). Eso
+ * cubre la causa conocida y medida.
+ *
+ * NO CUBRE OTRAS. Una fuente que no embeba sus glifos, o un render que falle de
+ * otro modo, volvería a perder el contacto y hoy nadie lo vería. Queda anotado
+ * como el precio de haber sacado el bloque, no como un problema resuelto.
+ */
 
 describe("el equilibrio de viñetas depende de la antigüedad", () => {
   /**

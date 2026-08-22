@@ -43,7 +43,7 @@ export default function BoldBlockTemplate() {
         }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, letterSpacing: "0.25em", color: accent, marginBottom: 10 }}>HOLA, SOY</div>
+          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, letterSpacing: "0.18em", color: accent, marginBottom: 10 }}>HOLA, SOY</div>
           <h1 style={{
             fontFamily: "inherit", fontWeight: 900, fontSize: 72,
             lineHeight: 0.9, margin: 0, letterSpacing: "-0.04em", textTransform: "uppercase",

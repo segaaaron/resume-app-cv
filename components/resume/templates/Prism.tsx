@@ -205,7 +205,7 @@ export default function PrismTemplate() {
               color: "#9aabb8",
               fontSize: "9.5px",
               fontWeight: 600,
-              letterSpacing: "0.35em",
+              letterSpacing: "0.18em",
               textTransform: "uppercase",
               marginBottom: 12,
             }}>

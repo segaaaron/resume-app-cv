@@ -135,14 +135,6 @@ export interface BuildReportInput {
   roleBalance?: readonly { targetId: string; jobTitle: string; count: number; min: number; max: number }[]
   /** Huecos de empleo de seis meses o más. */
   gaps?: readonly { months: number; after: string; before: string }[]
-  verified?: {
-    formatIssues: readonly string[]
-    missingSections: readonly string[]
-    hasEmail: boolean
-    hasPhone: boolean
-    wordCount: number
-    pageCount?: number
-  }
   /** El texto de la vacante, sólo para contar apariciones por término. */
   jobDescription?: string
   /** El texto del CV, para el mismo conteo del otro lado. */
@@ -319,71 +311,18 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     })
   }
 
-  // ── format: lo que midió el parser sobre el PDF REAL ──────────────────────
-  const v = input.verified
-  if (v) {
-    v.formatIssues.slice(0, 6).forEach((issue, i) => {
-      push({
-        id: `format.real.${i}`,
-        section: "format",
-        state: "warn",
-        weight: 0,
-        titleKey: "check.real_format",
-        params: { issue },
-        owner: "user",
-      })
-    })
-    /**
-     * `contact` NO se reporta como sección faltante, y `summary` tampoco.
-     *
-     * Visto en el navegador: nuestras plantillas no rotulan «Contacto» como
-     * encabezado —los datos van bajo el nombre—, así que el detector de secciones
-     * lo daba por ausente en TODOS los CV. Un hallazgo que se dispara siempre no
-     * informa: enseña a ignorar el panel.
-     *
-     * La pregunta que sí importa de ese par ya está contestada bien, y con el
-     * dato real: si el parser extrajo o no el email del PDF.
-     */
-    const ALWAYS_UNLABELLED = new Set(["contact", "summary"])
-    for (const name of v.missingSections.filter((n) => !ALWAYS_UNLABELLED.has(n))) {
-      push({
-        id: `search.real_missing_section.${name}`,
-        section: "search",
-        state: "crit",
-        weight: 0,
-        titleKey: "check.real_missing_section",
-        // El nombre viene en inglés del detector; se traduce en la clave.
-        params: { section: name },
-        owner: "user",
-        evidence: [name],
-      })
-    }
-    // El contacto que el CV tiene y el parser NO encontró: el caso más caro del
-    // panel — un candidato al que nadie puede responderle.
-    if (st?.hasEmail && !v.hasEmail) {
-      push({
-        id: "search.email_not_extracted",
-        section: "search",
-        state: "crit",
-        weight: 0,
-        titleKey: "check.email_not_extracted",
-        owner: "user",
-      })
-    }
-    if (typeof v.pageCount === "number" && v.pageCount > 1 && v.wordCount < 450) {
-      // Una segunda página con poco texto: el reclutador la abre y encuentra tres
-      // líneas. Casi siempre se arregla apretando el interlineado o la plantilla.
-      push({
-        id: "format.orphan_page",
-        section: "format",
-        state: "warn",
-        weight: 0,
-        titleKey: "check.orphan_page",
-        params: { words: v.wordCount },
-        owner: "user",
-      })
-    }
-  }
+  // ── EL BLOQUE DE LA MEDICIÓN SOBRE EL PDF REAL SE FUE ────────────────────
+  //
+  // Producía los hallazgos `format.real.*` a partir de lo que un parser extraía
+  // del PDF exportado. Dependía de que el usuario apretara «Verificar» —o de un
+  // render automático en cada análisis, que costaba un Chrome headless por
+  // corrida— y lo que devolvía era un número que él tenía que interpretar solo.
+  //
+  // Lo que ese camino detectaba de verdad era texto que el parser no puede leer,
+  // y eso ahora se PREVIENE en el origen: ninguna plantilla puede exportar con un
+  // `letterSpacing` que rompa las palabras. Medido y con guard
+  // (`template-parseable-text.test.ts`). Prevenir en la plantilla es mejor que
+  // avisarle al candidato de un defecto que no es suyo.
 
   // ── hard ───────────────────────────────────────────────────────────────────
   //

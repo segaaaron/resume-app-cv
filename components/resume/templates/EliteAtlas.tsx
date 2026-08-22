@@ -54,12 +54,12 @@ export default function EliteAtlasTemplate() {
   const SectionRule = ({ n, label }: { n: string; label: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 16px" }}>
       <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: accent, letterSpacing: "0.05em" }}>{n}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: ink }}>{label}</span>
+      <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: ink }}>{label}</span>
       <span style={{ flex: 1, height: 1, background: divider }} />
     </div>
   )
   const SideLabel = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontSize: 10.5, letterSpacing: "0.28em", textTransform: "uppercase", color: accent, marginBottom: 13, fontWeight: 600 }}>
+    <div style={{ fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, marginBottom: 13, fontWeight: 600 }}>
       {children}
     </div>
   )
@@ -160,7 +160,7 @@ export default function EliteAtlasTemplate() {
           />
           <div style={{ position: "absolute", left: 28, right: 28, bottom: 18 }}>
             <div style={{ width: 30, height: 3, background: accent, marginBottom: 10, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-            <div style={{ fontSize: 11, letterSpacing: "0.34em", textTransform: "uppercase", color: accent }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: accent }}>
               {config.language === "en" ? "Portfolio 2026" : "Portafolio 2026"}
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function EliteAtlasTemplate() {
           CV — 01
         </div>
         {pd.jobTitle && (
-          <div style={{ fontSize: 12, letterSpacing: "0.4em", textTransform: "uppercase", color: accent, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, marginBottom: 16 }}>
             {pd.jobTitle}
           </div>
         )}

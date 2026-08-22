@@ -49,7 +49,7 @@ export default function EngravedTemplate() {
             <circle cx="30" cy="30" r="20" fill="none" stroke={gold} strokeWidth="0.6" />
             <text x="30" y="36" fontSize="20" textAnchor="middle" fontFamily="'Cormorant Garamond', serif" fontWeight="700" fill={gold}>{monogram}</text>
           </svg>
-          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.4em", marginTop: 8, color: gold }}>
+          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.18em", marginTop: 8, color: gold }}>
             ★&nbsp; CURRICULUM VITAE &nbsp;★
           </div>
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 56, fontWeight: 500, margin: "16px 0 4px", letterSpacing: "0.02em" }}>
@@ -153,7 +153,7 @@ export default function EngravedTemplate() {
 
       {/* Footer */}
       <div style={{ textAlign: "center", padding: "0 64px 50px", position: "relative", zIndex: 1 }}>
-        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, letterSpacing: "0.4em", color: gold }}>
+        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, letterSpacing: "0.18em", color: gold }}>
           —&nbsp; IN FIDEM SCRIPSI &nbsp;—
         </div>
       </div>

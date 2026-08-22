@@ -29,7 +29,7 @@ export default function CascadeTemplate() {
 
   const SideLabel = ({ title }: { title: string }) => (
     <p style={{
-      fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.22em",
+      fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.18em",
       textTransform: "uppercase", color: "rgba(255,255,255,0.5)",
       marginBottom: 8, paddingBottom: 5,
       borderBottom: "0.5px solid rgba(255,255,255,0.15)",

@@ -20,7 +20,6 @@ vi.mock("next-intl", () => ({
 }))
 
 const BulletQualityPanel = (await import("@/components/editor/ats-report/BulletQualityPanel")).default
-const KeywordContextPanel = (await import("@/components/editor/ats-report/KeywordContextPanel")).default
 
 const bullet = (over: Partial<ReportBullet> = {}): ReportBullet => ({
   targetId: "j1", index: 0, text: "Atendí clientes", verb: true, metric: true, keywords: ["Excel"], words: 18,
@@ -122,37 +121,12 @@ describe("el botón por línea no inventa trabajo", () => {
   })
 })
 
-describe("afirmado contra probado", () => {
-  beforeEach(() => { document.body.innerHTML = "" })
+/**
+ * EL PANEL «AFIRMADO CONTRA PROBADO» SE BORRÓ, Y SUS TESTS CON ÉL.
+ *
+ * Daba un porcentaje —qué parte de lo que el CV dice está respaldado por una
+ * viñeta— con cero botones y cero acciones. «¿En qué me ayuda?» (CEO,
+ * 2026-08-21): en nada. Los términos que ese número resumía ya viven en la tabla
+ * de abajo, agrupados bajo «sólo en la lista» y con el botón que los resuelve.
+ */
 
-  /**
-   * Para el filtro un término dentro de una viñeta con fecha y el mismo solo en
-   * la lista valen igual. Para quien entrevista, no. Ésa es la única pregunta
-   * que contesta este panel, y por eso no mueve la nota.
-   */
-  it("cuenta sólo lo que el CV dice, y separa lo que no respalda", () => {
-    const { unmount } = render(React.createElement(KeywordContextPanel, {
-      terms: [
-        { term: "Excel", section: "hard", jd: 1, cv: 2, listOnly: false },
-        { term: "Salesforce", section: "hard", jd: 1, cv: 1, listOnly: true },
-        { term: "SAP", section: "hard", jd: 1, cv: 0, listOnly: false },
-      ],
-    }))
-    // 2 afirmadas (Excel y Salesforce); SAP no cuenta porque el CV no la dice.
-    expect(body()).toContain("ctx_caption(evidenced=1,claimed=2)")
-    // LA PROPORCIÓN, NO LA LISTA. Los términos uno por uno se pintaban acá y en
-    // la tabla y en el hallazgo y en el ejecutor: cuatro copias del mismo dato,
-    // y ésta era la única sin botón. Su responsabilidad es el agregado —qué
-    // parte de lo que decís está probado—, que no la contesta nadie más.
-    expect(body()).not.toContain("Salesforce")
-    unmount()
-  })
-
-  it("sin habilidades afirmadas no se pinta nada", () => {
-    const { unmount } = render(React.createElement(KeywordContextPanel, {
-      terms: [{ term: "SAP", section: "hard", jd: 1, cv: 0, listOnly: false }],
-    }))
-    expect(body()).toBe("")
-    unmount()
-  })
-})

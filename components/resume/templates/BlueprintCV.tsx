@@ -46,7 +46,7 @@ export default function BlueprintCVTemplate() {
     }}>
       <div style={{ padding: "44px 56px", flex: 1 }}>
         {/* Sheet header */}
-        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.25em", color: subdue }}>
+        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.18em", color: subdue }}>
           SHEET 01 OF 01 · CV · {new Date().getFullYear()} · A4
         </div>
         <h1 style={{
@@ -211,7 +211,7 @@ export default function BlueprintCVTemplate() {
 function BpH({ children, color, style }: { children: React.ReactNode; color: string; style?: React.CSSProperties }) {
   return (
     <h3 style={{
-      fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.22em",
+      fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.18em",
       color, margin: "0 0 8px", textTransform: "uppercase", ...style,
     }}>
       {children}

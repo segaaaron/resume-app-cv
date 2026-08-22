@@ -134,24 +134,16 @@ describe("la tarjeta de la viñeta muestra todo junto", () => {
  * mal"; usarlo siempre lo convierte en ruido y le enseña al usuario a
  * ignorarlo justo cuando algo SÍ está mal.
  */
-describe("el color de credibilidad dice la verdad", () => {
-  /**
-   * La tarjeta se mudó al riel y quedó reducida a lo que era: una NOTA. El color
-   * ahora sale del propio número, así que no hay forma de fijarlo en rojo — la
-   * clase de defecto que se reportó ya no se puede escribir.
-   */
-  const rail = () => read("components/editor/ats-report/ReportRail.tsx")
+/**
+ * LOS DOS TESTS DE LA NOTA DE CREDIBILIDAD SE FUERON CON ELLA.
+ *
+ * Comprobaban que su color saliera del número y que se callara sin hallazgos.
+ * Los dos eran ciertos — y la nota igual se borró del riel: era un segundo
+ * puntaje al lado del principal, sin un solo botón. Dos números que cuentan
+ * cosas distintas, uno al lado del otro, se leen como una contradicción aunque
+ * ambos sean ciertos.
+ *
+ * El cálculo sigue vivo: los hallazgos de credibilidad que tienen algo que
+ * arreglar entran al informe como chequeos, con su sección y su salida.
+ */
 
-  it("el tono sale del número, no de una constante", () => {
-    expect(rail()).toContain("report.credibility.score >= 80")
-    expect(rail()).toContain("report.credibility.score >= 60")
-  })
-
-  it("hay un tono para cuando está bien", () => {
-    expect(rail()).toContain("var(--a-ok)")
-  })
-
-  it("y la nota se calla cuando no hay nada que objetar", () => {
-    expect(rail()).toContain("report.credibility.band !== null")
-  })
-})

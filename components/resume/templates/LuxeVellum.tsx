@@ -52,7 +52,7 @@ function LxHead({ accent, line, children }: { accent: string; line: string; chil
           fontFamily: "inherit",
           fontSize: 10,
           fontWeight: 600,
-          letterSpacing: "0.26em",
+          letterSpacing: "0.18em",
           textTransform: "uppercase",
           color: accent,
           whiteSpace: "nowrap",
@@ -133,7 +133,7 @@ export default function LuxeVellumTemplate() {
             style={{
               fontFamily: "inherit",
               fontSize: 10,
-              letterSpacing: "0.46em",
+              letterSpacing: "0.18em",
               color: accent,
               margin: "14px 0 8px",
               paddingLeft: "0.5em",

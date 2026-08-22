@@ -44,7 +44,7 @@ export default function RisoDesignerTemplate() {
 
       {/* Header */}
       <header style={{ padding: "60px 56px 30px", position: "relative" }}>
-        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, letterSpacing: "0.3em" }}>
+        <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, letterSpacing: "0.18em" }}>
           RISO PRINT · {new Date().getFullYear()}
         </div>
         <h1 style={{

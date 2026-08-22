@@ -281,9 +281,6 @@ export function useATSScore() {
   const keywordCacheRef = useRef<{ postingKey: string; keywords: unknown } | null>(null)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_ats")
   const lastKeyRef = useRef<string | null>(null)
-  // verifyReal is declared below (it depends on state analyze does not need), so
-  // analyze reaches it through a ref instead of forcing a circular useCallback.
-  const verifyRealRef = useRef<((auto?: boolean) => Promise<void>) | null>(null)
 
   const analyze = useCallback(async () => {
     if (loading) return
@@ -383,12 +380,11 @@ export function useATSScore() {
         await onSuccess()
         track("ai_ats_scored", { plan, score_bucket: scoreBucket(typeof data?.score === "number" ? data.score : 0) })
         // Then show what an ATS literally extracts from the exported PDF. It is
-        // the only number here that is not our estimate of a parser, so it runs
-        // as part of the report rather than behind a button the user has to
-        // find. Fire-and-forget: the score is already on screen, this fills in
-        // when the render comes back, and a failure stays silent (the manual
-        // button remains for a retry).
-        void verifyRealRef.current?.(true)
+        // EL RENDER AUTOMÁTICO DEL PDF SE FUE. Cada análisis disparaba un
+        // Chrome headless en el servidor para medir el archivo — y el usuario no
+        // lo pedía ni veía el resultado sin abrir un desplegable. Lo que ese
+        // render detectaba (texto que el parser no puede leer) ahora lo previene
+        // un guard sobre las plantillas, gratis y en cada build.
       }
       lastKeyRef.current = key
       setAnalyzedInputKey(`${mode}:${text}`)
@@ -525,75 +521,8 @@ export function useATSScore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sectionData])
 
-  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null)
-  const [verifyLoading, setVerifyLoading] = useState(false)
 
-  // A prior real-PDF verification is measured on the file AS IT WAS. Any CV edit
-  // makes it stale, so clear it — a stale "real" score shown next to a freshly
-  // rescored estimate would mislead (exactly the "two numbers that disagree" the
-  // fused score set out to kill). The user re-verifies with one click when ready.
-  useEffect(() => {
-    setVerifyResult(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sectionData])
-
-  /**
-   * The pioneer check: render the REAL exported PDF, read what a strict ATS would
-   * extract, and score that. Reveals content a two-column template reorders/loses
-   * — the structured score can't see it because it never renders the file.
-   */
-  /**
-   * What an ATS actually reads out of the exported PDF.
-   *
-   * `auto` runs it as part of an analysis instead of waiting for the user to
-   * find the button. It is the one honest signal in this whole category — every
-   * other number is our estimate of a parser's behaviour, this one IS the
-   * parser's output — so it should not be optional homework. In automatic mode
-   * every toast is suppressed: a failure there is ours to absorb, and the panel
-   * simply keeps the button for a manual retry.
-   */
-  const verifyReal = useCallback(async (auto = false) => {
-    if (verifyLoading) return
-    const state = useResumeStore.getState()
-    const text = input.trim()
-    if (!state.resumeId || text.length < 15) {
-      if (!auto) toast.error(t("verify_needs_jd"))
-      return
-    }
-    setVerifyLoading(true)
-    setVerifyResult(null)
-    try {
-      // Persist current edits first — the PDF is rendered from the SAVED resume,
-      // so without this the check would score a stale version.
-      await state.save({ skipThumbnail: true })
-      const res = await apiFetch("/api/ai/ats-verify-real", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId: state.resumeId, jobDescription: text, locale }),
-      })
-      if (res.status === 422) {
-        const d = await res.json().catch(() => ({}))
-        if (!auto) toast.error(d.error === "not_extractable" ? t("verify_not_extractable") : t("verify_error"))
-        return
-      }
-      if (!res.ok) { if (!auto) toast.error(t("verify_error")); return }
-      setVerifyResult(await res.json())
-      track("ats_verified_real", { plan })
-    } catch (err) {
-      // The automatic run says nothing to the user by design — it is a bonus
-      // check nobody asked for. But this is the ONE honest number in the panel
-      // (what a parser really reads out of the exported PDF), it fires after
-      // every analysis, and a silent failure means the block simply never
-      // appears: no error, no block, no way to know it stopped working.
-      if (auto) reportUxFailure("ats_verify_real_auto_failed", { name: err instanceof Error ? err.name.slice(0, 40) : "unknown" })
-      if (!auto) toast.error(t("verify_error"))
-    } finally {
-      setVerifyLoading(false)
-    }
-  }, [input, locale, t, verifyLoading])
-
-  useEffect(() => { verifyRealRef.current = verifyReal }, [verifyReal])
-
+  
   const hasResult = atsResult !== null || reviewResult !== null
   // True when a result is on screen AND the job input is unchanged since it was
   // produced. The Analyze button reflects this: "up to date" vs "Re-analyze".
@@ -618,7 +547,6 @@ export function useATSScore() {
     rescore,
     creditSoftSkill,
     scoreDelta,
-    verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
   }
 }

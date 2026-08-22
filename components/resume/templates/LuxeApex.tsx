@@ -98,7 +98,7 @@ function LxHead({ color, line, children }: { color: string; line: string; childr
           fontFamily: "inherit",
           fontSize: 10,
           fontWeight: 600,
-          letterSpacing: "0.26em",
+          letterSpacing: "0.18em",
           textTransform: "uppercase",
           color,
           whiteSpace: "nowrap",
@@ -195,7 +195,7 @@ export default function LuxeApexTemplate() {
               style={{
                 fontFamily: MONO,
                 fontSize: 10,
-                letterSpacing: "0.32em",
+                letterSpacing: "0.18em",
                 color: ice,
                 marginBottom: 12,
                 textTransform: "uppercase",

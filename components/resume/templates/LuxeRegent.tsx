@@ -64,7 +64,7 @@ function LxHead({ color, line, children }: { color: string; line: string; childr
           fontFamily: "inherit",
           fontSize: 10,
           fontWeight: 700,
-          letterSpacing: "0.26em",
+          letterSpacing: "0.18em",
           textTransform: "uppercase",
           color,
           whiteSpace: "nowrap",
@@ -185,7 +185,7 @@ export default function LuxeRegentTemplate() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 24, alignItems: "center", position: "relative" }}>
           <div>
             {pd.jobTitle && (
-              <div style={{ fontSize: 10.5, letterSpacing: "0.4em", color: champ, marginBottom: 12, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 10.5, letterSpacing: "0.18em", color: champ, marginBottom: 12, textTransform: "uppercase" }}>
                 {pd.jobTitle}
               </div>
             )}
