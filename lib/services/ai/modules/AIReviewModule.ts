@@ -132,7 +132,15 @@ const ANALYSIS_CACHE_MAX = 100
  * algo que no tiene que hacer.
  */
 const DOCTRINE_FINGERPRINT = createHash("sha256")
-  .update(`${cvValueBar("es")}\u0000${noHardCodedFactsRule("es")}\u0000${proseRules("es")}`)
+  // LAS DOS RAMAS, y eso no es simetría decorativa: la huella existe para que un
+  // cambio en la doctrina invalide el caché solo. Calculada sólo sobre el
+  // español, tocar el prompt INGLÉS dejaba la huella igual — el caché seguía
+  // sirviendo el análisis viejo y el cambio no llegaba nunca a un CV en inglés.
+  // Es el mismo defecto que la huella vino a cerrar, escondido en una rama.
+  .update(
+    [cvValueBar("es"), noHardCodedFactsRule("es"), proseRules("es"),
+     cvValueBar("en"), noHardCodedFactsRule("en"), proseRules("en")].join("\u0000"),
+  )
   .digest("hex")
   .slice(0, 8)
 const ANALYSIS_REVISION = `v3-${DOCTRINE_FINGERPRINT}`

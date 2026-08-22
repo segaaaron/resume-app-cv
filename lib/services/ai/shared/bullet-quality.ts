@@ -71,16 +71,26 @@ export const WEAK_OPENERS: readonly string[] = [...WEAK_OPENERS_EN, ...WEAK_OPEN
  * Mandar no es un verbo de estilo, es un HECHO sobre la persona: sólo lo escribe
  * quien lo declaró. Un ejemplo general no puede sugerirlo. Los que quedan
  * describen el trabajo, no la posición en el organigrama.
+ *
+ * ── LAS DOS LISTAS VAN EMPAREJADAS, POSICIÓN POR POSICIÓN ──────────────────
+ *
+ * No lo estaban: a la española le faltaban «lancé» y un equivalente de
+ * «streamlined», y a la inglesa le faltaba «served» — el verbo de los oficios de
+ * atención, que en este producto son muchos. Un CV en inglés recibía dieciocho
+ * ejemplos y uno en español dieciséis, y nadie lo habría visto: son dos ramas de
+ * un `if` que nunca se leen juntas.
+ *
+ * Emparejadas 1:1 y en el mismo orden, la paridad se verifica ejecutando.
  */
 export const IMPACT_OPENERS_EN: readonly string[] = [
-  "built", "designed", "implemented", "automated", "delivered",
-  "launched", "negotiated", "coordinated", "resolved", "trained", "audited",
-  "reconciled", "streamlined", "reduced", "increased", "recovered", "prepared",
+  "built", "designed", "implemented", "automated", "delivered", "launched",
+  "negotiated", "coordinated", "resolved", "trained", "audited", "reconciled",
+  "streamlined", "served", "reduced", "increased", "recovered", "prepared",
 ]
 export const IMPACT_OPENERS_ES: readonly string[] = [
-  "construí", "diseñé", "implementé", "automaticé", "entregué",
-  "negocié", "coordiné", "resolví", "capacité", "audité",
-  "cuadré", "atendí", "reduje", "incrementé", "recuperé", "preparé",
+  "construí", "diseñé", "implementé", "automaticé", "entregué", "lancé",
+  "negocié", "coordiné", "resolví", "capacité", "audité", "cuadré",
+  "simplifiqué", "atendí", "reduje", "incrementé", "recuperé", "preparé",
 ]
 
 /**
