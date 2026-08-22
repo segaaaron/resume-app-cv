@@ -183,8 +183,6 @@ export default function ReportRail({
                 busyTerm={busyTerm}
               />
             )}
-            {/* Afirmado contra probado: vive en «duras» porque es sobre esas
-                habilidades que un reclutador pregunta en la entrevista. */}
             {/* LA BARRA «AFIRMADO CONTRA PROBADO» SE FUE. Cero botones, cero
                 acciones: un porcentaje y una barra que el usuario no podía usar
                 para nada. Lo que ese número resumía —qué términos están sólo en

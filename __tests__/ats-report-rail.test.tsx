@@ -46,7 +46,7 @@ const report = (over: Partial<AtsReport> = {}): AtsReport => ({
   ],
   terms: [],
   bullets: [],
-  overOptimised: false,
+  overOptimised: false, recoverable: 0,
   credibility: { score: 100, band: null },
   ...over,
 })

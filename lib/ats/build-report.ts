@@ -656,6 +656,10 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     terms,
     bullets: [...(input.bullets ?? [])],
     overOptimised: input.score >= OVER_OPTIMISATION_SCORE,
+    // Del desglose, que es quien lo calcula. Derivarlo de los pesos de los
+    // chequeos dejaba fuera los términos —la palanca más grande— y el panel
+    // prometía «+0» con treinta puntos en juego.
+    recoverable: input.categories.reduce((sum, c) => sum + c.recoverable, 0),
     posting: input.posting,
     /**
      * EL VEREDICTO, SÓLO SI NO CONTRADICE AL INFORME.

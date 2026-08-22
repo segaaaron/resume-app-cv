@@ -255,7 +255,7 @@ describe("aplicar todo aplica todo", () => {
         { term: "Excel", section: "hard", jd: 2, cv: 0, listOnly: false },
         { term: "Ventas", section: "hard", jd: 1, cv: 3, listOnly: false },
       ],
-      bullets: [], overOptimised: false, credibility: { score: 100, band: null },
+      bullets: [], overOptimised: false, recoverable: 0, credibility: { score: 100, band: null },
       ...over,
     }, applied, added)
 

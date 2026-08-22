@@ -67,7 +67,7 @@ describe("el camino completo, de tailor a la tarjeta", () => {
       { id: checkId, section: "tips", state: "warn", weight: 0, titleKey: "k", owner: "tailor",
         action: { kind: "rewrite_bullet", targetId: "j1", index: 0 } },
     ] }],
-    terms: [], bullets: [], overOptimised: false, credibility: { score: 100, band: null },
+    terms: [], bullets: [], overOptimised: false, recoverable: 0, credibility: { score: 100, band: null },
   })
 
   const resolve = (needsFigureConfirm: boolean) =>

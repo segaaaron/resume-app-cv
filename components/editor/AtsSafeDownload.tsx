@@ -42,7 +42,7 @@ export default function AtsSafeDownload() {
     }
     setBusy(format)
     try {
-      // Render from the SAVED resume (same source verifyReal scores), so the file the
+      // Render from the SAVED resume, so the file the
       // user downloads matches the version we told them parses clean.
       await state.save({ skipThumbnail: true })
       const res = await apiFetch("/api/ai/ats-safe-export", {

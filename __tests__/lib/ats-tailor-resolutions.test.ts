@@ -26,7 +26,7 @@ const report = (checks: ReportCheck[]): AtsReport => ({
   sections: [{ id: "tips", scoreCategory: null, coveragePct: null, checks }],
   terms: [],
   bullets: [],
-  overOptimised: false,
+  overOptimised: false, recoverable: 0,
   credibility: { score: 100, band: null },
 })
 

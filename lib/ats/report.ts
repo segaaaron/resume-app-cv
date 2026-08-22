@@ -191,6 +191,15 @@ export interface AtsReport {
   overOptimised: boolean
   credibility: ReportCredibility
   /**
+   * LOS PUNTOS QUE HAY DE VERDAD SOBRE LA MESA.
+   *
+   * Sale del desglose (`score-breakdown.ts`), el único que sabe cuánto vale
+   * cerrar cada brecha: las duras pesan .45, los requisitos .20, el título .15.
+   * Viaja en el informe porque el panel no puede recalcularlo — y porque
+   * derivarlo de otra cosa fue exactamente el defecto que esto cierra.
+   */
+  recoverable: number
+  /**
    * La vacante, tal como la extrajo el análisis. Viaja acá para que el ejecutor
    * la reciba DEL INFORME y no del crudo del servidor: el panel leía 18 veces
    * `atsResult` por su cuenta, y todo lo que salía por esa puerta se mostraba
@@ -400,11 +409,25 @@ export function solvableChecks(report: AtsReport): ReportCheck[] {
 /**
  * Los puntos que quedan sobre la mesa.
  *
- * Suma sólo lo abierto: un hallazgo ya resuelto no promete nada, y prometer un
- * punto que no va a llegar es la clase de número que hace desconfiar del resto.
+ * ── EL DEFECTO QUE ESTO CIERRA ─────────────────────────────────────────────
+ *
+ * Sumaba el peso de los CHEQUEOS abiertos e ignoraba los TÉRMINOS. Medido: un CV
+ * con 68 de puntaje y cuatro habilidades que la vacante pide y él no dice
+ * mostraba «+0 recuperables», mientras el desglose decía que había 32 puntos en
+ * juego. Las duras pesan .45 —la palanca más grande del informe— y quedaban
+ * fuera del único número que le promete algo al usuario.
+ *
+ * Es el mismo defecto que este panel ya pagó tres veces: una función que cuenta
+ * lo que ELLA sabe hacer en vez de lo que el informe reporta. El botón decía
+ * «resolver 1» con 13 abiertos; «aplicar las 5» con 10 pendientes; y éste, «+0»
+ * con 32 en juego.
+ *
+ * NO se suma con los pesos de los chequeos, a propósito: `hard.requirements` ya
+ * toma el suyo del mismo desglose (`recoverableOf`), así que sumarlos contaría
+ * los requisitos dos veces.
  */
 export function recoverablePoints(report: AtsReport): number {
-  return openChecks(report).reduce((sum, c) => sum + c.weight, 0)
+  return report.recoverable
 }
 
 /**

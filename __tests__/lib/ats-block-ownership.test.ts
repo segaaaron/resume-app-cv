@@ -69,7 +69,7 @@ describe("la regla que reemplazó a la matriz", () => {
           { id: "x", section: "tips", state: "warn", weight: 0, titleKey: "k", owner: "auto", action: { kind: "manual" } },
         ] },
       ],
-      terms: [], bullets: [], overOptimised: false, credibility: { score: 100, band: null },
+      terms: [], bullets: [], overOptimised: false, recoverable: 0, credibility: { score: 100, band: null },
     }
     expect(findDuplicateCheckIds(dup)).toEqual(["x"])
   })

@@ -49,7 +49,7 @@ const report = (over: Partial<AtsReport> = {}): AtsReport => ({
   ],
   terms: [],
   bullets: [],
-  overOptimised: false,
+  overOptimised: false, recoverable: 0,
   credibility: { score: 100, band: null },
   ...over,
 })
@@ -168,9 +168,21 @@ describe("lo que el panel pregunta y ya no calcula cada tarjeta por su cuenta", 
     expect(criticalChecks(r).map((c) => c.id)).toEqual(["a"])
   })
 
-  /** Prometer un punto ya cobrado es la clase de número que hace desconfiar del resto. */
-  it("los puntos recuperables suman sólo lo abierto", () => {
-    expect(recoverablePoints(r)).toBe(8)
+  /**
+   * LOS PUNTOS PROMETIDOS YA NO SE DERIVAN DE LOS CHEQUEOS.
+   *
+   * Este test esperaba 8 — la suma de los pesos abiertos. Era correcto para lo
+   * que la función hacía, y la función estaba mal: ignoraba los TÉRMINOS, que
+   * son la palanca más grande del puntaje. Medido: un CV con 68 y cuatro duras
+   * faltando mostraba «+0» con 32 puntos en juego.
+   *
+   * Ahora sale del desglose y viaja en el informe. La preocupación original
+   * —no prometer un punto ya cobrado— sigue cubierta, pero por quien
+   * corresponde: `score-breakdown` calcula sobre la cobertura ACTUAL, así que lo
+   * ya ganado nunca entra. Se verifica ejecutando en `recoverable-points.test.ts`.
+   */
+  it("los puntos prometidos salen del informe, no de los pesos abiertos", () => {
+    expect(recoverablePoints(r)).toBe(r.recoverable)
   })
 })
 
@@ -278,7 +290,7 @@ describe("los dos números críticos no pueden contradecirse", () => {
   const build = (checks: ReportCheck[]): AtsReport => ({
     score: 70,
     sections: [{ id: "hard", scoreCategory: "hardSkills", coveragePct: 40, checks }],
-    terms: [], bullets: [], overOptimised: false, credibility: { score: 100, band: null },
+    terms: [], bullets: [], overOptimised: false, recoverable: 0, credibility: { score: 100, band: null },
   })
 
   it("un requisito sin cubrir cuenta como crítico pero NO como resoluble", () => {

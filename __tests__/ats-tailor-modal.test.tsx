@@ -46,7 +46,7 @@ const report = (checks: ReportCheck[], over: Partial<AtsReport> = {}): AtsReport
   ],
   terms: [{ term: "Salesforce", section: "hard", jd: 3, cv: 0, listOnly: false }],
   bullets: [],
-  overOptimised: false,
+  overOptimised: false, recoverable: 0,
   credibility: { score: 100, band: null },
   ...over,
 })
