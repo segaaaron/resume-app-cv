@@ -20,7 +20,7 @@
 // sets would force each engine to score inputs it cannot see. See TITLE_CONNECTORS
 // below for why the two word lists must stay separate too.
 
-import { SCORE_WEIGHTS, OLD_TITLE_CREDIT } from "@/lib/ats/scoring-config"
+import { SCORE_WEIGHTS, OLD_TITLE_CREDIT, LISTED_ONLY_CREDIT } from "@/lib/ats/scoring-config"
 import { computeScoreBreakdown, type ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import type { ATSSubScores, GapLever } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
@@ -182,12 +182,44 @@ function coverage(
     if (exact && keywordPresent(k, evidenceNorm)) demonstrated.push(k)
     else listedOnly.push(k)
   }
+  /**
+   * LA COBERTURA PESA EL CONTEXTO, no sólo la presencia.
+   *
+   * Antes: `(matched + shown) / unique` — un término dentro de una viñeta con
+   * fecha y el mismo suelto en la lista de habilidades contaban IGUAL. El panel
+   * llevaba meses señalando esa diferencia y dándole al candidato un botón para
+   * cerrarla; cuando la cerraba, el número no se movía.
+   *
+   * Ahora lo demostrado cuenta entero y lo afirmado cuenta `LISTED_ONLY_CREDIT`
+   * — la misma mecánica que ya usaba el título viejo, y lo que la investigación
+   * describe como *context scoring* en los motores reales.
+   */
+  /**
+   * SIN EVIDENCIA CON LA QUE COMPARAR, NO SE DESCUENTA.
+   *
+   * `evidenceNorm` es el texto de la experiencia laboral. Cuando viene vacío no
+   * es que el candidato no demuestre nada: es que no tenemos con qué juzgarlo —
+   * y ahí TODO caería en `listedOnly`, hundiendo el puntaje de un CV que puede
+   * estar perfecto. El caso real es un recién graduado, o un CV que aún no
+   * cargó la experiencia: descontarle sería castigarlo por algo que ya se
+   * refleja en las otras categorías.
+   *
+   * Falla ABIERTO a propósito. La regla es que demostrar valga MÁS, no que no
+   * poder demostrar valga menos.
+   */
+  // `demonstrated` YA arranca con `[...shown]` — sumarlo aparte lo contaba dos
+  // veces y la cobertura llegaba a 200%. Juntos, `demonstrated` y `listedOnly`
+  // cubren exactamente `matched + shown`, sin solaparse.
+  const canJudge = evidenceNorm.trim().length > 0
+  const credited = canJudge
+    ? demonstrated.length + listedOnly.length * LISTED_ONLY_CREDIT.value
+    : matched.length + shown.length
   return {
     matched: [...matched, ...shown],
     missing,
     demonstrated,
     listedOnly,
-    pct: Math.round(((matched.length + shown.length) / unique.length) * 100),
+    pct: Math.round((credited / unique.length) * 100),
   }
 }
 

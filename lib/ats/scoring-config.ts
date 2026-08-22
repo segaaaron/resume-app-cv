@@ -71,6 +71,35 @@ export const OLD_TITLE_CREDIT: Tunable = {
 }
 
 /**
+ * Crédito de una habilidad que el CV dice SÓLO en la lista.
+ *
+ * ── LA REGLA QUE ESTO HACE CUMPLIR ─────────────────────────────────────────
+ *
+ * «Toda la información que tenemos debe cuadrar con el score, y viceversa. Las
+ * cosas opcionales no aportan score» (CEO, 2026-08-21).
+ *
+ * El panel viene señalando desde hace meses la diferencia entre una habilidad
+ * DEMOSTRADA —dentro de una viñeta, en un puesto con fecha— y una AFIRMADA —
+ * suelta en la lista de habilidades—. Le pide al candidato que la demuestre, le
+ * da un botón para hacerlo… y el puntaje contaba las dos igual. El candidato
+ * hacía el trabajo, el número no se movía, y concluía —con razón— que el panel
+ * le pedía cosas que no cuentan.
+ *
+ * Los ATS modernos hacen *context scoring*: el mismo término pesa distinto según
+ * dónde aparezca. Esto es lo mismo, con el descuento explícito.
+ *
+ * 0.6, EL MISMO QUE `OLD_TITLE_CREDIT`, y por la misma razón: la señal es real
+ * —el término ESTÁ en el documento y el filtro lo va a encontrar— pero es más
+ * débil que la prueba. Que el descuento sea 0.6 y no 0.5 ni 0.7 es nuestro, y se
+ * declara como tal.
+ */
+export const LISTED_ONLY_CREDIT: Tunable = {
+  value: 0.6,
+  basis: "chosen",
+  why: "A skill inside a dated bullet is proof; the same skill alone in a list is a claim. Both are found by the filter, one is weaker.",
+}
+
+/**
  * Multiplier applied when the chosen template is multi-column.
  *
  * The EFFECT is verified, not assumed: we render the real PDF, run it through a
@@ -122,6 +151,7 @@ export const BULLETS_PER_ROLE_MAX: Tunable = {
 export const ALL_TUNABLES: Record<string, Tunable> = {
   ...Object.fromEntries(Object.entries(SCORE_WEIGHTS).map(([k, v]) => [`weight.${k}`, v])),
   oldTitleCredit: OLD_TITLE_CREDIT,
+  listedOnlyCredit: LISTED_ONLY_CREDIT,
   multiColumnPenalty: MULTI_COLUMN_PENALTY,
   semanticThreshold: SEMANTIC_THRESHOLD,
   bulletsPerRoleMax: BULLETS_PER_ROLE_MAX,
