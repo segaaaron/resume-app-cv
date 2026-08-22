@@ -241,12 +241,12 @@ describe("los verbos de impacto llegan al prompt", () => {
   it("los cita, y cada rama sólo los suyos", () => {
     const es = proseRules("es")
     const en = proseRules("en")
-    expect(es).toContain("Lideré")
-    expect(en).toContain('"Led"')
+    expect(es).toContain("Construí")
+    expect(en).toContain('"Built"')
     // Un intento anterior con regex metió aperturas inglesas en el prompt
     // español porque las raíces se solapan. Separadas como DATO, no con regex.
-    expect(es).not.toContain('"Led"')
-    expect(en).not.toContain("Lideré")
+    expect(es).not.toContain('"Built"')
+    expect(en).not.toContain("Construí")
   })
 
   /**

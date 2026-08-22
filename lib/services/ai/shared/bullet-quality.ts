@@ -60,15 +60,26 @@ export const WEAK_OPENERS: readonly string[] = [...WEAK_OPENERS_EN, ...WEAK_OPEN
  * SEPARADAS POR IDIOMA COMO DATO, no con regex — misma razón que WEAK_OPENERS:
  * un intento con regex metió aperturas inglesas en el prompt español porque las
  * raíces se solapan.
+ *
+ * ── SIN VERBOS DE JERARQUÍA, Y ESO ERA UNA CONTRADICCIÓN REAL ──────────────
+ *
+ * «Lideré» / «led» estaban acá, y `noHardCodedFactsRule` dice tres líneas más
+ * abajo «nada de "lideré", "gestioné" ni "supervisé" si no lo dijo». El modelo
+ * recibía el verbo como ejemplo del registro correcto y su prohibición en el
+ * mismo prompt: una regla lo empujaba a usarlo y la otra a evitarlo.
+ *
+ * Mandar no es un verbo de estilo, es un HECHO sobre la persona: sólo lo escribe
+ * quien lo declaró. Un ejemplo general no puede sugerirlo. Los que quedan
+ * describen el trabajo, no la posición en el organigrama.
  */
 export const IMPACT_OPENERS_EN: readonly string[] = [
-  "led", "built", "designed", "implemented", "automated", "delivered",
+  "built", "designed", "implemented", "automated", "delivered",
   "launched", "negotiated", "coordinated", "resolved", "trained", "audited",
   "reconciled", "streamlined", "reduced", "increased", "recovered", "prepared",
 ]
 export const IMPACT_OPENERS_ES: readonly string[] = [
-  "lideré", "construí", "diseñé", "implementé", "automaticé", "entregué",
-  "gestioné", "negocié", "coordiné", "resolví", "capacité", "audité",
+  "construí", "diseñé", "implementé", "automaticé", "entregué",
+  "negocié", "coordiné", "resolví", "capacité", "audité",
   "cuadré", "atendí", "reduje", "incrementé", "recuperé", "preparé",
 ]
 
