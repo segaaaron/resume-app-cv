@@ -81,6 +81,7 @@ const REGISTRO: Record<string, { max: number; razon: string }> = {
   "lib/ats-no-duplicate-sections.test.ts": { max: 1, razon: "el panel no conserva ningún bloque propio" },
   "lib/impact-scoring.test.ts": { max: 1, razon: "la banda de cuantificación tiene un solo dueño, no una copia en el panel" },
   "lib/doctrine-ownership.test.ts": { max: 3, razon: "los tres prompts que escriben prosa del CV citan la doctrina compartida" },
+  "lib/grounding-covers-the-work.test.ts": { max: 2, razon: "el grounding del ejecutor ya no recorta a ciegas los puestos" },
   "lib/no-invention-framing.test.ts": { max: 1, razon: "la extracción conserva el no-inventes; los seis de prosa no" },
 }
 

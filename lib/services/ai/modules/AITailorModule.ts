@@ -148,7 +148,33 @@ export class AITailorModule {
       return { summary: null, rewrites: [] }
     }
 
-    const workList = work.slice(0, 4).map((j) => {
+    /**
+     * TODOS LOS PUESTOS QUE TIENEN TRABAJO ASIGNADO, no los primeros cuatro.
+     *
+     * ── EL DEFECTO, MEDIDO ─────────────────────────────────────────────────
+     *
+     * Esto era `work.slice(0, 4)`, y el comentario de abajo ya advertía el
+     * riesgo: sin la viñeta en el grounding, una reescritura FIEL se lee como
+     * dato quemado y el guard la tira. Eso es exactamente lo que pasaba en
+     * cualquier CV de más de cuatro puestos:
+     *
+     *   el CV tiene 5 puestos · la lista de tareas cubre los 5 (sale del
+     *   informe, que no recorta) · el grounding sólo llevaba 4 · el modelo
+     *   reescribe bien la viñeta del quinto conservando su cifra · el guard
+     *   compara contra un grounding que no la contiene → «figure» → descartada.
+     *
+     * La cifra era del candidato. El guard no tenía cómo saberlo.
+     *
+     * Ahora entran los puestos QUE TIENEN TRABAJO —que es lo que el modelo
+     * necesita leer— más el resto hasta un tope, para que el contexto siga
+     * acotado sin cortar justo lo que se le pidió tocar.
+     */
+    const conTrabajo = new Set(grounded.map((w) => w.targetId))
+    const relevantes = [
+      ...work.filter((j) => conTrabajo.has(j.id ?? "")),
+      ...work.filter((j) => !conTrabajo.has(j.id ?? "")),
+    ].slice(0, Math.max(4, conTrabajo.size))
+    const workList = relevantes.map((j) => {
       const bulletLines = renderBulletsForPrompt(parseBullets(j.description ?? ""), {
         emptyLabel: en ? "  (no bullets)" : "  (sin bullets)",
       })
