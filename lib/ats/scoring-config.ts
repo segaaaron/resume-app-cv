@@ -49,12 +49,31 @@ export interface Tunable {
  * Categories the posting does not mention are dropped and the rest renormalize,
  * so a job that lists no soft skills never costs the candidate points for it.
  */
-export const SCORE_WEIGHTS: Record<"hardSkills" | "mustHaves" | "title" | "softSkills" | "sections", Tunable> = {
+export const SCORE_WEIGHTS: Record<"hardSkills" | "mustHaves" | "title" | "softSkills" | "sections" | "impact", Tunable> = {
   hardSkills: { value: 0.45, basis: "chosen", why: "Required skills are what keyword filters index and rank on — the largest single lever." },
   mustHaves: { value: 0.20, basis: "chosen", why: "Stated hard requirements: missing one is often a hard reject, not a deduction." },
   title: { value: 0.15, basis: "chosen", why: "Recruiters and search filters both match on job title before reading anything else." },
   softSkills: { value: 0.10, basis: "chosen", why: "Asked for in most postings, rarely used to filter — present but small." },
   sections: { value: 0.10, basis: "convention", why: "A résumé missing a standard section (experience, education, skills) parses incompletely." },
+  /**
+   * IMPACTO CUANTIFICADO — la categoría que faltaba.
+   *
+   * «Toda la información que tenemos debe cuadrar con el score, y viceversa»
+   * (CEO, 2026-08-21). El panel mide qué proporción de las viñetas lleva una
+   * cifra real, lo muestra en su propio bloque, y le pide al candidato que
+   * cuantifique sus logros. Ese trabajo valía CERO: el candidato lo hacía, el
+   * número no se movía, y concluía que el panel le pedía cosas que no cuentan.
+   *
+   * Los nueve criterios que la investigación documenta para Workday, Greenhouse
+   * y Taleo incluyen «quantified impact». Nosotros lo medíamos y no lo
+   * puntuábamos.
+   *
+   * 0.08 y no más: es una señal de CALIDAD, no de coincidencia con la vacante.
+   * Las cinco categorías de arriba contestan «¿encajás con este aviso?», que es
+   * la pregunta del filtro; ésta contesta «¿tus logros están dichos como
+   * logros?», que es la de quien lee después. Vale, pero menos.
+   */
+  impact: { value: 0.08, basis: "chosen", why: "Bullets that state a measurable result read as achievements; the same work without one reads as a duty list." },
 }
 
 /**
@@ -64,6 +83,34 @@ export const SCORE_WEIGHTS: Record<"hardSkills" | "mustHaves" | "title" | "softS
  * today — that direction is not controversial. That the discount is 0.6 rather
  * than 0.5 or 0.7 is ours.
  */
+/**
+ * LA BANDA SANA DE CUANTIFICACIÓN, en un solo lugar.
+ *
+ * ── POR QUÉ ESTAS CONSTANTES SALIERON DEL COMPONENTE ───────────────────────
+ *
+ * Vivían dentro de `BulletQualityPanel.tsx`, que dibuja la banda verde del
+ * medidor. Mientras sólo las usaba el panel eso alcanzaba. Cuando el impacto
+ * cuantificado pasó a PUNTUAR, el motor necesitó la misma banda — y dos copias
+ * del mismo umbral es como el score y la pantalla terminan diciendo cosas
+ * distintas.
+ *
+ * ── POR QUÉ UNA BANDA Y NO «CUANTAS MÁS, MEJOR» ────────────────────────────
+ *
+ * La doctrina del producto es explícita: NO toda viñeta lleva número. Un CV
+ * donde todas terminan en una cifra se lee como fabricado, y el propio panel lo
+ * dice. Si el puntaje premiara linealmente hasta el 100%, empujaría al candidato
+ * exactamente hacia lo que la pantalla de al lado le desaconseja.
+ *
+ * Dentro de la banda la categoría vale entero. Por debajo sube; por encima baja
+ * — la misma forma que ya tenía el medidor, ahora también en el número.
+ */
+export const QUANTIFICATION_BAND = {
+  min: 60,
+  max: 70,
+  basis: "chosen" as Basis,
+  why: "Around two thirds of the bullets carrying a real figure reads as achievement-driven; every single one reads as manufactured.",
+}
+
 export const OLD_TITLE_CREDIT: Tunable = {
   value: 0.6,
   basis: "chosen",

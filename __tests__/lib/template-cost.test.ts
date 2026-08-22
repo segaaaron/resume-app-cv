@@ -40,9 +40,12 @@ describe("what the template actually costs", () => {
 
   it("the format sub-score reports the layout without feeding the weighted score", () => {
     expect(templateFormatScore("caution")).toBeLessThan(templateFormatScore("safe"))
-    // The weighted categories are these five; format is not among them.
+    // EL INVENTARIO DE CATEGORÍAS, enumerado a propósito: agregar una obliga a
+    // declararla acá, y a decidir si la plantilla debe entrar al reparto (no).
+    // `impact` se sumó el 2026-08-21: el panel medía la cuantificación, la
+    // mostraba en su medidor y no valía un punto.
     expect(Object.keys(SCORE_WEIGHTS).sort()).toEqual(
-      ["hardSkills", "mustHaves", "sections", "softSkills", "title"],
+      ["hardSkills", "impact", "mustHaves", "sections", "softSkills", "title"],
     )
   })
 

@@ -972,7 +972,10 @@ Reglas:
       : new Set<string>()
 
     const mustMet = metMustHaves(keywords.mustHaves, sectionData ?? {})
-    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated, mustMet)
+    // Qué proporción de las viñetas lleva una cifra. Se calculaba y se mostraba;
+    // ahora también puntúa — el trabajo de cuantificar tenía que valer algo.
+    const quantifiedPct = sectionData ? assessResumeContent(sectionData).quantificationPct : null
+    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated, mustMet, quantifiedPct)
 
     // ── Semantic recall pass (embeddings) ──────────────────────────────────────
     // The exact matcher misses a required skill the CV phrases differently
@@ -1037,7 +1040,7 @@ Reglas:
         })
         if (semanticMatches.size > 0) {
           semanticMatched = semanticMatches
-          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated, mustMet)
+          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated, mustMet, quantifiedPct)
         }
       }
     }
@@ -1195,7 +1198,7 @@ Reglas:
     // Same carry for the soft-skill evidence: judging bullets needs a model call,
     // which cannot run per keystroke. The analysis published what it found.
     const carriedSoft = input.demonstratedSoftSkills?.length ? new Set(input.demonstratedSoftSkills) : undefined
-    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft, metMustHaves(keywords.mustHaves, data))
+    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft, metMustHaves(keywords.mustHaves, data), assessResumeContent(data).quantificationPct)
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)

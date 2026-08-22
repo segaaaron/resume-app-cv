@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { Sparkles } from "lucide-react"
 import type { AtsReport, ReportBullet } from "@/lib/ats/report"
 import { solvableChecks } from "@/lib/ats/report"
+import { QUANTIFICATION_BAND } from "@/lib/ats/scoring-config"
 
 /**
  * Todas las viñetas, medidas de una.
@@ -20,8 +21,10 @@ import { solvableChecks } from "@/lib/ats/report"
  * («más números») empujaría exactamente hacia donde no queremos.
  */
 
-const TARGET_MIN = 60
-const TARGET_MAX = 70
+// La banda vive en `scoring-config` porque ahora también PUNTÚA: dos copias del
+// mismo umbral es como el número y la pantalla terminan diciendo cosas distintas.
+const TARGET_MIN = QUANTIFICATION_BAND.min
+const TARGET_MAX = QUANTIFICATION_BAND.max
 
 interface Props {
   report: AtsReport

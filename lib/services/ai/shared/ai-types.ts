@@ -111,7 +111,7 @@ export interface ATSSubScores {
  *  score uses (not invented). Structured, not localized: the UI writes the copy. */
 export interface GapLever {
   /** Which score lever this is. `template` is the layout penalty, not a matcher category. */
-  key: "hardSkills" | "mustHaves" | "title" | "softSkills" | "sections" | "template"
+  key: "hardSkills" | "mustHaves" | "title" | "softSkills" | "sections" | "impact" | "template"
   /** Estimated score points recoverable by maxing this lever out (0-100). */
   points: number
   /** Current coverage of this lever (0-100); null when not applicable (e.g. template). */

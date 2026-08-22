@@ -79,6 +79,7 @@ const REGISTRO: Record<string, { max: number; razon: string }> = {
   "lib/ats-one-truth.test.ts": { max: 1, razon: "la herramienta pública conserva la matriz que el panel ya no usa" },
   "lib/ats-panel-memory.test.ts": { max: 1, razon: "la copia del estado final existe en los dos idiomas" },
   "lib/ats-no-duplicate-sections.test.ts": { max: 1, razon: "el panel no conserva ningún bloque propio" },
+  "lib/impact-scoring.test.ts": { max: 1, razon: "la banda de cuantificación tiene un solo dueño, no una copia en el panel" },
 }
 
 function walk(dir: string): string[] {

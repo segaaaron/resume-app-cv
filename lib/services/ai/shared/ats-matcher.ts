@@ -20,7 +20,7 @@
 // sets would force each engine to score inputs it cannot see. See TITLE_CONNECTORS
 // below for why the two word lists must stay separate too.
 
-import { SCORE_WEIGHTS, OLD_TITLE_CREDIT, LISTED_ONLY_CREDIT } from "@/lib/ats/scoring-config"
+import { SCORE_WEIGHTS, OLD_TITLE_CREDIT, LISTED_ONLY_CREDIT, QUANTIFICATION_BAND } from "@/lib/ats/scoring-config"
 import { computeScoreBreakdown, type ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import type { ATSSubScores, GapLever } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
@@ -244,6 +244,31 @@ function titleScore(jdTitle: string, cvTitlesNorm: string, recentTitlesNorm?: st
   return Math.round((hits / tokens.length) * 100)
 }
 
+/**
+ * Cuánto cubre el impacto cuantificado, medido contra la BANDA SANA.
+ *
+ * No es «cuantas más cifras, mejor». La doctrina del producto dice que no toda
+ * viñeta lleva número —un CV donde todas terminan en una cifra se lee como
+ * fabricado— y el propio panel dibuja esa banda en su medidor. Premiar
+ * linealmente hasta el 100% empujaría al candidato justo a lo que la pantalla de
+ * al lado le desaconseja.
+ *
+ * Dentro de la banda: cobertura entera. Por debajo sube proporcionalmente; por
+ * encima baja, porque saturar tiene su propio costo.
+ *
+ * `null` cuando no hay dato: la categoría queda fuera del reparto y los pesos se
+ * renormalizan solos. Un CV sin viñetas no se penaliza por algo que no medimos.
+ */
+function impactCoverage(pct?: number | null): number | null {
+  if (pct == null) return null
+  const { min, max } = QUANTIFICATION_BAND
+  if (pct >= min && pct <= max) return 100
+  if (pct < min) return Math.round((pct / min) * 100)
+  // Por encima del techo: se descuenta lo que sobra, con el mismo criterio con
+  // que el medidor pinta el exceso fuera de la banda.
+  return Math.max(0, Math.round(100 - ((pct - max) / (100 - max)) * 100))
+}
+
 function sectionsScore(s: SectionPresence): number {
   const present = [s.summary, s.work, s.skills, s.education].filter(Boolean).length
   return Math.round((present / 4) * 100)
@@ -300,6 +325,18 @@ export function computeATSMatch(
    * is why it takes the same route: proof outranks presence.
    */
   mustHavesMet?: Set<string>,
+  /**
+   * Qué proporción de las viñetas lleva una cifra real (0-100).
+   *
+   * El panel lo medía y lo mostraba en su propio bloque, y el puntaje lo
+   * ignoraba: el candidato cuantificaba sus logros, el número no se movía, y
+   * concluía que el panel le pedía cosas que no cuentan.
+   *
+   * `undefined` = un CV sin viñetas, o una llamada que no lo calcula. La
+   * categoría queda fuera del reparto y los pesos se renormalizan solos, así que
+   * no penaliza a nadie por un dato que no tenemos.
+   */
+  quantificationPct?: number | null,
 ): ATSMatchResult {
   const hay = normalize(resumeText)
   const titlesNorm = normalize(cvTitles)
@@ -321,6 +358,7 @@ export function computeATSMatch(
     title,
     softSkills: soft.pct,
     sections: sectionsPct,
+    impact: impactCoverage(quantificationPct),
   })
   const score = breakdown.score
 
