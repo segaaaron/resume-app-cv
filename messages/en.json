@@ -1944,7 +1944,7 @@
         "dates_mixed_bare_detail": "The ATS works out your tenure from the dates, and a bare year leaves it twelve months of slack. Add the month to each of these and the check closes itself.",
         "title_mismatch": "The posting looks for “{wanted}” and your CV does not say it that way",
         "title_mismatch_detail": "The job title is the first thing the filter reads. If it is the same work, write “{wanted}” verbatim in your headline or your most recent role — never claim a title you did not hold.",
-        "cut_bullet": "This line is surplus in {job}: it carries {count} and {max} get read",
+        "cut_bullet": "{job} has {count} bullets and {max} get read — this is one of the spare ones",
         "cut_bullet_detail": "It is one of the weakest in the role — no strong verb, no result, or repeating the line next to it. Cutting it is what makes your best lines get read.",
         "cut_irrelevant": "This line says nothing this posting asks for ({job})",
         "cut_irrelevant_detail": "It lands none of the words the posting asks for, and the role already carries {count} lines when {max} get read. It is the first one to go.",

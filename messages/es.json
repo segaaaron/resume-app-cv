@@ -1944,7 +1944,7 @@
         "dates_mixed_bare_detail": "El ATS calcula tu antigüedad desde las fechas, y un año pelado le deja doce meses de margen. Poné el mes en cada una de estas y el chequeo se cierra solo.",
         "title_mismatch": "La vacante busca «{wanted}» y tu CV no lo dice así",
         "title_mismatch_detail": "El cargo es lo que el filtro lee primero. Si el trabajo es el mismo, escribí «{wanted}» tal cual en tu titular o en el puesto más reciente — no inventes un cargo que no tuviste.",
-        "cut_bullet": "Esta línea sobra en {job}: lleva {count} y se leen {max}",
+        "cut_bullet": "{job} tiene {count} viñetas y se leen {max}: ésta es de las que sobran",
         "cut_bullet_detail": "Es de las más flojas del puesto — sin verbo fuerte, sin resultado o repitiendo lo de al lado. Cortarla hace que se lean tus mejores líneas.",
         "cut_irrelevant": "Esta línea no le habla a esta vacante ({job})",
         "cut_irrelevant_detail": "No dice ninguna de las palabras que la oferta pide, y el puesto ya lleva {count} líneas cuando se leen {max}. Es la primera candidata a salir.",

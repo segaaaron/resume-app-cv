@@ -428,14 +428,34 @@ export function applyAllPlan(
 }
 
 /**
- * LO QUE ESTA VACANTE PIDE Y EL CV NO DICE. `other` queda fuera, y no es un
- * detalle: esa sección son las habilidades PROPIAS del candidato que la oferta no
+ * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────────
+ *
+ *   «Agrego un Add o un Prove it pero me lleva al tailor y no me muestra nada.»
+ *
+ * Y la prueba estaba en la propia captura: las dos habilidades que fallaban
+ * decían «could not count it» debajo. Eso es `jd === 0`, y estas dos funciones
+ * exigían `jd > 0` para considerar el término trabajo del ejecutor.
+ *
+ * `jd` es el CONTADOR QUE SE MUESTRA —«la vacante lo pide 3 veces»—, y vale 0
+ * cuando el aviso escribe el requisito con otras palabras: la extracción devuelve
+ * la forma canónica («Strategic thinking») y el texto original dice «thinks
+ * strategically». El contador no puede contarlo, y eso es correcto y está dicho
+ * en pantalla.
+ *
+ * Lo que NO puede pasar es que ese contador decida la PERTENENCIA. Si el término
+ * está en el informe con sección `hard` o `soft`, la vacante lo pide: lo decidió
+ * la extracción, no una búsqueda literal. Con la regla vieja, el riel ofrecía el
+ * término con sus dos botones y el ejecutor no lo tenía — el usuario apretaba y
+ * el modal se abría vacío. Medido: de tres términos faltantes, el ejecutor veía
+ * uno.
+ *
+ * `other` sigue fuera: esa sección son las habilidades PROPIAS del candidato que la oferta no
  * nombra. No mueven el puntaje, así que meterlas acá le daría trabajo al ejecutor
  * —y renglones a «aplicar todo»— que no puede mover el número. Un balde que
  * cuenta lo que no cobra es el mismo defecto, del otro lado.
  */
 export function missingTerms(report: AtsReport): ReportTerm[] {
-  return report.terms.filter((t) => t.section !== "other" && t.jd > 0 && t.cv === 0)
+  return report.terms.filter((t) => t.section !== "other" && t.cv === 0)
 }
 
 /**
@@ -452,7 +472,7 @@ export function missingTerms(report: AtsReport): ReportTerm[] {
  * captura: diez habilidades listadas y ninguna forma visible de resolverlas.
  */
 export function unbackedTerms(report: AtsReport): ReportTerm[] {
-  return report.terms.filter((t) => t.section !== "other" && t.jd > 0 && t.cv > 0 && t.listOnly)
+  return report.terms.filter((t) => t.section !== "other" && t.cv > 0 && t.listOnly)
 }
 
 /**
