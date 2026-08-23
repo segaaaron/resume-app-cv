@@ -1048,11 +1048,36 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   // veces, tu CV lo dice 0" se verifica leyendo; "te falta esta skill" hay que
   // creerlo.
   const listedOnly = new Set(input.listedOnlyKeywords.map((s) => s.toLowerCase()))
+  /**
+   * ── EL CERO QUEMADO (medido, 2026-08-22) ─────────────────────────────────
+   *
+   * Esto ponía `cv: 0` a todo término que el SERVIDOR había marcado como
+   * faltante, sin volver a mirar el CV. Y el CV cambia entre una llamada y la
+   * siguiente: el usuario escribe una viñeta que dice «GraphQL», el panel se
+   * rehace al instante con los datos vivos… y la tabla le sigue diciendo que su
+   * CV no lo dice. Medido: escribir el término dejaba el conteo en 0 → 0.
+   *
+   * De ahí colgaba todo lo demás: el término seguía contando como trabajo del
+   * ejecutor, «aplicar todo» lo volvía a ofrecer, y el usuario veía el panel
+   * ignorando la mejora que acababa de aplicar.
+   *
+   * ── QUIÉN DECIDE QUÉ ─────────────────────────────────────────────────────
+   *
+   * El servidor decide QUÉ TÉRMINOS EXISTEN —eso sale de la vacante y sólo
+   * cambia si cambia la oferta—. El CV VIVO decide SI ESTÁN. Mezclar las dos
+   * preguntas es lo que congelaba el cero.
+   *
+   * El `matched ? 1` se conserva y es la parte sutil: un término que el servidor
+   * dio por presente por sinónimo («APIs REST» ≈ «RESTful APIs») no aparece
+   * literal en el texto, y contarlo sólo por letra lo devolvería a «faltante».
+   * Se toma el mayor de los dos: lo que el CV dice hoy, o lo que el análisis ya
+   * había probado.
+   */
   const termOf = (term: string, matched: boolean, section: ReportTerm["section"]): ReportTerm => ({
     term,
     section,
     jd: countOccurrences(input.jobDescription ?? "", term),
-    cv: matched ? Math.max(1, countOccurrences(input.resumeText ?? "", term)) : 0,
+    cv: Math.max(countOccurrences(input.resumeText ?? "", term), matched ? 1 : 0),
     listOnly: listedOnly.has(term.toLowerCase()),
   })
   const terms: ReportTerm[] = [
