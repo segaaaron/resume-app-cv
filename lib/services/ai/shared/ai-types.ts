@@ -633,6 +633,16 @@ export interface ImproveBulletInput {
    * silencio hacia menos valor.
    */
   postingTerms?: string[]
+  /**
+   * El CV vivo, para juzgar «¿esta herramienta es fabricada?» contra el CV
+   * COMPLETO y no sólo contra la viñeta. `hardCodedFactKind` marcaba «Swift» como
+   * marca fabricada porque la fuente era sólo la línea + el puesto — no veía que
+   * el candidato lo declaró en Habilidades o en una sección propia. La regla es
+   * correcta; el dato contra el que comparaba estaba incompleto. Tailor, review y
+   * skill-bullet ya usan el CV entero; improve-bullet era el único descolgado.
+   * OPCIONAL: sin él, la fuente estrecha de siempre — cero regresión.
+   */
+  sectionData?: Record<string, unknown>
 
   jobTitle?: string
   employer?: string

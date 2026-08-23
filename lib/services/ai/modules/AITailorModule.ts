@@ -40,11 +40,11 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, hardCodedFactKind, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hardCodedFactKind, figureDegraded } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
-import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
-import { assessDescription, opensInThirdPersonEs } from "../shared/bullet-quality"
+import { isTrivialEdit, isCosmeticReword, isRedundantRewrite, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
+import { assessDescription, toFirstPersonOpener } from "../shared/bullet-quality"
 import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { hasCliche } from "../shared/cliches"
 import { computeCostUsd } from "../shared/cost-tracker"
@@ -398,7 +398,7 @@ Reglas:
       const rewrites: TailorRewrite[] = []
       for (const r of Array.isArray(raw.rewrites) ? raw.rewrites : []) {
         const checkId = typeof r?.checkId === "string" ? r.checkId : ""
-        const text = typeof r?.text === "string" ? r.text.trim() : ""
+        let text = typeof r?.text === "string" ? r.text.trim() : ""
         // Un checkId que no está en la lista es trabajo que nadie pidió: el modelo
         // no puede abrir tarea por su cuenta, que es todo el punto del cambio.
         const item = byCheckId.get(checkId)
@@ -431,25 +431,27 @@ Reglas:
         // que es el diseño del CEO: la IA propone, el usuario confirma el único
         // dato que la IA no puede saber. Borrarla era una regresión mía.
 
-        // Una reescritura que habla DE la persona en tercera persona se lee como
-        // una carta que escribió otro, dentro de su propio historial.
-        if (!en && opensInThirdPersonEs(text)) { droppedTrivial++; continue }
+        // TERCERA PERSONA: SE CORRIGE, NO SE BORRA (CEO, 2026-08-22).
+        // «Ejecutó suites…» / «He managed…» es una línea que puede ser excelente
+        // con un solo defecto de forma. Borrarla perdía todo su valor por el
+        // verbo. Se arregla la apertura a primera persona y la línea sigue por el
+        // resto de los guards como cualquier otra. Vale para es y en.
+        text = toFirstPersonOpener(text, language)
 
         // El texto es la identidad: si la reescritura habla de otra línea del mismo
         // puesto, aplicarla borraría una y duplicaría otra.
         const lines = bulletsByJob.get(item.targetId) ?? []
         if (rewriteBelongsTo(text, lines, item.index) !== item.index) { droppedTrivial++; continue }
 
-        // Borró o alteró una cifra del candidato.
-        if (original && losesStatedFigure(original, text)) { droppedFigure++; continue }
+        // Borró la cifra del candidato, o la dejó puesta y le sacó el verbo que la
+        // explicaba («aumentar las ventas entre 15% y 20%» → «ventas de 15% a
+        // 20%»): las dos formas de perder lo mismo, una sola pregunta.
+        if (original && figureDegraded(original, text)) { droppedFigure++; continue }
 
-        // O la dejó puesta y le sacó el verbo que la explicaba: «aumentar las
-        // ventas entre un 15% y 20%» → «ventas de 15% a 20%». Peor que borrarla,
-        // porque lo que queda PARECE un dato y el candidato lo firma sin mirar.
-        if (original && figureLosesItsVerb(original, text)) { droppedFigure++; continue }
-
-        // Sin cambio real: idéntica, o un cambio de sinónimos.
-        if (original && (isTrivialEdit(original, text) || isCosmeticReword(original, text, [...posting.hardSkills, ...posting.softSkills]))) { droppedTrivial++; continue }
+        // No aporta: idéntica, un cambio de sinónimos, o las mismas palabras
+        // reordenadas. El MISMO set que corre improve-bullet — antes tailor se
+        // saltaba el reordenado y una línea sin cambio real entraba por acá.
+        if (original && isRedundantRewrite(original, text, { postingTerms: [...posting.hardSkills, ...posting.softSkills] })) { droppedTrivial++; continue }
 
         /**
          * Y NUNCA DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.
@@ -498,8 +500,7 @@ Reglas:
       const summary = summaryRaw && origSummary && (
         isTrivialEdit(origSummary, summaryRaw)
         || isCosmeticReword(origSummary, summaryRaw)
-        || losesStatedFigure(origSummary, summaryRaw)
-        || figureLosesItsVerb(origSummary, summaryRaw)
+        || figureDegraded(origSummary, summaryRaw)
       ) ? null : summaryRaw
       return { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm }
     }

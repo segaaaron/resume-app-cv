@@ -370,6 +370,21 @@ export function figureLosesItsVerb(original: string, rewrite: string): boolean {
   return !hasChangeVerb(rewrite)
 }
 
+/**
+ * ¿LA CIFRA DEL CANDIDATO SOBREVIVIÓ INTACTA? — una sola pregunta, un solo dueño.
+ *
+ * Son dos formas de perder lo mismo: `losesStatedFigure` la borra, y
+ * `figureLosesItsVerb` la deja puesta pero le saca el verbo que la explicaba.
+ * El par `A(o,r) || B(o,r)` estaba escrito a mano en tailor (viñetas y resumen)
+ * y en review — y en `improve-bullet` faltaba la mitad (`figureLosesItsVerb`),
+ * así que la misma clase de prosa, en el mismo campo del CV, se juzgaba con una
+ * vara más floja por un solo camino. Un nombre, la pregunta entera, y ningún
+ * módulo puede volver a correr media.
+ */
+export function figureDegraded(original: string, rewrite: string): boolean {
+  return losesStatedFigure(original, rewrite) || figureLosesItsVerb(original, rewrite)
+}
+
 export const METRIC_PLACEHOLDER_REGEX =
   /\[\s*(?:x\b|n\b|z\b|\$|\d|number\b|métrica\b|metric\b|porcentaje\b|percent\b|cifra\b)/i
 
@@ -516,28 +531,11 @@ export function hardCodedFactKind(
  */
 
 export function hasHardCodedFact(text: string, sourceContext: string): boolean {
-  if (!text) return false
-  const sourceLower = sourceContext.toLowerCase()
-
-  // 1. Metric placeholders are never allowed in production-ready output.
-  if (METRIC_PLACEHOLDER_REGEX.test(text)) return true
-
-  // 2. Metric tokens present in text but absent from the source.
-  const textMetrics = text.match(METRIC_REGEX) ?? []
-  for (const metric of textMetrics) {
-    if (!sourceLower.includes(metric.toLowerCase())) return true
-  }
-
-  // 3. Tech buzzwords introduced out of nowhere.
-  //    Use word-boundary regex (not substring) to avoid false positives like
-  //    "reacción" → "react", "avenue" → "vue", "node_modules" → "node".
-  //    Escape `.` and `+` for entries such as "next.js" or hypothetical "c++".
-  for (const tech of TECH_BUZZWORDS) {
-    const re = new RegExp(`\\b${tech.replace(/[.+]/g, "\\$&")}\\b`, "i")
-    if (re.test(text) && !re.test(sourceContext)) return true
-  }
-
-  return false
+  // UN SOLO JUEZ para «¿trae un dato fabricado?». Antes esta función tenía lógica
+  // propia y NO coincidía con hardCodedFactKind (le faltaba namesUndeclaredSystem):
+  // «SAP4 Hana» daba brand en una y false en la otra, así que módulos distintos
+  // dejaban pasar datos fabricados distintos. Ahora delega — mismo veredicto siempre.
+  return hardCodedFactKind(text, sourceContext) !== null
 }
 
 // Summary/cover-letter prompts label each variant ("Version 1 — EXECUTIVE", etc.)

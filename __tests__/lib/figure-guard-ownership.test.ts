@@ -70,7 +70,10 @@ const src = (m: string) => readFileSync(join(process.cwd(), `lib/services/ai/mod
 describe("ningún módulo que reescribe el CV se salta la regla de la cifra", () => {
   for (const [m, porque] of Object.entries(REESCRIBEN)) {
     it(`${m} — ${porque}`, () => {
-      expect(src(m), `${m} no consulta losesStatedFigure`).toContain("losesStatedFigure")
+      // La regla se consulta por el dueño único `figureDegraded` (que compone las
+      // dos formas de perderla) o, en prosa/fusión donde el verbo no aplica, por
+      // la primitiva `losesStatedFigure` directa. Cualquiera de las dos cuenta.
+      expect(src(m), `${m} no consulta la regla de la cifra`).toMatch(/figureDegraded|losesStatedFigure/)
     })
   }
 
@@ -164,7 +167,47 @@ describe("ningún módulo que reescribe el CV se salta la regla de la cifra", ()
   it("las alternativas de improve-bullet pasan el mismo filtro", () => {
     const code = src("AIBulletModule")
     const alts = code.slice(code.indexOf("const alternatives"), code.indexOf(".slice(0, 2)"))
-    expect(alts, "una alternativa puede borrar la cifra").toContain("losesStatedFigure")
+    expect(alts, "una alternativa puede borrar la cifra").toMatch(/figureDegraded|losesStatedFigure/)
+  })
+
+  /**
+   * Y EL DUEÑO ÚNICO NO PUEDE VACIARSE.
+   *
+   * `figureDegraded` es la pregunta entera —«¿la cifra sobrevivió intacta?»— y
+   * la componen las dos formas de perderla: borrada (`losesStatedFigure`) o sin
+   * su verbo (`figureLosesItsVerb`). Antes el par se escribía a mano en cada
+   * módulo y a improve-bullet le faltaba la mitad. Si alguien le saca una de las
+   * dos al dueño, todos los módulos vuelven a correr media regla de golpe.
+   */
+  it("figureDegraded compone las dos formas de perder la cifra", () => {
+    const helpers = readFileSync(join(process.cwd(), "lib/services/ai/shared/ai-helpers.ts"), "utf8")
+    const body = helpers.slice(helpers.indexOf("export function figureDegraded"))
+    expect(body, "el dueño dejó de mirar la cifra borrada").toContain("losesStatedFigure")
+    expect(body, "el dueño dejó de mirar la cifra sin verbo").toContain("figureLosesItsVerb")
+  })
+
+  /**
+   * Y EL MÓDULO QUE MATA LA CIFRA NO PUEDE INVITARLA EN EL PROMPT.
+   *
+   * `noHardCodedFactsRule` incluye una LICENCIA («proponé un rango, nunca dejes
+   * la línea pelada»). merge y cover son postura B: su guard `hasHardCodedFact`
+   * borra toda cifra. Si el prompt pide el rango y el guard lo borra en silencio,
+   * el modelo recibe dos órdenes opuestas — la contradicción que se cortó pasando
+   * `allowProposedFigure: false`, que omite la licencia en la fuente.
+   *
+   * Hoy sólo el strip auto-verificado protege el WORDING; esto protege el
+   * CABLEADO: un revert del flag en cualquiera de las dos inyecciones revive la
+   * contradicción, y acá se cae. skill NO entra: usa la acotación explícita
+   * («NARROWING…»), trabada por su propio test más arriba.
+   */
+  it("merge y cover no invitan la cifra que su guard borra", () => {
+    for (const m of ["AIMergeBulletsModule", "AICoverLetterModule"]) {
+      const calls = src(m).match(/noHardCodedFactsRule\([^)]*\)/g) ?? []
+      expect(calls.length, `${m} dejó de inyectar la regla`).toBeGreaterThan(0)
+      for (const c of calls) {
+        expect(c, `${m}: una inyección sin allowProposedFigure:false revive la contradicción`).toContain("allowProposedFigure: false")
+      }
+    }
   })
 })
 

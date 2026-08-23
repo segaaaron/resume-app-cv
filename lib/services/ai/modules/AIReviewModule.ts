@@ -15,7 +15,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
-import { parseAIJson, safeParseAIJson, resolveLanguage, hardCodedFactKind, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
+import { parseAIJson, safeParseAIJson, resolveLanguage, hardCodedFactKind, losesStatedFigure, figureDegraded, resolveJobId } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword, isTrivialEdit } from "../shared/text-similarity"
@@ -257,7 +257,7 @@ export class AIReviewModule {
        * degrading to `manual` keeps the diagnosis and removes only the write.
        */
       const target = targetTextFor(f.action, sectionData)
-      if (target && f.fix?.trim() && (losesStatedFigure(target, f.fix) || figureLosesItsVerb(target, f.fix))) {
+      if (target && f.fix?.trim() && figureDegraded(target, f.fix)) {
         this.logger.warn("[AIService.atsScore] fix would delete a stated figure — degraded to advice", {
           kind: f.action.kind,
         })

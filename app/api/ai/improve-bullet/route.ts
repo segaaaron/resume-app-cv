@@ -15,6 +15,9 @@ const schema = z.object({
   // Lo que la vacante pide, tal como lo extrajo el ATS. El tope es el mismo que
   // usa el prompt para no recibir una lista que después recorta en silencio.
   postingTerms: z.array(z.string().max(80)).max(POSTING_TERMS_IN_PROMPT).optional(),
+  // El CV vivo, para juzgar la invención contra el CV COMPLETO (no sólo la
+  // viñeta). Mismo shape laxo que ats-rescore ya valida.
+  sectionData: z.record(z.string(), z.unknown()).optional(),
 })
 
 export async function POST(req: Request) {

@@ -199,7 +199,7 @@ Write a complete, compelling cover letter body for the following candidate and p
 
 ${cvValueBar("en")}
 
-${noHardCodedFactsRule("en")}
+${noHardCodedFactsRule("en", { allowProposedFigure: false })}
 
 ${untrustedDataRule(true)}
 
@@ -236,7 +236,7 @@ Escribe el cuerpo completo de una carta de presentación para el siguiente candi
 
 ${cvValueBar("es")}
 
-${noHardCodedFactsRule("es")}
+${noHardCodedFactsRule("es", { allowProposedFigure: false })}
 
 ${untrustedDataRule(false)}
 
@@ -747,7 +747,7 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
         ].filter(Boolean).join(" | ")
 
     const prompt = language === "en"
-      ? `${noHardCodedFactsRule("en")}
+      ? `${noHardCodedFactsRule("en", { allowProposedFigure: false })}
 
 ADDITIONAL RULES:
 1. ONLY rewrite using information already present in the current letter and the context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the source.
@@ -778,7 +778,7 @@ ON NUMBERS — read this last and follow it exactly:
 The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the letter or context above will be rejected and the candidate will get nothing back. Write the strongest letter you can using only what is there.
 
 Respond ONLY with valid JSON, shaped: a "status" key set to "improved", and a "versions" key holding an array of exactly three strings. Each string is one entire rewritten letter — every paragraph of it, separated by \\n\\n. Write all three in full. Nothing else in the response.`
-      : `${noHardCodedFactsRule("es")}
+      : `${noHardCodedFactsRule("es", { allowProposedFigure: false })}
 
 REGLAS ADICIONALES:
 1. SOLO reescribe usando información ya presente en la carta actual y el contexto de arriba. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no presentes en el source.

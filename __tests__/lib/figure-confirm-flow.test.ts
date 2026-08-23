@@ -49,6 +49,18 @@ describe("por que se disparo el guard", () => {
   it("no marca una cifra que ya esta en el CV", () => {
     expect(hardCodedFactKind("Coordine un equipo de 3 analistas", "Coordine un equipo de 3 analistas")).toBeNull()
   })
+
+  /**
+   * Movido desde el borrado `figure-policy` (2026-08-22): ese archivo duplicaba
+   * la clasificación de cifra que este ya cubre. Éste era su único caso propio —
+   * el matiz de que `METRIC_REGEX` sólo acusa un número cuando lleva una de sus
+   * unidades (%, users/usuarios…). «clientes» no está en la lista, así que un
+   * rango con esa palabra da null; con «usuarios», figure.
+   */
+  it("una cifra solo se acusa cuando lleva una unidad de la lista", () => {
+    expect(hardCodedFactKind("Atendi entre 50 y 100 clientes", "Atendi clientes")).toBe(null)
+    expect(hardCodedFactKind("Atendi entre 20 y 30 usuarios", "Atendi clientes")).toBe("figure")
+  })
 })
 
 describe("el camino completo, de tailor a la tarjeta", () => {

@@ -150,50 +150,58 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
               tres renglones apretados contra el borde. Catorce píxeles menos en un
               número que ya se lee de sobra son catorce más para la frase que
               explica por qué. */}
-          <svg viewBox="0 0 130 130" width="104" height="104" aria-hidden="true">
-            <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="var(--a-track)" strokeWidth="9" />
+          {/**
+           * ── EL RÓTULO NO VIVE MÁS COMO TEXTO SUELTO (reportado con captura) ──
+           *
+           *   «"Match with this job" no se ve bien y se solapa con el anillo.»
+           *
+           * «Match with this job» son cuatro palabras: dentro del anillo no caben
+           * (la cuerda útil son ~70px) y debajo se apilaban en dos renglones
+           * apretados. Y era REDUNDANTE: la frase de la derecha —«mide cuánto
+           * coincide tu CV con esta vacante»— ya nombra el número. Así que el
+           * anillo se queda con lo suyo (el número, gauge con unidad /100) y el
+           * rótulo pasa a `aria-label`: sigue nombrado para lectores de pantalla,
+           * sin ocupar espacio ni pelearse con el arco. Una cosa dicha una vez.
+           */}
+          <svg
+            viewBox="0 0 130 130" width="104" height="104"
+            role="img" aria-label={`${t("axis_match")}: ${score} / 100`}
+          >
+            <defs>
+              <linearGradient id={`ats-dial-${tone}`} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.5" />
+                <stop offset="100%" stopColor={color} stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="var(--a-track)" strokeWidth="8" />
             <circle
               className="ats-dial-arc"
               cx="65" cy="65" r={RADIUS} fill="none"
-              stroke={color} strokeWidth="9" strokeLinecap="round"
+              stroke={`url(#ats-dial-${tone})`} strokeWidth="8" strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={CIRCUMFERENCE * (1 - Math.max(0, Math.min(100, score)) / 100)}
               transform="rotate(-90 65 65)"
+              style={{ filter: `drop-shadow(0 1px 4px color-mix(in srgb, ${color} 42%, transparent))` }}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span
-              className="text-[30px] font-bold leading-none tabular-nums [font-family:var(--dash-serif)]"
+              className="text-[31px] font-bold leading-none tabular-nums [font-family:var(--dash-serif)]"
               style={{ color: "var(--a-ink)" }}
             >
               {shown}
             </span>
+            {/* La unidad hace del número un gauge y no un dato suelto: «99 / 100»
+                se lee sin ayuda. Muda para lectores (el aria-label ya lo dice). */}
+            <span
+              className="mt-0.5 text-[9px] font-semibold leading-none tabular-nums tracking-[0.12em]"
+              style={{ color: "var(--a-muted-2)" }}
+              aria-hidden="true"
+            >
+              / 100
+            </span>
           </div>
           </div>
-          {/**
-           * ── EL RÓTULO SALIÓ DEL ANILLO (reportado con captura, 2026-08-22) ──
-           *
-           *   «La palabra en inglés no entra en el anillo de progreso del score.»
-           *
-           * Y no entra POR GEOMETRÍA, no por un ancho mal puesto: dentro de un
-           * círculo de 104px, a la altura donde cae el rótulo —debajo de un número
-           * de 30px—, la cuerda disponible son unos 70px. «MATCH WITH THIS JOB»
-           * en mayúsculas no cabe ahí en ninguna tipografía, y «Coincidencia con
-           * la vacante» tampoco: el español entraba de casualidad porque partía en
-           * tres renglones cortos.
-           *
-           * Achicar la fuente sería un parche que el próximo idioma —o la próxima
-           * palabra larga— vuelve a romper. El número se queda adentro, que es lo
-           * que el anillo mide; el rótulo baja, donde tiene el ancho de la columna.
-           * Es el mismo arreglo que ya se hizo con el título de la tarjeta de
-           * sección cuando se partía a mitad de palabra.
-           */}
-          <span
-            className="mt-1.5 max-w-[112px] text-center text-[8.5px] font-bold uppercase leading-tight tracking-[0.08em] [text-wrap:balance]"
-            style={{ color: "var(--a-muted-2)" }}
-          >
-            {t("axis_match")}
-          </span>
         </div>
 
         <div className="min-w-0 flex-1">

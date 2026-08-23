@@ -398,6 +398,10 @@ export default function ATSScorePanel() {
         body: JSON.stringify({
           text: b.text, jobTitle: b.jobTitle || undefined, language: cvLanguage, focus,
           postingTerms: postingTermsForPrompt(report?.posting?.hardSkills, report?.posting?.softSkills),
+          // El CV vivo —el mismo que alimenta el ATS— para que el guard juzgue la
+          // invención contra el CV COMPLETO y no marque como inventada una
+          // herramienta que el candidato declaró en otra sección.
+          sectionData,
         }),
       })
       if (!res.ok) {

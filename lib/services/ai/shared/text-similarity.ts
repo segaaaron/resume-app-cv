@@ -531,6 +531,37 @@ export function addsNoInformation(original: string, suggested: string): boolean 
 }
 
 /**
+ * ¿ESTA REESCRITURA DE VIÑETA NO APORTA? — un solo dueño para tres formas del
+ * mismo defecto.
+ *
+ * Son tres maneras de devolver la línea que el usuario ya tenía: idéntica
+ * (`isTrivialEdit`), un cambio de sinónimos (`isCosmeticReword`), o las mismas
+ * palabras reordenadas o con relleno colgado (`addsNoInformation`). Cada
+ * primitiva vive definida una sola vez; lo que estaba disparejo era la
+ * COMPOSICIÓN: `improve-bullet` corría las tres y tailor sólo las dos primeras,
+ * así que un reordenado entraba al CV por el ejecutor y no por el editor. Medido:
+ * `addsNoInformation` da `false` sobre toda reescritura de valor real, así que
+ * cerrar el hueco no cuesta una sola línea buena.
+ *
+ * `diagnosed`: cuando el panel señaló un defecto en la línea, un cambio chico ES
+ * el arreglo (arreglar un «Participé en…» es un cambio pequeño por cualquier
+ * medida de similitud), así que ahí no se aplica el guard de sinónimos — igual
+ * que hacía improve-bullet. La pérdida de contenido (`dropsContentWithoutGain`)
+ * NO entra acá: depende de si la línea original ya era fuerte, y eso lo evalúa
+ * cada llamador con su propio contexto.
+ */
+export function isRedundantRewrite(
+  original: string,
+  rewrite: string,
+  opts: { postingTerms?: readonly string[]; diagnosed?: boolean } = {},
+): boolean {
+  if (isTrivialEdit(original, rewrite)) return true
+  if (!opts.diagnosed && isCosmeticReword(original, rewrite, opts.postingTerms)) return true
+  if (addsNoInformation(original, rewrite)) return true
+  return false
+}
+
+/**
  * ¿La reescritura habla de la viñeta que dice, o de otra del mismo puesto?
  *
  * MEDIDO CONTRA LA API REAL (2026-08-20, set STRONG, 33 propuestas): el modelo

@@ -100,7 +100,7 @@ export class AIMergeBulletsModule {
 
 ${cvValueBar("en")}
 
-${noHardCodedFactsRule("en")}
+${noHardCodedFactsRule("en", { allowProposedFigure: false })}
 
 ${keepCandidateFactsRule("en")}
 
@@ -123,7 +123,7 @@ BULLET B: ${b}`
 
 ${cvValueBar("es")}
 
-${noHardCodedFactsRule("es")}
+${noHardCodedFactsRule("es", { allowProposedFigure: false })}
 
 ${keepCandidateFactsRule("es")}
 

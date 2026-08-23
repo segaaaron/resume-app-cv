@@ -106,8 +106,94 @@ export const IMPACT_OPENERS_ES: readonly string[] = [
  * stays silent on English, where the same form does not exist.
  */
 export function opensInThirdPersonEs(text: string): boolean {
-  const first = text.replace(/^[\s•·▪‣*\-–—]+/, "").trim().split(/\s+/)[0] ?? ""
+  const stripped = text.replace(/^[\s•·▪‣*\-–—]+/, "").trim()
+  // El pronombre delata la tercera persona igual que el verbo: «Él coordinó» es
+  // tan de-otro como «Coordinó». El inglés ya cazaba su pronombre; el español
+  // debe cazar el suyo para quedar parejo.
+  // SÓLO singular: «Él/Ella coordinó» describe al candidato. «Ellos/Ellas»
+  // habla de OTRAS personas — convertirlo cambiaría el significado, no lo
+  // arreglaría. Por eso quedan fuera a propósito.
+  if (/^(?:él|ella)\s+[a-zá-úñ]/i.test(stripped)) return true
+  const words = stripped.split(/\s+/)
+  const first = words[0] ?? ""
+  // Un verbo de apertura ABRE una acción: siempre lleva algo después. Un token
+  // suelto que termina en -ó es más probable un nombre propio o una sigla que un
+  // pretérito — no se toca sin un complemento que confirme que es el verbo.
+  if (words.length < 2) return false
+  // Sigla o marca en mayúsculas (SAAB, TELCO…): no es un verbo aunque termine en
+  // -ó, y convertirla a «-é» la rompería. El pretérito real abre con mayúscula
+  // inicial y minúsculas después.
+  if (first === first.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(first)) return false
+  // -ó (hablar→habló) y -ió (dirigir→dirigió) son el pretérito regular de 3ª: una
+  // clase de palabras que en español son verbos. No hace falta un diccionario.
   return /^[a-zá-úñ]+ó$/i.test(first)
+}
+
+/**
+ * ¿La línea abre en tercera persona en INGLÉS? — un pronombre que reporta al
+ * candidato desde afuera.
+ *
+ * En inglés la primera persona del pasado se ve igual que la tercera sin
+ * pronombre («Managed the team» sirve para «I managed» y «he managed»), así que
+ * el defecto NO es el verbo: es abrir con «He/She/They», que convierte la línea
+ * en alguien describiendo al candidato. Es el mismo defecto que
+ * `opensInThirdPersonEs` caza en español, por la puerta que el inglés sí tiene.
+ */
+export function opensInThirdPersonEn(text: string): boolean {
+  const stripped = text.replace(/^[\s•·▪‣*\-–—]+/, "").trim()
+  // SÓLO singular: «He/She managed» describe al candidato. «They» habla de un
+  // equipo — quitarlo cambiaría «ellos hicieron» por «yo hice». Fuera a propósito.
+  return /^(?:he|she)\s+[a-z]/i.test(stripped)
+}
+
+/**
+ * CORRIGE la apertura a primera persona en vez de tirar la reescritura entera.
+ *
+ * ── POR QUÉ CORREGIR Y NO BORRAR (CEO, 2026-08-22) ─────────────────────────
+ *
+ * Una reescritura de alto impacto no puede morir por un solo defecto de forma:
+ * «Ejecutó suites de prueba con Selenium reduciendo el retrabajo» es una línea
+ * excelente con un único problema —el verbo en tercera persona—. Borrarla pierde
+ * todo su valor por una letra. Se arregla la letra y se conserva el valor.
+ *
+ * ── LA CONJUGACIÓN, DE RAÍZ Y NO A OJO ─────────────────────────────────────
+ *
+ * ES: el pasado de tercera persona es «-ó» (verbos -ar: ejecutó→ejecuté) o «-ió»
+ * (verbos -er/-ir: definió→definí, escribió→escribí). Se distingue por la
+ * terminación, no por una lista de verbos.
+ * EN: se quita el pronombre y se recapitaliza («He managed…»→«Managed…»).
+ *
+ * Sólo toca la PRIMERA palabra —la que el detector marcó—; el resto de la línea
+ * queda intacto. Conserva el glifo de viñeta si venía.
+ */
+export function toFirstPersonOpener(text: string, language: string): string {
+  const m = text.match(/^([\s•·▪‣*\-–—]*)(.*)$/s)
+  const marker = m?.[1] ?? ""
+  const body = (m?.[2] ?? text).trimStart()
+  const en = language === "en"
+
+  if (en) {
+    if (!opensInThirdPersonEn(text)) return text
+    const rest = body.replace(/^(?:he|she)\s+/i, "")
+    return marker + rest.charAt(0).toUpperCase() + rest.slice(1)
+  }
+
+  if (!opensInThirdPersonEs(text)) return text
+  // Si abre con pronombre, se quita —igual que en inglés— y se corrige el verbo
+  // que queda de primera palabra. Sin pronombre, se corrige el verbo directo.
+  const words = body.replace(/^(?:él|ella)\s+/i, "").split(/\s+/)
+  const first = words[0] ?? ""
+  const tail = words.slice(1)
+  const hadPronoun = /^(?:él|ella)\s+/i.test(body)
+  const wasCapital = hadPronoun || /^[A-ZÁÉÍÓÚÑ]/.test(first)
+  let corrected: string
+  // Sólo transforma si el verbo está en tercera (-ó/-ió); si el pronombre iba con
+  // otra forma, se conserva la palabra tal cual tras quitar el pronombre.
+  if (/ió$/i.test(first)) corrected = first.slice(0, -2) + "í"
+  else if (/ó$/i.test(first)) corrected = first.slice(0, -1) + "é"
+  else corrected = first
+  if (wasCapital && corrected) corrected = corrected.charAt(0).toUpperCase() + corrected.slice(1)
+  return marker + [corrected, ...tail].join(" ")
 }
 
 export interface BulletAssessment {

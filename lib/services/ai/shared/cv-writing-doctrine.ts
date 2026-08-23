@@ -107,8 +107,57 @@ export function cvValueBar(language: string): string {
  *   medible de lo que contó, propuesto como rango que él confirma. Eso es el
  *   producto, y callárselo lo deja con la lista de tareas que ya tenía.
  */
-export function noHardCodedFactsRule(language: string): string {
-  return language === "en"
+/**
+ * POSTURA B: quita la LICENCIA de proponer cifra, deja la prohibición intacta.
+ *
+ * `noHardCodedFactsRule` empaqueta dos cosas: la prohibición (no quemes datos) y
+ * una licencia («SÍ podés proponer una cifra como rango, nunca dejes la línea
+ * pelada»). Los módulos que REESCRIBEN desde un relato del candidato (tailor,
+ * bullet, review) la quieren entera: la cifra sobrevive marcada para confirmar.
+ * Los que MATAN toda cifra con `hasHardCodedFact` (merge, cover) recibían la
+ * licencia igual — el prompt invitaba lo que el guard borraba en silencio. Antes
+ * cada uno lo parcheaba distinto (skill acotaba, cover se medio-contradecía,
+ * merge nada); ahora la contradicción se corta en la fuente.
+ *
+ * Reemplaza POR TRAMOS entre marcadores, y LANZA si un marcador no está: si
+ * alguien edita el wording de la licencia y no acá, esto se cae en voz alta en
+ * vez de servir la contradicción de nuevo. No hay reemplazo que sea no-op mudo.
+ */
+function stripFigureLicense(text: string, language: string): string {
+  const en = language === "en"
+  const introSize = en ? ", proposing the measurable size of what they did" : ", proponer el tamaño medible de lo que hizo"
+  const spans: Array<{ start: string; end: string; to: string }> = en
+    ? [
+        { start: "\n  You MAY propose a figure", end: "a number you decided is not.",
+          to: "\n  Do not propose a figure of your own. If the candidate did not state a number, write the line without one \u2014 a figure you supply is a claim about them nobody asked them to confirm." },
+        { start: "\nIf the work genuinely had a number", end: "hand them a precise figure you chose.",
+          to: "\nNever hand them a figure you chose: if the candidate did not state a number, the line goes without one." },
+      ]
+    : [
+        { start: "\n  S\u00cd pod\u00e9s proponer una cifra", end: "un n\u00famero que decidiste vos, no.",
+          to: "\n  No propongas una cifra propia. Si el candidato no escribi\u00f3 un n\u00famero, escrib\u00ed la l\u00ednea sin \u00e9l \u2014 una cifra que pon\u00e9s vos es una afirmaci\u00f3n sobre \u00e9l que nadie le pidi\u00f3 confirmar." },
+        { start: "\nSi el trabajo realmente ten\u00eda un n\u00famero", end: "una cifra exacta elegida por vos.",
+          to: "\nNunca le entregues una cifra elegida por vos: si el candidato no dio un n\u00famero, la l\u00ednea va sin \u00e9l." },
+      ]
+
+  let out = text
+  if (!out.includes(introSize)) {
+    throw new Error(`noHardCodedFactsRule: intro de tama\u00f1o medible deriv\u00f3, no se puede acotar postura B (${language})`)
+  }
+  out = out.replace(introSize, "")
+  for (const { start, end, to } of spans) {
+    const i = out.indexOf(start)
+    const j = i < 0 ? -1 : out.indexOf(end, i)
+    if (i < 0 || j < 0) {
+      throw new Error(`noHardCodedFactsRule: licencia de cifra deriv\u00f3, no se puede acotar postura B (${language})`)
+    }
+    out = out.slice(0, i) + to + out.slice(j + end.length)
+  }
+  return out
+}
+
+export function noHardCodedFactsRule(language: string, opts: { allowProposedFigure?: boolean } = {}): string {
+  const base = language === "en"
     ? `WHAT IS FORBIDDEN IS A HARD-CODED FACT — a datum you burned in yourself.
 
 A figure taken from an example, from a template, or from what "usually" happens in that trade is hard-coded: it did not come from this candidate, and it is what makes a CV collapse in an interview.
@@ -143,6 +192,8 @@ Todo lo que escribas A PARTIR DE LO QUE ÉL TE CONTÓ es la mejora que está pag
 - Certificaciones, licencias ni títulos.
 - Jerarquía que no declaró: nada de "lideré", "gestioné" ni "supervisé" si no lo dijo.
 Si el trabajo realmente tenía un número y no lo dio, proponé el rango y marcalo como suyo para confirmar. Nunca dejes la línea pelada cuando el tamaño es obvio, y nunca le entregues una cifra exacta elegida por vos.`
+  if (opts.allowProposedFigure === false) return stripFigureLicense(base, language)
+  return base
 }
 
 /**

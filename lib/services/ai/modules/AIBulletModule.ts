@@ -1,16 +1,16 @@
 // lib/services/ai/modules/AIBulletModule.ts
 import { validateAIInput } from "@/lib/ai-safety"
-import { AI_MODEL_PROSE, AI_TEMPERATURE_STRUCTURED, logAIUsage } from "@/lib/ai-client"
+import { AI_MODEL_PROSE, AI_TEMPERATURE_STRUCTURED, logAIUsage, buildResumeContext } from "@/lib/ai-client"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, resolveLanguage, hasHardCodedFact, hardCodedFactKind, losesStatedFigure } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hasHardCodedFact, hardCodedFactKind, figureDegraded } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { isTrivialEdit, isCosmeticReword, addsNoInformation, dropsContentWithoutGain } from "../shared/text-similarity"
+import { isTrivialEdit, isRedundantRewrite, dropsContentWithoutGain } from "../shared/text-similarity"
 import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { reportGuardDrops } from "../shared/guard-metrics"
 import { assessDescription, isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
@@ -353,7 +353,25 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
 
-    const source = [text, jobTitle ?? "", employer ?? "", industry ?? ""].join("\n")
+    /**
+     * LA FUENTE CONTRA LA QUE SE JUZGA LA INVENCIÓN — el CV COMPLETO cuando lo hay.
+     *
+     * ── EL DEFECTO (medido, 2026-08-22) ────────────────────────────────────────
+     *
+     * Era sólo la viñeta + el puesto, así que una herramienta que el candidato
+     * declaró en Habilidades o en una sección propia («Swift») se marcaba como
+     * marca fabricada y la reescritura se descartaba. La regla del guard es
+     * correcta —no meter una marca que él no dijo—; lo que fallaba era el dato
+     * incompleto. Tailor, review y skill-bullet ya usan `buildResumeContext`;
+     * improve-bullet era el único descolgado. Ahora lo usa también, la MISMA
+     * función y el MISMO CV que ve el ATS.
+     *
+     * `sectionData` es opcional: sin él, la fuente estrecha de siempre. Cero
+     * regresión para cualquier llamador que no lo mande.
+     */
+    const source = input.sectionData
+      ? `${buildResumeContext(input.sectionData, language).slice(0, AI_INPUT_LIMITS.resumeContext)}\n${text}`
+      : [text, jobTitle ?? "", employer ?? "", industry ?? ""].join("\n")
 
     /** Model output → the improvements we are willing to show. Reused by the retry. */
     const harvest = (raw: string): BulletImprovement[] => {
@@ -412,21 +430,15 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
          */
         // La cifra NO se borra: viaja con needsFigureConfirm (más abajo) para que
         // el usuario la confirme. Borrarla era una regresión mía.
-        if (isTrivialEdit(original, suggested)) { droppedTrivial++; continue }
-        // Same guard Review uses: a synonym-only swap ("enhance"→"improve") on an
-        // otherwise-identical bullet reads the same on both sides — drop it rather
-        // than sell a reword as an improvement. Spares spelling fixes + enrichments.
+        // No aporta: idéntica, un cambio de sinónimos, o las mismas palabras
+        // reordenadas / con relleno colgado. Las tres formas de devolver la línea
+        // que ya tenía, una sola pregunta — el MISMO set que corre tailor.
         //
-        // Skipped when the caller named a defect: replacing a weak opener
-        // ("Participé en…" → "Coordiné…") is a small textual change by every
-        // similarity measure, and dropping it is exactly why the panel could flag
-        // a bullet as weak and then refuse to fix it.
-        if (!diagnosed && isCosmeticReword(original, suggested, postingTerms)) { droppedTrivial++; continue }
-        // Reordered words, or the same line with empty words bolted on. Both
-        // used to reach the user as "improvements"; both are the sentence they
-        // already had. Applies with or without a diagnosis: a rewrite that says
-        // nothing new does not fix a defect either.
-        if (addsNoInformation(original, suggested)) { droppedTrivial++; continue }
+        // `diagnosed` salta el guard de sinónimos: si el panel señaló la línea,
+        // un cambio chico ES el arreglo (un «Participé en…» → «Coordiné…» es
+        // pequeño por cualquier medida), y descartarlo es justo lo que hacía que
+        // el panel marcara una viñeta floja y después se negara a arreglarla.
+        if (isRedundantRewrite(original, suggested, { postingTerms, diagnosed })) { droppedTrivial++; continue }
         // Lateral-rewrite guard: when the ORIGINAL is already strong (opens with a
         // verb — no weak "responsible for" opener — and carries no cliché), a rewrite
         // that STRIPS content it stated and adds nothing concrete is different, not
@@ -458,7 +470,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
          * botón rotulado como mejora y pierde lo único de esa línea que un
          * reclutador puede pesar.
          */
-        if (losesStatedFigure(original, suggested)) { droppedFigure++; continue }
+        if (figureDegraded(original, suggested)) { droppedFigure++; continue }
         /**
          * NI DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.
          *
@@ -490,7 +502,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             // convierte una decisión en tres. La recomendada ya trae esa puerta.
             && !hasHardCodedFact(a.text, source)
             && !isTrivialEdit(original, a.text)
-            && !losesStatedFigure(original, a.text)
+            && !figureDegraded(original, a.text)
             && droppedPostingTerms(original, a.text, postingTerms).length === 0
             && !(originalIsStrong && dropsContentWithoutGain(original, a.text)))
           .slice(0, 2)

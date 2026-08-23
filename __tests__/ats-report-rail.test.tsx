@@ -90,7 +90,11 @@ describe("el veredicto no puede contradecir los hallazgos", () => {
 
   it("el número se rotula por lo que mide, no como nota del CV", () => {
     const { host, unmount } = render(report())
-    expect(text(host)).toContain("axis_match")
+    // El rótulo dejó de ser texto suelto bajo el anillo (se apilaba y era
+    // redundante con la frase de la derecha) y pasó al aria-label del gauge:
+    // sigue nombrando el número por lo que mide, para lectores de pantalla.
+    const dial = host.querySelector('[role="img"]')
+    expect(dial?.getAttribute("aria-label") ?? "").toContain("axis_match")
     unmount()
   })
 })
