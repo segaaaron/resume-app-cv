@@ -514,41 +514,6 @@ export function hardCodedFactKind(
  * El guard `figure-guard-ownership.test.ts` enumera qué postura tomó cada módulo
  * y falla cuando aparece uno sin declararla.
  */
-/**
- * ¿La cifra que agregó viene como RANGO A CONFIRMAR, o como hecho?
- *
- * ── LA MITAD QUE FALTABA (barrido de contradicciones, 2026-08-22) ──────────
- *
- * La doctrina no dice «podés poner números». Dice, con todas las letras: podés
- * proponer el tamaño medible del trabajo que él describió **como RANGO que
- * confirma o corrige en un clic, nunca como número exacto presentado como
- * hecho**. Son dos cosas distintas y el guard no las distinguía:
- *
- *   «entre 50 y 100 transacciones por día»  → una PREGUNTA. Él la confirma.
- *   «reduje las fallas de login un 40%»     → una AFIRMACIÓN que él nunca hizo.
- *
- * `hardCodedFactKind` sólo ve «hay un número que no está en la fuente» y las
- * llama igual. Con eso, dejar pasar las cifras propuestas dejaba pasar también
- * un resultado fabricado — que es el defecto más caro del producto, el que hace
- * que un CV se caiga en la entrevista.
- *
- * Y al revés: descartarlas TODAS —lo que hacían seis de siete módulos— tiraba la
- * propuesta legítima que el propio prompt pide. La línea correcta pasa por el
- * medio, y es exactamente la que la doctrina ya había escrito.
- *
- * Detecta la forma del rango en los dos idiomas: «entre X y Y», «between X and
- * Y», «X-Y», «X a Y», «X to Y». Ante la duda responde `false` — falla del lado
- * de descartar, que es el lado que no le pone palabras en la boca al candidato.
- */
-export function proposesRangeFigure(text: string): boolean {
-  if (!text) return false
-  const t = text.toLowerCase()
-  return (
-    /\b(?:entre|between)\s+[\d.,]+\s*[a-z%]*\s*(?:y|and|a|to)\s+[\d.,]+/.test(t)
-    || /\b\d[\d.,]*\s*(?:-|–|—)\s*\d[\d.,]*/.test(t)
-    || /\b\d[\d.,]*\s+(?:a|to)\s+\d[\d.,]*/.test(t)
-  )
-}
 
 export function hasHardCodedFact(text: string, sourceContext: string): boolean {
   if (!text) return false

@@ -6,7 +6,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, resolveLanguage, hasHardCodedFact, hardCodedFactKind, proposesRangeFigure, losesStatedFigure } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hasHardCodedFact, hardCodedFactKind, losesStatedFigure } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
@@ -410,7 +410,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
          * por eso tenía que elegir entre tirar la propuesta legítima (lo que
          * hacía) o dejar pasar un resultado fabricado.
          */
-        if (factKind === "figure" && !proposesRangeFigure(suggested)) { droppedHardCoded++; continue }
+        // La cifra NO se borra: viaja con needsFigureConfirm (más abajo) para que
+        // el usuario la confirme. Borrarla era una regresión mía.
         if (isTrivialEdit(original, suggested)) { droppedTrivial++; continue }
         // Same guard Review uses: a synonym-only swap ("enhance"→"improve") on an
         // otherwise-identical bullet reads the same on both sides — drop it rather
@@ -420,7 +421,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         // ("Participé en…" → "Coordiné…") is a small textual change by every
         // similarity measure, and dropping it is exactly why the panel could flag
         // a bullet as weak and then refuse to fix it.
-        if (!diagnosed && isCosmeticReword(original, suggested)) { droppedTrivial++; continue }
+        if (!diagnosed && isCosmeticReword(original, suggested, postingTerms)) { droppedTrivial++; continue }
         // Reordered words, or the same line with empty words bolted on. Both
         // used to reach the user as "improvements"; both are the sentence they
         // already had. Applies with or without a diagnosis: a rewrite that says

@@ -49,7 +49,73 @@ export const TRIVIAL_EDIT_SIMILARITY = 0.9
  */
 export function isTrivialEdit(original: string, suggested: string): boolean {
   if (!suggested.trim()) return true
+  /**
+   * CORREGIR UNA ERRATA NO ES UN CAMBIO TRIVIAL — es recuperar una keyword.
+   *
+   * ── EL DEFECTO (reportado y medido, 2026-08-22) ────────────────────────────
+   *
+   * «Objetive-C» → «Objective-C» tiene similitud ≥ 0.9, así que esto lo
+   * descartaba como «casi la misma frase». Pero una errata le cuesta al
+   * candidato la keyword entera: el matcher busca la palabra bien escrita y no la
+   * encuentra. Descartar la corrección es de lo más caro que este guard puede
+   * hacer.
+   *
+   * La distinción no está en la similitud —una errata y un sinónimo vacío se
+   * parecen igual de mucho al original—: está en el DICCIONARIO. Un cambio que
+   * convierte una palabra que el diccionario NO conoce en una que SÍ, corrige;
+   * un cambio entre dos palabras comunes, no. `isKnownSkill` ya está importado en
+   * este archivo y es la misma lista que el matcher usa para puntuar.
+   *
+   * Sólo mira el caso de UNA palabra cambiada: una errata es eso. Si cambió más,
+   * la similitud manda como antes.
+   */
+  if (fixesTypoToKnownTerm(original, suggested)) return false
   return normalizedSimilarity(original, suggested) >= TRIVIAL_EDIT_SIMILARITY
+}
+
+/**
+ * ¿El ÚNICO cambio convirtió una palabra desconocida en una keyword conocida?
+ * Eso es corregir una errata, no reformular. Comparación posición a posición
+ * para que «una sola palabra» sea exacto y no una heurística de conjuntos.
+ */
+function fixesTypoToKnownTerm(original: string, suggested: string): boolean {
+  const o = wordsOf(original)
+  const s = wordsOf(suggested)
+  if (o.length !== s.length) return false
+  let cambiada = -1
+  for (let i = 0; i < o.length; i++) {
+    if (o[i] === s[i]) continue
+    if (cambiada !== -1) return false // más de una palabra cambió → no es una errata
+    cambiada = i
+  }
+  if (cambiada === -1) return false
+  const antes = o[cambiada]
+  const despues = s[cambiada]
+  // Deben PARECERSE: es una errata de esa palabra, no un reemplazo. «navite»→
+  // «native» sí; «gato»→«swift» no.
+  if (normalizedSimilarity(antes, despues) < 0.6) return false
+  /**
+   * La palabra corregida forma una keyword conocida que antes NO existía.
+   *
+   * Mira ventanas de 1, 2 y 3 palabras alrededor del cambio, porque muchas
+   * keywords son multi-palabra: «native» suelta no es keyword, pero «react
+   * native» sí — y ése es justo el caso de «React Navite»→«React Native». Sin las
+   * ventanas, sólo cazaría erratas de una sola palabra («Objetive-C»).
+   */
+  const known = (words: string[], center: number): string | null => {
+    for (const len of [3, 2, 1]) {
+      for (let start = Math.max(0, center - len + 1); start <= center && start + len <= words.length; start++) {
+        const phrase = words.slice(start, start + len).join(" ")
+        if (isKnownSkill(phrase)) return phrase
+      }
+    }
+    return null
+  }
+  // Corrige una errata si la palabra cambiada AHORA forma una keyword conocida
+  // que en el original (con la palabra mal escrita) no existía en ese lugar.
+  const ahora = known(s, cambiada)
+  if (ahora === null) return false
+  return known(o, cambiada) !== ahora
 }
 
 /** Significant words of a normalized string (drops leading markers, empties). */
@@ -205,7 +271,34 @@ function swapsOneWord(original: string, suggested: string): boolean {
  */
 const TYPO_FIX_SIMILARITY = 0.5
 
-export function isCosmeticReword(original: string, suggested: string): boolean {
+/**
+ * ¿La reescritura AGREGÓ un término de la vacante que el original no tenía?
+ * Por palabra normalizada, no por substring (para no contar «java» en
+ * «javascript»). Es la señal que separa el tailoring del sinónimo vacío.
+ */
+function addsPostingTerm(original: string, suggested: string, postingTerms: readonly string[]): boolean {
+  if (postingTerms.length === 0) return false
+  const antes = new Set(wordsOf(original))
+  const despues = new Set(wordsOf(suggested))
+  for (const term of postingTerms) {
+    const words = wordsOf(term)
+    if (words.length === 0) continue
+    if (words.every((w) => despues.has(w)) && !words.every((w) => antes.has(w))) return true
+  }
+  return false
+}
+
+export function isCosmeticReword(
+  original: string,
+  suggested: string,
+  /**
+   * Los términos que la vacante pide. OPCIONAL: sin ellos esta función se
+   * comporta EXACTAMENTE como antes — ningún llamador que no los pase cambia.
+   * «con agilidad» → «con Scrum» es un swap de una palabra (parecería cosmético),
+   * pero si «Scrum» lo pide la vacante y la línea no lo tenía, es TAILORING.
+   */
+  postingTerms: readonly string[] = [],
+): boolean {
   if (!suggested.trim()) return false
   /**
    * ARREGLAR UNA APERTURA DÉBIL NUNCA ES COSMÉTICO — es el trabajo pedido.
@@ -222,6 +315,9 @@ export function isCosmeticReword(original: string, suggested: string): boolean {
    * similitud en palabras en vez de caracteres, y lo cazó la suite.
    */
   if (fixesWeakOpener(original, suggested)) return false
+  // Acercar la línea a un término que la vacante pide NO es cosmético: es
+  // tailoring. Antes del swap-de-una-palabra, que es el caso que lo confundía.
+  if (addsPostingTerm(original, suggested, postingTerms)) return false
   // Una sola palabra sustituida y el resto intacto: sinónimo, mida lo que mida.
   if (swapsOneWord(original, suggested)) return true
   if (!nearlySameLine(original, suggested)) return false

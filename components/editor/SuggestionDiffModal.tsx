@@ -23,6 +23,8 @@ export interface Suggestion {
   type: "replace" | "append"
   preview: string
   reason: string
+  /** La cifra propuesta que el usuario confirma; el chip lo dispara el panel. */
+  needsFigureConfirm?: boolean
   targetId?: string
 }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { vi } from "vitest"
 vi.mock("@/lib/db", () => ({ db: {} }))
-import { proposesRangeFigure, hardCodedFactKind } from "@/lib/services/ai/shared/ai-helpers"
+import { hardCodedFactKind } from "@/lib/services/ai/shared/ai-helpers"
 
 /**
  * LA CIFRA: UNA SOLA REGLA, Y LA MISMA EN LOS TRES LADOS.
@@ -28,34 +28,6 @@ import { proposesRangeFigure, hardCodedFactKind } from "@/lib/services/ai/shared
  * La línea correcta pasa por el medio y ya estaba escrita en la doctrina; lo que
  * faltaba era que el código supiera leerla.
  */
-describe("un rango que él confirma no es lo mismo que un número que decidimos", () => {
-  const RANGOS = [
-    "Atendí entre 50 y 100 transacciones por día en ventanilla",
-    "Handled between 50 and 100 transactions a day at the counter",
-    "Coordiné un equipo de 3-5 personas por turno",
-    "Resolví 20 a 30 tickets semanales de soporte",
-  ]
-  const HECHOS = [
-    "Reduje las fallas de login un 40%",
-    "Cut login failures by 40%",
-    "Aumenté las ventas en 15000 dólares",
-    "Migré 12 microservicios a Kubernetes",
-  ]
-
-  for (const t of RANGOS) {
-    it(`rango: ${t.slice(0, 40)}…`, () => expect(proposesRangeFigure(t)).toBe(true))
-  }
-  for (const t of HECHOS) {
-    it(`hecho: ${t.slice(0, 40)}…`, () => expect(proposesRangeFigure(t)).toBe(false))
-  }
-
-  /** Ante la duda, descarta: es el lado que no le pone palabras en la boca. */
-  it("un texto sin ninguna cifra no es un rango", () => {
-    expect(proposesRangeFigure("Coordiné el equipo de soporte")).toBe(false)
-    expect(proposesRangeFigure("")).toBe(false)
-  })
-})
-
 describe("y el tipo de dato quemado se sigue distinguiendo", () => {
   it("un placeholder nunca es una propuesta", () => {
     expect(hardCodedFactKind("Atendí [N] clientes", "Atendí clientes")).toBe("placeholder")
@@ -83,10 +55,12 @@ describe("y el tipo de dato quemado se sigue distinguiendo", () => {
     expect(hardCodedFactKind("Atendí entre 20 y 30 usuarios", "Atendí clientes")).toBe("figure")
   })
 
-  it("y ese rango con unidad ahora sobrevive, en vez de tirarse entero", () => {
-    const rango = "Atendí entre 20 y 30 usuarios por turno"
-    expect(hardCodedFactKind(rango, "Atendí usuarios")).toBe("figure")
-    expect(proposesRangeFigure(rango)).toBe(true)
+  it("una cifra que la fuente no tiene se marca como figure — el usuario la confirma", () => {
+    // Ya no se juzga la FORMA (rango vs exacta): toda cifra ausente del CV es
+    // `figure` y viaja al chip de confirmación. El diseño del CEO: la IA propone,
+    // el usuario decide. Se acabó el borrado por no tener forma de rango.
+    expect(hardCodedFactKind("Atendí entre 20 y 30 usuarios por turno", "Atendí usuarios")).toBe("figure")
+    expect(hardCodedFactKind("Reduje los errores un 40%", "Corregí errores")).toBe("figure")
   })
 
   it("y una cifra que la fuente ya decía no es nada", () => {

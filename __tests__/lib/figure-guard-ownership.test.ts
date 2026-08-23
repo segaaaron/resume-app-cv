@@ -212,8 +212,13 @@ describe("cada módulo declara qué hace con una cifra propuesta", () => {
     it(`${m} sigue la postura ${postura}`, () => {
       const code = src(m)
       if (postura === "A") {
-        expect(code, "descarta la cifra que la doctrina autoriza").toContain("hardCodedFactKind")
-        expect(code, "deja pasar cualquier cifra, no sólo el rango").toContain("proposesRangeFigure")
+        // Postura A (CEO, 2026-08-22): la cifra NUNCA se borra. Se distingue con
+        // hardCodedFactKind (placeholder/marca sí se tiran) y la CIFRA viaja con
+        // needsFigureConfirm para que el usuario la confirme. Ya NO se usa
+        // proposesRangeFigure como vara de borrado — ése era el diseño revertido.
+        expect(code, "no distingue el tipo de dato").toContain("hardCodedFactKind")
+        expect(code, "manda la cifra a confirmar en vez de borrarla").toContain("needsFigureConfirm")
+        expect(code, "revivió el borrado de cifra por forma de rango").not.toContain("proposesRangeFigure")
       } else {
         expect(code, "usa el camino que pregunta sin tener pantalla que pregunte").toContain("hasHardCodedFact")
       }

@@ -197,7 +197,18 @@ describe("no improvement loop — strong content never reaches the model", () =>
    * What must never change is what reaches the CV. The model may answer; a
    * number the original never stated may not survive.
    */
-  it("a missing metric never becomes an invented one", async () => {
+  /**
+   * ── DISEÑO CORREGIDO (CEO, 2026-08-22): la cifra NO se borra, se CONFIRMA ──
+   *
+   * Este test asumía que una cifra que el original no tenía se DESCARTABA. Ese
+   * era un diseño que yo introduje y el CEO revirtió: su regla es «la IA propone,
+   * el usuario confirma el único dato que la IA no puede saber». Una cifra
+   * inventada por el modelo NO se aplica como hecho — llega marcada con
+   * `needsFigureConfirm`, y el usuario la confirma o la corrige antes de que
+   * toque el CV. Lo prohibido no es que la proponga; es que entre sin que él la
+   * mire.
+   */
+  it("a missing metric arrives flagged for the user to confirm, not as fact", async () => {
     const noMetric = "• Migrated the authentication layer to OAuth 2.0 with the platform team."
     const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
       status: "improved",
@@ -206,9 +217,9 @@ describe("no improvement loop — strong content never reaches the model", () =>
     const c: IAIClient = { chat, embed: vi.fn() }
     const r = await new AIService(c, logger).improveBullet("u1", { text: noMetric, focus: ["metric"] }, "PRO")
 
-    // The figure was never in the original, so it never reaches the user.
-    const texts = (r.improvements ?? []).map((i) => i.text).join(" ")
-    expect(texts).not.toContain("40%")
-    expect(r.status).toBe("already_optimized")
+    const first = (r.improvements ?? [])[0]
+    // La reescritura llega — no se descarta — PERO marcada para confirmar.
+    expect(first?.text).toContain("40%")
+    expect(first?.needsFigureConfirm).toBe(true)
   })
 })

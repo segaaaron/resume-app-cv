@@ -1839,6 +1839,9 @@ export default function ATSScorePanel() {
           onConfirm={handleConfirmApply}
           suggestion={modal.suggestion}
           currentValue={modal.currentValue}
+          // La cifra propuesta que review marcó: el chip la manda a confirmar en
+          // vez de aplicarla como un hecho.
+          needsFigureConfirm={modal.suggestion.needsFigureConfirm}
           // Computed by running the real write — see previewSuggestion.
           afterValue={previewSuggestion(modal.suggestion, sectionData as unknown as ResumeSections)?.after}
         />

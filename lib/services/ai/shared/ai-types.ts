@@ -474,6 +474,12 @@ export const SuggestionSchema = z.object({
   preview: z.string().min(1).max(MAX_PREVIEW_CHARS),
   reason: z.string().max(120),
   targetId: z.string().optional(),
+  /**
+   * La reescritura propone una cifra que el CV no tiene. La pone el SERVIDOR tras
+   * los guards, no el modelo: la línea sobrevive y el panel muestra el chip
+   * «confirmá la cifra» en vez de aplicarla como un hecho. Antes se descartaba.
+   */
+  needsFigureConfirm: z.boolean().optional().catch(undefined),
 })
 
 export const ReviewItemSchema = z.object({

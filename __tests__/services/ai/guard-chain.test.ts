@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { vi } from "vitest"
 vi.mock("@/lib/db", () => ({ db: {} }))
-import { hardCodedFactKind, proposesRangeFigure, losesStatedFigure } from "@/lib/services/ai/shared/ai-helpers"
+import { hardCodedFactKind, losesStatedFigure } from "@/lib/services/ai/shared/ai-helpers"
 import { isTrivialEdit, isCosmeticReword, addsNoInformation, dropsContentWithoutGain } from "@/lib/services/ai/shared/text-similarity"
 import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 
@@ -29,7 +29,9 @@ import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 function survivesBulletChain(original: string, suggested: string, source: string, terms: string[]) {
   const kind = hardCodedFactKind(suggested, source)
   if (kind === "placeholder" || kind === "brand") return "hardCoded"
-  if (kind === "figure" && !proposesRangeFigure(suggested)) return "hardCoded"
+  // DISEÑO CORREGIDO (CEO): la cifra no se descarta — llega marcada para que el
+  // usuario la confirme. Placeholder y marca sí mueren (arriba).
+  if (kind === "figure") return "figureConfirm"
   if (isTrivialEdit(original, suggested)) return "trivial"
   if (isCosmeticReword(original, suggested)) return "cosmetic"
   if (addsNoInformation(original, suggested)) return "noInfo"
@@ -66,7 +68,6 @@ const BASURA: Array<[string, string]> = [
   ["• Desarrollé la app en Swift", "• Desarrollé la aplicación en Swift"],
   ["• Atendí 80 clientes por día", "• Atendí clientes en ventanilla con buen trato"],
   ["• Integré APIs RESTful con Swift", "• Integré APIs con buenas prácticas"],
-  ["• Hice pruebas de la app", "• Reduje los errores en producción un 40%"],
   ["• Hice pruebas de la app", "• Escribí pruebas con [N] casos de prueba"],
   ["• Trabajé en la app", "• Trabajé en la app usando Kubernetes y Terraform"],
 ]
@@ -107,5 +108,18 @@ describe("la cadena de guards, corrida entera", () => {
       .map(([o, s]) => [s.slice(0, 50), survivesBulletChain(o, s, SOURCE, TERMS)] as const)
       .filter(([, v]) => v === "KEPT")
     expect(vivas).toEqual([])
+  })
+
+  /**
+   * Y LA CIFRA NO SE BORRA — va a confirmar (diseño del CEO, 2026-08-22).
+   *
+   * «Reduje los errores un 40%» es una cifra que el CV no tiene. El diseño viejo
+   * la descartaba; el correcto la deja llegar MARCADA para que el usuario la
+   * confirme o corrija. No es basura que muere ni valor que entra a ciegas: es
+   * una propuesta que el usuario decide.
+   */
+  it("una cifra propuesta llega para confirmar, no se descarta ni se aplica a ciegas", () => {
+    const v = survivesBulletChain("• Hice pruebas de la app", "• Reduje los errores en producción un 40%", SOURCE, TERMS)
+    expect(v).toBe("figureConfirm")
   })
 })

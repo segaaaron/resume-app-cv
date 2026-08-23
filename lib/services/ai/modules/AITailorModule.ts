@@ -40,7 +40,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, hardCodedFactKind, proposesRangeFigure, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hardCodedFactKind, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
@@ -427,7 +427,9 @@ Reglas:
          * La doctrina ya lo decía: RANGO que confirma, nunca número exacto
          * presentado como hecho.
          */
-        if (kind === "figure" && !proposesRangeFigure(text)) { droppedHardCoded++; continue }
+        // LA CIFRA NUNCA SE BORRA. Sigue al chip «confirmá la cifra» (más abajo),
+        // que es el diseño del CEO: la IA propone, el usuario confirma el único
+        // dato que la IA no puede saber. Borrarla era una regresión mía.
 
         // Una reescritura que habla DE la persona en tercera persona se lee como
         // una carta que escribió otro, dentro de su propio historial.
@@ -447,7 +449,7 @@ Reglas:
         if (original && figureLosesItsVerb(original, text)) { droppedFigure++; continue }
 
         // Sin cambio real: idéntica, o un cambio de sinónimos.
-        if (original && (isTrivialEdit(original, text) || isCosmeticReword(original, text))) { droppedTrivial++; continue }
+        if (original && (isTrivialEdit(original, text) || isCosmeticReword(original, text, [...posting.hardSkills, ...posting.softSkills]))) { droppedTrivial++; continue }
 
         /**
          * Y NUNCA DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.

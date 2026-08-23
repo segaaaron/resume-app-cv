@@ -15,7 +15,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
-import { parseAIJson, safeParseAIJson, resolveLanguage, hardCodedFactKind, proposesRangeFigure, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
+import { parseAIJson, safeParseAIJson, resolveLanguage, hardCodedFactKind, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword, isTrivialEdit } from "../shared/text-similarity"
@@ -1753,8 +1753,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
        * número exacto es una afirmación que no puede defender.
        */
       const previewKind = hardCodedFactKind(cleanedPreview, resumeContext)
+      // Placeholder y marca no declarada SÍ se descartan: no son un dato del
+      // candidato para confirmar, son basura.
       const fabricatedFact = previewKind === "placeholder" || previewKind === "brand"
-        || (previewKind === "figure" && !proposesRangeFigure(cleanedPreview))
       if (fabricatedFact) {
         this.logger.warn("[AIService.reviewCV] dropped hard-coded suggestion", {
           field,
@@ -1762,6 +1763,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         })
         return { ...item, suggestion: undefined, location: loc }
       }
+      // UNA CIFRA NUNCA SE BORRA. La reescritura sobrevive y el panel muestra el
+      // chip «confirmá la cifra» — el diseño del CEO: la IA propone, el usuario
+      // confirma el único dato que la IA no puede saber. Descartarla era una
+      // regresión mía.
+      const needsFigureConfirm = previewKind === "figure"
 
       /**
        * Rewriting is not deleting the number either.
@@ -1800,7 +1806,12 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
       return {
         ...item,
-        suggestion: { ...item.suggestion, preview: cleanedPreview, targetId },
+        suggestion: {
+          ...item.suggestion,
+          preview: cleanedPreview,
+          targetId,
+          ...(needsFigureConfirm ? { needsFigureConfirm: true } : {}),
+        },
       }
     }
 
