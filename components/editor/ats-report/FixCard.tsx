@@ -74,6 +74,24 @@ export default function FixCard({
    * la única acción que baja el conteo, y por eso la única que termina.
    */
   const isCut = check.id.startsWith("tips.cut")
+  /**
+   * DOS LÍNEAS QUE CUENTAN LO MISMO NO SE ARREGLAN MEJORANDO UNA.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   *   «Presiono el botón y me dice que ya está bien escrito. Si ya está así,
+   *    ¿por qué comentarlo?»
+   *
+   * Y era la respuesta correcta a la pregunta equivocada. La tarjeta decía «dos
+   * líneas cuentan el mismo logro» y ofrecía «Mejorar la viñeta», que llama a
+   * improve-bullet — un endpoint que ve UNA línea. Aislada está bien escrita: el
+   * problema es que hay dos. El modelo contestaba lo único honesto que podía.
+   *
+   * Cuando el ejecutor YA escribió el reemplazo (tiene el motivo `duplicate` y ve
+   * el puesto entero), la tarjeta lo muestra y se aplica. Cuando no, la salida es
+   * cortar una — y cuál, lo decide quien hizo el trabajo, con las dos a la vista.
+   */
+  const isNearDup = check.id.startsWith("tips.near_dup") && !after
   /** El término que la vacante pide y el CV no dice, para ofrecer el reemplazo. */
   const replacement = typeof check.params?.replacement === "string" ? check.params.replacement : ""
   /**
@@ -252,7 +270,7 @@ export default function FixCard({
         ) : (
           <>
             {/* La tarjeta de corte NO ofrece reescribir: ver arriba. */}
-            {isCut ? (
+            {isCut || isNearDup ? (
               <>
                 {onRemove && (
                   <button type="button" onClick={() => onRemove(check.id)} disabled={busy}
@@ -293,7 +311,7 @@ export default function FixCard({
             )}
             {/* Borrar es una salida legítima: una línea que no gana su renglón
                 resta más de lo que suma, y reescribirla no la salva. */}
-            {!isCut && isBullet && onRemove && (
+            {!isCut && !isNearDup && isBullet && onRemove && (
               <button type="button" onClick={() => onRemove(check.id)}
                 className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
                 style={{ borderColor: "var(--a-border)", color: "var(--a-bad)" }}>

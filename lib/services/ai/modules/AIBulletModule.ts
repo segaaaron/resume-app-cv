@@ -168,6 +168,10 @@ export class AIBulletModule {
         en: "contains a recruiter cliché / empty buzzword — the rewrite MUST drop it and state the concrete work instead",
         es: "contiene un cliché de reclutador / muletilla vacía — la reescritura DEBE quitarlo y decir el trabajo concreto en su lugar",
       },
+      passive: {
+        en: "is written in the passive voice — the work shows and the person who did it disappears. The rewrite MUST be first person, active, opening with the verb the work deserves, keeping every fact",
+        es: "está escrita en voz pasiva — el trabajo aparece y quien lo hizo desaparece. La reescritura DEBE ir en primera persona, activa, abriendo con el verbo que le corresponde y conservando todos los datos",
+      },
       metric: {
         en: "states no result — sharpen the action and the outcome the source already contains. When the work plainly has a measurable size they did not write down, propose it as a range for them to confirm; never hard-code a precise figure",
         es: "no expresa resultado — afilá la acción y el resultado que el source YA contiene. Cuando el trabajo tiene un tamaño medible evidente que él no escribió, proponelo como rango para que lo confirme; nunca quemes una cifra exacta",

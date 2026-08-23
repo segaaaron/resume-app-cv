@@ -21,6 +21,8 @@ import ReportRail from "./ats-report/ReportRail"
 import { applyAllPlan, solvableChecks, tailorWorkload } from "@/lib/ats/report"
 import TailorModal, { type TailorFilter } from "./ats-report/TailorModal"
 import { postingTermsForPrompt } from "@/lib/ats/rewrite-keeps-match"
+import { hasCliche } from "@/lib/services/ai/shared/cliches"
+import { assessDescription } from "@/lib/services/ai/shared/bullet-quality"
 import { appliedSignatures, rememberApplied } from "@/lib/ats/applied-memory"
 import { useShallow } from "zustand/react/shallow"
 // Same normalization the matcher used to decide "demonstrated", so an accented
@@ -357,6 +359,21 @@ export default function ATSScorePanel() {
   const [softPick, setSoftPick] = useState<
     { skill: string; recommendedId: string | null; draft: string | null; soft: boolean }
   | null>(null)
+
+  /**
+   * POR QUÉ ESTA LÍNEA NECESITA TRABAJO, en el vocabulario que improve-bullet
+   * entiende. Deriva del TEXTO con las mismas funciones que lo diagnosticaron.
+   */
+  function focusForLine(checkId: string, line: string): string[] {
+    const out: string[] = []
+    if (checkId.startsWith("tips.passive")) out.push("passive")
+    if (hasCliche(line)) out.push("cliche")
+    if (assessDescription(line).weakOpenerIndices.length > 0) out.push("weak_verb")
+    // La cifra va última: es la más suave de las tres y no debe tapar un defecto
+    // concreto cuando existe.
+    if (out.length === 0 && !/\d/.test(line)) out.push("metric")
+    return out.slice(0, 3)
+  }
 
   async function improveMetricless(
     b: { text: string; targetId: string; jobTitle: string; index: number; reasons?: string[] },
@@ -899,7 +916,15 @@ export default function ATSScorePanel() {
    * congelada. El spinner estaba escrito en `FixCard` desde siempre; nunca se le
    * dijo cuándo encenderlo.
    */
-  const panelBusy = tailor.loading || !!mergingKey || !!weavingSoft
+  /**
+   * `improvingKey` FALTABA, y es el botón que más se aprieta.
+   *
+   * Reportado con captura (2026-08-22): «presiono el botón y no me da la
+   * apariencia de que está cargando algo». Es el mismo defecto que ya se pagó
+   * con la fusión —el spinner existía en `FixCard` desde siempre; nadie le decía
+   * cuándo— y quedó vivo en el camino de improve-bullet, que tarda lo mismo.
+   */
+  const panelBusy = tailor.loading || !!mergingKey || !!weavingSoft || !!improvingKey
 
   /** Lo que el ejecutor escribió, atado al hallazgo que cierra. */
   const resolutions = useMemo(
@@ -969,8 +994,29 @@ export default function ATSScorePanel() {
       const job = work.find((j) => j.id === action.targetId)
       const line = parseBullets(job?.description ?? "")[action.index] ?? ""
       if (!line) return
+      /**
+       * ── EL MENSAJE ABSURDO (reportado con captura, 2026-08-22) ────────────
+       *
+       *   «Me dice que ya está bien escrito, pero si ya está así ¿por qué
+       *    comentarlo?»
+       *
+       * Y tenía toda la razón: esta llamada iba SIN foco. El panel sabe por qué
+       * marcó la línea —está en pasiva, es de las más flojas, tiene un cliché— y
+       * no se lo decía al modelo, que entonces juzgaba la línea AISLADA y
+       * contestaba lo único honesto que podía: que está bien escrita.
+       *
+       * El foco sale de la línea con las MISMAS funciones que la marcaron, no de
+       * una tabla paralela: si el diagnóstico y el pedido salen de dos sitios,
+       * vuelven a decir cosas distintas.
+       */
       void improveMetricless(
-        { text: line, targetId: action.targetId, jobTitle: job?.jobTitle ?? "", index: action.index },
+        {
+          text: line,
+          targetId: action.targetId,
+          jobTitle: job?.jobTitle ?? "",
+          index: action.index,
+          reasons: focusForLine(checkId, line),
+        },
         `check-${checkId}`,
       )
       return
@@ -1458,6 +1504,10 @@ export default function ATSScorePanel() {
               addedTerms={addedKeywords}
               busyTerm={weavingSoft}
               busy={panelBusy}
+              /* El riel y el modal leen el MISMO estado de lo aplicado: sin esto
+                 el modal marcaba «Aplicado» y el riel seguía ofreciendo resolver
+                 lo mismo. */
+              appliedIds={appliedCheckIds}
             />
           </div>
         )}

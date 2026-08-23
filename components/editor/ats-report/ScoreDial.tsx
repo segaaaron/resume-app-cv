@@ -142,7 +142,8 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
-        <div className="relative shrink-0">
+        <div className="flex shrink-0 flex-col items-center">
+          <div className="relative">
           {/* 104 y no 118. En el riel quedan ~288px útiles: con el dial en 118 más
               el gap, al texto le sobraban ~154 y el veredicto —«1 arreglo crítico
               antes de mandarlo», quince palabras largas en español— se apilaba en
@@ -167,12 +168,32 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
             >
               {shown}
             </span>
-            {/* Rotulado por lo que mide, no como nota del CV. */}
-            <span className="mt-1 max-w-[86px] text-center text-[8.5px] font-bold uppercase leading-tight tracking-[0.08em]"
-              style={{ color: "var(--a-muted-2)" }}>
-              {t("axis_match")}
-            </span>
           </div>
+          </div>
+          {/**
+           * ── EL RÓTULO SALIÓ DEL ANILLO (reportado con captura, 2026-08-22) ──
+           *
+           *   «La palabra en inglés no entra en el anillo de progreso del score.»
+           *
+           * Y no entra POR GEOMETRÍA, no por un ancho mal puesto: dentro de un
+           * círculo de 104px, a la altura donde cae el rótulo —debajo de un número
+           * de 30px—, la cuerda disponible son unos 70px. «MATCH WITH THIS JOB»
+           * en mayúsculas no cabe ahí en ninguna tipografía, y «Coincidencia con
+           * la vacante» tampoco: el español entraba de casualidad porque partía en
+           * tres renglones cortos.
+           *
+           * Achicar la fuente sería un parche que el próximo idioma —o la próxima
+           * palabra larga— vuelve a romper. El número se queda adentro, que es lo
+           * que el anillo mide; el rótulo baja, donde tiene el ancho de la columna.
+           * Es el mismo arreglo que ya se hizo con el título de la tarjeta de
+           * sección cuando se partía a mitad de palabra.
+           */}
+          <span
+            className="mt-1.5 max-w-[112px] text-center text-[8.5px] font-bold uppercase leading-tight tracking-[0.08em] [text-wrap:balance]"
+            style={{ color: "var(--a-muted-2)" }}
+          >
+            {t("axis_match")}
+          </span>
         </div>
 
         <div className="min-w-0 flex-1">

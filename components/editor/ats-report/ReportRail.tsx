@@ -43,16 +43,36 @@ interface Props {
   addedTerms?: ReadonlySet<string>
   busyTerm?: string | null
   busy?: boolean
+  /**
+   * LO QUE EL USUARIO YA APLICÓ, para que el riel no lo siga ofreciendo.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ────────────────────────
+   *
+   *   «Los tips del reclutador, entrando en tailor, los muestra como aplicado
+   *    pero en el panel aún lo sugiere: no se actualiza la información.»
+   *
+   * El estado de lo aplicado vive en el panel y se le pasaba SÓLO al modal. El
+   * riel seguía pintando «Resolver con Tailor» sobre hallazgos que el modal ya
+   * marcaba como aplicados: la misma lista, dos vistas, y una de las dos mintiendo.
+   *
+   * Es el mismo defecto de fondo que el de los términos del riel — dos vistas del
+   * mismo dato que no se hablan.
+   */
+  appliedIds?: ReadonlySet<string>
 }
 
 export default function ReportRail({
-  report, onSolve, onFix, onAddTerm, onWeaveTerm, addedTerms, busyTerm, busy,
+  report, onSolve, onFix, onAddTerm, onWeaveTerm, addedTerms, busyTerm, busy, appliedIds,
 }: Props) {
   const t = useTranslations("editor.ats")
 
-  const crits = criticalChecks(report)
-  const open = openChecks(report)
-  const workload = solvableChecks(report)
+  // Los tres contadores DESCUENTAN lo aplicado. Si no, el riel dice «8 abiertos»
+  // mientras el modal muestra ocho tarjetas en verde: dos números sobre el mismo
+  // dato, y el usuario creyendo que el panel no registró su trabajo.
+  const noAplicado = (c: ReportCheck) => !appliedIds?.has(c.id)
+  const crits = criticalChecks(report).filter(noAplicado)
+  const open = openChecks(report).filter(noAplicado)
+  const workload = solvableChecks(report).filter(noAplicado)
   // Los términos que faltan cuentan como trabajo: son la palanca más grande del
   // puntaje (.45 las duras) y el botón no puede ofrecer menos de lo que resuelve.
   const missing = weavableTerms(report).filter((x) => x.cv > 0 || !addedTerms?.has(x.term))
@@ -60,14 +80,19 @@ export default function ReportRail({
   const recoverable = recoverablePoints(report)
   const ready = isReadyToSend(report)
 
-  const renderCheck = (c: ReportCheck) => (
-    <CheckRow
-      check={c}
-      onSolve={c.owner === "tailor" ? () => onSolve(c.id) : undefined}
-      onFix={c.owner === "auto" ? onFix : undefined}
-      busy={busy}
-    />
-  )
+  const renderCheck = (c: ReportCheck) => {
+    // Aplicado = resuelto. Se pinta como el informe pinta todo lo cerrado —en
+    // verde y sin botón— en vez de seguir ofreciendo trabajo ya hecho.
+    const aplicado = appliedIds?.has(c.id) ?? false
+    return (
+      <CheckRow
+        check={aplicado ? { ...c, state: "pass" } : c}
+        onSolve={!aplicado && c.owner === "tailor" ? () => onSolve(c.id) : undefined}
+        onFix={!aplicado && c.owner === "auto" ? onFix : undefined}
+        busy={busy}
+      />
+    )
+  }
 
   // Cada sección, SUS términos. Sin este filtro «duras» y «blandas» pintaban la
   // misma tabla completa dos veces — el cruce que este rediseño vino a terminar,

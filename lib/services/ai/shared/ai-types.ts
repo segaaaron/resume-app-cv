@@ -603,7 +603,12 @@ export type FillProfileResult = z.infer<typeof FillProfileResponseSchema>
  * request, because "no rule fires on it" and "a professional writer could not
  * sharpen it" are not the same statement.
  */
-export type BulletFocus = "metric" | "weak_verb" | "cliche" | "polish"
+/**
+ * `passive` entró el 2026-08-22 con el chequeo de voz pasiva. Sin él, el botón de
+ * esa tarjeta llamaba SIN foco y el modelo contestaba «ya está bien escrita»
+ * sobre una línea que el propio panel acababa de marcar — reportado con captura.
+ */
+export type BulletFocus = "metric" | "weak_verb" | "cliche" | "passive" | "polish"
 
 export interface ImproveBulletInput {
   text: string
