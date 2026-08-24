@@ -959,3 +959,16 @@ select:focus-visible {
 .ats-dial-arc {
   transition: stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1), stroke .4s ease;
 }
+
+/* ── Full-screen route loader ─────────────────────────────────────────
+   Zero-JS placeholder rendered by the loading.tsx boundaries outside the
+   dashboard (auth, editor, marketing). The spin reuses `dp-ring-spin`.
+   See components/shared/FullScreenLoading.tsx. */
+@keyframes brandLoaderPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.92); }
+  50%      { opacity: 1;    transform: scale(1.06); }
+}
+@keyframes brandLoaderBar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}

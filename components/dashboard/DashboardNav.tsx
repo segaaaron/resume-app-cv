@@ -17,6 +17,7 @@ import { useTranslations, useLocale } from "next-intl"
 import { NavItem, SectionLabel, NavSeparator } from "./_nav-sub"
 import ImportResumeButton from "./ImportResumeButton"
 import NavPendingOverlay from "./NavPendingOverlay"
+import BrandMark from "@/components/shared/BrandMark"
 
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
@@ -126,25 +127,7 @@ export default function DashboardNav({
     <div className="flex flex-col h-full overflow-hidden">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 pt-6 pb-5 border-b border-dash-border-s shrink-0">
-        <Link
-          href={`/${locale}`}
-          onClick={onDrawerClose}
-          className="flex items-center gap-3 no-underline"
-        >
-          {/* Logo icon */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.svg"
-            alt="Valhalla Resume"
-            width={38}
-            height={38}
-            className="rounded-[10px] shrink-0 block"
-          />
-          {/* Brand text */}
-          <span className="[font-family:var(--dash-serif)] text-[15px] font-bold text-dash-navy tracking-[-0.02em] leading-none">
-            Valhalla Resume
-          </span>
-        </Link>
+        <BrandMark href={`/${locale}`} onClick={onDrawerClose} tone="light" size="md" />
       </div>
 
       {/* Nav */}

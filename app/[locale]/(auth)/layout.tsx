@@ -1,6 +1,6 @@
-import Link from "next/link"
-import { FileText, CheckCircle2 } from "lucide-react"
+import { CheckCircle2 } from "lucide-react"
 import { getTranslations } from "next-intl/server"
+import BrandMark from "@/components/shared/BrandMark"
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const t = await getTranslations("auth.layout")
@@ -32,15 +32,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
         <div className="relative z-10 flex flex-col h-full px-10 py-10">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 w-fit group">
-            <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-105"
-              style={{ background: "linear-gradient(135deg,#00D4FF,#0099CC)", boxShadow: "0 4px 14px rgba(0,212,255,0.35)" }}>
-              <FileText className="h-[18px] w-[18px] text-white" />
-            </div>
-            <span className="text-white font-bold text-lg tracking-[-0.02em]">
-              Ready<span style={{ color: "#00D4FF" }}>CV</span>
-            </span>
-          </Link>
+          <BrandMark href="/" tone="dark" size="lg" />
 
           {/* Main copy */}
           <div className="mt-auto mb-auto pt-20" suppressHydrationWarning>
@@ -80,15 +72,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <div className="flex-1 flex flex-col bg-[#F8FAFC]">
         {/* Mobile logo */}
         <div className="lg:hidden px-6 pt-6 pb-2">
-          <Link href="/" className="flex items-center gap-2 w-fit">
-            <div className="w-8 h-8 rounded-[9px] flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,#00D4FF,#0099CC)", boxShadow: "0 3px 10px rgba(0,212,255,0.3)" }}>
-              <FileText className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-[#1a2e4a] font-bold text-base tracking-[-0.01em]">
-              Ready<span style={{ color: "#00D4FF" }}>CV</span>
-            </span>
-          </Link>
+          <BrandMark href="/" tone="light" size="sm" />
         </div>
 
         <main id="main-content" className="flex-1 flex items-center justify-center px-6 py-10">

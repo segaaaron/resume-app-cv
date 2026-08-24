@@ -3134,7 +3134,8 @@
       "service_unavailable": "Servicio no disponible. Intenta en unos minutos.",
       "network_error": "Sin conexión. Verifica tu internet."
     },
-    "home_label": "Inicio"
+    "home_label": "Inicio",
+    "loading": "Cargando…"
   },
   "blog_index": {
     "index_title": "Guías de CV y búsqueda de empleo",

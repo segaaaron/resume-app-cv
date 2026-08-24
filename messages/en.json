@@ -3134,7 +3134,8 @@
       "service_unavailable": "Service unavailable. Try again in a few minutes.",
       "network_error": "No connection. Check your internet."
     },
-    "home_label": "Home"
+    "home_label": "Home",
+    "loading": "Loading…"
   },
   "blog_index": {
     "index_title": "Resume tips and job search guides",
