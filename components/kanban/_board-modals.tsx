@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useTranslations } from "next-intl"
 import type { ApplicationCard, AppStatus } from "@/stores/applicationStore"
+import { Z_BOARD_DIALOG, Z_MODAL } from "@/lib/ui/z-layers"
 
 // ── RejectModal ───────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ export function RejectModal({ rejectState, rejectChip, setRejectChip, rejectNote
   ]
   if (!rejectState) return null
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+    <div style={{ zIndex: Z_BOARD_DIALOG }} className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
       <div className="bg-white rounded-2xl mx-4 w-full max-w-sm p-6" style={{ boxShadow: "0 24px 64px rgba(26,46,74,0.18)" }}>
         <div className="w-12 h-12 rounded-full mx-auto mb-4 bg-red-500/10 flex items-center justify-center">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -88,7 +89,7 @@ export function FoundJobModal({ foundCard, onClose }: { foundCard: ApplicationCa
   const t = useTranslations("kanban")
   if (!foundCard) return null
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div style={{ zIndex: Z_BOARD_DIALOG }} className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-white rounded-2xl mx-4 w-full max-w-sm p-8 text-center" style={{ boxShadow: "0 24px 64px rgba(26,46,74,0.18)" }}>
         <div className="text-5xl mb-4">🎉</div>
         <h2 className="text-2xl font-black mb-2 text-dash-navy" style={{ fontFamily: "var(--dash-serif)" }}>{t("found_title")}</h2>
@@ -125,7 +126,8 @@ export function RejectionDetailModal({ app, onClose }: { app: ApplicationCard | 
   const modal = (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md"
+      style={{ zIndex: Z_MODAL }}
+      className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md"
     >
       <div className="bg-white rounded-[20px] mx-4 w-full max-w-[440px] overflow-hidden" style={{ boxShadow: "0 32px 80px rgba(26,46,74,0.22)" }}>
 
@@ -234,7 +236,7 @@ export function ClearBoardModal({ open, onClose, onConfirm, clearing, totalCount
   const t = useTranslations("kanban")
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+    <div style={{ zIndex: Z_BOARD_DIALOG }} className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
       <div className="bg-white rounded-2xl mx-4 w-full max-w-sm p-6" style={{ boxShadow: "0 24px 64px rgba(26,46,74,0.18)" }}>
         <div className="w-12 h-12 rounded-full mx-auto mb-4 bg-red-500/10 flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

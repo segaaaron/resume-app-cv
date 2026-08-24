@@ -10,6 +10,8 @@ import DashboardNav from "./DashboardNav"
 import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
 import ImportResumeButton from "./ImportResumeButton"
 import { apiFetch } from "@/lib/apiFetch"
+import { Z_DRAWER_SCRIM, Z_STICKY_BAR } from "@/lib/ui/z-layers"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 interface DashboardShellProps {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
@@ -34,17 +36,20 @@ function TopbarNewCVButton({ locale, isPro }: { locale: string; isPro: boolean }
   const t = useTranslations("dashboard.shell")
   const router = useRouter()
   const [creating, setCreating] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
 
   async function createResume() {
     // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
     if (creating) return
     setCreating(true)
     setTimeout(() => setCreating(false), 1500)
-    if (!isPro) { router.push(`/${locale}/pricing`); return }
+    if (!isPro) { setLeaving(true); router.push(`/${locale}/pricing`); return }
     try {
       const res = await apiFetch("/api/resumes", { method: "POST" })
       if (!res.ok) { toast.error(t("error_create_cv")); setCreating(false); return }
       const data = await res.json()
+      setLeaving(true)
       router.push(`/${locale}/editor/${data.id}?new=1`)
     } catch {
       toast.error(t("error_create_cv"))
@@ -53,19 +58,22 @@ function TopbarNewCVButton({ locale, isPro }: { locale: string; isPro: boolean }
   }
 
   return (
-    <button
-      type="button"
-      onClick={createResume}
-      disabled={creating}
-      className={`${btnGoldClass} disabled:opacity-60`}
-    >
-      {creating ? (
-        <Loader2 className="w-3 h-3 animate-spin" />
-      ) : (
-        <Plus className="w-3 h-3" />
-      )}
-      {t("new_cv")}
-    </button>
+    <>
+      <PendingScreen show={leaving} />
+      <button
+        type="button"
+        onClick={createResume}
+        disabled={creating}
+        className={`${btnGoldClass} disabled:opacity-60`}
+      >
+        {creating ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <Plus className="w-3 h-3" />
+        )}
+        {t("new_cv")}
+      </button>
+    </>
   )
 }
 
@@ -73,13 +81,15 @@ function TopbarNewLetterButton({ locale, isPro }: { locale: string; isPro: boole
   const t = useTranslations("dashboard.shell")
   const router = useRouter()
   const [creating, setCreating] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
 
   async function createLetter() {
     // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
     if (creating) return
     setCreating(true)
     setTimeout(() => setCreating(false), 1500)
-    if (!isPro) { router.push(`/${locale}/pricing`); return }
+    if (!isPro) { setLeaving(true); router.push(`/${locale}/pricing`); return }
     try {
       const res = await apiFetch("/api/cover-letters", {
         method: "POST",
@@ -88,6 +98,7 @@ function TopbarNewLetterButton({ locale, isPro }: { locale: string; isPro: boole
       })
       if (!res.ok) { toast.error(t("error_create_letter")); setCreating(false); return }
       const data = await res.json()
+      setLeaving(true)
       router.push(`/${locale}/cover-letter/${data.id}?new=1`)
     } catch {
       toast.error(t("error_create_letter"))
@@ -96,19 +107,22 @@ function TopbarNewLetterButton({ locale, isPro }: { locale: string; isPro: boole
   }
 
   return (
-    <button
-      type="button"
-      onClick={createLetter}
-      disabled={creating}
-      className={`${btnGoldClass} disabled:opacity-60`}
-    >
-      {creating ? (
-        <Loader2 className="w-3 h-3 animate-spin" />
-      ) : (
-        <Plus className="w-3 h-3" />
-      )}
-      {t("new_letter")}
-    </button>
+    <>
+      <PendingScreen show={leaving} />
+      <button
+        type="button"
+        onClick={createLetter}
+        disabled={creating}
+        className={`${btnGoldClass} disabled:opacity-60`}
+      >
+        {creating ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <Plus className="w-3 h-3" />
+        )}
+        {t("new_letter")}
+      </button>
+    </>
   )
 }
 
@@ -221,8 +235,9 @@ export default function DashboardShell({
       <div
         aria-hidden="true"
         onClick={() => setDrawerOpen(false)}
-        className="fixed inset-0 z-[990] transition-opacity duration-[240ms] ease-[ease]"
+        className="fixed inset-0 transition-opacity duration-[240ms] ease-[ease]"
         style={{
+          zIndex: Z_DRAWER_SCRIM,
           background: "rgba(8,10,16,0.55)",
           opacity: drawerOpen ? 1 : 0,
           pointerEvents: drawerOpen ? "auto" : "none",
@@ -246,7 +261,8 @@ export default function DashboardShell({
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Topbar */}
           <header
-            className="h-14 shrink-0 flex items-center gap-[14px] px-4 sm:px-7 border-b border-dash-border z-30 bg-white/85 backdrop-blur-[10px]"
+            style={{ zIndex: Z_STICKY_BAR }}
+            className="h-14 shrink-0 flex items-center gap-[14px] px-4 sm:px-7 border-b border-dash-border bg-white/85 backdrop-blur-[10px]"
           >
             {/* Mobile burger — visible on ≤1024px */}
             <button

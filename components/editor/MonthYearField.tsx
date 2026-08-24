@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { Z_POPOVER_OVER_BAR } from "@/lib/ui/z-layers"
 
 const MONTHS = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"] as const
 const MIN_YEAR = 1960
@@ -177,7 +178,7 @@ export default function MonthYearField({
           </Popover.Trigger>
 
           <Popover.Portal>
-            <Popover.Positioner side="bottom" align="end" sideOffset={6} className="z-[60]">
+            <Popover.Positioner side="bottom" align="end" sideOffset={6} style={{ zIndex: Z_POPOVER_OVER_BAR }}>
               <Popover.Popup className="w-[248px] rounded-xl border border-border bg-popover p-3 shadow-lg outline-none">
                 {/* Year stepper. A dropdown of fifty years is what this replaces. */}
                 <div className="mb-2.5 flex items-center justify-between">

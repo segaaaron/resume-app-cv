@@ -5,6 +5,7 @@ import type { AppStatus, ApplicationCard } from "@/stores/applicationStore"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { enUS } from "date-fns/locale/en-US"
+import { Z_BOARD_DRAG_CARD } from "@/lib/ui/z-layers"
 
 // ── CSS color constants ───────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
     if (dragging) return {
       opacity: 0.25, transform: "scale(0.97)",
       boxShadow: "none", borderColor: C.border,
-      background: C.surface, cursor: "grabbing", zIndex: 50,
+      background: C.surface, cursor: "grabbing", zIndex: Z_BOARD_DRAG_CARD,
       filter: "grayscale(0.4)",
     }
     return {}

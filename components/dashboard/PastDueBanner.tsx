@@ -7,6 +7,7 @@ import { AlertTriangle, X, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { track } from "@/lib/analytics/track"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 export default function PastDueBanner() {
   const t = useTranslations("dashboard.past_due_banner")
@@ -14,6 +15,8 @@ export default function PastDueBanner() {
   const { data: session } = useSession()
   const [dismissed, setDismissed] = useState(false)
   const [loading, setLoading] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
 
   if (dismissed) return null
   if (session?.user?.plan === "LIMITED") return null
@@ -34,6 +37,7 @@ export default function PastDueBanner() {
       }
       if (data.url) {
         track("billing_portal_opened", { provider: "stripe" })
+        setLeaving(true)
         window.location.href = data.url
       }
     } finally {
@@ -43,6 +47,7 @@ export default function PastDueBanner() {
 
   return (
     <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-3 mx-4 mt-4 text-sm">
+      <PendingScreen show={leaving} />
       <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
       <div className="flex-1 min-w-0">
         <p className="font-semibold">{t("title")}</p>

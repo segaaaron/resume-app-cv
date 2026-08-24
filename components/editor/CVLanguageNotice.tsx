@@ -7,6 +7,7 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { detectCvLanguageOrNull } from "@/lib/resume/cv-language"
 import { Languages, X } from "lucide-react"
+import { Z_SCREEN_DIALOG } from "@/lib/ui/z-layers"
 
 /** The mark never changes underneath us — it is written by this component only. */
 function subscribeNever() { return () => {} }
@@ -87,7 +88,8 @@ export default function CVLanguageNotice() {
   const dialog = showDialog && typeof document !== "undefined"
     ? createPortal(
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center p-4"
+          style={{ zIndex: Z_SCREEN_DIALOG }}
+          className="fixed inset-0 flex items-center justify-center p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="cv-lang-title"

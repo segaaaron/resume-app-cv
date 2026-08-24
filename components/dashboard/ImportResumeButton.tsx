@@ -10,6 +10,8 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { track } from "@/lib/analytics/track"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { Z_PAGE_OVERLAY } from "@/lib/ui/z-layers"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 interface Props {
   /**
@@ -29,6 +31,8 @@ export default function ImportResumeButton({ locked }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   // The overlay is portaled to <body>: this button lives inside the dashboard nav,
   // whose transform traps position:fixed inside the nav's box (it rendered small in
   // the top-left instead of full-screen). Mounted-guard keeps SSR/hydration clean.
@@ -106,6 +110,7 @@ export default function ImportResumeButton({ locked }: Props) {
           })
         }
       }
+      setLeaving(true)
       router.push(`/${locale}/editor/${data.id}`)
     } catch {
       toast.error(t("import_error"))
@@ -118,6 +123,7 @@ export default function ImportResumeButton({ locked }: Props) {
 
   return (
     <>
+      <PendingScreen show={leaving} />
       <input
         ref={inputRef}
         type="file"
@@ -148,7 +154,7 @@ export default function ImportResumeButton({ locked }: Props) {
       </Button>
 
       {uploading && mounted && createPortal(
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-[100]">
+        <div style={{ zIndex: Z_PAGE_OVERLAY }} className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center">
           <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm w-full mx-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
               <FileText className="h-8 w-8 text-primary animate-pulse" />

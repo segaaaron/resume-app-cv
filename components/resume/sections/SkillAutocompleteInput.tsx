@@ -4,6 +4,7 @@ import { useState, useRef, useMemo, useId, type ReactNode } from "react"
 import { useTranslations } from "next-intl"
 import { filterSkills, type SkillOption } from "@/lib/ats/skill-catalog"
 import { findDuplicateSkill, containsSkill } from "@/lib/ats/skill-dedup"
+import { Z_DIALOG } from "@/lib/ui/z-layers"
 
 interface Props {
   value: string
@@ -136,7 +137,7 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
         // Wrapper holds the (optional) "did you mean" heading OUTSIDE the listbox —
         // per the WAI-ARIA combobox pattern, a listbox's children must be options
         // (or groups), never a bare label li.
-        <div className="absolute left-0 right-0 top-[44px] z-50 rounded-2xl border border-slate-200 bg-white py-1 shadow-[0_20px_48px_-12px_rgba(26,46,74,0.35)] overflow-hidden">
+        <div style={{ zIndex: Z_DIALOG }} className="absolute left-0 right-0 top-[44px] rounded-2xl border border-slate-200 bg-white py-1 shadow-[0_20px_48px_-12px_rgba(26,46,74,0.35)] overflow-hidden">
           {fuzzy && (
             <p className="px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-600">{t("skills.did_you_mean")}</p>
           )}

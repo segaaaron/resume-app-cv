@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, Download, FileDown, FileText, Loader2, CheckCircle2, Lock } from "lucide-react"
 import { toast } from "sonner"
+import { Z_DIALOG } from "@/lib/ui/z-layers"
 
 export interface DownloadOption {
   format: "pdf"
@@ -136,7 +137,7 @@ export default function DownloadMenu({
       </Button>
 
       {open && !locked && (
-        <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-xl min-w-[220px] overflow-hidden">
+        <div style={{ zIndex: Z_DIALOG }} className="absolute right-0 top-full mt-1 bg-white border border-border rounded-xl shadow-xl min-w-[220px] overflow-hidden">
           {options.map((opt) => {
             const otherLoading = anyLoading && !opt.isLoading
             const Icon = opt.format === "pdf" ? FileDown : FileText

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Z_POPOVER_OVER_BAR } from "@/lib/ui/z-layers"
 
 /**
  * Thin fixed progress bar at the very top of the viewport that fills as the
@@ -32,7 +33,7 @@ export default function ReadingProgress() {
   }, [])
 
   return (
-    <div aria-hidden className="fixed inset-x-0 top-0 z-[60] h-[3px] bg-transparent">
+    <div aria-hidden style={{ zIndex: Z_POPOVER_OVER_BAR }} className="fixed inset-x-0 top-0 h-[3px] bg-transparent">
       <div
         className="h-full bg-gradient-to-r from-[#00D4FF] to-[#4F8BFF] shadow-[0_0_12px_rgba(0,212,255,0.7)] transition-[width] duration-150 ease-out"
         style={{ width: `${progress}%` }}

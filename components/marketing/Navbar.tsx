@@ -9,6 +9,7 @@ import { Menu, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
+import { Z_FIXED_BAR, Z_PAGE_OVERLAY } from "@/lib/ui/z-layers"
 
 export default function Navbar() {
   const { data: session } = useSession()
@@ -34,10 +35,11 @@ export default function Navbar() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#C9A96E]/25 shadow-brand-xs">
+    <header style={{ zIndex: Z_FIXED_BAR }} className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-[#C9A96E]/25 shadow-brand-xs">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#1a2e4a] focus:shadow-lg focus:outline focus:outline-2 focus:outline-[#00D4FF]"
+        style={{ zIndex: Z_PAGE_OVERLAY }}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#1a2e4a] focus:shadow-lg focus:outline focus:outline-2 focus:outline-[#00D4FF]"
       >
         {t("skip_to_content")}
       </a>

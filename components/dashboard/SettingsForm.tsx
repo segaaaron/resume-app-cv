@@ -22,6 +22,7 @@ import { hasStripeBillingPortal } from "@/lib/plans"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { FieldInput, BtnGold, BtnGhost, DataCard } from "./_settings-sub"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 interface UserData {
   id: string
@@ -95,6 +96,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const [name, setName]                 = useState(user.name ?? "")
   const [saving, setSaving]             = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -156,6 +159,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       const { url } = await res.json()
       if (!res.ok || !url) { toast.error(t("portal_error")); return }
       track("billing_portal_opened", { provider: "stripe" })
+      setLeaving(true)
       window.location.href = url
     } catch {
       toast.error(t("portal_error"))
@@ -224,6 +228,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <PendingScreen show={leaving} />
 
       {/* ── Card 1: Perfil (full width) ── */}
       <div className="col-span-1 sm:col-span-2 bg-white border border-dash-border rounded-[10px] overflow-hidden">
@@ -417,7 +422,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
                 </div>
             </>
           ) : (
-            <BtnGold onClick={() => { window.location.href = `/${locale}/pricing` }} fullWidth>
+            <BtnGold onClick={() => { setLeaving(true); window.location.href = `/${locale}/pricing` }} fullWidth>
               {t("activate_pro")}
             </BtnGold>
           )}

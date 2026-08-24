@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { track } from "@/lib/analytics/track"
 import { useTranslations, useLocale } from "next-intl"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 type FormState = "login" | "challenge" | "blocked"
 
@@ -39,6 +40,12 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
   const [verifyingCode, setVerifyingCode] = useState(false)
   const [otp, setOtp] = useState("")
   const [blockedUntil, setBlockedUntil] = useState<Date | null>(null)
+  /**
+   * Se enciende al empezar a irse y NO se apaga: la navegación desmonta esto.
+   * Apagarla en un `finally` bajaría la pantalla justo cuando empieza la espera
+   * larga — el dashboard todavía cargando y el formulario otra vez a la vista.
+   */
+  const [leaving, setLeaving] = useState(false)
 
   const schema = z.object({
     email: z.string().email(t("email_invalid")),
@@ -73,6 +80,7 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
       toast.error(t("error"))
     } else {
       track("login_completed", { method: "password" })
+      setLeaving(true)
       router.push(planParam ? `/${locale}/checkout?plan=${planParam}` : `/${locale}/dashboard/resumes`)
       router.refresh()
     }
@@ -134,6 +142,7 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
         })
         if (result?.ok && !result.error) {
           track("login_completed", { method: "password" })
+          setLeaving(true)
           router.push(planParam ? `/${locale}/checkout?plan=${planParam}` : `/${locale}/dashboard/resumes`)
           router.refresh()
         } else {
@@ -188,6 +197,7 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
   if (formState === "challenge") {
     return (
       <div className="w-full max-w-[420px]">
+        <PendingScreen show={sendingCode || verifyingCode || leaving} />
         <div className="mb-6 p-4 rounded-[10px] flex items-start gap-3"
           style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}>
           <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
@@ -260,6 +270,7 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
   // ── Login Form ────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-[440px]">
+      <PendingScreen show={isSubmitting || googleLoading || leaving} />
       {/* Card */}
       <div className="bg-white rounded-2xl px-8 py-8"
         style={{ boxShadow: "0 4px 32px rgba(26,46,74,0.10), 0 1px 4px rgba(26,46,74,0.06)", border: "1px solid rgba(217,225,237,0.8)" }}>

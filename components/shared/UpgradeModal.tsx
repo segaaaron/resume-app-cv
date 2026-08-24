@@ -10,7 +10,7 @@
  * `useUpgradeModal()`.
  */
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { motion, AnimatePresence } from "framer-motion"
@@ -24,6 +24,8 @@ import {
   X,
   ArrowRight,
 } from "lucide-react"
+import { Z_UPGRADE_DIALOG } from "@/lib/ui/z-layers"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 export type UpgradeTrigger =
   | "download"
@@ -109,16 +111,23 @@ export default function UpgradeModal({
 
   const ctaLabel = t(`${ns}.cta`)
 
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
+
   function handleUpgrade() {
     onClose()
+    setLeaving(true)
     router.push(`/${locale}/pricing`)
   }
 
   return (
+    <>
+      <PendingScreen show={leaving} />
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          style={{ zIndex: Z_UPGRADE_DIALOG }}
+          className="fixed inset-0 flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -268,5 +277,6 @@ export default function UpgradeModal({
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   )
 }

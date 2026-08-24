@@ -39,9 +39,11 @@ describe("dashboard tabs have a loading boundary", () => {
     expect(dynamicPages.length).toBeGreaterThanOrEqual(6)
   })
 
-  it.each(dynamicPages)("%s renders a skeleton while it loads", (page) => {
+  // El esqueleto por pestaña se retiró por orden del CEO (2026-08-24): la app
+  // dice «cargando» de UNA sola forma, a pantalla completa, en todas partes.
+  it.each(dynamicPages)("%s muestra la pantalla de carga mientras carga", (page) => {
     const boundary = loadingBoundaryFor(page)
     expect(boundary, `${page} is force-dynamic with no loading.tsx above it`).not.toBeNull()
-    expect(readFileSync(boundary as string, "utf-8")).toContain("DashboardSkeleton")
+    expect(readFileSync(boundary as string, "utf-8")).toContain("FullScreenLoading")
   })
 })

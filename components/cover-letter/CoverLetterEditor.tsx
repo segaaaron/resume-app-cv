@@ -22,6 +22,8 @@ const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
 import { CoverLetterThumbnail } from "./thumbnails"
 import type { CandidateData, CoverLetterContent, TemplateProps } from "./templates/types"
 import CoverLetterAtsPanel from "./CoverLetterAtsPanel"
+import { Z_FIXED_BAR } from "@/lib/ui/z-layers"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 const TEMPLATE_COMPONENTS: Record<string, React.ComponentType<TemplateProps>> = {
   elegant:   dynamic(() => import("./templates/ElegantTemplate"),       { ssr: false }),
@@ -209,6 +211,8 @@ export default function CoverLetterEditor({
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess: aiOnSuccess } = useAICall()
   const [showExitModal, setShowExitModal] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const [title, setTitle] = useState(initialTitle)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
@@ -366,16 +370,16 @@ export default function CoverLetterEditor({
 
   function handleBack() {
     if (dirty) { setShowExitModal(true); return }
-    router.push("/dashboard/cover-letters")
+    { setLeaving(true); router.push("/dashboard/cover-letters") }
   }
 
   async function handleModalSave() {
     await save()
-    router.push("/dashboard/cover-letters")
+    { setLeaving(true); router.push("/dashboard/cover-letters") }
   }
 
   function handleModalDiscard() {
-    router.push("/dashboard/cover-letters")
+    { setLeaving(true); router.push("/dashboard/cover-letters") }
   }
 
   /**
@@ -419,7 +423,7 @@ export default function CoverLetterEditor({
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
           openUpgradeModal,
-          redirect: (p) => router.push(p),
+          redirect: (p) => { setLeaving(true); router.push(p) },
           locale,
           fallbackToast: () => toast.error(res.status === 429 ? t("ai_rate_limit") : t("ai_pro_only")),
           dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
@@ -471,7 +475,7 @@ export default function CoverLetterEditor({
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
           openUpgradeModal,
-          redirect: (p) => router.push(p),
+          redirect: (p) => { setLeaving(true); router.push(p) },
           locale,
           fallbackToast: () => toast.error(res.status === 429 ? t("ai_rate_limit") : t("ai_pro_only")),
           dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
@@ -646,6 +650,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
 
   return (
     <div className="h-screen flex flex-col bg-[#F4F8FD]">
+      <PendingScreen show={leaving} />
       {/* Top bar — matches resume EditorTopBar */}
       <header
         className="h-[58px] flex items-center justify-between shrink-0 sticky top-0 z-10 relative px-3 sm:px-5"
@@ -1266,8 +1271,8 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
       </div>
 
       {/* Mobile bottom toggle bar */}
-      <div className="md:hidden print:hidden fixed bottom-0 left-0 right-0 flex h-14 z-50 bg-[#0B1B3D] border-t border-dash-cyan/15"
-        style={{ boxShadow: "0 -4px 24px rgba(11,27,61,0.35)" }}>
+      <div className="md:hidden print:hidden fixed bottom-0 left-0 right-0 flex h-14 bg-[#0B1B3D] border-t border-dash-cyan/15"
+        style={{ zIndex: Z_FIXED_BAR, boxShadow: "0 -4px 24px rgba(11,27,61,0.35)" }}>
         {([
           { view: "form" as const, icon: <FileText className="w-[18px] h-[18px]" />, label: t("mobile_edit") },
           { view: "preview" as const, icon: <Eye className="w-[18px] h-[18px]" />, label: t("mobile_preview") },

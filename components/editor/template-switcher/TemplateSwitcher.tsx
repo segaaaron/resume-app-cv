@@ -9,6 +9,7 @@ import UpgradeModal from "@/components/editor/UpgradeModal"
 import { TemplateCard } from "./TemplateCard"
 import { useTemplateSwitcher } from "./hooks/useTemplateSwitcher"
 import { PRO_IDS } from "./template-data"
+import { Z_DIALOG } from "@/lib/ui/z-layers"
 
 const proTemplates = TEMPLATES.filter((t) => PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
 const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
@@ -58,8 +59,8 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
       />
 
       {/* Sidebar (desktop) or fullscreen panel (mobile) */}
-      <div className={cn(
-        "flex flex-col overflow-hidden z-50",
+      <div style={{ zIndex: Z_DIALOG }} className={cn(
+        "flex flex-col overflow-hidden",
         "bg-[linear-gradient(180deg,#f0f8ff_0%,#e8f4fb_60%,#edf6fb_100%)]",
         fullscreen
           ? "w-full h-full"

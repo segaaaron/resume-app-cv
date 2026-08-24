@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import { useTranslations } from "next-intl"
 import { Sparkles, PencilLine, X } from "lucide-react"
+import { Z_SCREEN_DIALOG } from "@/lib/ui/z-layers"
 
 interface Props {
   onPickAI: () => void
@@ -38,7 +39,7 @@ export default function NewResumeWelcome({ onPickAI, onPickBlank }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="new-welcome-title" onKeyDown={onKeyDown}>
+    <div style={{ zIndex: Z_SCREEN_DIALOG }} className="fixed inset-0 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="new-welcome-title" onKeyDown={onKeyDown}>
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onPickBlank} aria-hidden />
       <div ref={cardRef} className="relative w-full max-w-lg rounded-3xl border border-cyan-100 bg-white p-6 shadow-[0_40px_100px_-20px_rgba(26,46,74,0.45)] animate-in fade-in zoom-in-95 duration-200">
         <button

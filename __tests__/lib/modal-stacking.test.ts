@@ -1,7 +1,22 @@
 import { describe, it, expect } from "vitest"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
-import { Z_MODAL, Z_MODAL_FOLLOW_UP } from "@/lib/ui/z-layers"
+import {
+  Z_MODAL,
+  Z_MODAL_FOLLOW_UP,
+  Z_STICKY_BAR,
+  Z_NAV_PANEL,
+  Z_FIXED_BAR,
+  Z_POPOVER_OVER_BAR,
+  Z_PAGE_OVERLAY,
+  Z_SCREEN_DIALOG,
+  Z_UPGRADE_DIALOG,
+  Z_DRAWER_SCRIM,
+  Z_DASHBOARD_OVERLAY,
+  Z_ROUTE_PENDING,
+  Z_ROUTE_LOADING,
+  Z_BOARD_DIALOG,
+} from "@/lib/ui/z-layers"
 
 /**
  * LO QUE PREGUNTA VA ENCIMA DE LO QUE PREGUNTÓ.
@@ -96,4 +111,75 @@ describe("ninguno de los dos elige su capa por su cuenta", () => {
       expect(src, `${file} no usa la escala compartida`).toContain(layer)
     })
   }
+})
+
+/**
+ * NINGUNA CAPA DE APP SE ELIGE FUERA DEL REGISTRO.
+ *
+ * ── POR QUÉ (CEO, 2026-08-24: «no quiero nada suelto») ─────────────────────
+ *
+ * La primera vuelta subió al registro sólo las dos capas del defecto reportado
+ * y dejó las otras trece reparidas por veinte archivos. Mientras exista un
+ * `z-[NNN]` a mano, el defecto original —dos componentes eligiendo su número
+ * sin mirarse— puede volver a nacer en cualquier pantalla.
+ *
+ * Vigila lo que se pisa de verdad: los valores de app (≥30). Los z pequeños
+ * (`z-0`, `z-[1]`, `z-[5]`, `z-10`, `z-20`) ordenan hijos DENTRO de una tarjeta
+ * y viven en su propio contexto de apilado: no pueden chocar con nada.
+ *
+ * Es un test de AUSENCIA —un número que no debe estar escrito— y por eso lee el
+ * fuente; queda registrado en `source-reading-guards`.
+ */
+describe("las capas de la app viven todas en el registro", () => {
+  const APP_LAYER = /z-\[(\d{2,})\]|\bz-(30|40|50|60)\b|zIndex:\s*(\d{2,})|z-index:\s*(\d{2,})/g
+
+  function sources(dir: string): string[] {
+    const out: string[] = []
+    for (const entry of readdirSync(join(process.cwd(), dir), { withFileTypes: true })) {
+      const rel = `${dir}/${entry.name}`
+      if (entry.isDirectory()) out.push(...sources(rel))
+      else if (/\.tsx?$/.test(entry.name)) out.push(rel)
+    }
+    return out
+  }
+
+  const files = [...sources("components"), ...sources("app")].filter(
+    (f) => f !== "lib/ui/z-layers.ts",
+  )
+
+  it("ningún componente escribe un z de app a mano", () => {
+    const offenders: string[] = []
+    for (const file of files) {
+      const src = readFileSync(join(process.cwd(), file), "utf8")
+      for (const m of src.matchAll(APP_LAYER)) {
+        const value = Number(m[1] ?? m[2] ?? m[3] ?? m[4])
+        if (value >= 30) offenders.push(`${file} → ${m[0]}`)
+      }
+    }
+    expect(
+      offenders,
+      `estas capas eligen su número solas; declaralas en lib/ui/z-layers.ts:\n${offenders.join("\n")}`,
+    ).toEqual([])
+  })
+
+  /**
+   * Y la escala mantiene su orden: cada peldaño por encima del anterior. Si dos
+   * empatan a propósito (un diálogo y una barra fija comparten el 50) es porque
+   * nunca se superponen; lo que no puede pasar es que un modal quede por debajo
+   * de una barra.
+   */
+  it("la escala sube y el modal es el techo", () => {
+    expect(Z_STICKY_BAR).toBeLessThan(Z_NAV_PANEL)
+    expect(Z_NAV_PANEL).toBeLessThan(Z_FIXED_BAR)
+    expect(Z_FIXED_BAR).toBeLessThan(Z_POPOVER_OVER_BAR)
+    expect(Z_POPOVER_OVER_BAR).toBeLessThan(Z_PAGE_OVERLAY)
+    expect(Z_PAGE_OVERLAY).toBeLessThan(Z_SCREEN_DIALOG)
+    expect(Z_SCREEN_DIALOG).toBeLessThan(Z_UPGRADE_DIALOG)
+    expect(Z_UPGRADE_DIALOG).toBeLessThan(Z_DRAWER_SCRIM)
+    expect(Z_DRAWER_SCRIM).toBeLessThan(Z_DASHBOARD_OVERLAY)
+    expect(Z_DASHBOARD_OVERLAY).toBeLessThan(Z_ROUTE_PENDING)
+    expect(Z_ROUTE_PENDING).toBeLessThan(Z_ROUTE_LOADING)
+    expect(Z_ROUTE_LOADING).toBeLessThan(Z_BOARD_DIALOG)
+    expect(Z_BOARD_DIALOG).toBeLessThan(Z_MODAL)
+  })
 })

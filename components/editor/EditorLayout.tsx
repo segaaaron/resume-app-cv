@@ -12,6 +12,7 @@ import { isActive, isSuperAdmin, effectivePlan } from "@/lib/plans"
 import UpgradeBanner from "./UpgradeBanner"
 import NewResumeWelcome from "./NewResumeWelcome"
 import { FileText, Eye } from "lucide-react"
+import { Z_FIXED_BAR } from "@/lib/ui/z-layers"
 
 interface Props {
   resumeId: string
@@ -132,7 +133,7 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
         </div>
 
         {/* Mobile bottom bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 flex h-14 bg-[#0B1B3D] border-t border-[rgba(0,229,255,0.15)] shadow-[0_-4px_24px_rgba(11,27,61,0.35)] z-50">
+        <div style={{ zIndex: Z_FIXED_BAR }} className="md:hidden fixed bottom-0 left-0 right-0 flex h-14 bg-[#0B1B3D] border-t border-[rgba(0,229,255,0.15)] shadow-[0_-4px_24px_rgba(11,27,61,0.35)]">
           <button type="button" onClick={() => setMobileView("form")} style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }} className={TAB_CLS(mobileView === "form")}>
             <FileText className="w-[16px] h-[16px] pointer-events-none" strokeWidth={2} />
             <span className="pointer-events-none">Editar</span>

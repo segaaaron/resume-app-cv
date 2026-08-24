@@ -9,6 +9,7 @@ import { track } from "@/lib/analytics/track"
 import type { BillingCycle } from "@/lib/analytics/events"
 import { useTranslations, useLocale } from "next-intl"
 import PaymentMethodSelector, { type PaymentMethod } from "@/components/marketing/PaymentMethodSelector"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 // Maps a pricing card to its analytics plan name + billing cycle (low cardinality).
 const PLAN_META: Record<"monthly" | "annual" | "basic" | "sprint", { name: string; cycle: BillingCycle }> = {
@@ -64,6 +65,8 @@ interface Props {
 
 export default function PricingButtons({ plan, blocksPurchase = false, isStaffAccess = false, billingNeedsSupport = false, currentPlanEndsAt = null, alreadyCancelled = false, theme = "light", buttonClassName, isEU = false, paypalAvailable = false }: Props) {
   const [loading, setLoading] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const [consented, setConsented] = useState(false)
   const [method, setMethod] = useState<PaymentMethod>("stripe")
   const locale = useLocale()
@@ -114,6 +117,7 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
       // right door for returning buyers; anyone without an account creates one from
       // the "create account" link there, so new users are not turned away either.
       if (res.status === 401) {
+        setLeaving(true)
         router.push(`/login?plan=${plan}`)
         return
       }
@@ -144,6 +148,7 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
 
       if (data.url) {
         track("checkout_started", { plan: meta.name, billing_cycle: meta.cycle, provider: analyticsProvider })
+        setLeaving(true)
         window.location.href = data.url
       }
     } catch {
@@ -220,6 +225,7 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
 
   return (
     <div className="flex flex-col gap-3">
+      <PendingScreen show={leaving} />
       {/* Absent entirely unless the gateway is configured server-side. */}
       {paypalAvailable && (
         <PaymentMethodSelector

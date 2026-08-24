@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import ResumePreviewWatermark from "./ResumePreviewWatermark"
 import { useEditorPro } from "./EditorContext"
 import { useResumeStore } from "@/stores/resumeStore"
+import { Z_PAGE_OVERLAY } from "@/lib/ui/z-layers"
 
 export default function PreviewPanel() {
   const { isPro } = useEditorPro()
@@ -36,7 +37,7 @@ export default function PreviewPanel() {
       <div aria-hidden className="absolute rounded-full pointer-events-none" style={{ filter: "blur(120px)", opacity: 0.4, background: "#B300FF", width: 800, height: 800, bottom: -200, right: -150, animation: "ambientDrift 20s infinite alternate", zIndex: 0 }} />
 
       {/* Zoom controls */}
-      <div className="zoom-controls absolute top-6 right-6 flex items-center bg-white/85 backdrop-blur-[16px] border border-[#E2E8F0] rounded-[24px] p-1 z-[100] shadow-[0_4px_16px_rgba(11,27,61,0.08)]">
+      <div style={{ zIndex: Z_PAGE_OVERLAY }} className="zoom-controls absolute top-6 right-6 flex items-center bg-white/85 backdrop-blur-[16px] border border-[#E2E8F0] rounded-[24px] p-1 shadow-[0_4px_16px_rgba(11,27,61,0.08)]">
         <button type="button" onClick={() => setScale((s) => Math.max(0.3, s - 0.1))} className="w-8 h-8 rounded-full border-none bg-transparent text-[#0B1B3D] cursor-pointer flex items-center justify-center transition-[background] duration-[150ms] hover:bg-[rgba(11,27,61,0.06)]" aria-label="Zoom out">
           <ZoomOut size={16} />
         </button>

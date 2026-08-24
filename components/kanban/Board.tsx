@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { track } from "@/lib/analytics/track"
 import { RejectModal, FoundJobModal, ClearBoardModal, RejectionDetailModal } from "./_board-modals"
+import { Z_MODAL } from "@/lib/ui/z-layers"
 
 // ── CSS variables ─────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const MODALIDADES = [
 function burstConfetti() {
   const colors = ["#00D4FF","#1a2e4a","#D4A574","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899"]
   const container = document.createElement("div")
-  container.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden"
+  container.style.cssText = `position:fixed;inset:0;pointer-events:none;z-index:${Z_MODAL};overflow:hidden`
   document.body.appendChild(container)
   for (let i = 0; i < 120; i++) {
     const el = document.createElement("div")

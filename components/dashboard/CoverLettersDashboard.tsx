@@ -22,6 +22,7 @@ import UpgradeCTACard from "./UpgradeCTACard"
 import { isActive } from "@/lib/plans"
 import { type LetterCard, LetterCardItem, LetterActivityItem } from "./_letter-sub"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 export default function CoverLettersDashboard({ initialLetters }: { initialLetters: LetterCard[] }) {
   const t = useTranslations("dashboard.cover_letters")
@@ -42,6 +43,8 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState("")
   const [renaming, setRenaming] = useState(false)
@@ -71,6 +74,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
       const data = await res.json()
       if (!data?.id) { toast.error(t("create_error")); setCreating(false); return }
       track("cover_letter_created", { method: "blank" })
+      setLeaving(true)
       router.push(`/${locale}/cover-letter/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))
@@ -111,6 +115,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
 
   return (
     <>
+      <PendingScreen show={leaving} />
       <div>
         <UpgradeCTACard />
 
@@ -170,7 +175,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
               locale={locale}
               userTimezone={userTimezone}
               dateLocale={dateLocale}
-              onEdit={() => router.push(`/${locale}/cover-letter/${letter.id}`)}
+              onEdit={() => { setLeaving(true); router.push(`/${locale}/cover-letter/${letter.id}`) }}
               onRename={() => { setRenameId(letter.id); setRenameDraft(letter.title) }}
               onDelete={() => setDeleteId(letter.id)}
             />

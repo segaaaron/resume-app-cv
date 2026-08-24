@@ -11,6 +11,7 @@ import { Loader2, AlertCircle, ArrowLeft, KeyRound } from "lucide-react"
 import { useTranslations, useLocale } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
 import { toast } from "sonner"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 const schema = z.object({
   email: z.string().email(),
@@ -24,6 +25,8 @@ export default function ForgotPasswordForm() {
   const [oauthProvider, setOauthProvider] = useState<string | null>(null)
   const [managed, setManaged] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
 
   const {
     register,
@@ -63,6 +66,7 @@ export default function ForgotPasswordForm() {
       return
     }
 
+    setLeaving(true)
     router.push(`/${locale}/forgot-password/verify?email=${encodeURIComponent(data.email)}`)
   }
 
@@ -141,6 +145,7 @@ export default function ForgotPasswordForm() {
 
   return (
     <div className="w-full max-w-[420px]">
+      <PendingScreen show={isSubmitting || googleLoading || leaving} />
       {/* Icon + header */}
       <div className="mb-7">
         <div className="flex items-center gap-3 mb-2">

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
@@ -18,6 +19,8 @@ import { NavItem, SectionLabel, NavSeparator } from "./_nav-sub"
 import ImportResumeButton from "./ImportResumeButton"
 import NavPendingOverlay from "./NavPendingOverlay"
 import BrandMark from "@/components/shared/BrandMark"
+import { Z_DASHBOARD_OVERLAY } from "@/lib/ui/z-layers"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
@@ -39,6 +42,8 @@ export default function DashboardNav({
   onDrawerClose,
 }: Props) {
   const pathname = usePathname()
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const t = useTranslations("dashboard.nav")
   const locale = useLocale()
 
@@ -257,6 +262,7 @@ export default function DashboardNav({
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={async () => {
+                  setLeaving(true)
                   const result = await clearSessionToken()
                   if (!result.ok) toast.error(t("logout_error"))
                   signOut({ callbackUrl: `/${locale}` })
@@ -274,6 +280,7 @@ export default function DashboardNav({
 
   return (
     <>
+      <PendingScreen show={leaving} />
       {/* Desktop sidebar — hidden on ≤1024px */}
       <aside className="lg:flex hidden flex-col w-[240px] shrink-0 h-full overflow-hidden border-r border-dash-border bg-gradient-to-b from-[#FAFBFD] to-dash-surface">
         {sidebarContent}
@@ -281,8 +288,9 @@ export default function DashboardNav({
 
       {/* Mobile drawer — off-canvas, shown on ≤1024px */}
       <aside
-        className="lg:hidden fixed top-0 left-0 bottom-0 w-[290px] z-[1000] flex flex-col overflow-hidden isolation-isolate border-r border-dash-border bg-[#FAFBFD] shadow-[8px_0_32px_rgba(15,25,45,0.18)]"
+        className="lg:hidden fixed top-0 left-0 bottom-0 w-[290px] flex flex-col overflow-hidden isolation-isolate border-r border-dash-border bg-[#FAFBFD] shadow-[8px_0_32px_rgba(15,25,45,0.18)]"
         style={{
+          zIndex: Z_DASHBOARD_OVERLAY,
           transform: drawerOpen ? "translateX(0)" : "translateX(-105%)",
           transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
         }}

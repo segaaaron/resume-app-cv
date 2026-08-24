@@ -24,6 +24,7 @@ import { isActive, purchaseConfirmed } from "@/lib/plans"
 import CVCard, { NewCVCard, type ResumeCard } from "./CVCard"
 import { ProBanner, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed, TranslatingOverlay } from "./_resume-sub"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 export default function ResumesDashboard({
   initialResumes,
@@ -61,6 +62,8 @@ export default function ResumesDashboard({
   const [renameDraft, setRenameDraft] = useState("")
   const [renaming, setRenaming] = useState(false)
   const [creating, setCreating] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
   const [translatingIds, setTranslatingIds] = useState<Set<string>>(new Set())
   const [showPersonalUseWarning, setShowPersonalUseWarning] = useState(false)
@@ -181,6 +184,7 @@ export default function ResumesDashboard({
       })
       const data = await res.json()
       if (!res.ok || !data.url) { toast.error(t("portal_error")); return }
+      setLeaving(true)
       window.location.href = data.url
     } catch {
       toast.error(t("portal_error"))
@@ -230,6 +234,7 @@ export default function ResumesDashboard({
       track("resume_created", { method: "blank" })
       // Deliberately still locked: we are navigating away, and releasing it
       // here just offers the user one more click on a page that is leaving.
+      setLeaving(true)
       router.push(`/${locale}/editor/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))
@@ -414,6 +419,7 @@ export default function ResumesDashboard({
 
   return (
     <div>
+      <PendingScreen show={leaving} />
       {translatingIds.size > 0 && <TranslatingOverlay />}
       <UpgradeCTACard />
 
@@ -476,7 +482,7 @@ export default function ResumesDashboard({
             dateLocale={dateLocale}
             isDownloading={downloadingIds.has(resume.id)}
             index={i}
-            onEdit={() => router.push(`/${locale}/editor/${resume.id}`)}
+            onEdit={() => { setLeaving(true); router.push(`/${locale}/editor/${resume.id}`) }}
             onRename={() => { setRenameId(resume.id); setRenameDraft(resume.title) }}
             onDuplicate={() => duplicateResume(resume.id)}
             onTranslate={() => translateResume(resume.id)}

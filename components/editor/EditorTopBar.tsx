@@ -18,6 +18,8 @@ import UnsavedChangesModal from "./UnsavedChangesModal"
 import PlaceholderWarningModal from "./PlaceholderWarningModal"
 import { detectPlaceholders } from "@/lib/detectPlaceholders"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { Z_PAGE_OVERLAY } from "@/lib/ui/z-layers"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 interface Props {
   hasAccess: boolean
@@ -48,6 +50,8 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
   const [togglingShare, setTogglingShare] = useState(false)
   const [viewStats, setViewStats] = useState<{ total: number; last7d: number } | null>(null)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const [showExitModal, setShowExitModal] = useState(false)
   const [placeholderCount, setPlaceholderCount] = useState(0)
   const [showPlaceholderModal, setShowPlaceholderModal] = useState(false)
@@ -107,6 +111,7 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
       setShowPlaceholderModal(true)
       return
     }
+    setLeaving(true)
     router.push(`/${locale}/dashboard/resumes`)
   }
 
@@ -117,6 +122,7 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
       setShowPlaceholderModal(true)
       return
     }
+    setLeaving(true)
     router.push(`/${locale}/dashboard/resumes`)
   }
 
@@ -236,13 +242,16 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
 
   function handlePlaceholderGoBack() {
     setShowPlaceholderModal(false)
+    setLeaving(true)
     router.push(`/${locale}/dashboard/resumes`)
   }
 
   return (
-    <header
-      className="h-[58px] flex items-center justify-between shrink-0 z-[100] relative px-3 sm:px-5 border-b border-[rgba(0,212,255,0.2)] shadow-[0_1px_0_rgba(0,212,255,0.12),0_4px_16px_rgba(0,0,0,0.06)]"
-      style={{ background: "linear-gradient(135deg, #f0f8ff 0%, #e8f4fb 40%, #f5faff 70%, #edf6fb 100%)" }}
+    <>
+      <PendingScreen show={leaving} />
+      <header
+      className="h-[58px] flex items-center justify-between shrink-0 relative px-3 sm:px-5 border-b border-[rgba(0,212,255,0.2)] shadow-[0_1px_0_rgba(0,212,255,0.12),0_4px_16px_rgba(0,0,0,0.06)]"
+      style={{ zIndex: Z_PAGE_OVERLAY, background: "linear-gradient(135deg, #f0f8ff 0%, #e8f4fb 40%, #f5faff 70%, #edf6fb 100%)" }}
     >
       {/* Subtle cyan glow line at bottom */}
       <div
@@ -440,5 +449,6 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
         onProceedAnyway={handlePlaceholderGoBack}
       />
     </header>
+    </>
   )
 }

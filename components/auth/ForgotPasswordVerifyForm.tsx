@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 import OtpInput from "@/components/auth/OtpInput"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 export default function ForgotPasswordVerifyForm() {
   const t = useTranslations("auth.forgot_password.verify")
@@ -25,6 +26,8 @@ export default function ForgotPasswordVerifyForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [resending, setResending] = useState(false)
   const [otpCode, setOtpCode] = useState("")
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
 
   const schema = z.object({
     code: z.string().length(6, t("otp_length")).regex(/^\d{6}$/, t("otp_digits_only")),
@@ -64,6 +67,7 @@ export default function ForgotPasswordVerifyForm() {
 
     if (res.ok && body.ok) {
       toast.success(t("success"))
+      setLeaving(true)
       router.push(`/${locale}/login?reset=true`)
       return
     }
@@ -101,6 +105,7 @@ export default function ForgotPasswordVerifyForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <PendingScreen show={isSubmitting || resending || leaving} />
       <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">{t("title")}</h1>
         <p className="text-gray-500 text-sm mb-6">{t("subtitle", { email })}</p>

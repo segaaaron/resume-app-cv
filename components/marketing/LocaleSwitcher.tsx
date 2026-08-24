@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useTransition } from "react"
+import React, { useState, useTransition } from "react"
 import { useLocale } from "next-intl"
 import { usePathname, useRouter } from "next/navigation"
 import { setLocaleCookie } from "@/lib/actions/locale"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 interface LocaleSwitcherProps {
   variant?: "dashboard" | "marketing"
@@ -15,6 +16,8 @@ export default function LocaleSwitcher({ variant = "dashboard", inactiveColor }:
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
 
   function switchLocale(nextLocale: string) {
     if (nextLocale === locale) return
@@ -28,6 +31,7 @@ export default function LocaleSwitcher({ variant = "dashboard", inactiveColor }:
     const segments = pathname.split("/")
     const pathWithoutLocale = segments.slice(2).join("/")
     const newPath = `/${nextLocale}${pathWithoutLocale ? `/${pathWithoutLocale}` : ""}`
+    setLeaving(true)
     startTransition(() => { router.push(newPath) })
   }
 
@@ -38,6 +42,7 @@ export default function LocaleSwitcher({ variant = "dashboard", inactiveColor }:
 
     return (
       <div className="flex items-center gap-0 text-xs font-semibold">
+        <PendingScreen show={leaving} />
         {(["es", "en"] as const).map((lang, i) => (
           <React.Fragment key={lang}>
             {i > 0 && (
@@ -75,6 +80,7 @@ export default function LocaleSwitcher({ variant = "dashboard", inactiveColor }:
       className="flex items-center gap-1 rounded-[8px] p-0.5"
       style={{ background: "var(--dash-surface)", border: "1px solid var(--dash-border)" }}
     >
+      <PendingScreen show={leaving} />
       {(["es", "en"] as const).map((lang) => (
         <button
           key={lang}

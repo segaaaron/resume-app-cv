@@ -13,6 +13,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { track } from "@/lib/analytics/track"
 import { useTranslations, useLocale } from "next-intl"
 import OtpInput from "@/components/auth/OtpInput"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 type RegisterStep = "form" | "otp"
 
@@ -37,6 +38,8 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
   const [otpLoading, setOtpLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [formSnapshot, setFormSnapshot] = useState<FormData | null>(null)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
 
   const schema = z.object({
     name: z.string().min(2, t("name_short")),
@@ -107,6 +110,7 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
           password: submittedPassword,
           redirect: false,
         })
+        setLeaving(true)
         if (planParam) {
           router.push(`/${locale}/checkout?plan=${planParam}`)
         } else {
@@ -172,6 +176,7 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
   if (step === "otp") {
     return (
       <div className="w-full max-w-[420px]">
+        <PendingScreen show={otpLoading || resending || leaving} />
         <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5"
             style={{ background: "linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,153,204,0.08))", border: "1px solid rgba(0,212,255,0.2)" }}>
@@ -231,6 +236,7 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
   // ── Register Form ─────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-[420px]">
+      <PendingScreen show={isSubmitting || googleLoading || leaving} />
       {/* Header */}
       <div className="mb-7">
         <h1 className="text-[28px] font-extrabold text-[#1a2e4a] tracking-[-0.025em] mb-1.5">

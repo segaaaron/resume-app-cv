@@ -172,7 +172,7 @@ export function UpgradeStatusOverlay({ upgradeState, purchasedPlan }: UpgradeSta
   const plan = planLabel(purchasedPlan)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+    <div style={{ zIndex: Z_DIALOG }} className="fixed inset-0 flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6 text-center max-w-sm px-6">
         {upgradeState === "waiting" && (
           <>
@@ -220,8 +220,8 @@ export function TranslatingOverlay() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-[1000] flex items-center justify-center px-6"
-      style={{ background: "rgba(26,46,74,0.62)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+      className="fixed inset-0 flex items-center justify-center px-6"
+      style={{ zIndex: Z_DASHBOARD_OVERLAY, background: "rgba(26,46,74,0.62)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
     >
       <div
         className="dash-card-in flex flex-col items-center gap-5 text-center rounded-[20px] px-8 py-9 max-w-[360px] w-full border border-white/60"
@@ -364,6 +364,7 @@ interface ActivityFeedProps {
 }
 
 import type { Locale } from "date-fns"
+import { Z_DIALOG, Z_DASHBOARD_OVERLAY } from "@/lib/ui/z-layers"
 
 export function ActivityFeed({ resumes, hasRecentEdit, userTimezone, dateLocale, formatFn }: ActivityFeedProps) {
   const t = useTranslations("dashboard.resumes")

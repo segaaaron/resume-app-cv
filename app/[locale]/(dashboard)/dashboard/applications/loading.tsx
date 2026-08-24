@@ -1,5 +1,5 @@
-import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton"
+import FullScreenLoading from "@/components/shared/FullScreenLoading"
 
 export default function Loading() {
-  return <DashboardSkeleton variant="board" />
+  return <FullScreenLoading />
 }

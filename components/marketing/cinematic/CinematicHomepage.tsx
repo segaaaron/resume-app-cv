@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl"
 import { useSession } from "next-auth/react"
 import { useScrollReveal } from "@/hooks/useScrollReveal"
 import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
+import { Z_FIXED_BAR, Z_NAV_PANEL } from "@/lib/ui/z-layers"
 
 const SCENES: Record<string, { bg: string; text: "light" | "dark"; overlay: number }> = {
   "act-entry":     { bg: "#d4d0cc", text: "dark",  overlay: 0.08 },
@@ -215,8 +216,8 @@ export default function CinematicHomepage({ children, locale }: Props) {
 
       {/* Navbar */}
       <nav
-        className="fixed top-0 left-0 right-0 z-50 px-6 h-16 flex items-center justify-between gap-6 backdrop-blur-[6px]"
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)" }}
+        className="fixed top-0 left-0 right-0 px-6 h-16 flex items-center justify-between gap-6 backdrop-blur-[6px]"
+        style={{ zIndex: Z_FIXED_BAR, background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)" }}
       >
         <Link
           href={`/${locale}`}
@@ -278,8 +279,9 @@ export default function CinematicHomepage({ children, locale }: Props) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="fixed top-16 left-0 right-0 z-40 px-6 py-5 flex flex-col gap-4 text-sm md:hidden backdrop-blur-2xl"
+        <div className="fixed top-16 left-0 right-0 px-6 py-5 flex flex-col gap-4 text-sm md:hidden backdrop-blur-2xl"
           style={{
+            zIndex: Z_NAV_PANEL,
             background: isLight ? "rgba(15,15,26,0.95)" : "rgba(255,255,255,0.95)",
             borderBottom: pillBorder,
           }}

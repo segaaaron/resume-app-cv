@@ -8,6 +8,7 @@ import { TEMPLATES } from "@/types/resume"
 import { formatInTimezone } from "@/hooks/useUserTimezone"
 import type { Locale } from "date-fns"
 import { getAnimationDelay, DDItem } from "./_cv-card-sub"
+import { Z_DASHBOARD_OVERLAY } from "@/lib/ui/z-layers"
 
 export { NewCVCard } from "./_cv-card-sub"
 
@@ -187,8 +188,9 @@ const CVCard = React.memo(function CVCard({
 
             {/* Dropdown menu */}
             <div
-              className="absolute right-0 bg-white rounded-[10px] p-2 min-w-[170px] z-[1000] origin-top-right border border-dash-border shadow-[0_8px_32px_rgba(26,46,74,0.12),0_0_0_1px_rgba(0,212,255,0.15)] transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.34,1.1,0.64,1)]"
+              className="absolute right-0 bg-white rounded-[10px] p-2 min-w-[170px] origin-top-right border border-dash-border shadow-[0_8px_32px_rgba(26,46,74,0.12),0_0_0_1px_rgba(0,212,255,0.15)] transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.34,1.1,0.64,1)]"
               style={{
+                zIndex: Z_DASHBOARD_OVERLAY,
                 top: "calc(100% + 6px)",
                 opacity: ddOpen ? 1 : 0,
                 transform: ddOpen ? "translateY(0) scale(1)" : "translateY(-8px) scale(0.96)",

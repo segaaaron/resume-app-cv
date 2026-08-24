@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+import { Z_DIALOG } from "@/lib/ui/z-layers"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -25,13 +26,15 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 
 function DialogOverlay({
   className,
+  style,
   ...props
 }: DialogPrimitive.Backdrop.Props) {
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
+      style={{ zIndex: Z_DIALOG, ...(style as React.CSSProperties | undefined) }}
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -52,8 +55,8 @@ function DialogContent({
    *
    * ── POR QUÉ EL PRIMITIVO NECESITABA ESTO ─────────────────────────────────
    *
-   * Todos los diálogos de la app viven en `z-50`, y eso alcanza mientras se
-   * abran sobre la página. El editor tiene superficies propias a pantalla
+   * Todos los diálogos de la app viven en `Z_DIALOG`, y eso alcanza mientras
+   * se abran sobre la página. El editor tiene superficies propias a pantalla
    * completa —el modal del ejecutor está en 9999— y un diálogo lanzado DESDE
    * una de ellas caía detrás: el usuario apretaba «agregar habilidad», la
    * viñeta nueva se mostraba para que la confirmara, y la confirmación
@@ -63,7 +66,7 @@ function DialogContent({
    * sin props, así que ni pasando `className` se podía subir el fondo. El
    * defecto era la ausencia de esta palanca.
    *
-   * Sin `layer` NADA cambia — los `z-50` siguen intactos para toda la app.
+   * Sin `layer` NADA cambia — el diálogo se queda en `Z_DIALOG` como siempre.
    */
   layer?: number
 }) {
@@ -72,9 +75,9 @@ function DialogContent({
       <DialogOverlay style={layer ? { zIndex: layer } : undefined} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
-        style={layer ? { zIndex: layer, ...(props.style ?? {}) } : props.style}
+        style={{ zIndex: layer ?? Z_DIALOG, ...(props.style ?? {}) }}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { track } from "@/lib/analytics/track"
+import PendingScreen from "@/components/shared/PendingScreen"
 
 interface Props {
   open: boolean
@@ -20,6 +21,8 @@ interface Props {
 export default function UpgradeModal({ open, onClose }: Props) {
   const t = useTranslations("editor.upgrade")
   const [loading, setLoading] = useState<"monthly" | "annual" | null>(null)
+  /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
+  const [leaving, setLeaving] = useState(false)
   const router = useRouter()
   const locale = useLocale()
 
@@ -44,6 +47,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
       })
 
       if (res.status === 401) {
+        setLeaving(true)
         router.push(`/${locale}/login?plan=${plan}`)
         return
       }
@@ -56,6 +60,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
 
       if (data.url) {
         track("checkout_started", { plan: "PRO", billing_cycle: cycle, provider: "stripe" })
+        setLeaving(true)
         window.location.href = data.url
       }
     } catch {
@@ -66,6 +71,8 @@ export default function UpgradeModal({ open, onClose }: Props) {
   }
 
   return (
+    <>
+      <PendingScreen show={leaving} />
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="p-0 overflow-hidden rounded-2xl max-w-md border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.10)] gap-0">
         {/* Head — premium gradient */}
@@ -135,5 +142,6 @@ export default function UpgradeModal({ open, onClose }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+    </>
   )
 }

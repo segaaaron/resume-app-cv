@@ -23,6 +23,7 @@ vi.mock("next/link", () => ({
 }))
 
 import NavPendingOverlay from "@/components/dashboard/NavPendingOverlay"
+import { Z_ROUTE_PENDING, Z_DASHBOARD_OVERLAY, Z_DRAWER_SCRIM } from "@/lib/ui/z-layers"
 
 function render() {
   const host = document.createElement("div")
@@ -59,8 +60,11 @@ describe("NavPendingOverlay", () => {
     expect(el?.parentElement).toBe(document.body)
     expect(el?.className).toContain("fixed")
     expect(el?.className).toContain("inset-0")
-    // Above the mobile drawer (z-1000) and its backdrop (z-990).
-    expect(el?.className).toContain("z-[1100]")
+    // Above the mobile drawer and its backdrop — and it takes the number from
+    // the shared scale, so it can no longer drift away from them.
+    expect((el as HTMLElement).style.zIndex).toBe(String(Z_ROUTE_PENDING))
+    expect(Z_ROUTE_PENDING).toBeGreaterThan(Z_DASHBOARD_OVERLAY)
+    expect(Z_DASHBOARD_OVERLAY).toBeGreaterThan(Z_DRAWER_SCRIM)
     unmount()
   })
 
