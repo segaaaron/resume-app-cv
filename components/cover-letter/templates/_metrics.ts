@@ -1,5 +1,5 @@
 /**
- * El ritmo de impresión de una carta. UNA definición para las 55 plantillas.
+ * El ritmo de impresión de una carta. UNA definición para las 53 plantillas.
  *
  * POR QUÉ EXISTE. Medido en navegador: con una carta de 301 palabras —la mitad
  * del rango que el propio prompt le ordena escribir a la IA— 27 de 55 plantillas

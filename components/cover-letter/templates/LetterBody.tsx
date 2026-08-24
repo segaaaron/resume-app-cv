@@ -1,7 +1,7 @@
 "use client"
 
 /**
- * El cuerpo de la carta. UNA implementación para las 55 plantillas.
+ * El cuerpo de la carta. UNA implementación para las 53 plantillas.
  *
  * POR QUÉ EXISTE. Cada plantilla escribía su propio `<div dangerouslySetInnerHTML>`
  * y decidía por su cuenta el tamaño y el interlineado — o, peor, no decidía nada
