@@ -23,6 +23,11 @@ const schema = z
         jobTitle: z.string().max(120),
         mustHaves: z.array(z.string().max(160)).max(40),
         summary: z.string().max(600).optional(),
+        // Los pesos NO se aceptan acá a propósito: esta petición trae el texto
+        // del aviso, así que el servidor los MIDE de nuevo —es determinista y no
+        // cuesta un token—. Aceptarlos sería dejar que el cliente decida cuánto
+        // pesa cada término de su propio puntaje. En `ats-rescore` sí viajan,
+        // porque ahí no hay aviso que medir.
       })
       .optional(),
   })

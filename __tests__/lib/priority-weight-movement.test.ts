@@ -15,10 +15,15 @@ import { computeATSMatch } from "@/lib/services/ai/shared/ats-matcher"
  *
  * ── EL RESULTADO, Y POR QUÉ ESTE TEST SIGUE ACÁ ────────────────────────────
  *
- * Con el peso más conservador que distinguía algo, el vuelco medido fue de 19
- * puntos: 81 contra 62 para el mismo CV. La ponderación NO entró (ver el motivo
- * completo en `ats-matcher.ts`). Este test se queda como el candado: si alguien
- * la reintroduce sin medir, el vuelco vuelve y esto se pone en rojo.
+ * El primer intento tomaba la prioridad del ORDEN que devolvía el extractor, y
+ * con el peso más conservador que distinguía algo el vuelco medido fue de 19
+ * puntos: 81 contra 62 para el mismo CV. No entró.
+ *
+ * La ponderación que SÍ entró mide la prioridad sobre el texto del aviso
+ * (`lib/ats/posting-priority.ts`), así que el orden de la lista no la toca —y
+ * este test es justamente lo que lo comprueba, ejecutando el matcher con la
+ * misma lista al derecho y al revés. Si alguien vuelve a colgar el peso del
+ * orden, el vuelco reaparece y esto se pone en rojo.
  */
 const secciones = { summary: true, work: true, skills: true, education: true }
 

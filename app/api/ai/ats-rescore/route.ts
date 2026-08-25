@@ -16,6 +16,15 @@ const schema = z.object({
     softSkills: z.array(z.string().max(120)).max(60),
     jobTitle: z.string().max(200),
     mustHaves: z.array(z.string().max(200)).max(60),
+    /**
+     * Los pesos que el análisis midió sobre el aviso.
+     *
+     * Sin declararlos acá Zod los DESCARTA —no falla, los borra en silencio— y
+     * este re-cálculo puntuaría sin ponderar mientras el análisis ponderó: el
+     * número saltaría en la primera tecla, que es exactamente el defecto que el
+     * carry-over de `semanticMatches` existe para evitar.
+     */
+    hardWeights: z.record(z.string().max(120), z.number().min(0).max(3)).optional(),
   }),
   sectionData: z.record(z.string(), z.unknown()).optional(),
   language: z.enum(["es", "en"]).optional(),

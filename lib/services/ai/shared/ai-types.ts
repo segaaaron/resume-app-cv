@@ -170,6 +170,15 @@ export interface ATSExtractedKeywords {
    * model's summary and every re-run silently fell back to the generic one.
    */
   summary?: string
+  /**
+   * Cuánto insiste el aviso en cada dura, medido sobre su texto
+   * (`lib/ats/posting-priority.ts`). Viaja con las keywords porque el
+   * re-cálculo instantáneo no recibe el aviso y no podría medirlo.
+   *
+   * Opcional: sin el mapa todo pesa igual y el puntaje es el de siempre. Un
+   * análisis viejo en caché, o un cliente que no lo devuelve, no rompe nada.
+   */
+  hardWeights?: Record<string, number>
   /** Nivel y años que pide el aviso (F2). Informan; no entran al puntaje. */
   seniority?: string
   yearsRequired?: number

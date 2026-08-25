@@ -226,7 +226,7 @@ Rules:
 - NEVER name a company, employer, product, or client that is not in the candidate profile. NEVER use a stand-in like "XYZ Corp", "ABC Company", or "Company Name" — if the profile names no employer, describe the work without naming one.
 - Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text, so a signature here duplicates it or leaves an unfilled bracket in their letter.
 - NEVER write a bracket placeholder such as [X%] or [N projects]. This letter is sent to a recruiter as-is. If the candidate states no figure, write the achievement without a number.
-- NEVER these phrases. Every one is checked and a letter carrying any is rejected: ${clicheBanList("en")}
+- NEVER these phrases, no exceptions: ${clicheBanList("en")}
 - Each paragraph must be 2–4 sentences, substantive and specific — never padding to reach a length
 - The letter must feel written by a human, not AI
 - Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: ${aiTellWords("en")}. Ground every claim in a concrete detail from the profile (tool, company, real result) — never supply one yourself.
@@ -262,7 +262,7 @@ Reglas:
 - NUNCA nombres una empresa, empleador, producto o cliente que no esté en el perfil del candidato. NUNCA uses un nombre quemado como "XYZ Corp", "Empresa ABC" o "Nombre de la Empresa" — si el perfil no nombra un empleador, describe el trabajo sin nombrarlo.
 - NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto, así que una firma aquí lo duplica o le deja un corchete sin rellenar.
 - NUNCA escribas un placeholder entre corchetes como [X%] o [N proyectos]. Esta carta se envía al recruiter tal cual. Si el candidato no declara la cifra, escribe el logro sin número.
-- NUNCA estas frases. Todas se comprueban y una carta que lleve cualquiera se rechaza: ${clicheBanList("es")}
+- NUNCA estas frases, sin excepción: ${clicheBanList("es")}
 - Cada párrafo debe tener 2–4 oraciones, sustanciales y específicas — nunca relleno para alcanzar un largo
 - La carta debe sonar escrita por un humano, no por IA
 - Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: ${aiTellWords("es")}. Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo pongas vos.
@@ -383,6 +383,42 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     // arriba pueden alargar la carta (el de keywords teje términos nuevos), así que
     // medir antes daría un número que ya no es el que se entrega.
     body = await this.fitLetterToOnePage(body, prompt, langInstruction, language, grounding, retryUsages)
+
+    /**
+     * EL PROMPT PROMETÍA UN CHEQUEO QUE ESTE CAMINO NO HACÍA.
+     *
+     * Arriba, en las dos ramas de idioma, se le dice al modelo: «NUNCA estas
+     * frases. Todas se comprueban y una carta que lleve cualquiera se rechaza».
+     * Era mentira acá: `substituteCliches` y `hasCliche` sólo corrían al MEJORAR
+     * una carta, nunca al escribirla. Una carta recién generada podía salir con
+     * un cliché de la lista prohibida y llegar al reclutador tal cual.
+     *
+     * Es el mismo defecto que esta sesión cerró en la doctrina de la cifra: un
+     * prompt que promete una verificación inexistente. OpenAI documenta que el
+     * modelo gasta razonamiento reconciliando reglas que no se sostienen, y
+     * peor: acá el usuario recibía lo que la regla decía que no iba a recibir.
+     *
+     * Se cierra con la sustitución determinista que el camino de mejorar ya
+     * usaba —un cambio de cadena, CERO tokens, sin reintento—: un arranque de
+     * catálogo delante de una frase real es un reemplazo, no una reescritura.
+     * Si aun así queda uno, queda registrado en vez de pasar mudo.
+     */
+    body = substituteCliches(body)
+    const clichesRestantes = findCliches(body)
+    // La prohibición del prompt sigue entera; lo que se retiró de esa frase es
+    // el «y se comprueba, y se rechaza». Medido: de las 49 frases de la lista
+    // sólo 9 tienen un reemplazo determinista —las fórmulas de apertura, «estoy
+    // emocionado de» → «me gustaría»—, y las otras 40 son cualidades afirmadas
+    // («jugador de equipo») que no se pueden cambiar por una verdad sin
+    // reescribir la oración. Prometer un rechazo que no ocurre es la misma
+    // contradicción doctrina↔guard que esta sesión cerró en la cifra: o el
+    // código lo cumple, o el prompt no lo promete.
+    if (clichesRestantes.length > 0) {
+      this.logger.warn("[AIService.generateCoverLetter] cliché survived the deterministic swap", {
+        cliches: clichesRestantes.slice(0, 5),
+      })
+    }
+
     const html = plainToHtml(body)
 
     const genUsage = response.usage

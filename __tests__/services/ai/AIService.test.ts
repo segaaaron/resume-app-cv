@@ -328,8 +328,19 @@ describe("AIService", () => {
       expect(result.matchedKeywords).toContain("Developer")
       expect(result.missingKeywords).toContain("Kubernetes")
       expect(result.missingKeywords).not.toContain("Developer")
-      // hard-skill coverage = 1 of 2 matched.
-      expect(result.subScores.hardSkills).toBe(50)
+      /**
+       * Cobertura dura = 1 de 2, PESADA por lo que el aviso exige.
+       *
+       * «Developer» está en el título del puesto y «Kubernetes» sólo en el
+       * cuerpo, así que no valen lo mismo: 1.5 contra 1. El CV tiene la primera
+       * → 1.5 / 2.5 = 60%. Sin pesos daba 50, y ese 50 trataba igual al término
+       * que da nombre al puesto y a uno mencionado de paso.
+       *
+       * El peso sale de `posting-priority.ts`, que lo MIDE sobre el texto del
+       * aviso: mismo aviso, mismo peso, siempre. El intento anterior lo tomaba
+       * del orden que devolvía el modelo y por eso no salió.
+       */
+      expect(result.subScores.hardSkills).toBe(60)
       expect(result.label).toBeTruthy()
     })
 

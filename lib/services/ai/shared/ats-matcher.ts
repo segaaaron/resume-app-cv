@@ -25,6 +25,7 @@ import { computeScoreBreakdown, type ScoreBreakdown } from "@/lib/ats/score-brea
 import type { ATSSubScores, GapLever } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
 import { dedupe, partitionByPresence } from "@/lib/ats/core/matching"
+import { weightOf } from "@/lib/ats/posting-priority"
 
 // The vocabulary is shared with the free /tools/ats-checker. This module used
 // to carry its own 13-group alias table while a curated 244-term dictionary sat
@@ -57,31 +58,39 @@ export interface SectionPresence {
  * llegue entera a la pantalla, no para decidir cuánto ve el usuario.
  */
 /**
- * PONDERAR POR PRIORIDAD: MEDIDO, Y RECHAZADO. NO REINTRODUCIR SIN MEDIR.
+ * PONDERAR POR PRIORIDAD: EL PRIMER INTENTO SE RECHAZÓ, EL SEGUNDO ENTRÓ.
  *
- * El plan de F2 traía ponderar las duras por la prioridad que les da la vacante
- * —lo que el referente del mercado hace— usando el orden en que el extractor las
- * devuelve. Se implementó y se midió antes de dejarlo entrar. Dos hallazgos:
+ * ── LO QUE FALLÓ ───────────────────────────────────────────────────────────
  *
- *  1. CON EL PESO MÁS CONSERVADOR QUE DISTINGUE ALGO (las cinco primeras valen
- *     el doble), el SOLO HECHO DE ORDENAR movía el puntaje 19 puntos: el mismo
- *     CV y la misma vacante daban 81 o 62 según en qué orden llegara la lista.
- *     El techo que el plan fijó es 3.
+ * El plan de F2 quería ponderar las duras por la prioridad que les da la
+ * vacante. El primer intento usó el ORDEN en que el extractor las devolvía. Se
+ * midió antes de dejarlo entrar y no pasó: con el peso más conservador que
+ * distingue algo, el mismo CV y la misma vacante daban 81 o 62 según en qué
+ * orden llegara la lista. Diecinueve puntos, con un techo de tres.
  *
- *  2. Y el motivo de fondo, que ningún ajuste del peso arregla: ese orden lo
- *     decide un MODELO, y puede cambiar entre dos extracciones del mismo aviso.
- *     Un puntaje que depende de él deja de ser reproducible — y reproducible es
- *     la única promesa fuerte que este número puede hacer, porque contra
- *     resultados de contratación no está validado.
+ * El defecto no era el peso, era la FUENTE: ese orden lo decide un modelo y
+ * puede salir distinto entre dos lecturas del mismo aviso. Un puntaje que
+ * depende de eso deja de ser reproducible, que es la única promesa fuerte que
+ * este número puede hacer.
  *
- * Lo que SÍ se conserva del trabajo: el extractor devuelve las duras ordenadas
- * por prioridad, y ese orden alimenta los prompts, las sugerencias de
- * habilidades y lo que el panel muestra primero. Informa sin decidir.
+ * ── LO QUE ENTRÓ ───────────────────────────────────────────────────────────
  *
- * Para reintroducirlo haría falta lo que hoy no tenemos: prioridad medida sobre
- * el TEXTO del aviso (frecuencia, si está en el título, si está bajo
- * «requisitos») en vez del orden que devuelve el modelo, y datos de resultado
- * con los que calibrar el peso.
+ * `lib/ats/posting-priority.ts` mide la prioridad sobre el TEXTO del aviso —si
+ * el término está en el título, cuántas veces lo repite, si vive sólo bajo
+ * «deseable»—. Es una función pura: el mismo aviso da el mismo peso siempre,
+ * sin modelo en el medio. Medido: la misma lista al revés da pesos idénticos.
+ *
+ * Efecto sobre el número que el usuario ya ve, en cuatro oficios: +0, +7, +1,
+ * +0. El único que se mueve de verdad es el CV que cubre TODO lo que el aviso
+ * exige y ninguno de los «deseables» — y sube, que es lo que corresponde.
+ *
+ * ── POR QUÉ EL TECHO DE 12 SIGUE PUESTO ────────────────────────────────────
+ *
+ * El plan levantaba el techo «recién con la ponderación adentro». Ya está
+ * adentro, y se volvió a medir: ampliar el denominador a 24 duras mueve el
+ * puntaje 18 puntos aun ponderando (−28 sin ponderar). El gate de la fase corta
+ * en 3, así que el techo se queda. Bajar más el peso de lo deseable hasta que
+ * el número pase sería acomodar la medición al resultado que se quiere.
  */
 const MAX_REPORTED = 40
 
@@ -198,6 +207,12 @@ function coverage(
    * is the strongest form of the match, not the weakest.
    */
   demonstratedByEvidence?: Set<string>,
+  /**
+   * Cuánto insiste la vacante en cada término, medido sobre su TEXTO
+   * (`lib/ats/posting-priority.ts`). Opcional: sin mapa, todo pesa igual y el
+   * puntaje es el de siempre — una pieza opcional no puede tumbar el número.
+   */
+  weights?: Record<string, number>,
 ): Coverage {
   const unique = dedupe(keywords)
   if (unique.length === 0) {
@@ -248,15 +263,27 @@ function coverage(
   // `demonstrated` YA arranca con `[...shown]` — sumarlo aparte lo contaba dos
   // veces y la cobertura llegaba a 200%. Juntos, `demonstrated` y `listedOnly`
   // cubren exactamente `matched + shown`, sin solaparse.
+  /**
+   * Y LA COBERTURA PESA LO QUE LA VACANTE EXIGE, no cuántas cosas nombra.
+   *
+   * Sin esto cada término vale lo mismo, y un aviso que lista diez «deseables»
+   * al final hunde la cobertura de un CV que cumple todo lo que el puesto de
+   * verdad pide. Eso es lo que hacía imposible ampliar el denominador.
+   *
+   * `weightOf` devuelve 1 cuando no hay mapa, así que sin pesos esta cuenta es
+   * EXACTAMENTE la anterior: no hay dos fórmulas, hay una con el peso en 1.
+   */
+  const suma = (ks: readonly string[]) => ks.reduce((a, k) => a + weightOf(k, weights), 0)
+  const total = suma(unique)
   const credited = canJudge
-    ? demonstrated.length + listedOnly.length * LISTED_ONLY_CREDIT.value
-    : matched.length + shown.length
+    ? suma(demonstrated) + suma(listedOnly) * LISTED_ONLY_CREDIT.value
+    : suma(matched) + suma(shown)
   return {
     matched: [...matched, ...shown],
     missing,
     demonstrated,
     listedOnly,
-    pct: Math.round((credited / unique.length) * 100),
+    pct: total > 0 ? Math.round((credited / total) * 100) : null,
   }
 }
 
@@ -390,12 +417,22 @@ export function computeATSMatch(
    * no penaliza a nadie por un dato que no tenemos.
    */
   quantificationPct?: number | null,
+  /**
+   * Cuánto insiste la vacante en cada término duro, medido sobre su texto.
+   *
+   * Sólo lo leen las DURAS. Las blandas y los requisitos no se ponderan: un
+   * requisito no es más o menos requisito por cuántas veces lo escriban, y una
+   * blanda repetida no exige más que otra — ahí el conteo diría otra cosa que
+   * el aviso. Ponderar todo porque se puede es cómo se cuela una opinión
+   * nuestra dentro de una medición.
+   */
+  hardWeights?: Record<string, number>,
 ): ATSMatchResult {
   const hay = normalize(resumeText)
   const titlesNorm = normalize(cvTitles)
   const evidence = normalize(evidenceText)
 
-  const hard = coverage(keywords.hardSkills, hay, evidence, semanticMatches)
+  const hard = coverage(keywords.hardSkills, hay, evidence, semanticMatches, undefined, hardWeights)
   const soft = coverage(keywords.softSkills, hay, evidence, semanticMatches, softDemonstrated)
   const must = coverage(keywords.mustHaves, hay, evidence, semanticMatches, mustHavesMet)
   const title = titleScore(keywords.jobTitle, titlesNorm, recentTitles ? normalize(recentTitles) : undefined)

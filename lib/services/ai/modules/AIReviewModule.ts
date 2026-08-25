@@ -61,6 +61,7 @@ import { refineMissingRequirements } from "@/lib/ats/requirement-satisfied"
 import { fixesRepetition } from "@/lib/ats/repeated-content"
 import { readChat, truncatedNudge } from "../shared/chat-result"
 import { strictJsonFormat } from "../shared/strict-schema"
+import { measurePostingPriority } from "@/lib/ats/posting-priority"
 
 /**
  * Hard requirements this CV provably meets, normalized for the matcher.
@@ -1148,20 +1149,22 @@ Reglas:
     /**
      * EL TECHO DEL DENOMINADOR, Y POR QUÉ SIGUE PUESTO.
      *
-     * El plan de F2 lo decía en este orden y no es un detalle de redacción:
-     * «primero la prioridad, después el techo — recién con la ponderación
-     * adentro cae el tope de 12». La ponderación se midió y NO salió (movía 19
-     * puntos, y el gate de la fase corta en 3), así que el techo se queda: sin
-     * peso, cada dura vale lo mismo y sumar las «deseables» hunde la cobertura
-     * de un CV que no cambió.
+     * El plan de F2 lo decía en este orden: «primero la prioridad, después el
+     * techo — recién con la ponderación adentro cae el tope de 12».
      *
-     * MEDIDO sobre una vacante de iOS con 12 prioritarias y 12 deseables: el
-     * mismo CV daba 84 con techo y 56 sin techo. Veintiocho puntos, que es
-     * exactamente el «100 → 70» reportado.
+     * La ponderación YA ESTÁ ADENTRO, medida sobre el texto del aviso
+     * (`lib/ats/posting-priority.ts`). Y con ella puesta se volvió a medir el
+     * techo, que es lo que el plan pedía: sobre una vacante de iOS con 12
+     * prioritarias y 12 deseables, el mismo CV da 84 con techo y 66 sin techo
+     * —18 puntos— contra los 56 que daba sin ponderar. La ponderación ayuda,
+     * pero el gate de la fase corta en 3.
      *
-     * Lo que sí cambió y se queda: las 12 ya no son las primeras que el modelo
-     * escribió, son las que la vacante insiste, nombra en el título o repite.
-     * El peso vive en las que importan; el conteo sólo las acota.
+     * Así que el techo se queda, ahora por una medición propia y no por
+     * herencia. Dieciocho puntos de movimiento son el «100 → 70» reportado.
+     *
+     * Y las 12 que entran no son las primeras que el modelo escribió: son las
+     * que la vacante insiste, nombra en el título o repite. El orden lo pide el
+     * prompt; el peso lo mide el texto.
      *
      * En código además del prompt porque un prompt PIDE y el modelo puede
      * devolver quince: el gate de la fase tiene que valer por construcción.
@@ -1253,7 +1256,23 @@ Reglas:
     // Qué proporción de las viñetas lleva una cifra. Se calculaba y se mostraba;
     // ahora también puntúa — el trabajo de cuantificar tenía que valer algo.
     const quantifiedPct = sectionData ? assessResumeContent(sectionData).quantificationPct : null
-    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated, mustMet, quantifiedPct)
+    /**
+     * CUÁNTO INSISTE ESTA VACANTE EN CADA DURA (F2, la versión que sí sale).
+     *
+     * Se mide sobre el TEXTO del aviso —título, repeticiones, encabezado de
+     * «deseable»—, no sobre el orden en que el modelo devolvió la lista. Es una
+     * función pura: el mismo aviso da el mismo peso siempre, con lo cual el
+     * puntaje sigue siendo reproducible, que es la única promesa fuerte que
+     * puede hacer.
+     *
+     * En modo «sólo título» el aviso no existe: no hay texto que medir, el mapa
+     * sale con todo en 1 y la cuenta es la de siempre.
+     */
+    const hardWeights = measurePostingPriority(keywords.hardSkills, {
+      posting: jobContext,
+      jobTitle: keywords.jobTitle,
+    })
+    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated, mustMet, quantifiedPct, hardWeights)
 
     // ── Semantic recall pass (embeddings) ──────────────────────────────────────
     // The exact matcher misses a required skill the CV phrases differently
@@ -1318,7 +1337,7 @@ Reglas:
         })
         if (semanticMatches.size > 0) {
           semanticMatched = semanticMatches
-          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated, mustMet, quantifiedPct)
+          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated, mustMet, quantifiedPct, hardWeights)
         }
       }
     }
@@ -1410,6 +1429,10 @@ Reglas:
         summary: extraction.summary,
         jobTitle: extraction.jobTitle,
         mustHaves: extraction.mustHaves,
+        // Se publican para que el re-cálculo instantáneo puntúe con la MISMA
+        // vara: son deterministas, así que devolverlos no es cachear una
+        // opinión, es evitar medir dos veces lo mismo.
+        hardWeights,
         // F2: informan al panel y al crítico; el puntaje no los mira.
         seniority: extraction.seniority || undefined,
         yearsRequired: extraction.yearsRequired || undefined,
@@ -1526,7 +1549,14 @@ Reglas:
     // Same carry for the soft-skill evidence: judging bullets needs a model call,
     // which cannot run per keystroke. The analysis published what it found.
     const carriedSoft = input.demonstratedSoftSkills?.length ? new Set(input.demonstratedSoftSkills) : undefined
-    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft, metMustHaves(keywords.mustHaves, data), assessResumeContent(data).quantificationPct)
+    /**
+     * Los pesos viajan con las keywords, igual que `semanticMatches`: el
+     * re-cálculo no recibe el texto del aviso, así que no puede medirlos. Sin
+     * ellos el puntaje instantáneo usaría una vara distinta de la del análisis
+     * y el número saltaría en la primera tecla, que es exactamente el defecto
+     * que ese carry-over existe para evitar.
+     */
+    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft, metMustHaves(keywords.mustHaves, data), assessResumeContent(data).quantificationPct, input.keywords.hardWeights)
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
