@@ -35,7 +35,6 @@ const base = (over: Partial<BuildReportInput> = {}) => ({
     bulletBalance: [], mergeCandidates: [], chronology: null, futureDates: [], yearsClaim: null,
     nearDuplicates: [], bulletRanking: [], incompleteEducation: [], orphanFragments: [],
     metrics: { level: "ok", findings: [] }, degreeInSkills: [], hasLink: true },
-  content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] },
   missingSoftSkills: [], matchedSoftSkills: [], missingKeywords: [],
   jobDescription: "", resumeText: "",
   ...over,

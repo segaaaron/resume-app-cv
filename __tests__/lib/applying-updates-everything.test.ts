@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { buildPanelReport } from "@/lib/ats/panel-report"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
-import { assessResumeContent } from "@/lib/services/ai/shared/bullet-quality"
 import { allChecks, weavableTerms, applyAllPlan } from "@/lib/ats/report"
 
 /**
@@ -68,7 +67,6 @@ const cv = (primeraLinea: string) => ({
 const informe = (primeraLinea: string) => buildPanelReport({
   result: RESULT,
   writing: analyzeWriting(cv(primeraLinea), []),
-  content: assessResumeContent(cv(primeraLinea)),
   sectionData: cv(primeraLinea),
   jobDescription: JD,
 })

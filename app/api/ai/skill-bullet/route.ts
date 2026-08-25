@@ -12,6 +12,8 @@ const schema = z.object({
   soft: z.boolean().optional(),
   // Role the user picked after the model found no natural home for the skill.
   targetId: z.string().max(64).optional(),
+  // Traer adelante un término que ya está, pero sólo en un puesto viejo.
+  refresh: z.boolean().optional(),
 })
 
 export async function POST(req: Request) {

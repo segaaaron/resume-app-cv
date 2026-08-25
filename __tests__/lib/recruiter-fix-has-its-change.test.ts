@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest"
 import { buildAtsReport, type BuildReportInput } from "@/lib/ats/build-report"
 import { allChecks } from "@/lib/ats/report"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
-import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
 
 /**
  * UN HALLAZGO DEL RECLUTADOR DICE QUÉ CAMBIAR, O NO SE PUEDE APRETAR.
@@ -32,7 +31,6 @@ const input = (over: Partial<BuildReportInput> = {}): BuildReportInput => ({
   score: 87,
   categories: [],
   writing: emptyWriting(),
-  content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as unknown as ATSContentQuality,
   missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: [],
   missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
   templateSafety: "safe",

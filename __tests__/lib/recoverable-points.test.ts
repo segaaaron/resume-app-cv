@@ -30,7 +30,6 @@ const input = (o: Partial<BuildReportInput> = {}): BuildReportInput => ({
     nearDuplicates: [], bulletRanking: [], incompleteEducation: [], orphanFragments: [],
     metrics: { level: "ok", findings: [] }, degreeInSkills: [], hasLink: true,
   } as never,
-  content: { totalBullets: 2, quantifiedBullets: 1, quantificationPct: 50, weakOpenerBullets: 0, metriclessBullets: [] } as never,
   missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: [],
   missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
   templateSafety: "safe", recruiterFixes: [],

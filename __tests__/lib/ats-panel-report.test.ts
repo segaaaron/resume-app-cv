@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { buildPanelReport, type PanelReportInput } from "@/lib/ats/panel-report"
 import { allChecks, criticalChecks, isReadyToSend, openChecks } from "@/lib/ats/report"
-import type { ATSScoreResult, ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
+import type { ATSScoreResult } from "@/lib/services/ai/shared/ai-types"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
 
 /**
@@ -22,9 +22,6 @@ const writing = (over: Partial<WritingChecks> = {}): WritingChecks => ({
   ...over,
 })
 
-const content = (): ATSContentQuality => ({
-  totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [],
-} as ATSContentQuality)
 
 const result = (over: Partial<ATSScoreResult> = {}): ATSScoreResult => ({
   score: 72,
@@ -53,7 +50,6 @@ const result = (over: Partial<ATSScoreResult> = {}): ATSScoreResult => ({
 const input = (over: Partial<PanelReportInput> = {}): PanelReportInput => ({
   result: result(),
   writing: writing(),
-  content: content(),
   sectionData: {},
   jobDescription: "",
   ...over,
@@ -218,7 +214,10 @@ describe("la contradicción de la captura, de punta a punta", () => {
     expect(r.score).toBe(100)
     expect(isReadyToSend(r)).toBe(false)
     expect(criticalChecks(r)[0].weight).toBe(0)
-    expect(r.sections.find((s) => s.id === "tips")?.scoreCategory).toBeNull()
+    // «Consejos» declara `impact` desde 2026-08-25: la categoría existía en el
+    // puntaje y no tenía sección. Lo que NO mueve el número —este crítico del
+    // reclutador— lo sigue diciendo su propio peso, que es el assert de arriba.
+    expect(r.sections.find((s) => s.id === "tips")?.scoreCategory).toBe("impact")
   })
 })
 

@@ -285,6 +285,14 @@ export interface ReportPosting {
    */
   seniority?: string
   yearsRequired?: number
+  /**
+   * Cuánto insiste el aviso en cada dura, medido sobre su texto
+   * (`posting-priority`). Viaja DENTRO del informe porque el panel lo necesita
+   * para decidir qué línea sobra, y el informe es la única puerta: leerlo del
+   * crudo del servidor era abrir una segunda, que es el defecto que
+   * `report-is-the-only-door` existe para impedir.
+   */
+  hardWeights?: Record<string, number>
 }
 
 /**
@@ -431,9 +439,21 @@ export function applyAllPlan(
      * Todo lo demás que este botón hace se puede deshacer mirando el diff; borrar
      * una línea del CV de alguien en un clic masivo, no. `tips.cut.*` propone
      * cuál sobra y esa propuesta se acepta de a una, con la línea a la vista.
+     *
+     * ── Y TEJER UN TÉRMINO TAMPOCO (cazado por QA, 2026-08-25) ───────────────
+     *
+     * `search.stale.*` estrenó botón —tejer el término en un puesto reciente— y
+     * con eso entró acá sin que nadie lo decidiera. Cada uno es UNA llamada al
+     * modelo, una cuota y una confirmación: cuatro términos viejos disparaban
+     * cuatro peticiones a la vez y **sólo la última sobrevivía**, porque el modal
+     * de confirmación es un solo lugar. Tres pagadas y tiradas.
+     *
+     * Es exactamente la regla que este mismo botón ya aplicaba a los términos que
+     * FALTAN —«se AGREGAN, no se tejen: tejer son cinco llamadas al modelo y cinco
+     * esperas»—, que no se había extendido al hermano nuevo.
      */
     checkIds: solvableChecks(report)
-      .filter((c) => !appliedIds.has(c.id) && !c.id.startsWith("tips.cut."))
+      .filter((c) => !appliedIds.has(c.id) && !c.id.startsWith("tips.cut.") && c.action?.kind !== "weave_term")
       .map((c) => c.id),
     // Los «sólo en la lista» NO se filtran por `addedTerms`: ese conjunto marca
     // lo agregado a Habilidades, y estos YA estaban ahí — lo que les falta es la

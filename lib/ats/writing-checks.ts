@@ -10,12 +10,12 @@
 // No LLM, no randomness: the same CV always yields the same findings, so they can
 // flow through the live re-score. Cliché detection reuses the shared list
 // (lib/services/ai/shared/cliches.ts) — one source of truth, never a parallel list.
-import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { findCliches } from "@/lib/services/ai/shared/cliches"
 import { findMergeCandidates, type MergeCandidate } from "./merge-candidates"
 import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
 import { assessMetricCredibility, findDegreeInSkills, hasVerifiableLink, type MetricCredibility } from "./metric-credibility"
 import { rankRoleBullets, type RoleBulletRanking } from "./bullet-strength"
+import { roleBand, roleBudget } from "./role-budget"
 import {
   checkChronology,
   checkFutureDates,
@@ -165,17 +165,6 @@ const MAX_CLICHE = 8
 const MAX_BALANCE = 6
 const MAX_DUPLICATE = 8
 /**
- * Bullets on one role before the list starts working against itself.
- *
- * Six, and the copy the user sees says six. It used to warn past 6 while the
- * message asked them to trim to "3-5, what recruiters skim" — two numbers from
- * two places, and a claim about recruiter behaviour we have never measured. The
- * defensible statement is the one about the resume itself: past this, the strong
- * lines compete with the weak ones for the same glance.
- */
-const BULLET_MAX = BULLETS_PER_ROLE_MAX.value
-
-/**
  * Comparison key for "is this the same bullet". Case, accents, punctuation and
  * whitespace are stripped: a duplicate that survived a re-typing is still a
  * duplicate to a recruiter. Short lines are skipped by the caller — two bullets
@@ -299,10 +288,22 @@ export function analyzeWriting(
       }
     })
 
+    /**
+     * Y ESTE TAMBIÉN PREGUNTA POR LA BANDA, no por el tope plano.
+     *
+     * Cazado por QA antes de subir: la migración a `roleBudget` había dejado
+     * afuera justo el cálculo que alimenta la CREDIBILIDAD (`overloaded_roles`) y
+     * la tarjeta `tips.balance`. Con el tope plano, un puesto de hace diez años
+     * con cuatro líneas —recargado para su antigüedad y así lo decía la tarjeta
+     * `tips.role_range`— no le costaba un punto de credibilidad; y un puesto
+     * actual con siete producía DOS tarjetas diciendo lo mismo con distinta
+     * cuenta. El número y la pantalla tienen que salir del mismo dueño.
+     */
+    const presupuesto = roleBudget(j)
     if (id && hasContent && bulletBalance.length < MAX_BALANCE) {
-      if (bullets.length > BULLET_MAX) {
-        bulletBalance.push({ targetId: id, jobTitle: j.jobTitle ?? "", count: bullets.length, kind: "too_many" })
-      } else if (bullets.length === 0) {
+      if (presupuesto.state === "over") {
+        bulletBalance.push({ targetId: id, jobTitle: j.jobTitle ?? "", count: presupuesto.count, kind: "too_many" })
+      } else if (presupuesto.count === 0) {
         bulletBalance.push({ targetId: id, jobTitle: j.jobTitle ?? "", count: 0, kind: "none" })
       }
     }
@@ -341,7 +342,13 @@ export function analyzeWriting(
     // deterministic checks, so the panel can offer the merge without a model call
     // deciding that a merge is warranted — see merge-candidates.ts.
     mergeCandidates: findMergeCandidates(
-      work.map((j) => ({ targetId: j.id ?? "", jobTitle: j.jobTitle ?? "", bullets: parseBullets(j.description ?? "") })),
+      work.map((j) => ({
+        targetId: j.id ?? "",
+        jobTitle: j.jobTitle ?? "",
+        bullets: parseBullets(j.description ?? ""),
+        // El rango que su antigüedad admite, medido por el único dueño.
+        band: roleBand(j),
+      })),
       undefined,
       semanticPairs,
     ),

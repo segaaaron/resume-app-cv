@@ -80,9 +80,30 @@ export default function ReportRail({
   const recoverable = recoverablePoints(report)
   const ready = isReadyToSend(report)
 
+  /**
+   * LO APLICADO SE MARCA UNA VEZ, Y TODOS LEEN ESA MARCA.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-25) ────────────────────────
+   *
+   *   «Cuando soluciones algo en tailor deberías llevarlo a aplicado… debería
+   *    estar bien sincronizado y transparente.»
+   *
+   * Y no lo estaba: esta vista pintaba la fila en verde descontando lo aplicado,
+   * pero el ENCABEZADO de cada sección se contaba solo —`ReportSectionCard`
+   * filtraba `state !== "pass"` sobre los chequeos crudos— así que el usuario
+   * aplicaba tres arreglos, los veía cerrados adentro, y el chip seguía diciendo
+   * «3 abiertos». Los contadores de arriba sí descontaban: tres números sobre el
+   * mismo dato y sólo dos de acuerdo.
+   *
+   * Se marca acá, una vez, y la tarjeta de sección cuenta lo mismo que se pinta.
+   * No hay una segunda regla que se pueda olvidar de descontar.
+   */
+  const secciones = report.sections.map((s) => ({
+    ...s,
+    checks: s.checks.map((c) => (appliedIds?.has(c.id) ? { ...c, state: "pass" as const } : c)),
+  }))
+
   const renderCheck = (c: ReportCheck) => {
-    // Aplicado = resuelto. Se pinta como el informe pinta todo lo cerrado —en
-    // verde y sin botón— en vez de seguir ofreciendo trabajo ya hecho.
     const aplicado = appliedIds?.has(c.id) ?? false
     return (
       <CheckRow
@@ -198,7 +219,7 @@ export default function ReportRail({
       </div>
 
       <div className="flex flex-col gap-2">
-        {report.sections.map((section) => (
+        {secciones.map((section) => (
           <ReportSectionCard
             key={section.id}
             section={section}

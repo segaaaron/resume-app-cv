@@ -159,25 +159,39 @@ describe("computeProfileGaps", () => {
   })
 
   /**
-   * The ceiling is not this file's opinion: BULLETS_PER_ROLE_MAX is 6, and the
-   * ATS panel already calls a role crowded there while the skill writer stops
-   * proposing. An assistant pushing past a limit its own analyser penalises
-   * makes both look untrustworthy.
+   * The ceiling is not this file's opinion: it comes from `roleBudget`, the one
+   * owner of "does another line fit". An assistant pushing past a limit its own
+   * analyser penalises makes both look untrustworthy.
+   *
+   * ── UPDATED (CEO, 2026-08-25) ────────────────────────────────────────────
+   *
+   * The ceiling is not a single global number any more: it depends on how old
+   * the role is (6 on the current one, 4 on the previous, 3 on the old ones),
+   * which is the same band the report already used to say "this role carries too
+   * many lines". With the flat 6, a role from 2015 was offered a sixth bullet
+   * while the report asked it to come down to three — two of our own features
+   * pulling opposite ways, which is exactly what was reported.
    */
   describe("more bullets, up to the limit the rest of the product enforces", () => {
-    const withBullets = (n: number) => ({
+    const withBullets = (n: number, job = FULL_JOB) => ({
       ...COMPLETE,
-      workExperience: [{ ...FULL_JOB, description: Array.from({ length: n }, (_, i) => `• Línea ${i + 1}`).join("\n") }],
+      workExperience: [{ ...job, description: Array.from({ length: n }, (_, i) => `• Línea ${i + 1}`).join("\n") }],
     })
+    /** FULL_JOB ended in 2015: an old role, where a recruiter reads two or three. */
+    const CURRENT_JOB = { ...FULL_JOB, endDate: "", currentlyWorking: true }
 
     it("offers another line while there is room", () => {
       expect(kinds(withBullets(1))).toContain("moreBullets")
-      expect(kinds(withBullets(5))).toContain("moreBullets")
+      expect(kinds(withBullets(2))).toContain("moreBullets")
+      expect(kinds(withBullets(5, CURRENT_JOB))).toContain("moreBullets")
     })
 
-    it("stops at six", () => {
-      expect(kinds(withBullets(6))).not.toContain("moreBullets")
-      expect(kinds(withBullets(7))).not.toContain("moreBullets")
+    it("stops at the ceiling that role's age admits", () => {
+      // El puesto viejo: tres es su techo, así que con tres ya no se ofrece.
+      expect(kinds(withBullets(3))).not.toContain("moreBullets")
+      expect(kinds(withBullets(4))).not.toContain("moreBullets")
+      expect(kinds(withBullets(6, CURRENT_JOB))).not.toContain("moreBullets")
+      expect(kinds(withBullets(7, CURRENT_JOB))).not.toContain("moreBullets")
     })
 
     it("does not offer it on a role with no bullets — that one gets asked outright", () => {

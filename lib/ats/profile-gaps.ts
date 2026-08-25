@@ -13,8 +13,7 @@
 // model is only needed to WRITE (bullets, the closing summary), and that keeps
 // the interview free.
 import { computeResumeScore } from "@/lib/services/ai/shared/resume-score"
-import { parseBullets } from "@/lib/services/ai/shared/bullets"
-import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
+import { hasRoomForBullet } from "@/lib/ats/role-budget"
 
 /**
  * Kinds of gap, which double as i18n keys for the question copy.
@@ -138,7 +137,11 @@ export function computeProfileGaps(sectionData: Record<string, unknown>): Profil
       // flags the role as crowded and the skill writer stops proposing there. An
       // assistant that pushes past a limit its own analyser penalises is the
       // fastest way to make both look untrustworthy.
-      if (!missingBullets(job) && parseBullets(job.description ?? "").length < BULLETS_PER_ROLE_MAX.value) {
+      // El tope no es global: `roleBudget` lo mide por antigüedad, que es la
+      // misma vara con la que el panel decide si el puesto está recargado. Con
+      // el tope global, un puesto viejo con cuatro líneas seguía recibiendo la
+      // pregunta «¿algo más ahí?» mientras el informe le pedía bajar a tres.
+      if (!missingBullets(job) && hasRoomForBullet(job)) {
         gaps.push({ kind: "moreBullets", jobId: job.id, subject, subjectIsRole, weight: COMPLETENESS_ITEM / 4, fill: "ai" })
       }
       if (missingBullets(job)) {

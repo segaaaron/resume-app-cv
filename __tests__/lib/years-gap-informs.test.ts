@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest"
 import { buildAtsReport, type BuildReportInput } from "@/lib/ats/build-report"
 import { allChecks } from "@/lib/ats/report"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
-import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
 
 /**
  * LA BRECHA DE AÑOS INFORMA, NO CASTIGA (F2).
@@ -24,7 +23,6 @@ const base = (over: Partial<BuildReportInput> = {}): BuildReportInput => ({
   score: 60,
   categories: [],
   writing: emptyWriting(),
-  content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as unknown as ATSContentQuality,
   missingKeywords: [],
   listedOnlyKeywords: [],
   matchedKeywords: [],

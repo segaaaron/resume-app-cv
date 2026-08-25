@@ -19,6 +19,7 @@
 // different on a second reading of an unchanged CV.
 
 import { CREDIBILITY_PENALTIES } from "./scoring-config"
+import { HARD_ROLE_CEILING } from "./role-budget"
 import type { WritingChecks } from "./writing-checks"
 
 export type CredibilityKey =
@@ -123,7 +124,18 @@ export function computeCredibility(checks: WritingChecks): CredibilityResult {
     findings.push({ key: "incomplete_education", band: "polish", cost: P.degreeAsSkill.value, count: checks.incompleteEducation.length })
   }
 
-  const overloaded = checks.bulletBalance.filter((b) => b.kind === "too_many").length
+  /**
+   * SE COBRA POR ENCIMA DEL TECHO DURO, NO DE LA BANDA.
+   *
+   * `bulletBalance` marca «demasiadas» con el rango que la ANTIGÜEDAD admite, que
+   * para un puesto viejo son tres. Cobrar ahí convertía el consejo de redacción
+   * en una multa: cuatro líneas en un puesto de hace ocho años es exactamente lo
+   * que este proyecto recomienda escribir, y la nota de confianza bajaba cinco
+   * puntos por puesto, sin tope. La tarjeta sigue sugiriendo el rango —ahí el
+   * consejo vale—; la confianza sólo se resiente cuando el puesto pasa el techo
+   * que nadie discute.
+   */
+  const overloaded = checks.bulletBalance.filter((b) => b.kind === "too_many" && b.count > HARD_ROLE_CEILING).length
   if (overloaded > 0) {
     findings.push({ key: "overloaded_roles", band: "polish", cost: P.overloadedRole.value * overloaded, count: overloaded })
   }

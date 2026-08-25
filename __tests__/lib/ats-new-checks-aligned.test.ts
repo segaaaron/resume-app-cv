@@ -4,7 +4,6 @@ import { buildPanelReport } from "@/lib/ats/panel-report"
 import { buildAtsReport, type BuildReportInput } from "@/lib/ats/build-report"
 import { allChecks, openChecks, solvableChecks, criticalChecks, applyAllPlan, tailorWorkload } from "@/lib/ats/report"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
-import { assessResumeContent } from "@/lib/services/ai/shared/bullet-quality"
 
 /**
  * TODO CHEQUEO NUEVO SE ALINEA CON EL ATS, O NO ENTRA.
@@ -54,7 +53,6 @@ describe("las tres familias que yo controlo ceden la línea ya reclamada", () =>
     const r = buildPanelReport({
       result: { score: 60, extractedKeywords: { jobTitle: "iOS Developer", hardSkills: ["Swift", "SwiftUI"], softSkills: [], mustHaves: [] } } as never,
       writing: analyzeWriting(cv, []),
-      content: assessResumeContent(cv),
       sectionData: cv,
       jobDescription: "iOS Developer con Swift y SwiftUI",
     })
@@ -121,7 +119,6 @@ const base = {
     nearDuplicates: [], bulletRanking: [], incompleteEducation: [], orphanFragments: [],
     metrics: { level: "ok", findings: [] }, degreeInSkills: [], hasLink: true,
   },
-  content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] },
   personalData: { hasPhoto: true, sensitive: ["birth_date", "id_number"] },
 } as unknown as BuildReportInput
 

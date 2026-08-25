@@ -44,7 +44,6 @@ describe("el cruce de las habilidades, ahora imposible por construcción", () =>
         nearDuplicates: [], bulletRanking: [], incompleteEducation: [], orphanFragments: [],
         metrics: { level: "ok", findings: [] }, degreeInSkills: [], hasLink: true,
       } as never,
-      content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
       missingKeywords: ["Salesforce"], listedOnlyKeywords: [], matchedKeywords: [],
       missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
       templateSafety: "safe",

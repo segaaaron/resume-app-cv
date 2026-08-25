@@ -352,13 +352,36 @@ const cappedStringArray = (limit: number) =>
 export const CvFixActionSchema = z
   .object({
     kind: z
-      .enum(["rewrite_bullet", "rewrite_summary", "replace_text", "add_skill", "fix_dates", "remove_duplicates", "manual"])
+      /**
+       * `set_title` y `weave_term` son ACCIONES DEL PANEL, no del modelo.
+       *
+       * ── EL DEFECTO (reportado con captura, 2026-08-25) ───────────────────
+       *
+       *   «Si bien nos dice algo, no es claro para la solución; ahí si agregamos
+       *    botones para solucionarlo en tailor sería genial, así no indagamos a
+       *    qué se refiere y cómo podemos solucionarlo.»
+       *
+       * Dos hallazgos de «¿te encuentran?» —el cargo que la vacante busca y el
+       * término que sólo vive en un puesto viejo— terminaban en «esto sólo lo
+       * sabés vos: escribilo en el editor». Es la frase sin salida que este panel
+       * existe para no decir: los dos tienen un arreglo que el producto ya sabe
+       * hacer (escribir el titular, tejer el término en una viñeta del puesto
+       * actual), y nadie los había conectado.
+       *
+       * `strip_glyphs` es la tercera: quitar la flecha con la que el usuario
+       * abrió una viñeta es determinista y no necesita a nadie que lo escriba.
+       *
+       * El modelo NO puede emitir ninguna: `rejectionOf` las descarta como
+       * `panel_only_action`. Un modelo que devolviera `set_title` estaría
+       * reescribiendo la identidad profesional de alguien sin que nadie lo mire.
+       */
+      .enum(["rewrite_bullet", "rewrite_summary", "replace_text", "add_skill", "fix_dates", "remove_duplicates", "set_title", "weave_term", "strip_glyphs", "manual"])
       .catch("manual"),
     /** rewrite_bullet: the job the bullet belongs to. */
     targetId: z.string().max(64).optional(),
     /** rewrite_bullet: 0-based bullet index inside that job. */
     index: z.number().int().min(0).max(60).optional(),
-    /** add_skill: the exact skill to add. replace_text: the wrong wording. */
+    /** add_skill: the exact skill to add. replace_text: the wrong wording. set_title: el cargo a escribir en el titular. weave_term: el término a demostrar. */
     value: z.string().max(200).optional(),
     /**
      * replace_text: what `value` should say instead.
@@ -948,6 +971,24 @@ export interface SkillBulletInput {
    * role is the only one considered.
    */
   targetId?: string
+  /**
+   * TRAER ADELANTE UN TÉRMINO QUE YA ESTÁ, PERO EN UN PUESTO VIEJO.
+   *
+   * ── POR QUÉ EXISTE (2026-08-25) ──────────────────────────────────────────
+   *
+   * Este endpoint corta temprano si la experiencia ya nombra la habilidad: sin
+   * eso, apretar dos veces escribía dos viñetas sobre lo mismo. Pero el informe
+   * tiene un hallazgo cuyo problema es EXACTAMENTE ése: «"iOS Security" sólo
+   * aparece en un puesto que terminó en 2016». Ahí la habilidad SÍ está — y por
+   * eso el chequeo existe. Sin esta bandera, su botón contestaba «ya está
+   * demostrada», marcaba el hallazgo como resuelto y no escribía nada: un
+   * callejón sin salida que además mentía.
+   *
+   * Quien la enciende ya midió que falta DONDE IMPORTA (en un puesto reciente),
+   * así que la comprobación de presencia se saltea y al modelo se le dice que la
+   * ubique en un puesto reciente. No relaja ningún guard de invención.
+   */
+  refresh?: boolean
 }
 
 export type SkillBulletResult =

@@ -7,7 +7,7 @@
 // bracket placeholder — and returns it for the user to confirm in the diff modal.
 // The human-in-the-loop confirm is the honesty gate: an assertion the user never
 // did is rejected by them, exactly like every other suggestion in the editor.
-import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
+import { hasRoomForBullet } from "@/lib/ats/role-budget"
 import { readChat } from "@/lib/services/ai/shared/chat-result"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
@@ -130,7 +130,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
   async weaveSkillBullet(userId: string, input: SkillBulletInput, plan: string): Promise<SkillBulletResult> {
     await enforceAIQuota(userId, "skill-bullet", plan)
 
-    const { skill: rawSkill, sectionData, language: rawLanguage, soft = false, targetId: chosenId } = input
+    const { skill: rawSkill, sectionData, language: rawLanguage, soft = false, targetId: chosenId, refresh = false } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const skill = rawSkill.trim()
@@ -154,7 +154,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
      * claim, and proving it in a bullet is exactly the point of this endpoint.
      */
     const experienceText = normalizeTerm(work.map((j) => j.description ?? "").join(" \n "))
-    if (termPresent(skill, experienceText)) {
+    // `refresh`: el término SÍ está, y ése es el problema — vive sólo en un puesto
+    // viejo. Ver `SkillBulletInput.refresh`. Sin esta salvedad, el botón de ese
+    // hallazgo contestaba «ya está demostrada» y no escribía nada.
+    if (!refresh && termPresent(skill, experienceText)) {
       return { status: "already_demonstrated" }
     }
 
@@ -179,8 +182,25 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
      * crowded role may be the only credible home. When the user picks the role
      * themselves this does not apply at all — their choice stands.
      */
-    const roomy = work.filter((j) => parseBullets(j.description ?? "").length <= BULLETS_PER_ROLE_MAX.value)
-    const crowded = work.filter((j) => parseBullets(j.description ?? "").length > BULLETS_PER_ROLE_MAX.value)
+    /**
+     * EL `<=` ERA EL BUCLE. Reportado por el CEO el 2026-08-25, con captura.
+     *
+     * «Con lugar» se preguntaba `length <= 6`, así que un puesto que YA tenía
+     * seis contaba como cómodo y recibía la séptima línea — y el chequeo de
+     * estructura, que corta en `> 6`, le pedía acto seguido borrarla. El panel
+     * escribía y el panel mandaba borrar lo recién escrito. Y ninguna de las dos
+     * miraba la antigüedad: un puesto de hace diez años, donde se leen tres,
+     * también contaba como cómodo con seis.
+     *
+     * Ahora las dos preguntan a `roleBudget`, que es el único dueño de «¿cabe
+     * otra línea?» y mide por antigüedad. Sigue sin ser exclusión dura: una
+     * habilidad va donde de verdad ocurrió, y un puesto lleno puede ser su único
+     * hogar creíble — por eso los llenos van ÚLTIMOS, no afuera. Lo que cambia es
+     * que el panel ya sabe que está lleno antes de escribir, y ofrece cambiar la
+     * línea que menos aporta en vez de agregar una séptima.
+     */
+    const roomy = work.filter((j) => hasRoomForBullet(j))
+    const crowded = work.filter((j) => !hasRoomForBullet(j))
     const jobs = chosenJob ? [chosenJob] : [...roomy, ...crowded].slice(0, 6)
     const workList = jobs.map((j) => {
       const bulletLines = renderBulletsForPrompt(parseBullets(j.description ?? ""), {
@@ -253,6 +273,18 @@ ${proseRules("es")}
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"targetId": "ID", "text": "• bullet que use ${skill}"}`
 
+    /**
+     * Y SI SE TRAE ADELANTE, SE DICE DÓNDE VA. Sin esta línea el modelo ve la
+     * habilidad ya escrita en el puesto viejo y la vuelve a poner ahí: la línea
+     * saldría bien y el hallazgo seguiría abierto, porque lo que estaba mal no era
+     * que faltara sino DÓNDE estaba.
+     */
+    const forwardTarget = refresh && !chosenJob
+      ? (language === "en"
+        ? `\n\nTHIS SKILL ALREADY APPEARS IN AN OLDER ROLE, and that is the problem being fixed: a reader assumes anything missing from recent work was dropped. Place the new bullet in the MOST RECENT role where it is credible — never in the oldest one.`
+        : `\n\nESTA HABILIDAD YA APARECE EN UN PUESTO VIEJO, y ése es justamente el problema que se está arreglando: un lector asume que lo que no está en el trabajo reciente se dejó de usar. Colocá el bullet nuevo en el puesto MÁS RECIENTE donde sea creíble — nunca en el más viejo.`)
+      : ""
+
     const forcedTarget = chosenJob
       ? (language === "en"
         ? `\n\nTHE JOB IS ALREADY CHOSEN BY THE USER: ID:${chosenJob.id}. Write the bullet for THAT job and return its ID. Do NOT return {"targetId": null} — the user decided where this belongs.`
@@ -273,7 +305,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             "Returning {\"targetId\": null} when no job is a credible fit is a correct, expected answer. " +
             langInstruction,
         },
-        { role: "user", content: prompt + forcedTarget },
+        { role: "user", content: prompt + forwardTarget + forcedTarget },
       ],
     })
 

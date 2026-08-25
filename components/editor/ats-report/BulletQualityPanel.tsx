@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react"
 import type { AtsReport, ReportBullet } from "@/lib/ats/report"
 import { solvableChecks } from "@/lib/ats/report"
 import { QUANTIFICATION_BAND } from "@/lib/ats/scoring-config"
+import { impactOf } from "@/lib/ats/bullet-impact"
 
 /**
  * Todas las viñetas, medidas de una.
@@ -36,6 +37,30 @@ export default function BulletQualityPanel({ report, onSolve }: Props) {
   const t = useTranslations("editor.ats")
   const bullets = report.bullets
   if (bullets.length === 0) return null
+
+  /**
+   * LAS QUE YA ESTÁN BIEN, DICHAS EN VOZ ALTA.
+   *
+   * ── LA ORDEN (CEO, 2026-08-25) ──────────────────────────────────────────
+   *
+   *   «Si los bullets tienen información de alto impacto para el puesto que
+   *    está aplicando, debería decir "bullets con información importante".»
+   *
+   * Este panel sólo sabía señalar lo que falta: V·#·K apagados y un botón. Una
+   * línea que aterriza lo que la vacante pide y está bien escrita no recibía
+   * ninguna señal, así que el usuario no podía distinguir «esto ya rinde» de
+   * «esto todavía no lo miré» — y terminaba reescribiendo lo que ya servía.
+   *
+   * NO ES UNA SEGUNDA OPINIÓN: sale de `bullet-impact`, la MISMA función con la
+   * que el informe decide qué línea se corta y cuál gemela se borra. Por
+   * construcción, una línea rotulada de alto impacto no puede ser la primera que
+   * otra tarjeta proponga borrar — que es la contradicción que se reportó.
+   */
+  const highImpact = (b: ReportBullet): boolean => {
+    const i = impactOf({ index: b.index, text: b.text, keywords: b.keywords })
+    return i.relevance > 0 && !i.expendable
+  }
+  const strong = bullets.filter(highImpact).length
 
   const withMetric = bullets.filter((b) => b.metric).length
   const withVerb = bullets.filter((b) => b.verb).length
@@ -79,6 +104,13 @@ export default function BulletQualityPanel({ report, onSolve }: Props) {
         <p className="mt-1.5 text-[10.5px] leading-snug" style={{ color: "var(--a-muted)" }}>
           {t("bq_caption", { withMetric, total: bullets.length, min: TARGET_MIN, max: TARGET_MAX, rich })}
         </p>
+        {/* Lo que YA rinde, contado antes de la lista: es la mitad del informe
+            que este panel nunca dijo. */}
+        {strong > 0 && (
+          <p className="mt-1 text-[10.5px] font-semibold leading-snug" style={{ color: "var(--a-ok-ink)" }}>
+            {t("bq_strong_caption", { strong, total: bullets.length })}
+          </p>
+        )}
       </div>
 
       <div className="mt-2.5 grid grid-cols-4 gap-px" style={{ background: "var(--a-border)" }}>
@@ -132,6 +164,14 @@ export default function BulletQualityPanel({ report, onSolve }: Props) {
                 >
                   {b.text}
                 </span>
+                {highImpact(b) && (
+                  <span
+                    className="mt-1 inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.05em]"
+                    style={{ background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }}
+                  >
+                    {t("bq_high_impact")}
+                  </span>
+                )}
                 {b.keywords.length > 0 && (
                   <span className="mt-0.5 block text-[9.5px]" style={{ color: "var(--a-accent-ink)" }}>
                     {b.keywords.slice(0, 4).join(" · ")}

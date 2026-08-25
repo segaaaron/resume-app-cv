@@ -14,7 +14,6 @@ import {
   REPORT_SECTIONS,
 } from "@/lib/ats/report"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
-import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
 
 /**
  * EL ENSAMBLADOR. Los ocho productores entran sueltos y sale UN informe.
@@ -43,14 +42,6 @@ const emptyWriting = (over: Partial<WritingChecks> = {}): WritingChecks => ({
   ...over,
 })
 
-const emptyContent = (over: Partial<ATSContentQuality> = {}): ATSContentQuality => ({
-  totalBullets: 0,
-  quantifiedBullets: 0,
-  quantificationPct: 0,
-  weakOpenerBullets: 0,
-  metriclessBullets: [],
-  ...over,
-} as ATSContentQuality)
 
 const input = (over: Partial<BuildReportInput> = {}): BuildReportInput => ({
   score: 72,
@@ -62,7 +53,6 @@ const input = (over: Partial<BuildReportInput> = {}): BuildReportInput => ({
     { category: "mustHaves", coveragePct: 50, weight: .20, share: .20, points: 10, recoverable: 10, basis: "chosen" },
   ],
   writing: emptyWriting(),
-  content: emptyContent(),
   missingKeywords: [],
   listedOnlyKeywords: [],
   matchedKeywords: [],
@@ -109,11 +99,19 @@ describe("cada sección declara si mueve el número", () => {
   /**
    * La mitad que faltaba del defecto reportado con captura: no alcanza con que
    * un consejo no sume puntos, hay que poder DECIRLO al lado del hallazgo.
+   *
+   * ── ACTUALIZADO (CEO, 2026-08-25) ──────────────────────────────────────────
+   *
+   * «Consejos» SÍ mueve el número y decía que no. `impact` —las viñetas que
+   * declaran un resultado medible— vale 0.08 del puntaje y no tenía sección:
+   * se cobraba y no aparecía en el informe, mientras esta sección se anunciaba
+   * gratis con chequeos adentro que sí pesan. Ahora declara su categoría; lo que
+   * no mueve el número lo sigue diciendo cada tarjeta por su cuenta.
    */
-  it("consejos de reclutador y vocabulario no puntúan, y lo dicen", () => {
-    expect(r.sections.find((s) => s.id === "tips")?.scoreCategory).toBeNull()
-    expect(r.sections.find((s) => s.id === "tips")?.coveragePct).toBeNull()
+  it("vocabulario no puntúa y lo dice; consejos declara la categoría que sí cobra", () => {
+    expect(r.sections.find((s) => s.id === "tips")?.scoreCategory).toBe("impact")
     expect(r.sections.find((s) => s.id === "other")?.scoreCategory).toBeNull()
+    expect(r.sections.find((s) => s.id === "other")?.coveragePct).toBeNull()
   })
 })
 

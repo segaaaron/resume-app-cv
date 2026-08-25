@@ -44,7 +44,6 @@ const reportInput = (over: Partial<BuildReportInput> = {}): BuildReportInput => 
   score: 72,
   categories: [],
   writing: emptyWriting(),
-  content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
   missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: [],
   missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
   templateSafety: "safe", recruiterFixes: [],
@@ -151,7 +150,6 @@ describe("lo aceptado se filtra en la ENTRADA al informe", () => {
     buildPanelReport({
       result: { score: 70, analysis: { criticalFixes: [FIX] } } as never,
       writing: emptyWriting(),
-      content: { totalBullets: 1, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
       sectionData: cv,
       jobDescription: "Ventas",
       isAlreadyAccepted,

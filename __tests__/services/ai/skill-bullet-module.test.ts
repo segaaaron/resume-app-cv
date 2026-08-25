@@ -156,3 +156,56 @@ describe("AISkillBulletModule.weaveSkillBullet", () => {
     })
   })
 })
+
+/**
+ * TRAER ADELANTE UN TÉRMINO QUE YA ESTÁ, PERO EN UN PUESTO VIEJO.
+ *
+ * El informe emite «"X" sólo aparece en un puesto que terminó en 2016» y su
+ * botón llama acá. Sin `refresh`, este endpoint corta con `already_demonstrated`
+ * —la habilidad SÍ está, en el puesto viejo— y el hallazgo quedaba marcado como
+ * resuelto sin haber escrito nada: un callejón sin salida que además mentía.
+ */
+describe("weaveSkillBullet · refresh", () => {
+  const conTerminoViejo = () => ({
+    skills: [{ id: "s1", name: "GraphQL", level: "advanced" }],
+    workExperience: [
+      { id: "w1", jobTitle: "Tech Lead", employer: "Now", description: "• Led the platform team" },
+      { id: "w0", jobTitle: "Backend Developer", employer: "Old", description: "• Built the GraphQL gateway" },
+    ],
+  })
+
+  it("sin la bandera corta, que es lo correcto para el botón normal", async () => {
+    const mod = moduleWith(async () => reply({ targetId: "w1", text: "• x" }))
+    const res = await mod.weaveSkillBullet("u1", { skill: "GraphQL", sectionData: conTerminoViejo(), language: "en" }, "PRO")
+    expect(res.status).toBe("already_demonstrated")
+  })
+
+  it("con la bandera escribe, y le dice al modelo que vaya al puesto reciente", async () => {
+    let enviado = ""
+    const mod = moduleWith(async (a) => {
+      enviado = a.messages.map((m) => m.content).join("\n")
+      return reply({ targetId: "w1", text: "• Rebuilt the internal reporting layer on GraphQL so the platform team could ship dashboards without waiting on backend changes" })
+    })
+    const res = await mod.weaveSkillBullet(
+      "u1",
+      { skill: "GraphQL", sectionData: conTerminoViejo(), language: "en", refresh: true },
+      "PRO",
+    )
+    expect(res.status).toBe("written")
+    expect(enviado).toMatch(/MOST RECENT role/)
+  })
+
+  it("y la instrucción sale en el idioma del CV", async () => {
+    let enviado = ""
+    const mod = moduleWith(async (a) => {
+      enviado = a.messages.map((m) => m.content).join("\n")
+      return reply({ targetId: "w1", text: "• Reconstruí la capa interna de reportes sobre GraphQL para que el equipo de plataforma publicara tableros sin depender del backend" })
+    })
+    await mod.weaveSkillBullet(
+      "u1",
+      { skill: "GraphQL", sectionData: conTerminoViejo(), language: "es", refresh: true },
+      "PRO",
+    )
+    expect(enviado).toMatch(/puesto MÁS RECIENTE/)
+  })
+})

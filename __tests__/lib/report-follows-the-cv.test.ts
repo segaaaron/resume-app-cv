@@ -47,7 +47,6 @@ const build = (sectionData: Record<string, unknown>) =>
   buildPanelReport({
     result: { score: 70, analysis: { criticalFixes: [FINDING] } } as never,
     writing: emptyWriting(),
-    content: { totalBullets: 1, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
     sectionData,
     jobDescription: "Ejecutivo de ventas",
   })

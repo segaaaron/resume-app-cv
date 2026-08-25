@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { ArrowRight, Check, Loader2, RotateCcw, Sparkles, Trash2 } from "lucide-react"
+import { ArrowRight, Check, Loader2, Sparkles, Trash2 } from "lucide-react"
 import type { ReportCheck, ReportResolution } from "@/lib/ats/report"
 import BulletAnatomy from "./BulletAnatomy"
 
@@ -32,11 +32,23 @@ interface Props {
   terms: readonly string[]
   applied: boolean
   onApply: (checkId: string) => void
-  onUndo: (checkId: string) => void
   /** Sólo para viñetas: a veces la línea no se arregla, se corta. */
   onRemove?: (checkId: string) => void
   /** Y lo que va en su lugar: un término de la vacante, escrito por el ejecutor. */
   onReplace?: (term: string) => void
+  /**
+   * Fusionar las dos gemelas en una, cuando viven en el MISMO puesto.
+   *
+   * ── LA ORDEN (CEO, 2026-08-25) ─────────────────────────────────────────
+   *
+   *   «Si hay duplicidad con los bullets, sugerir fusionar o borrar uno.»
+   *
+   * La tarjeta ofrecía sólo la tijera, y borrar pierde el matiz que la otra
+   * línea traía. Ahora las dos salidas están a la vista y elige quien hizo el
+   * trabajo. Ausente = el par cruza puestos y fusionarlo reescribiría la
+   * historia laboral.
+   */
+  onMerge?: (checkId: string) => void
   focused?: boolean
   /**
    * Su lugar en la lista, como en el diseño. Numerar no es decoración: convierte
@@ -55,7 +67,7 @@ interface Props {
 }
 
 export default function FixCard({
-  check, resolution, terms, applied, onApply, onUndo, onRemove, onReplace, focused, order, busy,
+  check, resolution, terms, applied, onApply, onRemove, onReplace, onMerge, focused, order, busy,
 }: Props) {
   const t = useTranslations("editor.ats")
   const sev = SEVERITY_STYLE[applied ? "pass" : check.state === "crit" ? "crit" : "warn"]
@@ -134,6 +146,12 @@ export default function FixCard({
     a?.kind === "fix_dates" ||
     a?.kind === "remove_duplicates" ||
     (a?.kind === "add_skill" && !!a.value) ||
+    // Escribir el cargo en el titular y demostrar un término en un puesto
+    // reciente: las dos se ejecutan con su propio valor, sin texto escrito por el
+    // modelo. Sin esto llegaban con la tarjeta puesta y el botón gris.
+    (a?.kind === "set_title" && !!a.value) ||
+    (a?.kind === "weave_term" && !!a.value) ||
+    a?.kind === "strip_glyphs" ||
     (a?.kind === "replace_text" && !!a.value && !!a.replacement)
   const actionable = !!after || evidence.length > 0 || isBullet || canApplyAction
 
@@ -275,16 +293,21 @@ export default function FixCard({
 
       <footer className="flex flex-wrap items-center gap-2 px-3.5 py-3">
         {applied ? (
-          <>
-            <span className="flex items-center gap-1.5 text-[11.5px] font-bold" style={{ color: "var(--a-ok)" }}>
-              <Check className="h-3.5 w-3.5" /> {t("fix_applied")}
-            </span>
-            <button type="button" onClick={() => onUndo(check.id)}
-              className="ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
-              style={{ borderColor: "var(--a-border)", color: "var(--a-ink-2)" }}>
-              <RotateCcw className="h-3 w-3" /> {t("fix_undo")}
-            </button>
-          </>
+          /**
+           * APLICADO Y NADA MÁS. Acá vivía un botón «Deshacer» que hacía UNA cosa:
+           * sacar el hallazgo de la lista de aplicados. El texto seguía escrito en
+           * el CV. Alguien podía apretarlo, ver la tarjeta pendiente otra vez, y
+           * descargar el PDF creyendo que revertió algo que seguía puesto.
+           *
+           * La vuelta atrás de verdad vive donde la foto del CV todavía es válida:
+           * en el aviso que sale al aplicar, durante diez segundos
+           * (`appliedWithUndo`). Un botón que sobrevive en la tarjeta seguiría ahí
+           * después de que el usuario editara otras tres líneas a mano, y
+           * restaurar entonces le borraría ese trabajo sin avisar.
+           */
+          <span className="flex items-center gap-1.5 text-[11.5px] font-bold" style={{ color: "var(--a-ok)" }}>
+            <Check className="h-3.5 w-3.5" /> {t("fix_applied")}
+          </span>
         ) : (
           <>
             {/* La tarjeta de corte NO ofrece reescribir: ver arriba. */}
@@ -295,6 +318,16 @@ export default function FixCard({
                     className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white transition-opacity disabled:opacity-60"
                     style={{ background: "var(--a-bad)" }}>
                     <Trash2 className="h-3 w-3" /> {t("fix_remove")}
+                  </button>
+                )}
+                {/* Y LA OTRA SALIDA, para que borrar no sea la única. Sólo
+                    aparece cuando las dos líneas viven en el mismo puesto: el
+                    informe manda el índice de la gemela que sobrevive. */}
+                {isNearDup && onMerge && typeof check.params?.otherIndex === "number" && (
+                  <button type="button" onClick={() => onMerge(check.id)} disabled={busy}
+                    className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
+                    style={{ borderColor: "var(--a-ai)", color: "var(--a-ai-ink)", background: "var(--a-ai-soft)" }}>
+                    <Sparkles className="h-3 w-3" /> {t("fix_merge_pair")}
                   </button>
                 )}
                 {/* CORTAR DEJA UN HUECO. Decirle «cortá» sin decirle «poné esto»

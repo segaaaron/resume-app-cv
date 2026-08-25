@@ -51,6 +51,29 @@ export function rememberApplied(resumeId: string, signature: string): void {
   } catch { /* ver arriba: opcional por diseño */ }
 }
 
+/**
+ * DESHACER TIENE QUE BORRAR LA MEMORIA DE ESE ARREGLO, o esconde el defecto.
+ *
+ * ── POR QUÉ (2026-08-25) ────────────────────────────────────────────────────
+ *
+ * Esta memoria existe para que el panel no vuelva a proponer lo que el usuario
+ * ya aceptó. Si al revertir dejáramos la firma puesta, el texto original vuelve
+ * al CV **y el hallazgo que lo señalaba queda filtrado para siempre**: el
+ * defecto sigue ahí y el panel deja de verlo. Un deshacer que esconde el
+ * problema es peor que no deshacer.
+ *
+ * Borra UNA firma, no la memoria entera: lo demás que el usuario aceptó sigue
+ * valiendo.
+ */
+export function forgetOneApplied(resumeId: string, signature: string): void {
+  if (typeof window === "undefined" || !resumeId || !signature) return
+  try {
+    const next = read(resumeId).filter((s) => s !== signature)
+    if (next.length > 0) window.localStorage.setItem(keyFor(resumeId), JSON.stringify(next))
+    else window.localStorage.removeItem(keyFor(resumeId))
+  } catch { /* opcional por diseño */ }
+}
+
 /** Al borrar o reemplazar el CV entero, lo aceptado antes ya no describe nada. */
 export function forgetApplied(resumeId: string): void {
   if (typeof window === "undefined" || !resumeId) return

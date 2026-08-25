@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { buildPanelReport } from "@/lib/ats/panel-report"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
-import { assessResumeContent } from "@/lib/services/ai/shared/bullet-quality"
 
 /**
  * EL NÚMERO DE BLANDAS Y SU LISTA CUENTAN LO MISMO.
@@ -44,7 +43,6 @@ const build = (over: Record<string, unknown>) =>
       ...over,
     } as never,
     writing: analyzeWriting(SECTION_DATA),
-    content: assessResumeContent(SECTION_DATA),
     sectionData: SECTION_DATA,
     jobDescription: "Ejecutivo comercial con negociación, trabajo en equipo y comunicación.",
   })

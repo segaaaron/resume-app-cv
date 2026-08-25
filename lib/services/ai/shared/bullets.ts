@@ -22,6 +22,26 @@ export const BULLET_MARKER = "•"
  */
 const LEADING_MARKER_RE = /^\s*(?:[•·]+\s*|[-*]+\s+)/
 
+/**
+ * GLIFOS QUE EL USUARIO ESCRIBIÓ AL PRINCIPIO DE UNA LÍNEA.
+ *
+ * Flechas, checks y cuadraditos que vienen de un CV hecho en Word. No son
+ * marcadores nuestros —`LEADING_MARKER_RE` no los toca a propósito, porque
+ * quitarlos al parsear escondería el defecto en vez de mostrarlo— y sobreviven
+ * hasta el PDF, donde algunos parsers descartan la línea entera.
+ *
+ * Vive acá, con el resto de la convención de viñetas, porque el chequeo que los
+ * DETECTA y el arreglo que los QUITA tienen que mirar exactamente el mismo
+ * conjunto: dos listas es como el panel termina señalando un símbolo que su
+ * propio botón no sabe sacar.
+ */
+export const DECORATIVE_OPENER = /^[→⇒➤➔✔✓★●◆■▪]+\s*/u
+
+/** La línea sin el glifo decorativo con el que abría. Sin tocar el resto. */
+export function stripDecorativeOpener(line: string): string {
+  return line.replace(DECORATIVE_OPENER, "").trim()
+}
+
 /** Strips any leading list marker and surrounding whitespace from one line. */
 function stripMarker(line: string): string {
   return line.replace(LEADING_MARKER_RE, "").trim()

@@ -3,7 +3,6 @@ import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { isImprovableLine, rankRoleBullets, KEEP_PER_ROLE } from "@/lib/ats/bullet-strength"
 import { buildAtsReport, type BuildReportInput } from "@/lib/ats/build-report"
 import { allChecks } from "@/lib/ats/report"
-import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
 
 /**
  * EL PANEL TIENE QUE TERMINARSE.
@@ -46,17 +45,12 @@ const rolWith = (bullets: string[]) => ({
   description: bullets.map((b) => `• ${b}`).join("\n"),
 })
 
-const emptyContent = () => ({
-  totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0,
-  weakOpenerBullets: 0, metriclessBullets: [],
-}) as unknown as ATSContentQuality
 
 const reportFor = (bullets: string[]) =>
   buildAtsReport({
     score: 90,
     categories: [],
     writing: analyzeWriting({ workExperience: [rolWith(bullets)] }),
-    content: emptyContent(),
     missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: [],
     missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
     templateSafety: "safe",
@@ -214,7 +208,6 @@ describe("el dial promete sólo lo alcanzable", () => {
     buildAtsReport({
       score: 75, categories,
       writing: analyzeWriting({ workExperience: [rolWith(NUEVE_BUENAS.slice(0, 4))] }),
-      content: emptyContent(),
       missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: [],
       missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: unmet,
       templateSafety: "safe", recruiterFixes: [],

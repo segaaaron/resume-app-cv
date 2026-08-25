@@ -103,11 +103,22 @@ export function verifyContextOf(sectionData: Record<string, unknown>, resumeText
  * Por qué se descartó. Se devuelve en vez de un booleano para poder MEDIRLO:
  * un guard que sólo dice «no» esconde si está filtrando de más.
  */
-export type RejectReason = "missing_target" | "quote_not_in_cv" | "broken_reference" | "line_has_no_defect"
+export type RejectReason = "missing_target" | "quote_not_in_cv" | "broken_reference" | "line_has_no_defect" | "panel_only_action"
 
 export function rejectionOf(fix: RecruiterFix, ctx: VerifyContext): RejectReason | null {
   // 1. La línea que dice tocar tiene que existir.
   const a = fix.action
+  /**
+   * 0. HAY ACCIONES QUE EL MODELO NO PUEDE PEDIR.
+   *
+   * `set_title` reescribe el titular —la identidad profesional de la persona— y
+   * `weave_term` gasta una llamada tejiendo un término que el modelo elegiría
+   * por su cuenta. Las dos existen para que DOS chequeos deterministas de «¿te
+   * encuentran?» tengan botón; ninguna es una respuesta válida a «¿qué está mal
+   * en este CV?». Están en el mismo enum porque el informe usa un solo tipo de
+   * acción, y por eso el filtro vive acá y no en el esquema.
+   */
+  if (a?.kind === "set_title" || a?.kind === "weave_term" || a?.kind === "strip_glyphs") return "panel_only_action"
   if (a?.kind === "rewrite_bullet") {
     const role = ctx.roles.find((r) => r.id === a.targetId)
     if (!role) return "missing_target"
@@ -208,6 +219,7 @@ export function verifiedRecruiterFixes(
     quote_not_in_cv: 0,
     broken_reference: 0,
     line_has_no_defect: 0,
+    panel_only_action: 0,
   }
   const kept: RecruiterFix[] = []
   for (const f of fixes) {

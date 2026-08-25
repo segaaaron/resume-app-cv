@@ -50,10 +50,11 @@ interface Props {
   resolutions: readonly ReportResolution[]
   appliedIds: ReadonlySet<string>
   onApply: (checkId: string) => void
-  onUndo: (checkId: string) => void
   onRemove?: (checkId: string) => void
   /** Y con qué reemplazarla: un término que la vacante pide y el CV no dice. */
   onReplaceWithTerm?: (term: string) => void
+  /** Fusionar las dos gemelas en una, cuando comparten puesto. */
+  onMergePair?: (checkId: string) => void
   onApplyAll: () => void
   onClose: () => void
   /** Abre enfocando un hallazgo puntual, cuando se entró desde el riel. */
@@ -77,7 +78,7 @@ interface Props {
 }
 
 export default function TailorModal({
-  report, resolutions, appliedIds, onApply, onUndo, onRemove, onReplaceWithTerm, onApplyAll, onClose, focusCheckId, focusTerm, initialFilter, onWeaveTerm, onAddTerm, addedTerms, busyTerm, busy,
+  report, resolutions, appliedIds, onApply, onRemove, onReplaceWithTerm, onMergePair, onApplyAll, onClose, focusCheckId, focusTerm, initialFilter, onWeaveTerm, onAddTerm, addedTerms, busyTerm, busy,
 }: Props) {
   const t = useTranslations("editor.ats")
   const [filter, setFilter] = useState<Filter>(initialFilter ?? "all")
@@ -167,7 +168,23 @@ export default function TailorModal({
   const filters: Array<[Filter, string]> = [
     ["all", t("filter_all", { count: workload.length + terms2.length })],
     ["open", t("filter_open", { count: pendingTotal })],
-    ["done", t("filter_done", { count: appliedIds.size })],
+    /**
+     * «APLICADOS N» CUENTA LO QUE LA PESTAÑA PINTA, no todo lo que se aplicó.
+     *
+     * ── EL DEFECTO (barrido de la vista del ejecutor, CEO 2026-08-25) ────────
+     *
+     * Decía `appliedIds.size` —TODO lo aplicado en el panel— mientras la pestaña
+     * renderiza `workload.filter(aplicado)`. Los dos difieren siempre que se
+     * aplica algo que no es trabajo del ejecutor (reordenar fechas, agregar una
+     * habilidad, cortar una línea), y sobre todo DESPUÉS DEL RE-CÁLCULO: un
+     * hallazgo resuelto desaparece del informe, así que su id sigue en el
+     * conjunto y ya no tiene tarjeta. El chip decía «Aplicados 7» y la pestaña
+     * abría vacía — el usuario leía que su trabajo se había perdido.
+     *
+     * Es el mismo defecto que este panel ya pagó tres veces: un número que
+     * cuenta lo que la función SABE en vez de lo que la pantalla MUESTRA.
+     */
+    ["done", t("filter_done", { count: workload.filter((c) => appliedIds.has(c.id)).length })],
     ...sectionsPresent.map((s): [Filter, string] => [s, t(`section_${s}`)]),
   ]
 
@@ -275,9 +292,9 @@ export default function TailorModal({
               terms={terms}
               applied={appliedIds.has(c.id)}
               onApply={onApply}
-              onUndo={onUndo}
               onRemove={onRemove}
               onReplace={onReplaceWithTerm}
+              onMerge={onMergePair}
               focused={focusCheckId === c.id}
               busy={busy}
             />

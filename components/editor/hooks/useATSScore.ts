@@ -89,6 +89,13 @@ export interface ATSResult {
     softSkills: string[]
     jobTitle: string
     mustHaves: string[]
+    /**
+     * Cuánto insiste el aviso en cada dura, medido sobre su texto. Ya viajaba en
+     * la respuesta —el re-cálculo instantáneo la manda de vuelta— pero este tipo
+     * no la declaraba, así que el panel no podía distinguir un requisito exigido
+     * de un deseable al decidir qué línea sobra.
+     */
+    hardWeights?: Record<string, number>
   }
   /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
   contentQuality?: {
@@ -243,6 +250,8 @@ export function useATSScore() {
   // infers the STANDARD requirements for that role (low-friction, approximate).
   const [mode, setMode] = useState<"jd" | "role">("jd")
   const [loading, setLoading] = useState(false)
+  /** Cuántos análisis COMPLETOS lleva esta sesión. El re-cálculo no lo mueve. */
+  const [analysisRun, setAnalysisRun] = useState(0)
   /**
    * EL PRIMER ACTO LLEGÓ Y EL VEREDICTO NO.
    *
@@ -409,6 +418,18 @@ export function useATSScore() {
           // Acto 1 = informe sin veredicto. Acto 2 = ya está, o falló cerrado.
           setVerdictPending(sobre.act === 1)
           setAtsResult(normalizeAtsResult(sobre.result))
+          /**
+           * UNA CORRIDA COMPLETA MÁS. Es un contador, no un dato del CV.
+           *
+           * El panel necesita saber CUÁNDO el análisis volvió a leer el CV de
+           * cero, para soltar las marcas de «ya lo arreglé»: lo que el reclutador
+           * siga listando después de una lectura nueva sigue abierto. La otra
+           * forma de saberlo era mirar la identidad de `result.analysis` desde el
+           * panel, y eso es leer el crudo del servidor — la puerta que el informe
+           * cerró (`report-is-the-only-door`). Esto es estado de la PETICIÓN, la
+           * misma categoría que `analysisUnavailable`.
+           */
+          setAnalysisRun((n) => n + 1)
         }
         for (;;) {
           const { done, value } = await lector.read()
@@ -633,6 +654,7 @@ export function useATSScore() {
     input, setInput,
     mode, setMode,
     loading,
+    analysisRun,
     verdictPending,
     atsResult, reviewResult,
     offTopic,

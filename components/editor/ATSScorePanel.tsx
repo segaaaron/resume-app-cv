@@ -7,8 +7,10 @@ import { spliceSummary } from "@/lib/ats/summary-splice"
 import { resolveBulletIndex } from "@/lib/ats/bullet-locate"
 import { postingTermsLost } from "@/lib/ats/keyword-safety"
 import { reportUxFailure } from "@/lib/client-error-reporter"
-import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
-import { parseBullets, formatBullet, serializeBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
+import { roleBudget } from "@/lib/ats/role-budget"
+import { weakestBullet } from "@/lib/ats/bullet-impact"
+import { weightOf as postingWeightOf } from "@/lib/ats/posting-priority"
+import { parseBullets, formatBullet, serializeBullets, serializeBulletsReporting, stripDecorativeOpener } from "@/lib/services/ai/shared/bullets"
 import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
 import { useResumeStore } from "@/stores/resumeStore"
 import { textSignature, matchesApplied } from "@/lib/ats/action-plan"
@@ -17,13 +19,14 @@ import { planSkillAdd } from "@/lib/ats/skill-add"
 import { planRoleReorder } from "@/lib/ats/role-order"
 import { tailorResolutions } from "@/lib/ats/tailor-resolutions"
 import { allChecks } from "@/lib/ats/report"
+import { appliedIdsFrom, fingerprintOfCheck } from "@/lib/ats/applied-checks"
 import ReportRail from "./ats-report/ReportRail"
 import { applyAllPlan, solvableChecks, tailorWorkload } from "@/lib/ats/report"
 import TailorModal, { type TailorFilter } from "./ats-report/TailorModal"
 import { postingTermsForPrompt } from "@/lib/ats/rewrite-keeps-match"
 import { hasCliche } from "@/lib/services/ai/shared/cliches"
 import { assessDescription } from "@/lib/services/ai/shared/bullet-quality"
-import { appliedSignatures, rememberApplied } from "@/lib/ats/applied-memory"
+import { appliedSignatures, forgetOneApplied, rememberApplied } from "@/lib/ats/applied-memory"
 import { useShallow } from "zustand/react/shallow"
 // Same normalization the matcher used to decide "demonstrated", so an accented
 // Spanish skill matches the stored verdict instead of silently missing it.
@@ -39,7 +42,6 @@ import JobPickerModal from "./JobPickerModal"
 import type { ResumeSections, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
 import { applySuggestion, previewSuggestion } from "@/lib/services/ai/shared/apply-suggestion"
-import { assessResumeContent } from "@/lib/services/ai/shared/bullet-quality"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { applySpellingFix } from "@/lib/ats/apply-spelling"
 import { markContentOptimized } from "./hooks/useOptimizedGuard"
@@ -101,6 +103,7 @@ export default function ATSScorePanel() {
   const {
     input, setInput,
     loading,
+    analysisRun,
     verdictPending: verdictPendingFromRequest,
     atsResult, reviewResult,
     offTopic,
@@ -112,8 +115,7 @@ export default function ATSScorePanel() {
     cooldownUntil,
   } = useATSScore()
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
-  // El valor ya no se lee: lo aplicado sobrevive al re-análisis en `applied-memory`.
-  const [, setAppliedItems] = useState<Set<string>>(new Set())
+
   /**
    * True once the user has applied any fix from this report.
    *
@@ -128,9 +130,10 @@ export default function ATSScorePanel() {
   /**
    * Lo que el usuario ya aceptó en ESTE CV, entre corridas.
    *
-   * `appliedItems` se vacía al re-analizar, y el problema aparece justo DESPUÉS:
-   * el CV cambió, el modelo opina de cero y vuelve a proponer una variante del
-   * párrafo que él mismo escribió. Esta memoria dura más que el análisis.
+   * Las marcas de la sesión se borran al re-analizar, y el problema aparece justo
+   * DESPUÉS: el CV cambió, el modelo opina de cero y vuelve a proponer una
+   * variante del párrafo que él mismo escribió. Esta memoria dura más que el
+   * análisis porque vive en el navegador y se compara por FIRMA del texto.
    */
   /** Cómo parsea la plantilla elegida: decide si hace falta ofrecer la copia plana. */
   const templateSafety = getTemplateAtsSafety(useResumeStore((st) => st.config?.templateId))
@@ -151,15 +154,117 @@ export default function ATSScorePanel() {
     [appliedSigs],
   )
 
-  /** The ONLY writer of applied-state, so nothing can mark a fix done silently. */
-  function markFixApplied(key: string, appliedText?: string) {
-    setAppliedItems((prev) => new Set(prev).add(key))
+  /**
+   * Recuerda el TEXTO aceptado, para que el análisis siguiente no proponga una
+   * variante de lo que el usuario ya escribió.
+   *
+   * ── LO QUE ESTA FUNCIÓN DEJÓ DE HACER (barrido de cierre, 2026-08-25) ─────
+   *
+   * Recibía además una `key` y la metía en un `appliedItems` cuyo valor se
+   * descartaba (`const [, setAppliedItems]`) — el mismo patrón del `setMergingKey`
+   * que este proyecto ya había corregido una vez: estado que se escribe y nadie
+   * lee. Al sacarlo, la mitad de las llamadas pasaban a no hacer NADA y seguían
+   * escritas como si cerraran algo. Se borraron; las que quedan traen texto, que
+   * es lo único que esta memoria guarda.
+   *
+   * Quién retira la tarjeta es otra cosa y tiene su propio dueño:
+   * `markCheckApplied`.
+   */
+  function markFixApplied(appliedText: string) {
     // La firma, no el texto: alcanza para reconocerlo y no guarda frases del CV.
     const sig = appliedText ? textSignature(appliedText) : ""
     if (sig && memoryResumeId) {
       rememberApplied(memoryResumeId, sig)
       setAppliedSigs((prev) => (prev.includes(sig) ? prev : [sig, ...prev]))
     }
+  }
+
+  /**
+   * UN CAMBIO APLICADO, CON SU VUELTA ATRÁS. El único lugar que lo ofrece.
+   *
+   * ── EL DEFECTO (reportado por el CEO, 2026-08-25) ─────────────────────────
+   *
+   * La tarjeta tenía un botón «Deshacer» que hacía UNA cosa: sacar el hallazgo de
+   * la lista de aplicados. El texto quedaba escrito en el CV. Tres consecuencias,
+   * y la tercera es la cara: la tarjeta volvía a «pendiente» —así que el usuario
+   * gastaba otra llamada y otra cuota apretando de nuevo—, y sobre todo alguien
+   * podía descargar el PDF creyendo que había revertido algo que seguía puesto.
+   *
+   * ── CÓMO DEBE FUNCIONAR: EL PRODUCTO YA LO TUVO ───────────────────────────
+   *
+   * No es una invención de este turno. El editor de viñetas lo hacía en `c27f31d`:
+   * capturaba el texto ANTES de escribir y ofrecía «Deshacer» en el aviso, con
+   * diez segundos para apretarlo. Murió cuando se rehízo esa pantalla —las
+   * viñetas pasaron a cajas— y sus dos claves de idioma quedaron huérfanas en el
+   * archivo. Se reusan acá, así que el patrón vuelve a tener un dueño.
+   *
+   * ── POR QUÉ EN EL AVISO Y NO EN LA TARJETA ────────────────────────────────
+   *
+   * Porque una foto vieja es peor que ninguna. Si el botón viviera en la tarjeta,
+   * seguiría ahí después de que el usuario editara otras tres líneas a mano — y
+   * restaurar entonces le borraría ese trabajo sin avisar. La ventana del aviso
+   * es la única en la que la foto todavía describe el CV que él está mirando.
+   *
+   * Revertir NO deja rastro de aceptado: si la firma quedara en la memoria, el
+   * texto original vuelve y el hallazgo que lo señalaba queda filtrado para
+   * siempre. Ver `forgetOneApplied`.
+   */
+  function appliedWithUndo(
+    message: string,
+    before: ReadonlyArray<[Parameters<typeof updateSectionData>[0], unknown]>,
+    opts: { checkId?: string; signature?: string; onUndo?: () => void } = {},
+  ): void {
+    /**
+     * LA FOTO CADUCA CUANDO ALGUIEN MÁS ESCRIBE ENCIMA.
+     *
+     * ── EL DEFECTO (cazado por QA, 2026-08-25) ──────────────────────────────
+     *
+     * Diez segundos alcanzan para aplicar otro arreglo. Con dos avisos vivos,
+     * apretar «Deshacer» en el PRIMERO restauraba una foto anterior al segundo:
+     * el trabajo del segundo desaparecía en silencio. El precedente del que sale
+     * este patrón tenía UN camino de escritura; acá hay diez.
+     *
+     * ── Y NO ALCANZA CON CONTAR LAS ESCRITURAS DEL PANEL ────────────────────
+     *
+     * Un contador propio sólo ve lo que este panel escribe. El editor está al
+     * lado: durante esos diez segundos el usuario puede corregir una viñeta a
+     * mano, y esa edición no pasa por acá — la vuelta atrás se la habría comido
+     * sin decir nada. Así que no se cuenta: se GUARDA CÓMO QUEDÓ la sección y, al
+     * apretar, se compara con cómo está. Si no es idéntica, alguien escribió
+     * después —el panel, el formulario, quien sea— y la foto ya no describe este
+     * CV: se dice y no se toca nada. Callar y restaurar de más es lo que había
+     * que evitar.
+     *
+     * Se lee del store y no del render: `updateSectionData` acaba de correr y el
+     * `sectionData` de este closure todavía es el de antes.
+     */
+    const despues = Object.fromEntries(
+      before.map(([section]) => [
+        section,
+        JSON.stringify((useResumeStore.getState().sectionData as unknown as Record<string, unknown>)[section] ?? null),
+      ]),
+    )
+    toast.success(message, {
+      duration: 10_000,
+      action: {
+        label: tAi("undo"),
+        onClick: () => {
+          const ahora = useResumeStore.getState().sectionData as unknown as Record<string, unknown>
+          const vigente = before.every(([section]) => JSON.stringify(ahora[section] ?? null) === despues[section])
+          if (!vigente) { toast.info(tAi("undo_stale")); return }
+          for (const [section, value] of before) updateSectionData(section, value as never)
+          if (opts.signature && memoryResumeId) {
+            const sig = textSignature(opts.signature)
+            forgetOneApplied(memoryResumeId, sig)
+            setAppliedSigs((prev) => prev.filter((s) => s !== sig))
+          }
+          if (opts.checkId) undoCheck(opts.checkId)
+          opts.onUndo?.()
+          toast.info(tAi("bullets_undone"))
+          void runRescore()
+        },
+      },
+    })
   }
 
   // Re-score deterministically after a fix. The hook owns the delta badge now,
@@ -184,7 +289,16 @@ export default function ATSScorePanel() {
     }
     return after
   }
-  const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
+  /**
+   * `appliedCheckId` — el hallazgo que esta confirmación cierra.
+   *
+   * Sin él, un arreglo aceptado en el modal de confirmación quedaba registrado en
+   * la memoria de textos aceptados pero NO entre los hallazgos cerrados, que es lo
+   * que el riel y el ejecutor leen para pintar «aplicado». La tarjeta seguía
+   * ofreciendo trabajo ya hecho hasta el re-cálculo. Es la misma sincronía
+   * que la fusión ya resolvía por su cuenta con este mismo nombre de campo.
+   */
+  const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string; appliedCheckId?: string } | null>(null)
   const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
   // Everything the AI writes here is applied INTO the CV → the CV's language.
   const cvLanguage = useCvLanguage()
@@ -222,15 +336,13 @@ export default function ATSScorePanel() {
      */
     removeIndex?: number
     removeCurrent?: string
-    /** Marked applied on confirm, so the same offer cannot appear twice. */
-    appliedKey?: string
     /**
      * El hallazgo del informe que esto cierra.
      *
-     * `appliedKey` vive en `appliedItems`, que es OTRO conjunto de estado: cerrar
-     * ahí no retira la tarjeta del ejecutor, que lee `appliedCheckIds`. La fusión
-     * aceptada dejaba su propia tarjeta en pantalla ofreciendo fusionar dos
-     * líneas que ya eran una.
+     * La memoria de TEXTOS aceptados es otra cosa: cerrar ahí no retira la
+     * tarjeta del ejecutor, que lee los hallazgos cerrados. La fusión aceptada
+     * dejaba su propia tarjeta en pantalla ofreciendo fusionar dos líneas que ya
+     * eran una.
      */
     appliedCheckId?: string
   } | null>(null)
@@ -319,10 +431,9 @@ export default function ATSScorePanel() {
         // An honest no. The two lines turned out to be about different work, and
         // forcing them together would have distorted one of them.
         toast.info(t("merge_not_mergeable"))
-        markFixApplied(key)
         // Y LA TARJETA SE RETIRA. Una negativa que deja el mismo botón en pantalla
         // invita a apretarlo otra vez para recibir la misma negativa.
-        if (checkId) setAppliedCheckIds((prev) => new Set(prev).add(checkId))
+        if (checkId) markCheckApplied(checkId)
         return
       }
       setBulletFix({
@@ -334,10 +445,9 @@ export default function ATSScorePanel() {
         why: t("merge_why"),
         removeIndex: c.indexes[1],
         removeCurrent: c.texts[1],
+        // Se lleva al modal de confirmación para que ACEPTAR sea lo que retira el
+        // par — no el simple hecho de pedirlo. Cancelar deja la oferta en pie.
         appliedCheckId: checkId,
-        // Carried into the confirm modal so ACCEPTING is what retires the pair —
-        // not merely asking for it. Cancelling must leave the offer standing.
-        appliedKey: key,
       })
     } finally {
       setMergingKey(null)
@@ -357,8 +467,21 @@ export default function ATSScorePanel() {
    * theirs, with ours marked as the recommendation. `draft` is the bullet already
    * written for the recommended role: accepting that role costs no second call.
    */
+  /**
+   * `refresh` y `checkId` viajan en el ESTADO, no sólo en la llamada.
+   *
+   * ── EL DEFECTO (cazado por QA, 2026-08-25) ─────────────────────────────────
+   *
+   * El camino tiene dos postas: se pide la línea, y si el modelo no encuentra
+   * puesto creíble, el usuario elige uno y se vuelve a pedir. `refresh` se
+   * mandaba en la PRIMERA y se perdía en la segunda — así que al elegir el puesto
+   * el endpoint volvía a cortar con «ya está demostrada» (el término está, en el
+   * puesto viejo: por eso existe el hallazgo) y el usuario recibía la misma
+   * mentira, ahora después de gastar dos llamadas. Y sin `checkId` el hallazgo
+   * nunca se marcaba como aplicado, aunque la línea se escribiera.
+   */
   const [softPick, setSoftPick] = useState<
-    { skill: string; recommendedId: string | null; draft: string | null; soft: boolean }
+    { skill: string; recommendedId: string | null; draft: string | null; soft: boolean; refresh?: boolean; checkId?: string }
   | null>(null)
 
   /**
@@ -462,7 +585,7 @@ export default function ATSScorePanel() {
    * button and have the CV be clean.
    */
   /** @returns true when a repeated line was actually removed. */
-  function removeDuplicateBullets(): boolean {
+  function removeDuplicateBullets(checkId?: string): boolean {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     let removed = 0
     const updated = work.map((j) => {
@@ -476,7 +599,7 @@ export default function ATSScorePanel() {
     })
     if (removed === 0) { toast.info(t("dedupe_none")); return false }
     updateSectionData("workExperience", updated)
-    toast.success(t("dedupe_done", { count: removed }))
+    appliedWithUndo(t("dedupe_done", { count: removed }), [["workExperience", work]], { checkId })
     void runRescore()
     return true
   }
@@ -500,15 +623,53 @@ export default function ATSScorePanel() {
    * cannot do anything is not drawn.
    */
 
-  function fixDates(): boolean {
+  /**
+   * Quita el glifo decorativo con el que abren algunas viñetas.
+   *
+   * Reusa el escritor de siempre y el conjunto de símbolos que declara
+   * `bullets.ts` — el mismo con el que el chequeo las contó.
+   */
+  function stripDecorativeGlyphs(checkId?: string): boolean {
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    let limpiadas = 0
+    const updated = work.map((j) => {
+      const bullets = parseBullets(j.description ?? "")
+      if (bullets.length === 0) return j
+      // El contador es POR PUESTO. Con uno global, el primer glifo encontrado
+      // hacía que todos los puestos siguientes se re-serializaran aunque no
+      // tuvieran ninguno — y `serializeBullets` colapsa líneas idénticas, así
+      // que un arreglo de formato habría borrado viñetas repetidas sin decirlo.
+      let enEstePuesto = 0
+      const next = bullets.map((line) => {
+        const limpio = stripDecorativeOpener(line)
+        if (limpio !== line.trim() && limpio) enEstePuesto++
+        // Una línea que era SÓLO el símbolo no se borra: dejarla vacía cambiaría
+        // el conteo de viñetas por un arreglo de formato. Se deja como está.
+        return limpio || line
+      })
+      if (enEstePuesto === 0) return j
+      limpiadas += enEstePuesto
+      return { ...j, description: serializeBullets(next) }
+    })
+    if (limpiadas === 0) { toast.info(t("glyphs_none")); return false }
+    updateSectionData("workExperience", updated)
+    appliedWithUndo(t("glyphs_done", { count: limpiadas }), [["workExperience", work]], { checkId })
+    void runRescore()
+    return true
+  }
+
+  function fixDates(checkId?: string): boolean {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const edu = (sectionData.education ?? []) as { startDate?: string; endDate?: string }[]
     const w = normalizeDates(work)
     const e = normalizeDates(edu)
     if (w.changed + e.changed === 0) { toast.info(t("dates_none")); return false }
-    if (w.changed > 0) updateSectionData("workExperience", w.rows)
-    if (e.changed > 0) updateSectionData("education", e.rows as never)
-    toast.success(t("dates_done", { count: w.changed + e.changed }))
+    // Las DOS secciones en la foto: una vuelta atrás que restaure sólo una
+    // dejaría el CV a mitad de camino entre dos estados.
+    const antesDeFechas: Array<[Parameters<typeof updateSectionData>[0], unknown]> = []
+    if (w.changed > 0) { antesDeFechas.push(["workExperience", work]); updateSectionData("workExperience", w.rows) }
+    if (e.changed > 0) { antesDeFechas.push(["education", edu]); updateSectionData("education", e.rows as never) }
+    appliedWithUndo(t("dates_done", { count: w.changed + e.changed }), antesDeFechas, { checkId })
     void runRescore()
     return true
   }
@@ -546,7 +707,7 @@ export default function ATSScorePanel() {
    * need to know not to offer improving it again. The user's own wording is not
    * AI output and must not be treated as already-optimised.
    */
-  function writeBullet(targetId: string, index: number, current: string, next: string, aiWritten: boolean): boolean {
+  function writeBullet(targetId: string, index: number, current: string, next: string, aiWritten: boolean, checkId?: string): boolean {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const job = work.find((j) => j.id === targetId)
     const bullets = parseBullets(job?.description ?? "")
@@ -559,7 +720,11 @@ export default function ATSScorePanel() {
       // the line itself, which is their résumé.
       reportUxFailure("bullet_write_line_gone", { jobFound: !!job, index, bullets: bullets.length, currentLen: current.length })
       toast.info(t("bullet_line_gone"))
-      markFixApplied(`bullet-${targetId}-${index}`)
+      // Y LA FILA SE RETIRA DE VERDAD. El comentario de arriba lo prometía desde
+      // siempre y lo hacía escribiendo en un conjunto de estado cuyo valor se
+      // descartaba, así que la tarjeta seguía ofreciendo reescribir una línea que
+      // ya no existe. Se cierra por el mismo dueño que el resto: el hallazgo.
+      if (checkId) markCheckApplied(checkId)
       void runRescore()
       return false
     }
@@ -569,8 +734,8 @@ export default function ATSScorePanel() {
     if (aiWritten) markContentOptimized(`opt_bullet_${targetId}`, nextDescription)
     // `next` es la línea que quedó escrita: su firma es lo que evita que la
     // próxima corrida vuelva a proponer una variante de ella.
-    markFixApplied(`bullet-${targetId}-${index}`, next)
-    toast.success(t("toast_change_applied"))
+    markFixApplied(next)
+    appliedWithUndo(t("toast_change_applied"), [["workExperience", work]], { checkId, signature: next })
     if (written.removed > 0) toast.info(t("dedupe_done", { count: written.removed }))
     void runRescore()
     return true
@@ -599,8 +764,7 @@ export default function ATSScorePanel() {
       if (at < 0) {
         reportUxFailure("bullet_fix_line_gone", { jobFound: !!job, index, bullets: bullets.length, currentLen: bulletFix.current.length })
         toast.info(t("bullet_line_gone"))
-        markFixApplied(`bullet-${targetId}-${index}`)
-        void runRescore()
+          void runRescore()
         return
       }
       // A merge also deletes the second line. If that twin is no longer in the
@@ -631,10 +795,11 @@ export default function ATSScorePanel() {
       // Same key the Content tab's guard uses: this write IS AI output, so the
       // "improve" button over there must not come back offering to improve it.
       markContentOptimized(`opt_bullet_${targetId}`, nextDescription)
-      markFixApplied(`bullet-${targetId}-${index}`)
-      if (bulletFix.appliedKey) markFixApplied(bulletFix.appliedKey)
-      if (bulletFix.appliedCheckId) setAppliedCheckIds((prev) => new Set(prev).add(bulletFix.appliedCheckId as string))
-      toast.success(t("toast_change_applied"))
+      if (bulletFix.appliedCheckId) markCheckApplied(bulletFix.appliedCheckId)
+      appliedWithUndo(t("toast_change_applied"), [["workExperience", work]], {
+        checkId: bulletFix.appliedCheckId,
+        signature: nextDescription,
+      })
       if (written.removed > 0) toast.info(t("dedupe_done", { count: written.removed }))
       void runRescore()
     } catch {
@@ -678,14 +843,109 @@ export default function ATSScorePanel() {
     })
   }
 
-  async function weaveSkill(skill: string, targetId?: string, soft = true) {
+  /**
+   * PROPONER UNA LÍNEA NUEVA DENTRO DE UN PUESTO. Un solo dueño.
+   *
+   * ── EL DEFECTO (cazado al revisar el pase de QA, 2026-08-25) ──────────────
+   *
+   * El intercambio vivía dentro de `weaveSkill`, y el selector de puesto tiene un
+   * ATAJO —si el usuario acepta el puesto recomendado, se reusa el borrador ya
+   * escrito en vez de pagar una segunda llamada— que armaba su propio `setModal`
+   * con `type: "append"`. Por ese camino, que es el MÁS frecuente, un puesto
+   * lleno recibía la línea igual y el chequeo de estructura le pedía cortarla
+   * después: el bucle que este cambio vino a cerrar, entrando por la otra puerta.
+   *
+   * UN PUESTO LLENO NO RECIBE UNA LÍNEA MÁS: RECIBE UN CAMBIO.
+   *
+   *   «Si ya tenemos como máximo 6 bullets no debería aconsejarme agregar un
+   *    bullet donde ya tengo 6… si quiere ayudar ahí, sólo que me pida modificar
+   *    o reemplazar por el más débil de todos.» (CEO, 2026-08-25)
+   *
+   * Sin lugar, la propuesta es un INTERCAMBIO: entra la línea nueva y sale la que
+   * menos aporta A ESTA VACANTE —la misma vara con la que el informe decide qué
+   * gemela borrar—, y el modal muestra el puesto entero antes y después. El
+   * conteo no se mueve, así que ninguna tarjeta puede pedirle después que deshaga
+   * lo que acaba de aceptar.
+   *
+   * Y SI NO SOBRA NADA, NO SE ESCRIBE. Cuando todas sus líneas le hablan al
+   * puesto y están bien escritas, `weakestBullet` devuelve null y la respuesta
+   * honesta es que ahí no entra: sacrificar trabajo bueno para hacerle lugar a
+   * una habilidad es una pérdida, no una mejora.
+   */
+  function proposeBulletInto(
+    job: WorkExperienceItem,
+    text: string,
+    opts: { skill: string; soft: boolean; checkId?: string },
+  ): void {
+    const { skill, soft, checkId } = opts
+    // El consejo de blandas ya no viene de tailor —no era suyo—; la razón es la
+    // misma para las dos: mostrar la habilidad DENTRO de una línea con fecha,
+    // que es lo único que la convierte en prueba.
+    const reason = t("prove_skill_reason", { skill })
+    /**
+     * La clave de la memoria de aplicados sigue al MODO, no al atajo.
+     *
+     * El atajo escribía `soft-${skill}` siempre. Con una habilidad DURA eso
+     * guardaba la memoria bajo otra clave y, peor, `handleConfirmApply` acredita
+     * una BLANDA cuando la clave arranca con `soft-`: una dura tejida por el
+     * atajo sumaba cobertura de blandas. Preexistente, y ahora imposible: la
+     * clave se arma en un solo lugar.
+     */
+    const itemKey = soft ? `soft-${skill}` : `prove-${skill}`
+    const budget = roleBudget(job)
+    const lines = parseBullets(job.description ?? "")
+    if (budget.room <= 0) {
+      const pesos = report?.posting?.hardWeights
+      const victima = weakestBullet(
+        lines.map((linea, index) => ({
+          index,
+          text: linea,
+          keywords: report?.bullets.find((b) => b.targetId === job.id && b.index === index)?.keywords ?? [],
+        })),
+        (term) => postingWeightOf(term, pesos),
+      )
+      if (!victima) {
+        toast.info(t("weave_role_full_strong", { jobTitle: job.jobTitle ?? "" }))
+        return
+      }
+      setModal({
+        suggestion: {
+          field: "workExperience.description",
+          type: "replace",
+          preview: serializeBullets([...lines.filter((_, i) => i !== victima.index), text]),
+          reason: `${reason} · ${t("weave_role_swap", { jobTitle: job.jobTitle ?? "", dropped: victima.text })}`,
+          targetId: job.id,
+        },
+        currentValue: job.description ?? "",
+        itemKey,
+        // El hallazgo que esta confirmación cierra, cuando el tejido vino de uno.
+        // Sin esto la tarjeta seguía ofreciendo trabajo ya hecho.
+        appliedCheckId: checkId,
+      })
+      return
+    }
+    setModal({
+      suggestion: {
+        field: "workExperience.description",
+        type: "append",
+        preview: text,
+        reason,
+        targetId: job.id,
+      },
+      currentValue: job.description ?? "",
+      itemKey,
+      appliedCheckId: checkId,
+    })
+  }
+
+  async function weaveSkill(skill: string, targetId?: string, soft = true, refresh = false, checkId?: string) {
     if (weavingSoft) return
     setWeavingSoft(skill)
     try {
       const res = await apiFetch("/api/ai/skill-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skill, sectionData, language: cvLanguage, soft, targetId }),
+        body: JSON.stringify({ skill, sectionData, language: cvLanguage, soft, targetId, ...(refresh ? { refresh: true } : {}) }),
       })
       if (!res.ok) {
         // "Try again" is the wrong advice when the answer is "not today". The
@@ -714,49 +974,27 @@ export default function ATSScorePanel() {
       // The CV already proves this skill in a bullet. Say so and mark it done —
       // pressing again used to write a second bullet about the same thing.
       if (data?.status === "already_demonstrated") {
-        markFixApplied(soft ? `soft-${skill}` : `prove-${skill}`)
         toast.info(t("skill_already_demonstrated", { skill }))
         return
       }
       if (!data || data.status === "no_fit") {
-        if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft })
+        if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft, refresh, checkId })
         else noFitDeadEnd(skill)
         return
       }
       const job = work.find((j) => j.id === data.targetId)
       if (!job) {
-        if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft })
+        if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft, refresh, checkId })
         else noFitDeadEnd(skill)
         return
       }
       // First pass: show WHERE it would go and let the user move it. Only the
       // user's confirmed role reaches the CV.
       if (!targetId) {
-        setSoftPick({ skill, recommendedId: data.targetId, draft: data.text, soft })
+        setSoftPick({ skill, recommendedId: data.targetId, draft: data.text, soft, refresh, checkId })
         return
       }
-      // El consejo de blandas ya no viene de tailor —no era suyo—; la razón es la
-      // misma para las dos: mostrar la habilidad DENTRO de una línea con fecha,
-      // que es lo único que la convierte en prueba.
-      const reason = t("prove_skill_reason", { skill })
-      // The role that is about to receive this line may already carry more than a
-      // recruiter reads — and the structure check below will then ask the user to
-      // cut lines from it, including this one. Reported twice, and it is a
-      // contradiction between two of our own features. Said here, before the
-      // write, while the choice is still theirs: the reason line carries the
-      // warning and the picker is one press away.
-      const crowded = parseBullets(job.description ?? "").length >= BULLETS_PER_ROLE_MAX.value
-      setModal({
-        suggestion: {
-          field: "workExperience.description",
-          type: "append",
-          preview: data.text,
-          reason: crowded ? `${reason} · ${t("weave_role_crowded", { jobTitle: job.jobTitle ?? "" })}` : reason,
-          targetId: data.targetId,
-        },
-        currentValue: job.description ?? "",
-        itemKey: soft ? `soft-${skill}` : `prove-${skill}`,
-      })
+      proposeBulletInto(job, data.text, { skill, soft, checkId })
     } catch {
       toast.error(t("soft_skill_error"))
     } finally {
@@ -829,10 +1067,6 @@ export default function ATSScorePanel() {
    * above, so this costs nothing: no request, no tokens, no quota. Fix a line and
    * it leaves the list on the spot; the list shortens as the CV improves.
    */
-  const liveContentQuality = useMemo(
-    () => assessResumeContent(sectionData as Record<string, unknown>),
-    [sectionData],
-  )
   /**
    * `result.mergePairs` — the merge proposals the last analysis found, fed back
    * in. They come from an embedding call, which cannot run on a keystroke; the
@@ -887,7 +1121,6 @@ export default function ATSScorePanel() {
       ? buildPanelReport({
           result: atsResult,
           writing: liveWritingChecks,
-          content: liveContentQuality,
           sectionData: sectionData as Record<string, unknown>,
           jobDescription: input,
           credibility,
@@ -899,8 +1132,74 @@ export default function ATSScorePanel() {
           hasPhoto: !!photoUrl,
         })
       : null),
-    [atsResult, liveWritingChecks, liveContentQuality, sectionData, input, credibility, alreadyAccepted, photoUrl],
+    [atsResult, liveWritingChecks, sectionData, input, credibility, alreadyAccepted, photoUrl],
   )
+
+  /**
+   * QUÉ HALLAZGO CERRÓ EL USUARIO, Y CONTRA QUÉ VERSIÓN DE ESE HALLAZGO.
+   *
+   * ── EL DEFECTO (barrido de cierre, 2026-08-25) ────────────────────────────
+   *
+   * Esto era un `Set<string>` de ids que sólo SUMABA: nueve lugares hacían `add`
+   * y el único `delete` era la vuelta atrás. No había reset en ninguna parte, ni
+   * al re-analizar.
+   *
+   * Y los ids son estables (`format.decorative_glyphs`, `search.title`,
+   * `tips.metric.job-1.2`), así que un defecto que VUELVE —pegar otra vez una
+   * viñeta con flecha, sacarle la cifra a una línea a mano— reaparecía en el
+   * informe con el mismo id, la tarjeta lo pintaba en verde y no ofrecía botón.
+   * Callejón sin salida hasta recargar el editor.
+   *
+   * ── LA REGLA ──────────────────────────────────────────────────────────────
+   *
+   * Un hallazgo no es su id: es su id MÁS lo que señala. Se guarda la huella del
+   * hallazgo en el momento en que se aplicó, y cuenta como cerrado sólo mientras
+   * el informe siga describiéndolo igual. Si vuelve señalando otra cosa —otra
+   * línea, otro conteo, otro texto—, es un hallazgo nuevo y recupera su botón.
+   */
+  const [appliedFingerprints, setAppliedFingerprints] = useState<Map<string, string>>(new Map())
+
+  /**
+   * El ÚNICO escritor de «este hallazgo quedó cerrado».
+   *
+   * Guarda la huella junto al id. Un hallazgo que ya no está en el informe se
+   * recuerda igual —no hay nada que pintar— y uno que vuelve distinto se
+   * descarta solo al derivar el conjunto de abajo.
+   */
+  function markCheckApplied(checkId: string): void {
+    const c = report ? allChecks(report).find((x) => x.id === checkId) : null
+    setAppliedFingerprints((prev) => new Map(prev).set(checkId, c ? fingerprintOfCheck(c) : ""))
+  }
+
+  /**
+   * Los hallazgos cerrados que SIGUEN describiendo lo mismo.
+   *
+   * Se deriva del informe vivo, que se rehace con cada tecla: si el hallazgo
+   * volvió señalando otra cosa, deja de contar como cerrado y recupera su botón.
+   * Uno que ya no existe se conserva marcado —no hay tarjeta que pintar— y no
+   * ensucia ningún conteo, porque los conteos se arman sobre los chequeos del
+   * informe.
+   */
+  const appliedCheckIds = useMemo(
+    () => appliedIdsFrom(appliedFingerprints, report ? allChecks(report) : []),
+    [appliedFingerprints, report],
+  )
+
+  /**
+   * UN ANÁLISIS COMPLETO BORRA LAS MARCAS, y eso es lo correcto.
+   *
+   * La mitad de los hallazgos se recalcula con cada tecla y se cierra sola: si el
+   * defecto se fue, la tarjeta no existe. La otra mitad —lo que escribe el
+   * reclutador— viene congelada del último análisis y por eso necesita la marca.
+   * Cuando llega un análisis NUEVO, esa mitad se volvió a leer sobre el CV de
+   * ahora: lo que siga listado sigue abierto, lo diga la marca o no.
+   *
+   * La señal es `analysisRun`, un contador del hook que sólo avanza en la corrida
+   * completa: el re-cálculo instantáneo no lo mueve, así que esto no se dispara al
+   * teclear. Mirar la identidad de `result.analysis` habría sido leer el crudo del
+   * servidor, que es la puerta que el informe cerró.
+   */
+  useEffect(() => { setAppliedFingerprints(new Map()) }, [analysisRun])
 
   const [tailorOpen, setTailorOpen] = useState(false)
   const [focusCheckId, setFocusCheckId] = useState<string | null>(null)
@@ -908,7 +1207,7 @@ export default function ATSScorePanel() {
   const [tailorFilter, setTailorFilter] = useState<TailorFilter>("all")
   /** El término que el riel mandó a resolver, para aterrizar en su tarjeta. */
   const [focusTerm, setFocusTerm] = useState<string | null>(null)
-  const [appliedCheckIds, setAppliedCheckIds] = useState<Set<string>>(new Set())
+
 
 
 
@@ -1022,6 +1321,20 @@ export default function ATSScorePanel() {
       return
     }
 
+    /**
+     * El término que sólo vive en un puesto viejo se resuelve DEMOSTRÁNDOLO en
+     * uno reciente — la misma maquinaria que teje los términos que faltan. No
+     * hay un segundo escritor: es la función que ya existía, con su guard, su
+     * confirmación y, si el puesto está lleno, su intercambio.
+     */
+    if (action.kind === "weave_term" && action.value) {
+      // `refresh`: el término ESTÁ en el CV, en un puesto viejo — que es el
+      // hallazgo. Sin la bandera el endpoint corta con «ya está demostrada»,
+      // marca el hallazgo como resuelto y no escribe nada.
+      void weaveSkill(action.value, undefined, false, true, checkId)
+      return
+    }
+
     // Mismo destino desde el otro botón: nada de esta familia se reescribe.
     if (checkId.startsWith("tips.cut.")) { removeCheckLine(checkId); return }
 
@@ -1068,9 +1381,29 @@ export default function ATSScorePanel() {
       )
       return
     }
+
+    /**
+     * LAS DETERMINISTAS LAS APLICA SU DUEÑO, no una segunda copia acá.
+     *
+     * ── EL DEFECTO (cazado por QA, 2026-08-25) ───────────────────────────────
+     *
+     * Hay DOS despachadores: éste, para las tarjetas del ejecutor, y `fixCheck`,
+     * para el botón del riel. La acción nueva `set_title` se conectó sólo al
+     * segundo, mientras `FixCard` la declaraba aplicable — así que dentro del
+     * ejecutor el botón salía HABILITADO y no hacía nada: caía en el `return` de
+     * abajo por no tener reescritura. Y «Aplicar las N» la contaba.
+     *
+     * Se delega en vez de copiar la rama: dos copias de «cómo se escribe el
+     * titular» es como los dos botones terminan haciendo cosas distintas.
+     */
+    if (action.kind === "set_title" || action.kind === "fix_dates" || action.kind === "remove_duplicates" || action.kind === "replace_text" || action.kind === "add_skill" || action.kind === "strip_glyphs") {
+      fixCheck(checkId)
+      return
+    }
+
     if (!resolution) return
 
-    const done = () => setAppliedCheckIds((prev) => new Set(prev).add(checkId))
+    const done = () => markCheckApplied(checkId)
 
     if (action.kind === "rewrite_bullet" && action.targetId && typeof action.index === "number") {
       /**
@@ -1086,7 +1419,7 @@ export default function ATSScorePanel() {
       const claimed = (report?.terms ?? []).filter((x) => x.cv > 0).map((x) => x.term)
       const lost = postingTermsLost(resolution.before ?? "", resolution.text, claimed)
       if (lost.length > 0) { toast.error(t("rewrite_loses_terms", { terms: lost.slice(0, 3).join(", ") })); return }
-      if (writeBullet(action.targetId, action.index, resolution.before ?? "", resolution.text, true)) {
+      if (writeBullet(action.targetId, action.index, resolution.before ?? "", resolution.text, true, checkId)) {
         /**
          * LA BLANDA QUE ACABA DE QUEDAR DEMOSTRADA, ACREDITADA YA.
          *
@@ -1115,7 +1448,8 @@ export default function ATSScorePanel() {
       // resto del párrafo — medido, 56 palabras a 24.
       const current = (sectionData.summary as string) ?? ""
       updateSectionData("summary", spliceSummary(current, resolution.text) as never)
-      markFixApplied("fix-summary", resolution.text)
+      markFixApplied(resolution.text)
+      appliedWithUndo(t("toast_change_applied"), [["summary", current]], { checkId, signature: resolution.text })
       void runRescore()
       done()
     }
@@ -1132,22 +1466,62 @@ export default function ATSScorePanel() {
     if (!report) return
     const action = allChecks(report).find((c) => c.id === checkId)?.action
     if (!action) return
-    const done = () => setAppliedCheckIds((prev) => new Set(prev).add(checkId))
+    const done = () => markCheckApplied(checkId)
 
     // Reordenar no es unificar fechas: comparte el tipo de acción para tener
     // botón, pero ejecuta otra cosa. Se rutea por id, como la fusión.
-    if (checkId === "format.chronology") { reorderRoles(); done(); return }
+    if (checkId === "format.chronology") { reorderRoles({ checkId }); done(); return }
     // Cortar es determinista, pero no silencioso: abre la confirmación que
     // muestra la línea entera. El `done()` lo hace ella al confirmar.
     if (checkId.startsWith("tips.cut.")) { removeCheckLine(checkId); return }
-    if (action.kind === "fix_dates") { if (fixDates()) done(); return }
-    if (action.kind === "remove_duplicates") { if (removeDuplicateBullets()) done(); return }
-    if (action.kind === "add_skill" && action.value) { if (addKeywordToSkills(action.value)) done(); return }
+    /**
+     * EL TITULAR, Y SÓLO EL TITULAR.
+     *
+     * Escribe el cargo que la vacante busca en `personalDetails.jobTitle`, que es
+     * cómo la persona se presenta hoy. Los cargos de los PUESTOS no se tocan: son
+     * historia laboral, y «nunca reclames un cargo que no tuviste» sigue entero.
+     *
+     * Pasa por la confirmación —no por una escritura silenciosa— porque cambia la
+     * primera línea de su CV: ve el antes y el después y decide. Y reusa
+     * `applySuggestion`, el mismo escritor de todo lo demás.
+     */
+    if (action.kind === "set_title" && action.value) {
+      setModal({
+        suggestion: {
+          field: "personalDetails.jobTitle",
+          type: "replace",
+          preview: action.value,
+          reason: t("set_title_reason", { title: action.value }),
+        },
+        currentValue: ((sectionData.personalDetails ?? {}) as { jobTitle?: string }).jobTitle ?? "",
+        itemKey: `title-${action.value}`,
+        appliedCheckId: checkId,
+      })
+      return
+    }
+    /**
+     * LA FLECHITA DEL PRINCIPIO. Determinista, y por eso tiene botón.
+     *
+     * ── EL DEFECTO (barrido de los `owner: "user"`, 2026-08-25) ─────────────
+     *
+     * «{N} viñetas abren con símbolos raros: algunos ATS los descartan» cerraba
+     * con «esto sólo lo sabés vos: escribilo en el editor». Era lo ÚNICO de esa
+     * lista que no depende de un dato que el usuario tenga en la cabeza —el
+     * correo, el teléfono, las fechas, un hueco de empleo—: quitar el glifo es
+     * una operación de texto que el producto puede hacer solo.
+     *
+     * Toca el PRINCIPIO de la línea y nada más. Y con el mismo conjunto de
+     * símbolos que usó el chequeo para contarlas.
+     */
+    if (action.kind === "strip_glyphs") { if (stripDecorativeGlyphs(checkId)) done(); return }
+    if (action.kind === "fix_dates") { if (fixDates(checkId)) done(); return }
+    if (action.kind === "remove_duplicates") { if (removeDuplicateBullets(checkId)) done(); return }
+    if (action.kind === "add_skill" && action.value) { if (addKeywordToSkills(action.value, checkId)) done(); return }
     // La errata: una palabra, y la keyword vuelve a contar. Escribe por el MISMO
     // camino que la tarjeta de ortografía — dos escritores sobre el mismo dato es
     // como la pareja se desincroniza, y acá hay uno solo.
     if (action.kind === "replace_text" && action.value && action.replacement) {
-      if (applyTypoFix(action.value, action.replacement)) done()
+      if (applyTypoFix(action.value, action.replacement, checkId)) done()
       return
     }
     if (action.kind === "rewrite_bullet" && action.targetId && typeof action.index === "number") {
@@ -1156,12 +1530,17 @@ export default function ATSScorePanel() {
       const orphan = liveWritingChecks.orphanFragments.find(
         (f) => f.targetId === action.targetId && f.index === action.index,
       )
-      if (orphan && writeBullet(orphan.targetId, orphan.index - 1, orphan.previousText, `${orphan.previousText} ${orphan.text}`, false)) done()
+      if (orphan && writeBullet(orphan.targetId, orphan.index - 1, orphan.previousText, `${orphan.previousText} ${orphan.text}`, false, checkId)) done()
     }
   }
 
+  /**
+   * Devuelve el hallazgo a «pendiente». Su ÚNICO llamador es la vuelta atrás del
+   * aviso, después de haber restaurado el texto: desmarcar sin restaurar es lo
+   * que hacía el botón viejo de la tarjeta, y es exactamente lo que se cerró.
+   */
   function undoCheck(checkId: string): void {
-    setAppliedCheckIds((prev) => { const next = new Set(prev); next.delete(checkId); return next })
+    setAppliedFingerprints((prev) => { const next = new Map(prev); next.delete(checkId); return next })
   }
 
   /**
@@ -1177,7 +1556,6 @@ export default function ATSScorePanel() {
    */
   async function handleSubmit() {
     setAddedKeywords(new Set())
-    setAppliedItems(new Set())
     await analyze()
     if (!inputIsQuestion && input.trim().length >= 20) {
       setAutoTailorSignal((n) => n + 1)
@@ -1190,7 +1568,7 @@ export default function ATSScorePanel() {
   // from the correct term. This is a real solution, not a note.
   // Id of the scroll-target card a gap-plan lever just jumped to (flash highlight).
 
-  function applyTypoFix(typed: string, correct: string): boolean {
+  function applyTypoFix(typed: string, correct: string, checkId?: string): boolean {
     // Same writer as the spelling card — this used to be a second, narrower copy
     // that only touched skills, summary and bullet descriptions, so the identical
     // typo in an education or project line survived a fix that claimed to be
@@ -1203,10 +1581,17 @@ export default function ATSScorePanel() {
       { includeSkills: true },
     )
     if (!changed) { toast.info(t("typo_not_found")); return false }
+    // La foto se toma sobre las MISMAS claves que el parche va a tocar: una
+    // errata puede vivir en tres secciones y revertir sólo una las desalinea.
+    const antesDeErrata: Array<[Parameters<typeof updateSectionData>[0], unknown]> =
+      Object.keys(patch).map((key) => [
+        key as Parameters<typeof updateSectionData>[0],
+        (sectionData as unknown as Record<string, unknown>)[key],
+      ])
     for (const [key, value] of Object.entries(patch)) {
       updateSectionData(key as Parameters<typeof updateSectionData>[0], value as never)
     }
-    toast.success(t("typo_fixed", { correct }))
+    appliedWithUndo(t("typo_fixed", { correct }), antesDeErrata, { checkId })
     void runRescore()
     return true
   }
@@ -1254,18 +1639,18 @@ export default function ATSScorePanel() {
         // Already gone is the outcome the user wanted. Not an error.
         reportUxFailure("bullet_remove_line_gone", { jobFound: !!job, index, bullets: bullets.length, textLen: text.length })
         toast.info(t("bullet_line_gone"))
-        markFixApplied(`bullet-${targetId}-${index}`)
-        if (pendingRemove.checkId) setAppliedCheckIds((prev) => new Set(prev).add(pendingRemove.checkId as string))
+          if (pendingRemove.checkId) markCheckApplied(pendingRemove.checkId)
         void runRescore()
         return
       }
       const next = bullets.filter((_, i) => i !== at).map(formatBullet).join("\n")
       updateSectionData("workExperience", work.map((j) => (j.id === targetId ? { ...j, description: next } : j)))
-      markFixApplied(`bullet-${targetId}-${index}`)
       // El hallazgo que pidió el corte queda cerrado. Sin esto la tarjeta sigue
       // ofreciendo cortar una línea que ya no existe.
-      if (pendingRemove.checkId) setAppliedCheckIds((prev) => new Set(prev).add(pendingRemove.checkId as string))
-      toast.success(t("bullet_removed"))
+      if (pendingRemove.checkId) markCheckApplied(pendingRemove.checkId)
+      // Borrar es lo más caro de revertir a mano —la línea ya no está a la vista
+      // para volver a escribirla—, así que es donde la vuelta atrás más vale.
+      appliedWithUndo(t("bullet_removed"), [["workExperience", work]], { checkId: pendingRemove.checkId })
       void runRescore()
     } catch {
       toast.error(t("toast_change_error"))
@@ -1295,21 +1680,28 @@ export default function ATSScorePanel() {
 
       if (result.status === "manual") {
         toast.info(t(result.field === "languages" ? "toast_update_languages" : "toast_update_certifications"))
-        markFixApplied(itemKey)
         setModal(null)
         return
       }
 
+      // La foto, ANTES de escribir. Estaba unas líneas más abajo y funcionaba
+      // sólo por cómo immer copia el estado: leer el valor previo después de
+      // haberlo reemplazado depende de un detalle del store, no del código de acá.
+      const antesDeAplicar = (sectionData as unknown as Record<string, unknown>)[result.section]
       updateSectionData(result.section, result.value)
 
       // El preview es el texto que acaba de entrar al CV: su firma es lo que
       // impide que el análisis siguiente proponga una variante de él.
-      markFixApplied(itemKey, suggestion.preview)
+      markFixApplied(suggestion.preview)
+      if (modal.appliedCheckId) markCheckApplied(modal.appliedCheckId)
       // The bullet we just wrote demonstrates the skill we asked it to
       // demonstrate. Credit it now; waiting for the next full analysis meant the
       // number ignored the work the panel had just talked the user into.
       if (itemKey.startsWith("soft-")) creditSoftSkill(itemKey.slice("soft-".length))
-      toast.success(t("toast_change_applied"))
+      appliedWithUndo(t("toast_change_applied"), [[result.section, antesDeAplicar]], {
+        checkId: modal.appliedCheckId,
+        signature: suggestion.preview,
+      })
       // The same write also collapses a line the CV stated twice; say it.
       if (result.section === "workExperience" && (result.duplicatesRemoved ?? 0) > 0) {
         toast.info(t("dedupe_done", { count: result.duplicatesRemoved ?? 0 }))
@@ -1338,7 +1730,7 @@ export default function ATSScorePanel() {
    * todo junto adentro, y ahí lo único que se podía testear era leer que la
    * línea existiera — el defecto que este proyecto ya pagó con `applyAllPlan`.
    */
-  function addKeywordToSkills(keyword: string): boolean {
+  function addKeywordToSkills(keyword: string, checkId?: string): boolean {
     const plan = planSkillAdd(keyword, sectionData as Record<string, unknown>, () => nanoid())
     if (plan.kind === "not_a_skill") {
       toast.info(t("keyword_not_a_skill"))
@@ -1349,8 +1741,14 @@ export default function ATSScorePanel() {
       toast.info(t("keyword_already_added", { keyword: plan.name }))
       return false
     }
+    const antesDeHabilidades = sectionData.skills
     updateSectionData("skills", plan.skills)
-    toast.success(t("keyword_added", { keyword: plan.name }))
+    appliedWithUndo(t("keyword_added", { keyword: plan.name }), [["skills", antesDeHabilidades]], {
+      checkId,
+      // Y el término deja de contar como agregado: si no, tras deshacer sigue
+      // filtrado de «aplicar todo» y el usuario no puede volver a sumarlo.
+      onUndo: () => setAddedKeywords((prev) => { const next = new Set(prev); next.delete(keyword); return next }),
+    })
     void runRescore()
     return true
   }
@@ -1377,7 +1775,7 @@ export default function ATSScorePanel() {
    * puestos del CV del usuario, y ahí adentro lo único testeable era leer que la
    * línea existiera. Acá queda avisar, escribir y volver a puntuar.
    */
-  function reorderRoles(opts: { silent?: boolean } = {}) {
+  function reorderRoles(opts: { silent?: boolean; checkId?: string } = {}) {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const next = planRoleReorder(work)
     if (!next) {
@@ -1385,7 +1783,10 @@ export default function ATSScorePanel() {
       return
     }
     updateSectionData("workExperience", next)
-    if (!opts.silent) { toast.success(t("cred_order_done")); void runRescore() }
+    // `silent` existe para un llamador que hoy NO existe —el único es
+    // `reorderRoles()` sin argumentos—: se conserva porque es preexistente, y se
+    // dice que está sin uso en vez de describir un caso imaginario.
+    if (!opts.silent) { appliedWithUndo(t("cred_order_done"), [["workExperience", work]], { checkId: opts.checkId }); void runRescore() }
   }
 
   /** Drop one or more entries from Skills. Nothing else in the CV is touched. */
@@ -1862,12 +2263,33 @@ export default function ATSScorePanel() {
           resolutions={resolutions}
           appliedIds={appliedCheckIds}
           onApply={applyCheck}
-          onUndo={undoCheck}
           onRemove={removeCheckLine}
           /* Lo que va en lugar de la línea cortada. Reusa el MISMO camino que
              teje un término dentro de una viñeta — no hay un segundo escritor:
              un segundo escritor es una segunda forma de perder datos. */
           onReplaceWithTerm={(term) => { void weaveSkill(term, undefined, false) }}
+          /* Fusionar las dos gemelas. Reusa el MISMO camino que la tarjeta de
+             fusión —con su guard de contenido y su reintento—: el par lo arma
+             este panel con las dos líneas vivas, porque el informe manda los
+             índices y el texto de una línea puede haber cambiado desde el
+             análisis. Cruzando puestos no se ofrece, así que acá siempre es el
+             mismo `targetId`. */
+          onMergePair={(checkId) => {
+            const c = allChecks(report).find((x) => x.id === checkId)
+            const a = c?.action
+            const otro = c?.params?.otherIndex
+            if (!a?.targetId || typeof a.index !== "number" || typeof otro !== "number") return
+            const lineas = parseBullets(
+              ((sectionData.workExperience ?? []) as Array<{ id?: string; description?: string }>)
+                .find((j) => j.id === a.targetId)?.description ?? "",
+            )
+            const primero = Math.min(a.index, otro)
+            const segundo = Math.max(a.index, otro)
+            const uno = lineas[primero]
+            const dos = lineas[segundo]
+            if (!uno || !dos) return
+            void runMerge({ targetId: a.targetId, indexes: [primero, segundo], texts: [uno, dos] }, checkId)
+          }}
           onApplyAll={() => {
             if (!report) return
             // La lista sale de `applyAllPlan`, que es una función pura y por eso
@@ -1981,21 +2403,15 @@ export default function ATSScorePanel() {
             if (picked.recommendedId === id && picked.draft) {
               const job = ((sectionData.workExperience ?? []) as WorkExperienceItem[]).find((j) => j.id === id)
               if (job) {
-                setModal({
-                  suggestion: {
-                    field: "workExperience.description",
-                    type: "append",
-                    preview: picked.draft,
-                    reason: t("prove_skill_reason", { skill: picked.skill }),
-                    targetId: id,
-                  },
-                  currentValue: job.description ?? "",
-                  itemKey: `soft-${picked.skill}`,
+                proposeBulletInto(job, picked.draft, {
+                  skill: picked.skill,
+                  soft: picked.soft,
+                  checkId: picked.checkId,
                 })
                 return
               }
             }
-            void weaveSkill(picked.skill, id, picked.soft)
+            void weaveSkill(picked.skill, id, picked.soft, picked.refresh ?? false, picked.checkId)
           }}
         />
       )}

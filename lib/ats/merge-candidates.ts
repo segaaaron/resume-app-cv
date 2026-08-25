@@ -32,6 +32,7 @@
 
 import { sharesSubject, addsNothingNew } from "./resume-integrity"
 import { BULLETS_PER_ROLE_MAX } from "./scoring-config"
+import { roleBand } from "./role-budget"
 import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
 
@@ -51,6 +52,20 @@ export interface MergeCandidate {
  * drifting away from it.
  */
 const CROWDED_ROLE = BULLETS_PER_ROLE_MAX.value - 2
+
+/**
+ * Y FUSIONAR NO PUEDE DEJAR AL PUESTO POR DEBAJO DE SU PISO.
+ *
+ * Reportado como parte del mismo defecto (CEO, 2026-08-25): el producto ofrecía
+ * unir dos líneas de un puesto que después otra tarjeta declaraba corto. Unir
+ * baja el conteo en uno, así que la oferta sólo tiene sentido si el puesto
+ * aguanta ese uno menos. El rango por antigüedad lo decide `role-budget`, y acá
+ * llega ya medido: este archivo no vuelve a opinar sobre cuántas entran.
+ */
+function isCrowded(count: number, band?: { min: number; max: number }): boolean {
+  if (!band) return count >= CROWDED_ROLE
+  return count >= band.max - 2 && count - 1 >= band.min
+}
 /** Below this a line is barely a sentence, and fusing it fixes nothing. */
 const TOO_SHORT_TO_KEEP = 25
 
@@ -63,6 +78,12 @@ export interface MergeInput {
   targetId: string
   jobTitle: string
   bullets: string[]
+  /**
+   * El rango que su antigüedad admite (`roleBudget`). Opcional: sin él se usa el
+   * tope global, que es lo que este archivo hacía antes de que el rango tuviera
+   * dueño. Falla abierto — nunca deja de ofrecer por no haber recibido la banda.
+   */
+  band?: { min: number; max: number }
 }
 
 /**
@@ -108,8 +129,8 @@ export function findMergeCandidates(
   const out: (MergeCandidate & { score: number })[] = []
 
   for (const role of roles) {
-    const { targetId, jobTitle, bullets } = role
-    if (!targetId || bullets.length < CROWDED_ROLE) continue
+    const { targetId, jobTitle, bullets, band } = role
+    if (!targetId || !isCrowded(bullets.length, band)) continue
 
     const thin = bullets
       .map((text, index) => ({ text: text.trim(), index }))
@@ -187,7 +208,7 @@ export function findMergeCandidates(
 export function buildBulletSimilarityInput(
   sectionData: Record<string, unknown>,
 ): { targetId: string; bullets: { index: number; text: string }[]; mergeEligible: number[] }[] {
-  const work = (sectionData.workExperience ?? []) as { id?: string; description?: string }[]
+  const work = (sectionData.workExperience ?? []) as { id?: string; description?: string; endDate?: string; currentlyWorking?: boolean }[]
   const out: { targetId: string; bullets: { index: number; text: string }[]; mergeEligible: number[] }[] = []
   for (const job of work) {
     if (!job.id) continue
@@ -197,7 +218,14 @@ export function buildBulletSimilarityInput(
       // encabezado. El mismo piso que ya usaba la fusión.
       .filter(({ text }) => text.length >= TOO_SHORT_TO_KEEP)
     if (bullets.length === 0) continue
-    const crowded = parseBullets(job.description ?? "").length >= CROWDED_ROLE
+    /**
+     * Y ACÁ TAMBIÉN MANDA LA BANDA. Cazado por QA: `findMergeCandidates` pasó a
+     * medir por antigüedad y esta función —la que decide qué se manda a los
+     * embeddings, o sea la vía de fusión que de verdad acierta— se quedó con el
+     * tope plano. Un puesto viejo con tres líneas quedaba fuera del embebido y
+     * caía al camino determinista, que mide 0 de 10 fusiones reales.
+     */
+    const crowded = isCrowded(parseBullets(job.description ?? "").length, roleBand(job))
     const mergeEligible = crowded
       ? bullets.filter(({ text }) => !carriesFigure(text)).map(({ index }) => index)
       : []

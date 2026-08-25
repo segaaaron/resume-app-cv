@@ -136,7 +136,28 @@ describe("lo descartado se cuenta", () => {
       ctx(),
     )
     expect(out.kept).toHaveLength(1)
-    expect(out.rejected).toEqual({ broken_reference: 1, quote_not_in_cv: 1, missing_target: 1, line_has_no_defect: 0 })
+    expect(out.rejected).toEqual({ broken_reference: 1, quote_not_in_cv: 1, missing_target: 1, line_has_no_defect: 0, panel_only_action: 0 })
+  })
+
+  /**
+   * HAY ACCIONES QUE EL MODELO NO PUEDE PEDIR.
+   *
+   * `set_title` y `weave_term` existen para que dos chequeos deterministas de
+   * «¿te encuentran?» tengan botón. Viven en el mismo enum porque el informe usa
+   * un solo tipo de acción — y por eso hace falta el filtro: un modelo que
+   * devolviera `set_title` estaría reescribiendo el titular de alguien, que es su
+   * identidad profesional, sin que nadie lo mire.
+   */
+  it("las acciones que son del panel no llegan desde el modelo", () => {
+    const out = verifiedRecruiterFixes(
+      [
+        fix({ action: { kind: "set_title", value: "Director de Marketing" } }),
+        fix({ action: { kind: "weave_term", value: "Salesforce" } }),
+      ],
+      ctx(),
+    )
+    expect(out.kept).toHaveLength(0)
+    expect(out.rejected.panel_only_action).toBe(2)
   })
 })
 
@@ -164,7 +185,6 @@ describe("el aviso cuando no sobrevive ningún hallazgo", () => {
     buildPanelReport({
       result: { score: 70, analysis: { criticalFixes: fixes } } as never,
       writing: emptyWriting() as never,
-      content: { totalBullets: 1, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
       sectionData: cv,
       jobDescription: "Ventas",
     })

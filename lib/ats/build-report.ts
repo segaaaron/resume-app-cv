@@ -40,11 +40,13 @@ import type { CvFixAction } from "@/lib/services/ai/shared/ai-types"
 import type { ReportPosting } from "./report"
 import { verdictContradictions } from "./verdict-contradiction"
 import { isImprovableLine, rankRoleBullets, KEEP_PER_ROLE } from "./bullet-strength"
+import { compareImpact, impactOf, rankByImpact, type WeightOf } from "./bullet-impact"
+import { weightOf as postingWeightOf } from "./posting-priority"
+import { QUANTIFICATION_BAND } from "./scoring-config"
 import { normalizeTerm } from "./vocabulary"
 import { CREDIBILITY_PENALTIES } from "./scoring-config"
 import type { CategoryBreakdown, ScoreCategory } from "./score-breakdown"
 import type { BareYearRole, WritingChecks } from "./writing-checks"
-import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
 import {
   OVER_OPTIMISATION_SCORE,
   REPORT_SECTIONS,
@@ -57,13 +59,33 @@ import {
 } from "./report"
 
 /** Qué categoría del puntaje respalda cada sección. `null` = no mueve el número. */
+/**
+ * Cuántas cifras se piden de una vez. Pedir ocho es pedir un CV fabricado, y el
+ * usuario abandona la lista antes de la tercera.
+ */
+const MAX_METRIC_ASKS = 3
+
 const SECTION_CATEGORY: Record<ReportSectionId, ScoreCategory | null> = {
   search: "title",
   hard: "hardSkills",
   soft: "softSkills",
   other: null,
   format: "sections",
-  tips: null,
+  /**
+   * CONSEJOS SÍ MUEVE EL PUNTAJE, y decía que no.
+   *
+   * `impact` —viñetas que declaran un resultado medible— vale 0.08 y no tenía
+   * sección: se cobraba en el número y no aparecía en ninguna parte del informe.
+   * Mientras tanto esta sección se anunciaba «no mueve el puntaje» con chequeos
+   * adentro que sí pesan (las líneas repetidas cobran, la cifra que falta cobra).
+   * Dos mentiras que se tapaban entre sí.
+   *
+   * Es su categoría natural: acá viven las viñetas, y el panel de calidad que va
+   * debajo dibuja exactamente esa cobertura. Un chequeo que no mueve el número
+   * lo sigue diciendo por su cuenta —cada tarjeta declara sus puntos o su cero—,
+   * así que nada se pierde al nombrar la categoría de la sección.
+   */
+  tips: "impact",
 }
 
 /** Un hallazgo del análisis del reclutador, tal como llega hoy. */
@@ -105,7 +127,6 @@ export interface BuildReportInput {
   /** Del desglose que ya calcula `score-breakdown.ts`. No se recalcula nada. */
   categories: readonly CategoryBreakdown[]
   writing: WritingChecks
-  content: ATSContentQuality
   /** Términos que la vacante pide y el CV no dice. */
   missingKeywords: readonly string[]
   /** Los que dice, pero sólo en la lista de habilidades: una afirmación sin respaldo. */
@@ -263,6 +284,25 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   const checks: ReportCheck[] = []
   const push = (c: ReportCheck) => checks.push(c)
 
+  /**
+   * LO QUE CADA LÍNEA LE APORTA A ESTA VACANTE, en un solo lugar.
+   *
+   * `input.bullets[].keywords` son los términos de la oferta que esa línea
+   * aterriza, contados con el mismo matcher que puntúa — no es una heurística
+   * nueva ni cuesta una llamada. Con esto responden igual las tres decisiones
+   * que sacrifican una línea: cuál gemela se borra, cuál se corta por volumen y
+   * cuál se reemplaza cuando el puesto está lleno.
+   */
+  const keywordsAt = (targetId: string, index: number): readonly string[] =>
+    (input.bullets ?? []).find((b) => b.targetId === targetId && b.index === index)?.keywords ?? []
+  /**
+   * El peso del término. Sale de la MISMA medición sobre el texto del aviso que
+   * usa el puntaje (`posting-priority`), así que la línea que aterriza lo que la
+   * vacante EXIGE pesa más que la que aterriza un «deseable». Sin mapa —el
+   * re-cálculo instantáneo no siempre lo tiene— todas pesan 1: falla abierto.
+   */
+  const weightOfTerm: WeightOf = (term) => postingWeightOf(term, input.posting?.hardWeights)
+
   // ── search ─────────────────────────────────────────────────────────────────
   //
   // Las fechas nombran los puestos. "Tus fechas mezclan formatos" mandaba al
@@ -284,9 +324,8 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
    * Developer» y el CV se titula de otra manera. Es lo más barato de arreglar de
    * todo el panel —una línea de texto— y era lo único que no se decía.
    *
-   * `owner: "user"`: cambiarle el titular a alguien es escribir sobre su
-   * identidad profesional. Se le dice qué cargo busca la vacante y qué dice hoy
-   * su CV; la palabra la elige él.
+   * La palabra sigue siendo suya: el botón abre la confirmación con el antes y el
+   * después, y escribe sólo el TITULAR. Ver el bloque del `owner` más abajo.
    */
   const wantedTitle = input.posting?.jobTitle?.trim() ?? ""
   const titleCoverage = coverageOf(input.categories, "title")
@@ -301,7 +340,20 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       titleKey: "check.title_mismatch",
       detailKey: "check.title_mismatch_detail",
       params: { wanted: wantedTitle, current: input.cvTitles?.[0]?.trim() || "" },
-      owner: "user",
+      /**
+       * Y AHORA TIENE BOTÓN. Reportado con captura (CEO, 2026-08-25): la tarjeta
+       * explicaba bien el problema y cerraba con «esto sólo lo sabés vos:
+       * escribilo en el editor». Escribir el cargo que la vacante busca en el
+       * TITULAR es determinista, no necesita modelo, y es literalmente lo que la
+       * tarjeta aconseja hacer a mano.
+       *
+       * Toca el titular y NADA más: los cargos de los puestos son historia
+       * laboral y no se reescriben nunca —«nunca reclames un cargo que no
+       * tuviste» sigue entero—. El titular es cómo se presenta hoy, y pasa por la
+       * confirmación que muestra el antes y el después.
+       */
+      owner: "auto",
+      action: { kind: "set_title", value: wantedTitle },
       // Lo que HOY dice el CV, nombrado. Sin esto el aviso manda a buscar el
       // problema puesto por puesto, que es la parte que una persona hace peor
       // sobre su propio CV.
@@ -432,8 +484,19 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       state: "warn",
       weight: 0,
       titleKey: "check.decorative_glyphs",
+      detailKey: "check.decorative_glyphs_detail",
       params: { count: st.decorativeGlyphs },
-      owner: "user",
+      /**
+       * Y ESTE SÍ SE ARREGLA SOLO. Decía «esto sólo lo sabés vos: escribilo en
+       * el editor» sobre lo único de esa lista que NO depende de un dato que el
+       * usuario tenga en la cabeza: quitar la flecha con la que abrió la línea es
+       * determinista, no cuesta una llamada, y el producto ya pone su propio
+       * marcador de viñeta — el glifo del usuario queda duplicando ese trabajo.
+       *
+       * Toca el PRINCIPIO de la línea y nada más: el texto no se reescribe.
+       */
+      owner: "auto",
+      action: { kind: "strip_glyphs" },
     })
   }
 
@@ -552,10 +615,71 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
             dupPairs,
         )
       : 0
+  /**
+   * CUÁL DE LAS DOS SE VA, Y POR QUÉ NO ERA LA QUE SE IBA.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-25) ────────────────────────
+   *
+   *   «Parece que me aconseja borrar el más fuerte… debería decirme borrar al
+   *    más débil o el que menos aporta.»
+   *
+   * `writing-checks` marca la línea REPETIDA —la segunda en orden del documento,
+   * o el lado `b` del par semántico—, que es la pregunta «¿cuál es la copia?».
+   * La pregunta que la tarjeta hace es otra: «¿cuál sobra?». Entre una línea con
+   * cifra y su versión pelada, el orden del documento decidía cuál moría.
+   *
+   * Acá se decide con la única vara que este informe tiene para eso
+   * (`bullet-impact`): primero lo que le aporta a ESTA vacante, después la
+   * redacción, y el orden del documento sólo como desempate — así que un empate
+   * exacto sigue borrando la segunda, como antes.
+   */
+  const twinsOf = (n: (typeof input.writing.nearDuplicates)[number]) => {
+    const lados = [
+      // PRIMERO LA MARCADA COMO REPETIDA. El orden de esta lista ES el desempate:
+      // `compareImpact` no rompe empates y `sort` es estable, así que dos líneas
+      // que miden igual dejan como víctima a la que el detector ya señalaba —el
+      // comportamiento anterior—. Este cambio sólo mueve los casos donde una de
+      // las dos es medible peor, que es exactamente lo reportado.
+      { order: 0, targetId: n.targetId, jobTitle: n.jobTitle, index: n.index, text: n.text },
+      { order: 1, targetId: n.otherTargetId ?? n.targetId, jobTitle: n.otherJobTitle ?? n.jobTitle, index: n.otherIndex, text: n.otherText },
+    ]
+    const ranked = rankByImpact(
+      lados.map((l) => ({ index: l.order, text: l.text, keywords: keywordsAt(l.targetId, l.index) })),
+      weightOfTerm,
+    )
+    const victima = lados[ranked[0].index] ?? lados[1]
+    const sobrevive = lados.find((l) => l !== victima) ?? lados[0]
+    return { victima, sobrevive }
+  }
+
+  /**
+   * UNA LÍNEA, UNA TARJETA — también acá.
+   *
+   * ── EL DEFECTO (barrido de cierre, 2026-08-25; PREEXISTENTE) ──────────────
+   *
+   * El detector devuelve TODOS los pares que se parecen, y con tres líneas
+   * parecidas eso son tres pares: (1,0), (2,0) y (2,1). Medido ejecutándolo. Como
+   * el id de la tarjeta lo pone la línea que se borra, dos pares distintos
+   * producían DOS TARJETAS CON EL MISMO id — y la lista se pinta por id, así que
+   * React sólo dibuja una y el usuario ve un hallazgo menos de los que el informe
+   * cree tener. Peor: la segunda podía apuntar a una línea que la primera ya
+   * borró.
+   *
+   * Cada línea entra en UN par: el primero que la nombre, de cualquiera de los
+   * dos lados. Los demás se saltean — no se pierde información, porque la línea
+   * ya tiene su tarjeta y resolverla cambia el CV que el próximo análisis lee.
+   */
+  const reclamadasPorGemelas = new Set<string>()
   for (const n of input.writing.nearDuplicates) {
-    const across = !!n.otherTargetId && n.otherTargetId !== n.targetId
+    const { victima, sobrevive } = twinsOf(n)
+    const claveV = `${victima.targetId}::${victima.index}`
+    const claveS = `${sobrevive.targetId}::${sobrevive.index}`
+    if (reclamadasPorGemelas.has(claveV) || reclamadasPorGemelas.has(claveS)) continue
+    reclamadasPorGemelas.add(claveV)
+    reclamadasPorGemelas.add(claveS)
+    const across = victima.targetId !== sobrevive.targetId
     push({
-      id: `tips.near_dup.${n.targetId}.${n.index}`,
+      id: `tips.near_dup.${victima.targetId}.${victima.index}`,
       section: "tips",
       state: "warn",
       weight: dupRefund,
@@ -563,10 +687,28 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       // una línea que está en Cajero y otra en Vendedor manda a buscar dentro de
       // un puesto algo que no está ahí.
       titleKey: across ? "check.near_duplicate_across" : "check.near_duplicate",
-      params: across ? { job: n.jobTitle, otherJob: n.otherJobTitle ?? "" } : { job: n.jobTitle },
+      /**
+       * FUSIONAR TAMBIÉN ES SALIDA, y sólo dentro del mismo puesto.
+       *
+       * ── LA ORDEN (CEO, 2026-08-25) ──────────────────────────────────────
+       *
+       *   «Si hay duplicidad con los bullets, sugerir fusionar o borrar uno.»
+       *
+       * Borrar pierde el matiz que la otra línea traía; fusionar lo conserva. Se
+       * ofrece con el índice de la gemela que sobrevive, que es lo único que el
+       * panel necesita para armar el pedido. CRUZANDO PUESTOS NO: unir una línea
+       * de un trabajo con la de otro reescribe la historia laboral, y ésa es una
+       * regla que el buscador de fusiones ya tenía escrita.
+       */
+      params: across
+        ? { job: victima.jobTitle, otherJob: sobrevive.jobTitle }
+        : { job: victima.jobTitle, otherIndex: sobrevive.index },
       owner: "tailor",
-      action: { kind: "rewrite_bullet", targetId: n.targetId, index: n.index },
-      evidence: [n.text, n.otherText],
+      action: { kind: "rewrite_bullet", targetId: victima.targetId, index: victima.index },
+      // LA QUE SE VA, PRIMERO. La tarjeta pinta la evidencia en orden y su botón
+      // borra la del `action`: mostrarlas al revés dice, sin decirlo, que se
+      // llevará la otra.
+      evidence: [victima.text, sobrevive.text],
     })
   }
 
@@ -735,11 +877,20 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
         .filter((b) => b.targetId === targetId && b.keywords.length === 0)
         .map((b) => b.index),
     )
-    const porRelevancia = [...ranked.weakest].sort((a, b) => {
-      const ra = landsNothing.has(a.index) ? 0 : 1
-      const rb = landsNothing.has(b.index) ? 0 : 1
-      return ra - rb // el orden dentro de cada grupo lo conserva `sort` (es estable)
-    })
+    /**
+     * Y SE ORDENA CON LA MISMA VARA QUE DECIDE CUÁL GEMELA SE BORRA.
+     *
+     * Esto ordenaba a mano —relevancia sí/no, y el resto lo dejaba al orden del
+     * ranking— mientras el borrado de repetidas ordenaba de otra manera. Dos
+     * respuestas para «¿cuál sobra?» es exactamente la clase de defecto que este
+     * informe existe para cerrar, así que las dos preguntan a `bullet-impact`.
+     * Ahí la relevancia pesa por término (un exigido vale más que un deseable),
+     * que a mano no se podía hacer.
+     */
+    const porRelevancia = [...ranked.weakest]
+      .map((w) => ({ w, i: impactOf({ index: w.index, text: w.text, keywords: keywordsAt(targetId, w.index) }, weightOfTerm) }))
+      .sort((a, b) => compareImpact(a.i, b.i))
+      .map((x) => x.w)
     /**
      * Y NO SE OFRECE CORTAR UNA LÍNEA QUE OTRA TARJETA YA RECLAMÓ.
      *
@@ -851,6 +1002,17 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     // El puesto que ya recibió tarjetas de CORTE no vuelve a recibir el aviso de
     // volumen: es el mismo dato dicho dos veces, y la segunda vez sin salida.
     if (b.kind !== "none" && cutIndexes.has(b.targetId)) continue
+    /**
+     * NI EL QUE YA TIENE EL AVISO CON SU RANGO.
+     *
+     * Cazado por QA: desde que las dos fuentes miden con la misma banda, un
+     * puesto recargado sin nada que rankear producía DOS tarjetas —«lleva 7
+     * viñetas» y «lleva 7; para su antigüedad, 4-6»—. La segunda dice todo lo que
+     * dice la primera y además el rango, así que la que sobra es ésta. Antes no
+     * se pisaban por casualidad: una contaba con el tope plano y la otra con la
+     * banda, y justo por eso podían contradecirse.
+     */
+    if (b.kind !== "none" && (input.roleBalance ?? []).some((r) => r.targetId === b.targetId && r.count > r.max)) continue
     push({
       id: `tips.balance.${b.targetId}`,
       section: "tips",
@@ -885,6 +1047,88 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     })
   }
 
+  /**
+   * LA CIFRA QUE FALTA — la categoría que puntuaba sin emitir un solo hallazgo.
+   *
+   * ── EL DEFECTO (reportado por el CEO, 2026-08-25) ─────────────────────────
+   *
+   *   «Veo igual que no sugieres métricas, no sé si es porque ya tiene el
+   *    currículum o es que tenemos un bug metido ahí sobre ese tema.»
+   *
+   * Era un bug, y de los caros: `impact` vale 0.08 del puntaje —hasta 8 puntos—,
+   * el panel dibuja la banda de cuantificación con su porcentaje… y NINGÚN
+   * chequeo pedía nunca una cifra. `input.content`, que trae las viñetas sin
+   * número ya localizadas, entraba a esta función y no se leía en ninguna línea:
+   * un productor completo conectado a nada. El usuario veía «60-70%» como meta y
+   * cero salidas para llegar — el mismo defecto que tenía `search.title` antes de
+   * emitir su tarjeta.
+   *
+   * ── Y NO EMPUJA AL 100%, QUE ES EL OTRO LADO DEL MISMO ERROR ──────────────
+   *
+   * La meta es la BANDA (60-70%): un CV donde todas las líneas terminan en un
+   * número se lee fabricado, y este mismo panel avisa de eso una pantalla más
+   * arriba. Así que sólo se pide cifra mientras el CV esté POR DEBAJO del piso, y
+   * se piden exactamente las que faltan para entrar — nunca «cuantificá todo».
+   *
+   * QUÉ LÍNEA SE ELIGE: la que más le aporta a esta vacante entre las que no
+   * tienen número. Cuantificar la línea que el reclutador va a leer rinde más que
+   * cuantificar la que no le habla al puesto — y de esa última ya se ocupan las
+   * tarjetas de corte. Misma vara que todo lo demás (`bullet-impact`), al revés.
+   *
+   * La cifra NO la escribe el producto: el ejecutor propone el tamaño como RANGO
+   * y el candidato lo confirma o lo corrige. Es la doctrina de la casa, y por eso
+   * `owner: "tailor"` y no `auto`.
+   */
+  const todasLasVinetas = input.bullets ?? []
+  const conCifra = todasLasVinetas.filter((b) => b.metric).length
+  const pctCifra = todasLasVinetas.length > 0 ? Math.round((conCifra / todasLasVinetas.length) * 100) : 0
+  if (todasLasVinetas.length > 0 && pctCifra < QUANTIFICATION_BAND.min) {
+    const objetivo = Math.ceil((todasLasVinetas.length * QUANTIFICATION_BAND.min) / 100)
+    const faltan = Math.max(0, objetivo - conCifra)
+    // Una viñeta, un lugar: la que ya tiene tarjeta (corte, gemela, fusión,
+    // reescritura) no recibe una segunda que pida otra cosa sobre el mismo renglón.
+    const reclamadas = new Set(
+      checks
+        .filter((c) => c.action?.kind === "rewrite_bullet" && typeof c.action.index === "number")
+        .map((c) => `${c.action?.targetId}::${c.action?.index}`),
+    )
+    /**
+     * EL ÍNDICE ES LOCAL AL PUESTO, ASÍ QUE NO ALCANZA PARA IDENTIFICAR UNA LÍNEA.
+     *
+     * Cazado por QA antes de subir: la primera versión ordenaba `impactOf(...)`
+     * —que sólo lleva índice y texto— sobre las viñetas de TODO el CV, y después
+     * reconstruía el dueño buscando por índice y texto. Dos puestos con la misma
+     * línea en la misma posición colapsaban en UNA tarjeta con el mismo id, y el
+     * botón habría escrito sobre el puesto equivocado. La viñeta se mide, pero la
+     * identidad viaja al lado — nunca se re-deduce.
+     */
+    const candidatas = todasLasVinetas
+      .filter((b) => !b.metric && !reclamadas.has(`${b.targetId}::${b.index}`))
+      .map((b) => ({ vineta: b, impacto: impactOf({ index: b.index, text: b.text, keywords: b.keywords }, weightOfTerm) }))
+      // Al revés que el corte: primero la que MÁS aporta.
+      .sort((a, b) => compareImpact(b.impacto, a.impacto))
+    const elegidas = candidatas.slice(0, Math.min(faltan, MAX_METRIC_ASKS))
+    // El peso REAL, repartido: la categoría existe y se puede recuperar entera
+    // arreglando estas líneas. Prometer más de lo que el desglose devuelve sería
+    // la contradicción que el dial ya pagó una vez.
+    const impactoRecuperable = recoverableOf(input.categories, "impact")
+    const porTarjeta = elegidas.length > 0 ? Math.floor(impactoRecuperable / elegidas.length) : 0
+    for (const { vineta: dueño } of elegidas) {
+      push({
+        id: `tips.metric.${dueño.targetId}.${dueño.index}`,
+        section: "tips",
+        state: "warn",
+        weight: porTarjeta,
+        titleKey: "check.add_metric",
+        detailKey: "check.add_metric_detail",
+        params: { pct: pctCifra, min: QUANTIFICATION_BAND.min, max: QUANTIFICATION_BAND.max },
+        owner: "tailor",
+        action: { kind: "rewrite_bullet", targetId: dueño.targetId, index: dueño.index },
+        evidence: [dueño.text],
+      })
+    }
+  }
+
   for (const g of input.gaps ?? []) {
     push({
       id: `tips.gap.${g.after}.${g.before}`.replace(/\s+/g, "_"),
@@ -917,8 +1161,9 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
    * calibrar hace que el mismo CV valga distinto sin que el candidato toque
    * nada, que es justo lo que la medición de la prioridad dejó demostrado.
    *
-   * `owner: "user"`: sólo él sabe si sigue usando esa herramienta. Si la usa, la
-   * nombra en el puesto actual y el hallazgo se cierra solo.
+   * Sólo él sabe si sigue usando esa herramienta. Si la usa, el ejecutor escribe
+   * la línea que lo demuestra en un puesto reciente y él la confirma; si no la
+   * usa, deja el hallazgo como está. Ver el bloque del `owner` más abajo.
    */
   for (const st of input.staleTerms ?? []) {
     push({
@@ -927,8 +1172,19 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       state: "warn",
       weight: 0,
       titleKey: "check.stale_term",
+      detailKey: "check.stale_term_detail",
       params: { term: st.term, job: st.jobTitle, year: st.year },
-      owner: "user",
+      /**
+       * Y SU SALIDA, que existía y no estaba conectada.
+       *
+       * Decía «sólo vos sabés si seguís usando esa herramienta» y ahí terminaba.
+       * Pero si la sigue usando, lo que hay que hacer es nombrarla en un puesto
+       * reciente — que es EXACTAMENTE lo que hace el tejido de un término en una
+       * viñeta, la misma maquinaria que ya resuelve los términos que faltan. El
+       * candidato sigue decidiendo: el ejecutor propone la línea y él confirma.
+       */
+      owner: "tailor",
+      action: { kind: "weave_term", value: st.term },
     })
   }
 

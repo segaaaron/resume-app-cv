@@ -90,7 +90,6 @@ describe("el informe deja fuera el veredicto que se contradice", () => {
       nearDuplicates: [], bulletRanking: [], incompleteEducation: [], orphanFragments: [],
       metrics: { level: "ok", findings: [] }, degreeInSkills: [], hasLink: true,
     } as never,
-    content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
     missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: matched,
     missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
     templateSafety: "safe", recruiterFixes: [], verdict,

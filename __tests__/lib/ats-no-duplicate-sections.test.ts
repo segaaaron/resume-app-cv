@@ -14,7 +14,6 @@ const reportInput = (over: Partial<BuildReportInput> = {}): BuildReportInput => 
     nearDuplicates: [], bulletRanking: [], incompleteEducation: [], orphanFragments: [],
     metrics: { level: "ok", findings: [] }, degreeInSkills: [], hasLink: true,
   } as never,
-  content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
   missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: [],
   missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
   templateSafety: "safe", recruiterFixes: [],

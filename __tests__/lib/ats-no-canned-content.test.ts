@@ -13,7 +13,6 @@ const emptyWriting = () => ({
 
 const reportInput = (over: Partial<BuildReportInput> = {}): BuildReportInput => ({
   score: 72, categories: [], writing: emptyWriting(),
-  content: { totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] } as never,
   missingKeywords: [], listedOnlyKeywords: [], matchedKeywords: [],
   missingSoftSkills: [], matchedSoftSkills: [], unmetRequirements: [],
   templateSafety: "safe", recruiterFixes: [],

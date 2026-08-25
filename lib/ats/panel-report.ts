@@ -14,14 +14,13 @@
 // `refineMissingRequirements`, que ya existe y ya sabe que "Ingeniería Comercial,
 // Administración o afines" es UN requisito escrito en tres renglones.
 
-import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
 import type { CategoryBreakdown } from "./score-breakdown"
 import type { WritingChecks } from "./writing-checks"
 import { refineMissingRequirements } from "./requirement-satisfied"
 import { findPersonalData } from "./personal-data"
 import { findStuffedTerms } from "./keyword-density"
 import { findPassiveBullets } from "./passive-voice"
-import { parseBullets } from "@/lib/services/ai/shared/bullets"
+import { DECORATIVE_OPENER, parseBullets } from "@/lib/services/ai/shared/bullets"
 import { hasAnyMetric } from "@/lib/services/ai/shared/ai-helpers"
 import { WEAK_OPENERS } from "@/lib/services/ai/shared/bullet-quality"
 import type { ReportBullet } from "./report"
@@ -31,6 +30,7 @@ import { reportUxFailure } from "@/lib/client-error-reporter"
 import type { AtsReport } from "./report"
 import { cvExperienceYears } from "./experience-years"
 import { findStaleTerms } from "./stale-terms"
+import { roleBudget } from "./role-budget"
 
 /**
  * El CV como texto plano, sólo para contar apariciones por término.
@@ -138,7 +138,7 @@ export interface PanelResultLike {
   demonstratedSoftSkills?: string[]
   templateSafety?: "safe" | "caution"
   scoreBreakdown?: { categories: CategoryBreakdown[] } | null
-  extractedKeywords?: { jobTitle?: string; hardSkills?: string[]; softSkills?: string[]; mustHaves?: string[]; seniority?: string; yearsRequired?: number } | null
+  extractedKeywords?: { jobTitle?: string; hardSkills?: string[]; softSkills?: string[]; mustHaves?: string[]; seniority?: string; yearsRequired?: number; hardWeights?: Record<string, number> } | null
   analysis?: { criticalFixes?: Array<RecruiterFix & { needsFromYou?: string }>; verdict?: string } | null
   typoWarnings?: { keyword: string; typed: string }[]
 }
@@ -165,11 +165,14 @@ function structureOf(sectionData: Record<string, unknown>): NonNullable<BuildRep
 
   // Glifos que el USUARIO escribió al principio de una línea. El "• " que el
   // producto guarda no cuenta: lo pone `parseBullets` y no llega al PDF.
-  const DECORATIVE = /^[→⇒➤➔✔✓★●◆■▪]/u
+  //
+  // El conjunto lo declara `bullets.ts`, que es donde vive el arreglo que los
+  // quita: si acá tuviéramos la nuestra, el panel podría señalar un símbolo que
+  // su propio botón no sabe sacar.
   let decorativeGlyphs = 0
   for (const j of rows("workExperience") as Array<{ description?: string }>) {
     for (const line of parseBullets(j.description ?? "")) {
-      if (DECORATIVE.test(line.trim())) decorativeGlyphs++
+      if (DECORATIVE_OPENER.test(line.trim())) decorativeGlyphs++
     }
   }
 
@@ -182,20 +185,13 @@ function structureOf(sectionData: Record<string, unknown>): NonNullable<BuildRep
 }
 
 /**
- * Cuántas viñetas aguanta cada puesto, según su antigüedad.
+ * Cuántas viñetas aguanta cada puesto ya NO se contesta acá.
  *
- * Un tope único para todos —el `BULLETS_PER_ROLE_MAX` de hoy— trata igual al
- * puesto actual que a uno de hace diez años, y no son lo mismo: el reclutador
- * lee el de arriba y saltea los de abajo. El rango sale del diseño aprobado.
- *
- * Y el PISO importa tanto como el techo: un puesto con una sola línea se lee como
- * si el candidato no hubiera hecho nada ahí — el caso del contrato corto.
+ * El rango por antigüedad vivía en este archivo, privado, y por eso los otros
+ * cuatro lugares que necesitaban la misma respuesta se escribieron cada uno la
+ * suya —con desigualdades distintas—. Vive en `role-budget.ts`, que es el único
+ * dueño de «¿cabe otra línea?», y este chequeo es uno más de sus consumidores.
  */
-const ROLE_RANGE: Array<{ maxAgeYears: number; min: number; max: number }> = [
-  { maxAgeYears: 0, min: 4, max: 6 },    // el actual
-  { maxAgeYears: 5, min: 3, max: 4 },    // el anterior
-  { maxAgeYears: Infinity, min: 2, max: 3 }, // los viejos
-]
 
 /**
  * Los cargos que el CV declara, del titular al puesto más viejo.
@@ -231,17 +227,13 @@ function roleBalance(sectionData: Record<string, unknown>): Array<{ targetId: st
   const work = Array.isArray(sectionData.workExperience)
     ? (sectionData.workExperience as Array<{ id?: string; jobTitle?: string; description?: string; endDate?: string; currentlyWorking?: boolean }>)
     : []
-  const thisYear = new Date().getFullYear()
   const out: Array<{ targetId: string; jobTitle: string; count: number; min: number; max: number }> = []
 
   for (const j of work) {
-    const count = parseBullets(j.description ?? "").length
-    if (count === 0) continue
-    const end = j.currentlyWorking ? thisYear : Number((j.endDate ?? "").match(/(19|20)\d{2}/)?.[0] ?? thisYear)
-    const age = Math.max(0, thisYear - end)
-    const band = ROLE_RANGE.find((r) => age <= r.maxAgeYears) ?? ROLE_RANGE[ROLE_RANGE.length - 1]
-    if (count > band.max || count < band.min) {
-      out.push({ targetId: j.id ?? "", jobTitle: j.jobTitle ?? "", count, min: band.min, max: band.max })
+    const budget = roleBudget(j)
+    if (budget.count === 0) continue
+    if (budget.state === "over" || budget.state === "under") {
+      out.push({ targetId: j.id ?? "", jobTitle: j.jobTitle ?? "", count: budget.count, min: budget.min, max: budget.max })
     }
   }
   return out
@@ -284,7 +276,6 @@ function employmentGaps(sectionData: Record<string, unknown>): Array<{ months: n
 export interface PanelReportInput {
   result: PanelResultLike
   writing: WritingChecks
-  content: ATSContentQuality
   sectionData: Record<string, unknown>
   jobDescription: string
   /** La credibilidad, ya calculada por el panel. Acá no se recalcula. */
@@ -310,7 +301,7 @@ export interface PanelReportInput {
 
 /** Traduce la respuesta del servidor + los chequeos vivos a UN informe. */
 export function buildPanelReport(input: PanelReportInput): AtsReport {
-  const { result, writing, content, sectionData, jobDescription } = input
+  const { result, writing, sectionData, jobDescription } = input
   const accepted = input.isAlreadyAccepted ?? (() => false)
 
   // Un requisito ya cubierto no es una brecha. Sin este refinado, "Ingeniería
@@ -419,7 +410,6 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
     score: result.score,
     categories: result.scoreBreakdown?.categories ?? [],
     writing,
-    content,
     missingKeywords: result.missingKeywords ?? [],
     listedOnlyKeywords: result.listedOnlyKeywords ?? [],
     matchedKeywords: result.matchedKeywords ?? [],
@@ -438,6 +428,9 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
           softSkills: result.extractedKeywords.softSkills ?? [],
           mustHaves: result.extractedKeywords.mustHaves ?? [],
           seniority: result.extractedKeywords.seniority,
+          // Los pesos del aviso viajan DENTRO del informe: el panel decide con
+          // ellos qué línea sobra y no puede volver a leer el crudo.
+          hardWeights: result.extractedKeywords.hardWeights,
           yearsRequired: result.extractedKeywords.yearsRequired,
         }
       : undefined,

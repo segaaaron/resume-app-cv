@@ -60,7 +60,6 @@ function render(props: Partial<React.ComponentProps<typeof TailorModal>> = {}) {
     resolutions: [],
     appliedIds: new Set<string>(),
     onApply: () => {},
-    onUndo: () => {},
     onApplyAll: () => {},
     onClose: () => {},
     ...props,
@@ -220,16 +219,40 @@ describe("la anatomía se mide, no se afirma", () => {
   })
 })
 
-describe("lo aplicado se puede deshacer", () => {
+/**
+ * LO APLICADO SE DICE, Y NO SE OFRECE UN BOTÓN QUE NO CUMPLE.
+ *
+ * ── EL DEFECTO (reportado por el CEO, 2026-08-25) ──────────────────────────
+ *
+ * La tarjeta aplicada mostraba «Deshacer» y esa función hacía UNA cosa: sacar el
+ * hallazgo de la lista de aplicados. El texto seguía escrito en el CV — así que
+ * la tarjeta volvía a «pendiente» (otra llamada, otra cuota si la apretaba) y
+ * alguien podía descargar el PDF creyendo que había revertido algo que seguía
+ * puesto.
+ *
+ * La vuelta atrás de verdad vive en el aviso que sale al aplicar, durante diez
+ * segundos, que es la ventana en la que la foto del CV todavía describe lo que
+ * el usuario está mirando.
+ */
+describe("lo aplicado se dice sin prometer una vuelta atrás que no existe", () => {
   beforeEach(() => { document.body.innerHTML = "" })
 
-  it("una corrección aplicada ofrece deshacer, no aplicar de nuevo", () => {
+  it("una corrección aplicada se marca como tal y no ofrece aplicar de nuevo", () => {
     const { unmount } = render({
       appliedIds: new Set(["t1"]),
       resolutions: [{ checkId: "t1", before: "a", text: "b" }],
     })
     expect(body()).toContain("fix_applied")
-    expect(body()).toContain("fix_undo")
+    expect(body()).not.toContain("fix_apply_bullet")
+    unmount()
+  })
+
+  it("y no muestra el botón que sólo desmarcaba la tarjeta", () => {
+    const { unmount } = render({
+      appliedIds: new Set(["t1"]),
+      resolutions: [{ checkId: "t1", before: "a", text: "b" }],
+    })
+    expect(body()).not.toContain("fix_undo")
     unmount()
   })
 })
@@ -276,6 +299,44 @@ describe("los términos que faltan son trabajo del ejecutor", () => {
     })
     expect(document.querySelector('[data-term="Excel"]')).toBeNull()
     expect(document.querySelector('[data-term="Salesforce"]')).not.toBeNull()
+    unmount()
+  })
+})
+
+/**
+ * UN HALLAZGO QUE VUELVE RECUPERA SU BOTÓN.
+ *
+ * ── EL DEFECTO (barrido de cierre, 2026-08-25) ─────────────────────────────
+ *
+ * «Aplicado» era un conjunto de ids que sólo sumaba. Los ids son estables, así
+ * que un defecto que vuelve —pegar otra vez una viñeta con flecha, sacarle la
+ * cifra a una línea— reaparecía con el mismo id, la tarjeta lo pintaba en verde
+ * y no ofrecía botón: callejón hasta recargar el editor.
+ *
+ * Un hallazgo no es su id: es su id MÁS lo que señala. La huella se guarda al
+ * aplicar y el conjunto se deriva del informe vivo. Acá se comprueba el contrato
+ * que la vista consume: con el id marcado, la tarjeta se cierra; sin él, ofrece
+ * trabajo. Quien decide si sigue marcado es el panel, con la huella.
+ */
+describe("el conjunto de aplicados manda sobre la tarjeta", () => {
+  beforeEach(() => { document.body.innerHTML = "" })
+
+  it("marcado: se pinta cerrado", () => {
+    const { unmount } = render({
+      appliedIds: new Set(["t1"]),
+      resolutions: [{ checkId: "t1", before: "a", text: "b" }],
+    })
+    expect(body()).toContain("fix_applied")
+    unmount()
+  })
+
+  it("sin marcar: vuelve a ofrecer el arreglo", () => {
+    const { unmount } = render({
+      appliedIds: new Set<string>(),
+      resolutions: [{ checkId: "t1", before: "a", text: "b" }],
+    })
+    expect(body()).not.toContain("fix_applied")
+    expect(body()).toContain("fix_apply_bullet")
     unmount()
   })
 })
