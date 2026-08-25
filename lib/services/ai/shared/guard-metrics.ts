@@ -44,6 +44,15 @@ export interface GuardDropReport {
   /** Sin cambio real: idéntica, sinónimo, tercera persona, lateral o repetida. */
   trivial: number
   /**
+   * Volvió FLOJA: abrió con frase de tarea, quedó por debajo del mínimo de
+   * palabras de la doctrina, o no ganó nada medible frente a la original.
+   *
+   * Se cuenta aparte de `trivial` a propósito: trivial es «no cambió», flojo es
+   * «cambió y sigue sin servir». Si este número sube, el problema está en el
+   * pedido o en el modelo, no en el usuario.
+   */
+  weak: number
+  /**
    * Reescrituras que dejaban afuera un término que la vacante pide.
    *
    * El motivo más caro y el último en tener guard: las duras pesan .45, así que
@@ -55,7 +64,7 @@ export interface GuardDropReport {
 }
 
 export function reportGuardDrops(r: GuardDropReport): void {
-  const dropped = r.hardCoded + r.figureLoss + r.trivial + r.termLoss
+  const dropped = r.hardCoded + r.figureLoss + r.trivial + r.termLoss + r.weak
   if (dropped <= 0) return
   logger.error("rewrites dropped by post-model guards", {
     endpoint: r.endpoint,

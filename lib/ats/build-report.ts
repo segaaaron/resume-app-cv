@@ -41,6 +41,7 @@ import type { ReportPosting } from "./report"
 import { verdictContradictions } from "./verdict-contradiction"
 import { isImprovableLine, rankRoleBullets, KEEP_PER_ROLE } from "./bullet-strength"
 import { normalizeTerm } from "./vocabulary"
+import { CREDIBILITY_PENALTIES } from "./scoring-config"
 import type { CategoryBreakdown, ScoreCategory } from "./score-breakdown"
 import type { BareYearRole, WritingChecks } from "./writing-checks"
 import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
@@ -214,6 +215,30 @@ function recoverableOf(categories: readonly CategoryBreakdown[], id: ScoreCatego
  * y el test que lo cubría se limitaba a leer que la línea existiera en el código
  * —verde con el defecto puesto—. Acá se puede ejecutar y leer lo que sale.
  */
+/**
+ * Los cargos del CV, una vez cada uno.
+ *
+ * La lista de origen es el titular del perfil MÁS el cargo de cada puesto, así
+ * que un CV con tres puestos del mismo cargo repetía la misma ficha cuatro
+ * veces (reportado con captura, 2026-08-24). `normalizeTerm` es el mismo juez
+ * con el que el matcher decide si el CV dice un término de la vacante: si para
+ * el puntaje dos escrituras son el mismo cargo, para la evidencia también.
+ * Se conserva el texto tal como el usuario lo escribió la primera vez.
+ */
+function dedupeTitles(titles: readonly string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of titles) {
+    const text = raw.trim()
+    if (!text) continue
+    const key = normalizeTerm(text)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push(text)
+  }
+  return out
+}
+
 export function bareYearEvidence(roles: readonly BareYearRole[]): string[] {
   return roles.map((r) => (r.dates.length > 0 ? `${r.jobTitle} · ${r.dates.join(" – ")}` : r.jobTitle))
 }
@@ -264,7 +289,15 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       // Lo que HOY dice el CV, nombrado. Sin esto el aviso manda a buscar el
       // problema puesto por puesto, que es la parte que una persona hace peor
       // sobre su propio CV.
-      evidence: (input.cvTitles ?? []).filter((x) => x.trim()).slice(0, 4),
+      //
+      // SIN REPETIR (reportado con captura, 2026-08-24): la lista es el titular
+      // del perfil MÁS el cargo de cada puesto, así que un CV con tres puestos
+      // del mismo cargo mostraba la misma ficha cuatro veces. Cuatro copias no
+      // informan más que una: hacen dudar de si el panel está contando algo.
+      // Se deduplica con `normalizeTerm` —el mismo juez que usa el matcher para
+      // decidir si dos términos son el mismo— y se muestra el cargo tal como el
+      // usuario lo escribió la primera vez.
+      evidence: dedupeTitles(input.cvTitles ?? []).slice(0, 4),
     })
   }
 
@@ -485,14 +518,36 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   //
   // Peso 0 y dicho en voz alta. Alguien arregló diez cosas, vio la nota quieta y
   // concluyó que el panel mentía — no mentía, callaba.
+  /**
+   * DOS LÍNEAS QUE DICEN LO MISMO, Y LO QUE CUESTA.
+   *
+   * Antes salía con `weight: 0` —«no mueve el puntaje»— y era falso: la
+   * credibilidad ya cobraba `duplicatePair` por cada par (con tope
+   * `duplicateCap`). Un hallazgo que cuesta puntos y se anuncia como gratis se
+   * lee como un consejo opcional, y el usuario lo saltea. El peso sale de la
+   * MISMA constante que cobra, repartido entre los pares para no prometer más
+   * de lo que el tope puede devolver: la tarjeta y el número no pueden discrepar.
+   */
+  const dupPairs = input.writing.nearDuplicates.length
+  const dupRefund =
+    dupPairs > 0
+      ? Math.floor(
+          Math.min(dupPairs * CREDIBILITY_PENALTIES.duplicatePair.value, CREDIBILITY_PENALTIES.duplicateCap.value) /
+            dupPairs,
+        )
+      : 0
   for (const n of input.writing.nearDuplicates) {
+    const across = !!n.otherTargetId && n.otherTargetId !== n.targetId
     push({
       id: `tips.near_dup.${n.targetId}.${n.index}`,
       section: "tips",
       state: "warn",
-      weight: 0,
-      titleKey: "check.near_duplicate",
-      params: { job: n.jobTitle },
+      weight: dupRefund,
+      // Cruzando puestos NOMBRA LOS DOS. «En Cajero hay dos líneas iguales» sobre
+      // una línea que está en Cajero y otra en Vendedor manda a buscar dentro de
+      // un puesto algo que no está ahí.
+      titleKey: across ? "check.near_duplicate_across" : "check.near_duplicate",
+      params: across ? { job: n.jobTitle, otherJob: n.otherJobTitle ?? "" } : { job: n.jobTitle },
       owner: "tailor",
       action: { kind: "rewrite_bullet", targetId: n.targetId, index: n.index },
       evidence: [n.text, n.otherText],

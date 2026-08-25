@@ -194,6 +194,42 @@ export const MERGE_PAIR_THRESHOLD = 0.5
 /** How many pairs one role may propose. The user picks among them. */
 export const MERGE_PAIRS_PER_ROLE = 3
 
+/**
+ * DOS LÍNEAS QUE DICEN LO MISMO. Otra pregunta, otro corte.
+ *
+ * `MERGE_PAIR_THRESHOLD` pregunta si dos líneas son UN trabajo partido en dos:
+ * complementarias, cada una aporta algo que la otra no, y la salida es
+ * fusionarlas. Esta pregunta es la contraria: una de las dos NO aporta nada, y
+ * la salida es que sobra. Marcar una fusión como repetición le diría al
+ * candidato «borrá una» donde había que unirlas — por eso el corte de acá tiene
+ * que quedar POR ENCIMA del de fusión, no ser el mismo número con otro nombre.
+ *
+ * MEDIDO CONTRA LA API REAL (`scripts/ai-eval/repeat-threshold.test.ts`, 24
+ * pares etiquetados a mano ANTES de ver un número):
+ *
+ *   repetido    0.654 – 0.897   (12 pares, incluidos dos cruzando puestos)
+ *   fusionable  0.498 – 0.569   (6 pares)
+ *   distinto    0.257 – 0.505   (6 pares)
+ *
+ * Las bandas NO se tocan: hueco entre 0.569 y 0.654. El corte va en medio de ese
+ * hueco, apenas del lado de la precisión — un falso positivo acusa de repetir a
+ * quien no repitió, y eso enoja más que el silencio. A 0.62 marca las 12
+ * repeticiones y ninguno de los 12 negativos.
+ */
+export const REPEAT_PAIR_THRESHOLD = 0.62
+
+/**
+ * Una repetición vive ENTRE DOS PUESTOS tanto como dentro de uno, y por eso cada
+ * lado lleva su `targetId`: el caso más común es copiar un logro del trabajo
+ * anterior al siguiente, que es exactamente lo que el detector viejo no podía
+ * ver porque comparaba sólo dentro de cada puesto.
+ */
+export interface RepeatedPair {
+  a: { targetId: string; index: number }
+  b: { targetId: string; index: number }
+  score: number
+}
+
 export interface RoleBullets {
   targetId: string
   /** Only the bullets eligible to be merged, with their real index in the role. */
@@ -220,39 +256,109 @@ export interface SemanticPair {
  * Fails closed: any embedding error yields an empty list, and the caller keeps
  * its deterministic behaviour.
  */
-export async function findMergePairs(
-  roles: RoleBullets[],
-  embed: (texts: string[]) => Promise<number[][]>,
-): Promise<SemanticPair[]> {
-  const work = roles.filter((r) => r.targetId && r.candidates.length >= 2)
-  if (work.length === 0) return []
+export interface RoleAllBullets {
+  targetId: string
+  /** TODAS las viñetas del puesto, con su índice real. */
+  bullets: { index: number; text: string }[]
+  /** Los índices que además pueden PROPONERSE PARA FUSIÓN. */
+  mergeEligible: readonly number[]
+}
 
-  // One call for every role's bullets: the cost of this feature is a single
-  // embedding request per analysis, and the vectors are useless separately.
-  const flat = work.flatMap((r) => r.candidates.map((c) => c.text))
+/** Cuántas repeticiones se muestran. Más que esto es una lista, no un hallazgo. */
+export const REPEATED_PAIRS_MAX = 6
+
+/**
+ * UNA SOLA PETICIÓN DE EMBEDDINGS, DOS PREGUNTAS DISTINTAS.
+ *
+ * Antes se embebían sólo las viñetas ELEGIBLES PARA FUSIÓN: puestos con cuatro
+ * líneas o más, sin cifras, de 25 caracteres para arriba, y comparadas
+ * únicamente contra las de su propio puesto. Esos filtros son correctos para
+ * proponer una fusión —fusionar es destructivo— pero dejaban ciega la otra
+ * pregunta: un CV de tres puestos con tres líneas cada uno no se comparaba
+ * NUNCA, y copiar un logro del trabajo anterior al siguiente era invisible por
+ * construcción. Es lo que el CEO reportó: «podemos tener bullets repetidos y el
+ * ATS no nos los comenta».
+ *
+ * Ahora se embebe TODO el CV una vez y de esos mismos vectores salen las dos
+ * respuestas. No hay llamada nueva: hay más textos en la petición que ya se
+ * hacía. La comparación es n² sobre unas decenas de vectores.
+ *
+ * Falla cerrada: cualquier error de embeddings devuelve las dos listas vacías y
+ * el que llama se queda con su camino determinista de siempre.
+ */
+export async function findBulletSimilarity(
+  roles: RoleAllBullets[],
+  embed: (texts: string[]) => Promise<number[][]>,
+): Promise<{ mergePairs: SemanticPair[]; repeatedPairs: RepeatedPair[] }> {
+  const empty = { mergePairs: [], repeatedPairs: [] }
+  const work = roles.filter((r) => r.targetId && r.bullets.length > 0)
+  const total = work.reduce((n, r) => n + r.bullets.length, 0)
+  if (total < 2) return empty
+
+  const flat = work.flatMap((r) => r.bullets.map((b) => ({ targetId: r.targetId, index: b.index, text: b.text })))
   let vectors: number[][]
   try {
-    vectors = await embed(flat)
+    vectors = await embed(flat.map((f) => f.text))
   } catch {
-    return []
+    return empty
   }
-  if (vectors.length !== flat.length) return []
+  if (vectors.length !== flat.length) return empty
 
-  const out: SemanticPair[] = []
+  // ── Repeticiones: TODO contra TODO, también entre puestos ────────────────
+  const candidates: (RepeatedPair & { ia: number; ib: number })[] = []
+  for (let i = 0; i < flat.length; i++) {
+    for (let j = i + 1; j < flat.length; j++) {
+      // El texto idéntico es el chequeo de duplicado exacto, que además sabe
+      // borrarlo. Acá van las que dicen lo mismo con otras palabras.
+      if (flat[i].text.trim().toLowerCase() === flat[j].text.trim().toLowerCase()) continue
+      const score = cosineSimilarity(vectors[i], vectors[j])
+      if (score < REPEAT_PAIR_THRESHOLD) continue
+      candidates.push({
+        a: { targetId: flat[i].targetId, index: flat[i].index },
+        b: { targetId: flat[j].targetId, index: flat[j].index },
+        score,
+        ia: i,
+        ib: j,
+      })
+    }
+  }
+  // La más parecida primero, y ninguna línea en dos hallazgos: tres tarjetas
+  // encadenadas sobre la misma viñeta son una sola cosa dicha tres veces.
+  candidates.sort((a, b) => b.score - a.score)
+  const usedLine = new Set<number>()
+  const repeatedPairs: RepeatedPair[] = []
+  for (const c of candidates) {
+    if (usedLine.has(c.ia) || usedLine.has(c.ib)) continue
+    usedLine.add(c.ia); usedLine.add(c.ib)
+    repeatedPairs.push({ a: c.a, b: c.b, score: c.score })
+    if (repeatedPairs.length >= REPEATED_PAIRS_MAX) break
+  }
+
+  // ── Fusiones: sólo dentro del puesto y sólo entre las elegibles ──────────
+  const repeated = new Set(
+    repeatedPairs.flatMap((p) => [`${p.a.targetId}#${p.a.index}`, `${p.b.targetId}#${p.b.index}`]),
+  )
+  const mergePairs: SemanticPair[] = []
   let offset = 0
   for (const role of work) {
-    const vecs = vectors.slice(offset, offset + role.candidates.length)
-    offset += role.candidates.length
+    const base = offset
+    offset += role.bullets.length
+    const eligible = new Set(role.mergeEligible)
+    const local = role.bullets
+      .map((b, k) => ({ index: b.index, vec: vectors[base + k] }))
+      .filter((b) => eligible.has(b.index))
+    if (local.length < 2) continue
+
     const pairs: SemanticPair[] = []
-    for (let i = 0; i < role.candidates.length; i++) {
-      for (let j = i + 1; j < role.candidates.length; j++) {
-        const score = cosineSimilarity(vecs[i], vecs[j])
+    for (let i = 0; i < local.length; i++) {
+      for (let j = i + 1; j < local.length; j++) {
+        // Una repetición NO es una fusión: si ya se dijo que una de las dos
+        // sobra, ofrecer unirlas es mandar al usuario a dos sitios distintos
+        // con la misma línea.
+        if (repeated.has(`${role.targetId}#${local[i].index}`) || repeated.has(`${role.targetId}#${local[j].index}`)) continue
+        const score = cosineSimilarity(local[i].vec, local[j].vec)
         if (score < MERGE_PAIR_THRESHOLD) continue
-        pairs.push({
-          targetId: role.targetId,
-          indexes: [role.candidates[i].index, role.candidates[j].index],
-          score,
-        })
+        pairs.push({ targetId: role.targetId, indexes: [local[i].index, local[j].index], score })
       }
     }
     // Best first, and no bullet in two proposals: two cards offering to fold the
@@ -262,9 +368,32 @@ export async function findMergePairs(
     for (const p of pairs) {
       if (taken.has(p.indexes[0]) || taken.has(p.indexes[1])) continue
       taken.add(p.indexes[0]); taken.add(p.indexes[1])
-      out.push(p)
+      mergePairs.push(p)
       if (taken.size >= MERGE_PAIRS_PER_ROLE * 2) break
     }
   }
-  return out
+
+  return { mergePairs, repeatedPairs }
+}
+
+/**
+ * Las fusiones solas, para quien no necesita la otra respuesta.
+ *
+ * Delega: un segundo cuerpo con la misma lógica es la copia divergente que este
+ * proyecto ya pagó una vez.
+ */
+export async function findMergePairs(
+  roles: RoleBullets[],
+  embed: (texts: string[]) => Promise<number[][]>,
+): Promise<SemanticPair[]> {
+  const input: RoleAllBullets[] = roles
+    .filter((r) => r.targetId && r.candidates.length >= 2)
+    .map((r) => ({
+      targetId: r.targetId,
+      bullets: r.candidates.map((c) => ({ index: c.index, text: c.text })),
+      mergeEligible: r.candidates.map((c) => c.index),
+    }))
+  if (input.length === 0) return []
+  const { mergePairs } = await findBulletSimilarity(input, embed)
+  return mergePairs
 }

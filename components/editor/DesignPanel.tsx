@@ -131,6 +131,7 @@ export default function DesignPanel() {
   const colorInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [removingPhoto, setRemovingPhoto] = useState(false)
   const [hexInput, setHexInput] = useState("")
   const [hexInvalid, setHexInvalid] = useState(false)
 
@@ -161,13 +162,16 @@ export default function DesignPanel() {
   }
 
   async function handlePhotoRemove() {
-    if (!resumeId) return
+    if (!resumeId || removingPhoto) return
+    setRemovingPhoto(true)
     try {
       await apiFetch(`/api/resumes/${resumeId}/photo`, { method: "DELETE" })
       setPhoto(null)
       toast.success(t("photo_deleted"))
     } catch {
       toast.error(t("photo_delete_error"))
+    } finally {
+      setRemovingPhoto(false)
     }
   }
 
@@ -228,7 +232,7 @@ export default function DesignPanel() {
               {uploadingPhoto ? t("design.uploading") : config.photoUrl ? t("design.change_photo") : t("design.upload_photo")}
             </button>
             {config.photoUrl && (
-              <button className="dp-btn-danger" onClick={handlePhotoRemove}>
+              <button className="dp-btn-danger" onClick={handlePhotoRemove} disabled={removingPhoto}>
                 <IconTrash size={14} color="#F87171" />
                 {t("design.remove_photo")}
               </button>

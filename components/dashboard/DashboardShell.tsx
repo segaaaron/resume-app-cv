@@ -40,10 +40,14 @@ function TopbarNewCVButton({ locale, isPro }: { locale: string; isPro: boolean }
   const [leaving, setLeaving] = useState(false)
 
   async function createResume() {
-    // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
+    // Guard de doble clic: el boton queda bloqueado mientras la peticion corre.
+    // El temporizador de 1,5 s que lo soltaba se retiro cuando `creating` empezo
+    // a levantar la pantalla de carga: la soltaba a mitad de una peticion mas
+    // lenta y la pantalla parpadeaba (se iba y volvia al llegar la respuesta).
+    // Ahora lo suelta unicamente el resultado del backend: error lo libera,
+    // exito navega. Y la pantalla completa ya bloquea el segundo clic.
     if (creating) return
     setCreating(true)
-    setTimeout(() => setCreating(false), 1500)
     if (!isPro) { setLeaving(true); router.push(`/${locale}/pricing`); return }
     try {
       const res = await apiFetch("/api/resumes", { method: "POST" })
@@ -59,7 +63,7 @@ function TopbarNewCVButton({ locale, isPro }: { locale: string; isPro: boolean }
 
   return (
     <>
-      <PendingScreen show={leaving} />
+      <PendingScreen show={creating || leaving} />
       <button
         type="button"
         onClick={createResume}
@@ -85,10 +89,14 @@ function TopbarNewLetterButton({ locale, isPro }: { locale: string; isPro: boole
   const [leaving, setLeaving] = useState(false)
 
   async function createLetter() {
-    // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
+    // Guard de doble clic: el boton queda bloqueado mientras la peticion corre.
+    // El temporizador de 1,5 s que lo soltaba se retiro cuando `creating` empezo
+    // a levantar la pantalla de carga: la soltaba a mitad de una peticion mas
+    // lenta y la pantalla parpadeaba (se iba y volvia al llegar la respuesta).
+    // Ahora lo suelta unicamente el resultado del backend: error lo libera,
+    // exito navega. Y la pantalla completa ya bloquea el segundo clic.
     if (creating) return
     setCreating(true)
-    setTimeout(() => setCreating(false), 1500)
     if (!isPro) { setLeaving(true); router.push(`/${locale}/pricing`); return }
     try {
       const res = await apiFetch("/api/cover-letters", {
@@ -108,7 +116,7 @@ function TopbarNewLetterButton({ locale, isPro }: { locale: string; isPro: boole
 
   return (
     <>
-      <PendingScreen show={leaving} />
+      <PendingScreen show={creating || leaving} />
       <button
         type="button"
         onClick={createLetter}

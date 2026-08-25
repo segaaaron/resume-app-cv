@@ -13,6 +13,7 @@
 // token spent, instant, and the same summary always gets the same verdict.
 import { ANY_METRIC_REGEX } from "./ai-helpers"
 import { hasCliche } from "./cliches"
+import { opensInThirdPersonEs, opensInThirdPersonEn } from "./bullet-quality"
 
 /** First-person pronouns — a CV summary is written impersonally. */
 const PRONOUN_REGEX =
@@ -35,7 +36,7 @@ export interface SummaryQuality {
   /** True when nothing here is worth an AI rewrite. */
   alreadyGood: boolean
   /** Which checks failed — drives what we tell the user. */
-  issues: Array<"weak_opener" | "cliche" | "pronouns" | "missing_metric" | "too_short">
+  issues: Array<"weak_opener" | "cliche" | "pronouns" | "missing_metric" | "too_short" | "third_person">
 }
 
 function startsWithImpact(text: string): boolean {
@@ -62,6 +63,34 @@ function startsWithImpact(text: string): boolean {
  * penalised for lacking a figure the candidate never provided — demanding one
  * is exactly what used to push the model into hard-coding it.
  */
+
+/**
+ * LA TERCERA PERSONA DEL RESUMEN, QUE NO ES LA DE LA VIÑETA.
+ *
+ * `opensInThirdPersonEs` caza el pretérito («Coordinó…»), que es como aparece en
+ * una viñeta. Un resumen la trae de otra forma, y es la que el CEO reportó:
+ * «Atiende a los clientes…», «Su experiencia la posiciona…». El posesivo y el
+ * sustantivo que nombran al candidato desde afuera SÍ se pueden reconocer sin
+ * diccionario, y son inequívocos al abrir un resumen que él escribe sobre sí.
+ *
+ * ── LO QUE ESTO NO CAZA, DICHO ─────────────────────────────────────────────
+ *
+ * El verbo en PRESENTE de tercera persona («Atiende», «Gestiona») es
+ * indistinguible de un imperativo o de un sustantivo sin un diccionario, y este
+ * proyecto ya revirtió una lista curada por ese mismo error. Queda cubierto por
+ * el prompt y por la revisión del usuario, no por este chequeo.
+ */
+function summaryTalksAboutThem(text: string): boolean {
+  const t = text.replace(/^[\s•·▪‣*\-–—]+/, "").trim()
+  // Posesivo de tercera abriendo el resumen: «Su experiencia…», «Sus años…».
+  if (/^sus?\s+[a-zá-úñ]/i.test(t)) return true
+  // El candidato nombrado como un tercero: «El candidato…», «La postulante…».
+  if (/^(?:el|la)\s+(?:candidat[oa]|postulante|profesional|aspirante)\b/i.test(t)) return true
+  // Inglés: «The candidate…», «His/Her experience…».
+  if (/^(?:the\s+candidate|his|her)\s+[a-z]/i.test(t)) return true
+  return false
+}
+
 export function assessSummary(summary: string, profileHasMetrics: boolean): SummaryQuality {
   const text = (summary ?? "").trim()
   const issues: SummaryQuality["issues"] = []
@@ -71,6 +100,19 @@ export function assessSummary(summary: string, profileHasMetrics: boolean): Summ
 
   if (hasCliche(text)) issues.push("cliche")
   if (PRONOUN_REGEX.test(text)) issues.push("pronouns")
+
+  /**
+   * TERCERA PERSONA — «Atiende a los clientes…», «Su experiencia la posiciona…».
+   *
+   * El resumen lo escribe el candidato sobre sí mismo: en tercera persona se lee
+   * como una carta que escribió otro, y es el defecto que el CEO reportó dos
+   * veces. `PRONOUN_REGEX` caza el «yo/mi» del otro extremo, no éste.
+   *
+   * Se reutiliza el detector de la viñeta, que ya distingue el caso real de sus
+   * dos bordes: un token suelto y una sigla en mayúsculas no cuentan aunque
+   * terminen en -ó.
+   */
+  if (opensInThirdPersonEs(text) || opensInThirdPersonEn(text) || summaryTalksAboutThem(text)) issues.push("third_person")
 
   // Only a fault when the CV actually has a figure to carry over.
   if (profileHasMetrics && !ANY_METRIC_REGEX.test(text)) issues.push("missing_metric")

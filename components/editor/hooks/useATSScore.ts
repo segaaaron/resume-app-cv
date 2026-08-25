@@ -1,7 +1,7 @@
 "use client"
 
 import type { ScoreBreakdown } from "@/lib/ats/score-breakdown"
-import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
+import type { SemanticPair, RepeatedPair } from "@/lib/services/ai/shared/semantic-match"
 import { useState, useCallback, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
@@ -63,6 +63,8 @@ export interface ATSResult {
    *  analysis. Carried for the same reason: finding them costs an embedding
    *  call, and the live recompute runs on every keystroke. */
   mergePairs?: SemanticPair[]
+  /** Pares de líneas que dicen lo mismo — mismo embebido, mismo acarreo. */
+  repeatedPairs?: RepeatedPair[]
   /** Points the chosen template cost this score. Published by the scorer so the
    *  panel cannot state a different figure than the one actually applied. */
   templatePenaltyPoints?: number
@@ -481,6 +483,7 @@ export function useATSScore() {
           // and without these the merge card disappears on the first character
           // typed and comes back only after another full analysis.
           mergePairs: prev?.mergePairs ?? [],
+          repeatedPairs: prev?.repeatedPairs ?? [],
           // Soft-skill credit is decided by a model reading the bullets, and this
           // re-score is deterministic — it cannot re-run that pass on every
           // keystroke, so it carries the last verdict forward.

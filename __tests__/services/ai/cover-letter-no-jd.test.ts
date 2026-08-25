@@ -65,7 +65,7 @@ describe("generar sin la oferta pegada", () => {
     const { client: c, chat } = client()
     const mod = new AICoverLetterModule(c, logger as never)
     await mod.generateCoverLetter("u1", { company: "Acme", jobTitle: "Cajera", tone: "balanced", language: "es" }, "PRO")
-    expect(sent(chat)).toMatch(/NUNCA afirmes nada sobre ESTA empresa/)
+    expect(sent(chat)).toMatch(/Nada sobre ESTA empresa puede salir de vos/)
   })
 
   it("existe en los dos idiomas, no sólo en español", async () => {
@@ -74,7 +74,7 @@ describe("generar sin la oferta pegada", () => {
     await mod.generateCoverLetter("u1", { company: "Acme", jobTitle: "Welder", tone: "balanced", language: "en" }, "PRO")
     const p = sent(chat)
     expect(p).toContain("NO VACANCY TEXT WAS PROVIDED")
-    expect(p).toContain("NEVER state anything about THIS employer")
+    expect(p).toContain("Nothing about THIS employer can come from you")
   })
 
   /** Con oferta manda el brief real: el bloque de respaldo sólo haría ruido. */

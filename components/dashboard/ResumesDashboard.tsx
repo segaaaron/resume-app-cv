@@ -62,6 +62,7 @@ export default function ResumesDashboard({
   const [renameDraft, setRenameDraft] = useState("")
   const [renaming, setRenaming] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
   /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
   const [leaving, setLeaving] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
@@ -285,6 +286,7 @@ export default function ResumesDashboard({
   }
 
   async function doDuplicateResume(id: string) {
+    setDuplicating(true)
     try {
       const res = await apiFetch(`/api/resumes/${id}/duplicate`, { method: "POST" })
       if (!res.ok) { toast.error(t("duplicate_error")); return }
@@ -294,6 +296,8 @@ export default function ResumesDashboard({
       toast.success(t("duplicate_success"))
     } catch {
       toast.error(t("duplicate_error"))
+    } finally {
+      setDuplicating(false)
     }
   }
 
@@ -419,7 +423,7 @@ export default function ResumesDashboard({
 
   return (
     <div>
-      <PendingScreen show={leaving} />
+      <PendingScreen show={creating || duplicating || portalLoading || leaving} />
       {translatingIds.size > 0 && <TranslatingOverlay />}
       <UpgradeCTACard />
 

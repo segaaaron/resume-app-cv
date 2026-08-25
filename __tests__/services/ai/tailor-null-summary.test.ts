@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({ enforceAIQuota: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/lib/ai-client", () => ({
   AI_MODEL: "gpt-x",
+  AI_MODEL_PROSE: "gpt-x-prose",
   AI_TEMPERATURE_STRUCTURED: 0.3,
   buildResumeContext: () => "Backend engineer.",
   logAIUsage: vi.fn(),
@@ -103,7 +104,11 @@ describe("tailor no abre trabajo por su cuenta", () => {
         // nombre: el fixture mezclaba un CV inglés con una reescritura española,
         // así que el guard de términos —que llegó después— la descartaba con
         // razón y este test fallaba por algo que no venía a probar.
-        { checkId: "c1", text: "• Designed and ran the checkout payment services end to end" },
+        // La línea tiene que pasar el PISO DE SALIDA que llegó después (verbo de
+        // acción, doce palabras o más, y ganar algo frente a la original): el
+        // fixture viejo tenía diez palabras y lo rechazaba con razón, por algo
+        // que este test no venía a probar.
+        { checkId: "c1", text: "• Designed and ran the checkout payment services end to end, from authorisation to settlement and refunds" },
         { checkId: "inventado", text: "• Nadie pidió esto" },
       ],
     })

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({ enforceAIQuota: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/lib/ai-client", () => ({
   AI_MODEL: "gpt-4o-mini",
+  AI_MODEL_PROSE: "gpt-x-prose",
   AI_TEMPERATURE_PRECISE: 0.1,
   logAIUsage: vi.fn(),
 }))

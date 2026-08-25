@@ -515,6 +515,19 @@ describe("el cargo de la vacante contra el del CV", () => {
     expect(c?.evidence).toEqual(["Mobile Engineer", "Web Developer"])
   })
 
+  /**
+   * REPORTADO CON CAPTURA (2026-08-24): la tarjeta mostraba «iOS Developer»
+   * cuatro veces. La lista es el titular del perfil MÁS el cargo de cada
+   * puesto, y un CV con tres puestos del mismo cargo la repetía entera. Cuatro
+   * copias no informan más que una.
+   */
+  it("no repite el mismo cargo aunque esté en cuatro puestos", () => {
+    const c = allChecks(
+      buildAtsReport(conTitulo(25, { cvTitles: ["iOS Developer", "iOS developer", "IOS DEVELOPER", "iOS  Developer"] })),
+    ).find((x) => x.id === "search.title")
+    expect(c?.evidence).toEqual(["iOS Developer"])
+  })
+
   it("dice los puntos que están en juego, no cero", () => {
     const c = allChecks(buildAtsReport(conTitulo(25))).find((x) => x.id === "search.title")
     expect(c?.weight).toBe(11)

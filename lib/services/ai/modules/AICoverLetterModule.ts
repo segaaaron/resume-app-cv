@@ -217,12 +217,11 @@ Write 3 tight paragraphs (4 maximum), 250–${LETTER_ONE_PAGE_WORDS} words TOTAL
 3. CLOSING CTA — End with a confident, warm call to action that invites next steps.
 
 Rules:
-- TAILORING BRIEF FIRST: if a "TAILORING BRIEF" section appears above, it is the plan. Weave its featured keywords into the FIT paragraph THROUGH the real achievements it lists (paraphrase them, never quote verbatim), and explicitly connect 2-3 of them to the vacancy's needs. NEVER mention or claim anything under its "NEVER claim" line — the résumé does not support it.
+- TAILORING BRIEF FIRST: if a "TAILORING BRIEF" section appears above, it is the plan. Weave its featured keywords into the FIT paragraph THROUGH the real achievements it lists (paraphrase them, never quote verbatim), and explicitly connect 2-3 of them to the vacancy's needs. Nothing under its "DO NOT ATTRIBUTE" line goes into the letter — the résumé does not back it, so it would be yours, not his.
 - Write ONLY the body (no salutation, no date, no signature block)
 - Do NOT use placeholder text like [Company] or [Name] — use the actual values provided
 - NEVER name a company, employer, product, or client that is not in the candidate profile. NEVER use a stand-in like "XYZ Corp", "ABC Company", or "Company Name" — if the profile names no employer, describe the work without naming one.
 - Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text, so a signature here duplicates it or leaves an unfilled bracket in their letter.
-- Do NOT state facts, metrics, technologies, or experiences not present in the candidate profile
 - NEVER write a bracket placeholder such as [X%] or [N projects]. This letter is sent to a recruiter as-is. If the candidate states no figure, write the achievement without a number.
 - NEVER these phrases. Every one is checked and a letter carrying any is rejected: ${clicheBanList("en")}
 - Each paragraph must be 2–4 sentences, substantive and specific — never padding to reach a length
@@ -259,7 +258,6 @@ Reglas:
 - NO uses placeholders como [Empresa] o [Nombre] — usa los valores reales proporcionados
 - NUNCA nombres una empresa, empleador, producto o cliente que no esté en el perfil del candidato. NUNCA uses un nombre quemado como "XYZ Corp", "Empresa ABC" o "Nombre de la Empresa" — si el perfil no nombra un empleador, describe el trabajo sin nombrarlo.
 - NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto, así que una firma aquí lo duplica o le deja un corchete sin rellenar.
-- NO afirmes datos, métricas, tecnologías ni experiencias que no estén en el perfil del candidato
 - NUNCA escribas un placeholder entre corchetes como [X%] o [N proyectos]. Esta carta se envía al recruiter tal cual. Si el candidato no declara la cifra, escribe el logro sin número.
 - NUNCA estas frases. Todas se comprueban y una carta que lleve cualquiera se rechaza: ${clicheBanList("es")}
 - Cada párrafo debe tener 2–4 oraciones, sustanciales y específicas — nunca relleno para alcanzar un largo
@@ -438,7 +436,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     return en
       ? `=== CANDIDATE'S OWN WORDS (primary context — facts the candidate states about themselves) ===
 ${lines.join("\n")}
-Use the motivation for paragraph 1 and the achievement + fit for paragraph 2. Rewrite them as prose in the candidate's voice — never copy these lines verbatim, and never add a figure they did not give.
+Use the motivation for paragraph 1 and the achievement + fit for paragraph 2. Rewrite them as prose in the candidate's voice — never copy these lines verbatim.
 `
       : `=== PALABRAS DEL PROPIO CANDIDATO (contexto principal — hechos que el candidato declara sobre sí mismo) ===
 ${lines.join("\n")}
@@ -452,7 +450,7 @@ Usa la motivación para el párrafo 1 y el logro + el encaje para el párrafo 2.
     if (language === "en") {
       return `\n=== TAILORING BRIEF (computed from the job description + the candidate's résumé) ===
 Feature these vacancy terms the résumé genuinely supports, woven in naturally: ${brief.featureKeywords.join(", ")}.
-${evidence ? `Back them with these real achievements from the résumé (paraphrase, do not quote verbatim):\n${evidence}\n` : ""}NEVER claim these — the résumé does not support them: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(none)"}.\n`
+${evidence ? `Back them with these real achievements from the résumé (paraphrase, do not quote verbatim):\n${evidence}\n` : ""}DO NOT ATTRIBUTE these — the résumé does not back them: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(none)"}.\n`
     }
     return `\n=== BRIEF DE PERSONALIZACIÓN (calculado desde la vacante + el CV del candidato) ===
 Destaca estos términos de la vacante que el CV sí respalda, tejidos con naturalidad: ${brief.featureKeywords.join(", ")}.
@@ -622,10 +620,10 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     return language === "en"
       ? `\n=== NO VACANCY TEXT WAS PROVIDED ===
 Write for what ${role ? `a "${role}" role` : "this role"} normally involves: the duties, tools and responsibilities the trade is made of. That is professional knowledge and it belongs in the letter.
-NEVER state anything about THIS employer — no achievements, funding, culture, products, size or history — and never hard-code a requirement as if the vacancy had published it. Anchor every claim about the candidate in their résumé, exactly as above.\n`
+Nothing about THIS employer can come from you — its achievements, funding, culture, products, size or history are data you would be burning in, and so is a requirement written as if the vacancy had published it. Anchor every claim about the candidate in their résumé, exactly as above.\n`
       : `\n=== NO SE PEGÓ EL TEXTO DE LA VACANTE ===
 Escribe para lo que ${role ? `un puesto de "${role}"` : "este puesto"} implica normalmente: las tareas, herramientas y responsabilidades de las que está hecho ese oficio. Eso es conocimiento profesional y sí va en la carta.
-NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, ni productos, ni tamaño, ni historia— ni afirmes un requisito como si la vacante lo hubiera publicado. Todo lo que digas del candidato sale de su CV, igual que arriba.\n`
+Nada sobre ESTA empresa puede salir de vos —ni logros, ni inversión, ni cultura, ni productos, ni tamaño, ni historia—: sería un dato quemado, igual que escribir un requisito como si la vacante lo hubiera publicado. Todo lo que digas del candidato sale de su CV, igual que arriba.\n`
   }
 
   private async retryWithNote(
@@ -664,7 +662,7 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
     language: "es" | "en",
   ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
     const note = language === "en"
-      ? "YOUR LAST DRAFT STATED FACTS THE CANDIDATE NEVER GAVE. Rewrite the letter using ONLY what the candidate profile states. Do NOT state numbers, percentages, employers, companies, products, or technologies. If the profile gives no figure, write the achievement without one. Never write a stand-in name like \"XYZ Corp\"."
+      ? "YOUR LAST DRAFT BURNED IN DATA YOU CHOSE. Rewrite the letter from the candidate profile alone: every number, percentage, employer, company, product and technology has to come from it. If the profile gives no figure, the achievement goes without one. Never write a stand-in name like \"XYZ Corp\"."
       : "TU BORRADOR ANTERIOR AFIRMÓ DATOS QUE EL CANDIDATO NUNCA DIO. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO quemes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre quemado como \"XYZ Corp\"."
     return this.retryWithNote(basePrompt, note, langInstruction, language)
   }
@@ -681,7 +679,7 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
   ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
     const list = keywords.slice(0, 8).join(", ")
     const note = language === "en"
-      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT state anything, do NOT keyword-stuff, keep it under ${LETTER_ONE_PAGE_WORDS} words and ONE page.`
+      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT keyword-stuff, keep it under ${LETTER_ONE_PAGE_WORDS} words and ONE page.`
       : `Tu borrador anterior usó poco el lenguaje de la vacante. Reescribe la carta tejiendo estos términos que el CV respalda de forma NATURAL, a través de los logros reales del candidato: ${list}. NO quemes nada, NO amontones keywords, mantenla por debajo de ${LETTER_ONE_PAGE_WORDS} palabras y UNA página.`
     return this.retryWithNote(basePrompt, note, langInstruction, language)
   }
@@ -752,7 +750,7 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
 ADDITIONAL RULES:
 1. ONLY rewrite using information already present in the current letter and the context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the source.
 2. Preserve every metric the original states. Never leave a bracket standing in for a figure.
-3. If a version would require fabricating content to be impactful, prefer a shorter, conservative rewrite anchored to the source.
+3. If a version could only be impactful by adding data of your own, prefer a shorter, conservative rewrite anchored to the source.
 
 TASK: Improve this cover letter body and generate 3 optimized versions.
 

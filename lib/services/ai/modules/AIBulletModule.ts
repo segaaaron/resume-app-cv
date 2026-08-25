@@ -8,7 +8,7 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage, hasHardCodedFact, hardCodedFactKind, figureDegraded } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
-import { computeCostUsd } from "../shared/cost-tracker"
+import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit, isRedundantRewrite, dropsContentWithoutGain } from "../shared/text-similarity"
 import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
@@ -350,7 +350,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       plan,
       promptTokens: usage?.prompt_tokens ?? 0,
       completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      costUsd: costOfChat(AI_MODEL_PROSE, usage),
     })
 
     /**
@@ -538,6 +538,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         figureLoss: droppedFigure,
         trivial: droppedTrivial + droppedDuplicate,
         termLoss: droppedTerm,
+        weak: 0,
       })
       return improvements
     }
@@ -599,7 +600,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         plan,
         promptTokens: retryUsage?.prompt_tokens ?? 0,
         completionTokens: retryUsage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL_PROSE, retryUsage?.prompt_tokens ?? 0, retryUsage?.completion_tokens ?? 0),
+        costUsd: costOfChat(AI_MODEL_PROSE, retryUsage),
       })
       improvements = harvest(retry.choices[0]?.message?.content ?? "")
     }

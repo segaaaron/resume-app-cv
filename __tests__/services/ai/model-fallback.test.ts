@@ -12,6 +12,7 @@ const create = vi.fn()
 vi.mock("@/lib/ai-client", () => ({
   getOpenAI: () => ({ chat: { completions: { create } }, embeddings: { create: vi.fn() } }),
   AI_MODEL: "gpt-5.4-nano",
+  AI_MODEL_PROSE: "gpt-x-prose",
 }))
 
 /** Fresh module instance so the in-memory "unavailable models" cache starts empty. */

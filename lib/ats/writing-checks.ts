@@ -31,6 +31,7 @@ import {
   type IncompleteEducation,
 } from "./resume-integrity"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
+import type { RepeatedPair } from "@/lib/services/ai/shared/semantic-match"
 
 interface WorkRow {
   id?: string
@@ -197,9 +198,66 @@ const MIN_DUPLICATE_CHARS = 25
  * the server's own first pass and between analyses, and the merge finder falls
  * back to its deterministic path there.
  */
+/**
+ * Convierte los pares semánticos en hallazgos de repetición, y los suma a los
+ * que el detector léxico ya encontró.
+ *
+ * DOS DETECTORES, UNA LISTA. El léxico caza la copia con retoques (misma
+ * apertura, vocabulario casi idéntico) sin gastar un token; el semántico caza lo
+ * mismo dicho con otras palabras y, sobre todo, **entre puestos distintos**, que
+ * es donde el léxico no miraba nunca. Publicar dos listas separadas obligaría a
+ * cada consumidor —la credibilidad, el informe, el panel— a acordarse de las
+ * dos; una lista sola no se puede olvidar.
+ *
+ * Sin duplicar el hallazgo: si los dos vieron el mismo par, entra una vez.
+ */
+function mergeRepeats(
+  lexical: NearDuplicate[],
+  pairs: readonly RepeatedPair[],
+  work: readonly WorkRow[],
+): NearDuplicate[] {
+  if (pairs.length === 0) return lexical
+  const byId = new Map(work.filter((j) => j.id).map((j) => [j.id as string, j]))
+  const lineOf = (targetId: string, index: number) => {
+    const job = byId.get(targetId)
+    if (!job) return null
+    const text = parseBullets(job.description ?? "")[index]
+    return text ? { text, jobTitle: job.jobTitle?.trim() ?? "" } : null
+  }
+  const key = (a: { targetId: string; index: number }, b: { targetId: string; index: number }) =>
+    [`${a.targetId}#${a.index}`, `${b.targetId}#${b.index}`].sort().join("|")
+
+  const out = [...lexical]
+  const seen = new Set(
+    lexical.map((n) => key({ targetId: n.targetId, index: n.index }, { targetId: n.otherTargetId ?? n.targetId, index: n.otherIndex })),
+  )
+  for (const p of pairs) {
+    const k = key(p.a, p.b)
+    if (seen.has(k)) continue
+    const a = lineOf(p.a.targetId, p.a.index)
+    const b = lineOf(p.b.targetId, p.b.index)
+    // El CV pudo cambiar entre el análisis y este recálculo: un índice que ya no
+    // existe se descarta en silencio, nunca se muestra una línea que no está.
+    if (!a || !b) continue
+    seen.add(k)
+    out.push({
+      targetId: p.b.targetId,
+      jobTitle: b.jobTitle,
+      index: p.b.index,
+      text: b.text,
+      otherIndex: p.a.index,
+      otherText: a.text,
+      otherTargetId: p.a.targetId,
+      otherJobTitle: a.jobTitle,
+    })
+  }
+  return out
+}
+
 export function analyzeWriting(
   sectionData: Record<string, unknown>,
   semanticPairs: SemanticPair[] = [],
+  repeatedPairs: RepeatedPair[] = [],
 ): WritingChecks {
   const work = (sectionData.workExperience ?? []) as WorkRow[]
   const clicheBullets: ClicheBullet[] = []
@@ -297,8 +355,16 @@ export function analyzeWriting(
       work,
       new Date().getFullYear(),
     ),
-    nearDuplicates: findNearDuplicateBullets(
-      work.map((j) => ({ id: j.id, jobTitle: j.jobTitle, bullets: parseBullets(j.description ?? "") })),
+    // Las léxicas (misma apertura, o una que no agrega nada) MÁS las semánticas
+    // que el análisis encontró con embeddings. Un solo dueño de «esto está
+    // repetido»: la credibilidad las cobra y el informe las muestra sin saber
+    // cuál de los dos detectores las vio.
+    nearDuplicates: mergeRepeats(
+      findNearDuplicateBullets(
+        work.map((j) => ({ id: j.id, jobTitle: j.jobTitle, bullets: parseBullets(j.description ?? "") })),
+      ),
+      repeatedPairs,
+      work,
     ),
     // The structure check names the problem; this names the instances. Same source
     // of truth for "how many is too many", so the two can never disagree.

@@ -50,7 +50,7 @@ export interface CoverLetterBrief {
   role: string
   /** JD keywords the résumé genuinely supports, in priority order — SAFE to feature. */
   featureKeywords: string[]
-  /** JD keywords the résumé does NOT support — never invent these into the letter. */
+  /** JD keywords the résumé does NOT support — writing them into the letter would attribute to the candidate something his CV does not back. */
   gapsToAvoid: string[]
   /** Real résumé lines that map to top JD requirements, richest first. */
   supportingEvidence: CoverLetterEvidence[]

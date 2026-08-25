@@ -21,9 +21,10 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { normalizeTerm, termPresent } from "@/lib/ats/vocabulary"
 import { parseAIJson, resolveLanguage, hasHardCodedFact } from "../shared/ai-helpers"
-import { computeCostUsd } from "../shared/cost-tracker"
+import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
+import { bulletFloorMisses } from "@/lib/ats/output-floor"
 import { AI_INPUT_LIMITS, type SkillBulletInput, type SkillBulletResult } from "../shared/ai-types"
 import { noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 
@@ -266,7 +267,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       plan,
       promptTokens: usage?.prompt_tokens ?? 0,
       completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      costUsd: costOfChat(AI_MODEL_PROSE, usage),
     })
 
     const raw = parseAIJson<{ targetId?: unknown; text?: unknown }>(response.choices[0]?.message?.content ?? "{}")
@@ -303,6 +304,25 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const existing = parseBullets(job.description ?? "")
     if (!soft && bulletMentionsSkill(skill, (job.description ?? "").toLowerCase())) return { status: "no_fit" }
     if (existing.some((b) => isTrivialEdit(b, text))) return { status: "no_fit" }
+
+    /**
+     * EL PISO DE SALIDA — el mismo que el ejecutor, del mismo dueño.
+     *
+     * Esta línea nace de cero, así que no hay original contra la que medir
+     * ganancia: quedan las tres condiciones que sí aplican —verbo de acción,
+     * nada de frase vacía, y el mínimo de palabras de la doctrina—. Una línea
+     * como «Trabajo en equipo en el puesto de Cajera» cumple todos los guards de
+     * arriba (nada quemado, menciona la habilidad, no duplica) y no dice NADA: es
+     * exactamente la respuesta básica que el CEO reportó.
+     *
+     * No se reintenta acá: `no_fit` ya es una salida honesta con su aviso en
+     * pantalla, y un segundo intento por una sola línea gasta otro uso del plan.
+     */
+    const misses = bulletFloorMisses(text)
+    if (misses.length > 0) {
+      this.logger.warn("[AIService.weaveSkillBullet] bullet below the floor", { skill, misses, previewSample: text.slice(0, 120) })
+      return { status: "no_fit" }
+    }
 
     return {
       status: "written",

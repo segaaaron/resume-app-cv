@@ -225,7 +225,7 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
 
   return (
     <div className="flex flex-col gap-3">
-      <PendingScreen show={leaving} />
+      <PendingScreen show={loading || leaving} />
       {/* Absent entirely unless the gateway is configured server-side. */}
       {paypalAvailable && (
         <PaymentMethodSelector

@@ -93,11 +93,13 @@ describe("the assistant's three prompts", () => {
 
   /**
    * The product rule that outranks every other: the assistant proposes what a
-   * ROLE carries, and never states a fact about the person.
+   * ROLE carries, and every datum about the person would be one it burned in —
+   * it has not met them. Worded as "hard-coded", never as "do not invent": that
+   * older framing was applied too widely and blocked real value (CEO, 2026-08).
    */
-  it("forbids stating facts about the person, in both languages", () => {
-    expect(buildModePrompt("seed", "enfermera", "es").system).toMatch(/NUNCA afirmas un hecho sobre la persona/)
-    expect(buildModePrompt("seed", "nurse", "en").system).toMatch(/NEVER state a fact about the person/)
+  it("names every datum about the person as hard-coded, in both languages", () => {
+    expect(buildModePrompt("seed", "enfermera", "es").system).toMatch(/datos que quemas vos/)
+    expect(buildModePrompt("seed", "nurse", "en").system).toMatch(/data you burned in/)
     // The bullets prompt draws the line differently, and deliberately: it MAY
     // name what the trade's task consists of (that is the value it adds), and it
     // may NOT state anything only the person could know. Both branches must

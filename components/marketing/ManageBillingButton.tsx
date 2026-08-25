@@ -42,7 +42,7 @@ export default function ManageBillingButton() {
 
   return (
     <>
-      <PendingScreen show={leaving} />
+      <PendingScreen show={loading || leaving} />
       <button
       onClick={handleClick}
       disabled={loading}

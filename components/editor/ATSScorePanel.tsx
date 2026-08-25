@@ -804,10 +804,18 @@ export default function ATSScorePanel() {
    * checks themselves stay pure and deterministic, exactly as before. Absent
    * before the first analysis, and the merge finder falls back to its own
    * deterministic pass there.
+   *
+   * `result.repeatedPairs` — las líneas que dicen lo mismo con otras palabras,
+   * del mismo embebido y por el mismo motivo. Sin esto la repetición desaparece
+   * en cuanto el usuario toca una tecla y sólo vuelve tras otro análisis.
    */
   const liveWritingChecks = useMemo(
-    () => analyzeWriting(sectionData as Record<string, unknown>, atsResult?.mergePairs ?? []),
-    [sectionData, atsResult?.mergePairs],
+    () => analyzeWriting(
+      sectionData as Record<string, unknown>,
+      atsResult?.mergePairs ?? [],
+      atsResult?.repeatedPairs ?? [],
+    ),
+    [sectionData, atsResult?.mergePairs, atsResult?.repeatedPairs],
   )
 
   /**

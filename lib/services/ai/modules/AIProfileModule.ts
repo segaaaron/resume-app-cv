@@ -13,7 +13,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, buildSectionContext, resolveLanguage, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
-import { computeCostUsd } from "../shared/cost-tracker"
+import { computeCostUsd, costOfChat } from "../shared/cost-tracker"
 import { canonicalSkillName } from "@/lib/ats/skill-catalog"
 import { buildModePrompt } from "./profile-modes"
 import { assessDescription } from "../shared/bullet-quality"
@@ -143,7 +143,7 @@ Rules:
 
 ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-second read):
 - Every bullet OPENS with a strong action verb (Built, Led, Reduced, Increased, Designed, Launched, Delivered, Automated, Migrated, Improved, Cut, Grew). NEVER open with a duty phrase ("Responsible for", "Helped with", "Worked on", "Involved in") or a pronoun.
-- Bullet shape: action → what you did → result. Include a metric ONLY if the candidate gave one; if they gave none, write a strong action-and-outcome bullet WITHOUT a number — never fabricate a figure.
+- Bullet shape: action → what you did → result. Include a metric ONLY if the candidate gave one; if they gave none, write a strong action-and-outcome bullet WITHOUT a number — a figure you pick is yours, not theirs.
 - Use the STANDARD, canonical spelling of technologies/tools/skills so an ATS matches them exactly ("React Native", "REST APIs", "PostgreSQL", "CI/CD", "Node.js") — never abbreviate, misspell or paraphrase a known tool's name.
 - Dates in MM/YYYY whenever the candidate provides one (ATS parse employment dates to compute tenure).
 - Plain "• " bullets only — no tables, columns, emojis or special characters.
@@ -177,7 +177,7 @@ TAREA: Analiza la instrucción y determina qué secciones del CV deben mejorar. 
   BIEN: "React", "PostgreSQL", "Git", "REST APIs", "Docker", "Scrum", "Excel", "SAP", "AutoCAD", "Basilea III"
   MAL: "Diseño y mantenimiento de bases de datos relacionales" → escribí "PostgreSQL" o "SQL". "Control de versiones con Git" → escribí "Git". "Consumo de REST APIs" → escribí "REST APIs". "Maquetación responsiva" → escribí "CSS" o "Diseño responsivo".
 - Rellena SIEMPRE inferredSkills, sea cual sea el oficio: de 4 a 6 habilidades estándar de ese puesto que el candidato NO nombró.
-- Rellena SIEMPRE suggestedCertifications: de 3 a 6 credenciales ESTÁNDAR de ese puesto, sea cual sea el oficio — CCNA o CCNP para un ingeniero de redes, ITIL para soporte, carnet de manipulación de alimentos para un cocinero, licencia docente para un profesor, licencia de montacargas para un jefe de almacén. Nombra credenciales reales y reconocibles; nunca afirmes que el candidato las tiene.
+- Rellena SIEMPRE suggestedCertifications: de 3 a 6 credenciales ESTÁNDAR de ese puesto, sea cual sea el oficio — CCNA o CCNP para un ingeniero de redes, ITIL para soporte, carnet de manipulación de alimentos para un cocinero, licencia docente para un profesor, licencia de montacargas para un jefe de almacén. Nombra credenciales reales y reconocibles; escríbelas como lo que el puesto suele pedir, nunca como algo que él ya tenga.
 - Si menciona que estudió en algún lado → ponlo en educationNew con degree e institution, dejando vacío "" lo que no haya dicho A un gerente de sucursal le corresponden manejo de efectivo y supervisión de equipo; a una secretaria jurídica, gestión de expedientes y control de plazos judiciales; a un cocinero, inocuidad alimentaria y control de porciones. Nunca repitas una que ya esté en suggestedSkills ni en el CV.
 - Si menciona idiomas → agrégalos a suggestedLanguages con nivel apropiado
 - Si menciona estudios → mejora la descripción de esa educación
@@ -206,7 +206,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
 Reglas:
 - Usa SIEMPRE los ids exactos del listado de secciones de arriba. Usá sólo los ids listados; nunca uses uno que no esté ahí.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
-- No afirmes datos (fechas, empresas, métricas) que el candidato no mencionó.
+- Fechas, empresas y métricas salen de lo que el candidato mencionó; cualquier otra sería un dato quemado por ti.
 - Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: ${aiTellWords("es")}.
 
 ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundos de un reclutador):
@@ -434,7 +434,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       plan,
       promptTokens: usage?.prompt_tokens ?? 0,
       completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      costUsd: costOfChat(AI_MODEL, usage),
     })
     return {
       summary: data.summary ?? null,

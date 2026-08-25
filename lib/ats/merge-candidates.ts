@@ -173,6 +173,39 @@ export function findMergeCandidates(
  * under 25 characters, or a line carrying a figure — that one has earned its
  * slot and is never folded away.
  */
+/**
+ * TODAS las viñetas del CV, con cuáles de ellas pueden además proponerse para
+ * fusión.
+ *
+ * Los filtros de fusión —puesto de cuatro líneas o más, sin cifra, 25 caracteres
+ * mínimo— existen porque fusionar es destructivo. Aplicados a la pregunta «¿esto
+ * está repetido?» dejaban ciega media app: un CV de tres puestos con tres
+ * líneas cada uno no se comparaba nunca, y copiar un logro del trabajo anterior
+ * al siguiente era invisible por construcción. Acá van las dos cosas juntas: la
+ * lista completa para detectar repetición, y la marca de elegible para fusión.
+ */
+export function buildBulletSimilarityInput(
+  sectionData: Record<string, unknown>,
+): { targetId: string; bullets: { index: number; text: string }[]; mergeEligible: number[] }[] {
+  const work = (sectionData.workExperience ?? []) as { id?: string; description?: string }[]
+  const out: { targetId: string; bullets: { index: number; text: string }[]; mergeEligible: number[] }[] = []
+  for (const job of work) {
+    if (!job.id) continue
+    const bullets = parseBullets(job.description ?? "")
+      .map((text, index) => ({ index, text: text.trim() }))
+      // Una línea de tres palabras no es una repetición ni una fusión: es un
+      // encabezado. El mismo piso que ya usaba la fusión.
+      .filter(({ text }) => text.length >= TOO_SHORT_TO_KEEP)
+    if (bullets.length === 0) continue
+    const crowded = parseBullets(job.description ?? "").length >= CROWDED_ROLE
+    const mergeEligible = crowded
+      ? bullets.filter(({ text }) => !carriesFigure(text)).map(({ index }) => index)
+      : []
+    out.push({ targetId: job.id, bullets, mergeEligible })
+  }
+  return out
+}
+
 export function buildMergeRoleInput(
   sectionData: Record<string, unknown>,
 ): { targetId: string; candidates: { index: number; text: string }[] }[] {

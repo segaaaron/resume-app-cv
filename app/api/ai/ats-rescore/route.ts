@@ -33,6 +33,13 @@ const schema = z.object({
     indexes: z.tuple([z.number().int().min(0).max(200), z.number().int().min(0).max(200)]),
     score: z.number().min(0).max(1),
   })).max(40).optional(),
+  // Ídem las repeticiones: mismo embebido, mismo acarreo, mismos límites. Un
+  // par vive entre DOS puestos, así que cada lado trae el suyo.
+  repeatedPairs: z.array(z.object({
+    a: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200) }),
+    b: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200) }),
+    score: z.number().min(0).max(1),
+  })).max(40).optional(),
 })
 
 export async function POST(req: Request) {

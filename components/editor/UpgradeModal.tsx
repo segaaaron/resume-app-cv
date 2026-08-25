@@ -72,7 +72,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
 
   return (
     <>
-      <PendingScreen show={leaving} />
+      <PendingScreen show={loading !== null || leaving} />
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="p-0 overflow-hidden rounded-2xl max-w-md border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.10)] gap-0">
         {/* Head — premium gradient */}

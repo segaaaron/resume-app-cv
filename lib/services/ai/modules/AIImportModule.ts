@@ -21,7 +21,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { parseAIJson, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
 import { appearsIn, normaliseFigures, recoverContact, hostOf, linesForRole } from "../shared/import-recovery"
-import { computeCostUsd } from "../shared/cost-tracker"
+import { costOfChat } from "../shared/cost-tracker"
 import { ResumeSectionsSchema, type ResumeSections } from "@/types/resume"
 import { normalizeDescription } from "@/lib/utils"
 import { randomUUID } from "crypto"
@@ -111,7 +111,7 @@ export class AIImportModule {
       plan,
       promptTokens: usage?.prompt_tokens ?? 0,
       completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      costUsd: costOfChat(AI_MODEL, usage),
     })
 
     const sections = this.groundAndShape(parsed, rawText)

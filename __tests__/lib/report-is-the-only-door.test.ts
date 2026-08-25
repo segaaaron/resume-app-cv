@@ -34,6 +34,9 @@ const ALLOWED = {
   // Alimenta `analyzeWriting`, que a su vez es una entrada de `buildPanelReport`.
   // Va río arriba del informe; no es algo que el panel pinte.
   mergePairs: "insumo de analyzeWriting → entra al informe",
+  // Mismo caso: los pares que dicen lo mismo salen del embebido del análisis y
+  // entran a `analyzeWriting`. El panel no los pinta, los pasa.
+  repeatedPairs: "insumo de analyzeWriting → entra al informe",
   // Estado de la PETICIÓN, no un dato del CV: si el análisis no pudo correr, el
   // informe no existe y no hay nada que pueda decirlo desde adentro.
   analysisUnavailable: "estado de la petición, no un dato del CV",

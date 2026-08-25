@@ -107,7 +107,7 @@ ${keepCandidateFactsRule("en")}
 WHAT A MERGE IS, and this is the part that goes wrong:
 - A merge is NOT the two sentences joined by "and". "Picked orders from the pick list and packed them onto pallets" is two lines with a conjunction between them: it is longer than either, says nothing neither said, and buys the candidate one line of space and no more. Measured: three of four merges came back exactly like that.
 - A merge names ONE action and folds the other in as HOW or WITH WHAT it was done. "Managed the clinic's appointment book, confirming each patient's slot by phone the day before" is one claim; "Managed the book and confirmed the slots" is two. The test is not length — two lines that share no wording cannot get much shorter without losing a fact, and keeping the facts wins. The test is whether a reader meets ONE claim or two.
-- Do not open with a verb that upgrades the work into something the candidate never claimed. "Built the order fulfilment workflow" is a claim about designing a system; picking and packing is not. Use the verb their own line used.
+- Do not open with a verb that upgrades the work into something the candidate never described. "Built the order fulfilment workflow" is a claim about designing a system; picking and packing is not. Use the verb their own line used.
 
 RULES:
 - One sentence, verb-first in the past tense. No pronouns. No bullet marker.
@@ -259,7 +259,7 @@ BULLET B: ${b}`
      */
     if (losesStatedFigure(`${a}\n${b}`, text)) {
       this.logger.warn("[AIService.mergeBullets] merged bullet dropped a stated figure — discarded", { targetId })
-      reportGuardDrops({ endpoint: "merge-bullets", offered: 1, kept: 0, hardCoded: 0, figureLoss: 1, trivial: 0, termLoss: 0 })
+      reportGuardDrops({ endpoint: "merge-bullets", offered: 1, kept: 0, hardCoded: 0, figureLoss: 1, trivial: 0, termLoss: 0, weak: 0 })
       return { status: "not_mergeable" }
     }
 
@@ -315,6 +315,7 @@ BULLET B: ${b}`
         figureLoss: 0,
         trivial: lostTerms.length > 0 ? 0 : 1,
         termLoss: lostTerms.length > 0 ? 1 : 0,
+        weak: 0,
       })
       return { status: "not_mergeable" }
     }

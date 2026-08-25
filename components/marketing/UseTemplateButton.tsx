@@ -60,7 +60,7 @@ export default function UseTemplateButton({ templateId, label }: Props) {
 
   return (
     <>
-      <PendingScreen show={leaving} />
+      <PendingScreen show={loading || leaving} />
       <button
       onClick={handleClick}
       disabled={loading}

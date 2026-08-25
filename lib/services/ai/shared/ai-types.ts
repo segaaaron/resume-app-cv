@@ -2,7 +2,7 @@
 // Shared result and input types used across AI modules.
 import type { ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import { z } from "zod"
-import type { SemanticPair } from "./semantic-match"
+import type { SemanticPair, RepeatedPair } from "./semantic-match"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
 
 // ─── Shared Result Types ───────────────────────────────────────────────────────
@@ -222,6 +222,12 @@ export interface ATSScoreResult {
    */
   mergePairs: SemanticPair[]
   /**
+   * Pares de viñetas que DICEN LO MISMO con otras palabras — dentro de un puesto
+   * o entre dos. Se transportan por el mismo motivo que `mergePairs`: salen de
+   * los embeddings y el panel recalcula sus chequeos en cada tecla.
+   */
+  repeatedPairs: RepeatedPair[]
+  /**
    * Points the template's layout cost this score, already applied.
    *
    * Published rather than recomputed in the UI so the panel can never state a
@@ -298,6 +304,8 @@ export interface ATSRescoreInput {
   /** The merge proposals the full analysis published, carried back so the live
    *  re-score keeps offering the same pairs. */
   mergePairs?: SemanticPair[]
+  /** Ídem para las repeticiones: sin esto desaparecen en la primera tecla. */
+  repeatedPairs?: RepeatedPair[]
 }
 
 // LLM call #1 for ats-score: extract the requirements from the job description

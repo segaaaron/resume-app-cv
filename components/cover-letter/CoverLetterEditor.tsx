@@ -650,7 +650,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
 
   return (
     <div className="h-screen flex flex-col bg-[#F4F8FD]">
-      <PendingScreen show={leaving} />
+      <PendingScreen show={saving || leaving} />
       {/* Top bar — matches resume EditorTopBar */}
       <header
         className="h-[58px] flex items-center justify-between shrink-0 sticky top-0 z-10 relative px-3 sm:px-5"

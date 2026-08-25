@@ -23,6 +23,17 @@ const v = (x: number, y: number) => [x, y]
 /** Cosine of the angle between two unit-ish vectors; easy to reason about. */
 const at = (deg: number) => v(Math.cos((deg * Math.PI) / 180), Math.sin((deg * Math.PI) / 180))
 
+/** Tres vectores unitarios con el MISMO coseno `c` entre cualquier par. */
+const trio = (c: number) => {
+  const y2 = Math.sqrt(1 - c * c)
+  const x3 = (c - c * c) / y2
+  return [
+    [1, 0, 0],
+    [c, y2, 0],
+    [c, x3, Math.sqrt(Math.max(0, 1 - c * c - x3 * x3))],
+  ]
+}
+
 const role = (targetId: string, texts: string[]) => ({
   targetId,
   candidates: texts.map((text, index) => ({ index, text })),
@@ -30,8 +41,11 @@ const role = (targetId: string, texts: string[]) => ({
 
 describe("findMergePairs proposes, ranked", () => {
   it("offers the closest pair and drops what falls under the floor", async () => {
-    // 0 and 1 are 20° apart (cos ≈ 0.94); 2 sits at 89° from both (cos ≈ 0.02).
-    const embed = async () => [at(0), at(20), at(89)]
+    // 0 y 1 a 55° (cos ≈ 0.57): dentro de la banda de FUSIÓN medida
+    // (0.498–0.569) y por debajo del corte de REPETICIÓN (0.62), que desde
+    // 2026-08-24 se lleva los pares más parecidos a su propio hallazgo. La
+    // tercera a 140°, lejos de las dos (cos ≈ −0.77 y 0.09).
+    const embed = async () => [at(0), at(55), at(140)]
     const pairs = await findMergePairs([role("j", ["a", "b", "c"])], embed)
     expect(pairs).toHaveLength(1)
     expect(pairs[0].indexes).toEqual([0, 1])
@@ -39,15 +53,19 @@ describe("findMergePairs proposes, ranked", () => {
   })
 
   it("never puts one bullet in two proposals", async () => {
-    // All three close together: 0-1, 0-2 and 1-2 all clear the floor.
-    const embed = async () => [at(0), at(10), at(20)]
+    // Las tres EQUIDISTANTES en la banda de fusión (0.55 entre cualquier par):
+    // 0-1, 0-2 y 1-2 pasan el piso sin llegar al corte de repetición. En dos
+    // dimensiones no se puede — tres ángulos parecidos dejan siempre un par casi
+    // idéntico, que ahora es una repetición, no una fusión.
+    const embed = async () => trio(0.55)
     const pairs = await findMergePairs([role("j", ["a", "b", "c"])], embed)
     const used = pairs.flatMap((p) => p.indexes)
     expect(new Set(used).size).toBe(used.length)
   })
 
   it("keeps the real index of each bullet, not its position among the eligible ones", async () => {
-    const embed = async () => [at(0), at(15)]
+    // 56° ≈ 0.56: fusionable, no repetido (ver el corte de arriba).
+    const embed = async () => [at(0), at(56)]
     // Indexes 1 and 4 of the role; 0, 2 and 3 were filtered out upstream.
     const pairs = await findMergePairs([{
       targetId: "j",

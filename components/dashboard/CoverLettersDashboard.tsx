@@ -42,6 +42,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   )
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [creating, setCreating] = useState(false)
   /** Se enciende al empezar a irse y no se apaga: la navegación desmonta esto. */
   const [leaving, setLeaving] = useState(false)
@@ -106,16 +107,23 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   }
 
   async function deleteLetter(id: string) {
-    const res = await apiFetch(`/api/cover-letters/${id}`, { method: "DELETE" })
-    if (!res.ok) { toast.error(t("delete_error")); setDeleteId(null); return }
-    setLetters((prev) => prev.filter((l) => l.id !== id))
-    setDeleteId(null)
-    toast.success(t("delete_success"))
+    setDeleting(true)
+    try {
+      const res = await apiFetch(`/api/cover-letters/${id}`, { method: "DELETE" })
+      if (!res.ok) { toast.error(t("delete_error")); setDeleteId(null); return }
+      setLetters((prev) => prev.filter((l) => l.id !== id))
+      setDeleteId(null)
+      toast.success(t("delete_success"))
+    } catch {
+      toast.error(t("delete_error"))
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
     <>
-      <PendingScreen show={leaving} />
+      <PendingScreen show={creating || leaving} />
       <div>
         <UpgradeCTACard />
 
@@ -342,7 +350,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
         </AlertDialog>
 
         {/* Delete dialog */}
-        <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && !deleting && setDeleteId(null)}>
           <AlertDialogContent
             className="p-0 overflow-hidden"
             style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
@@ -401,6 +409,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 {t("cancel")}
               </AlertDialogCancel>
               <AlertDialogAction
+                disabled={deleting}
                 onClick={() => deleteId && deleteLetter(deleteId)}
                 style={{
                   flex: 1,
@@ -416,7 +425,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                   justifyContent: "center",
                 }}
               >
-                {t("delete")}
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("delete")}
               </AlertDialogAction>
             </div>
           </AlertDialogContent>

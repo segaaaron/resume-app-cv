@@ -1920,6 +1920,7 @@
         "future_date": "{job} termina en una fecha que todavía no llegó ({value})",
         "orphan_fragment": "Una línea de {job} es la cola de la anterior, cortada al importar",
         "near_duplicate": "En {job} hay dos líneas que cuentan el mismo logro",
+        "near_duplicate_across": "La misma línea aparece en {job} y en {otherJob}",
         "role_too_many_bullets": "{job} tiene {count} viñetas: tus mejores líneas compiten con las más flojas",
         "role_no_bullets": "{job} no tiene ninguna viñeta",
         "years_claim": "Tu resumen dice {claimed} años y tus fechas suman {actual}",

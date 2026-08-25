@@ -77,6 +77,16 @@ export interface NearDuplicate {
   text: string
   otherIndex: number
   otherText: string
+  /**
+   * El puesto de la OTRA línea, cuando no es el mismo.
+   *
+   * El detector léxico compara sólo dentro de un puesto y no lo necesita; el
+   * semántico compara todo el CV, y el caso más común de repetición es copiar un
+   * logro del trabajo anterior al siguiente. Ausente = las dos líneas viven en
+   * `targetId`.
+   */
+  otherTargetId?: string
+  otherJobTitle?: string
 }
 
 /** The last four-digit year in a date string, or null. */

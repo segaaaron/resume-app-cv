@@ -228,7 +228,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <PendingScreen show={leaving} />
+      <PendingScreen show={portalLoading || leaving} />
 
       {/* ── Card 1: Perfil (full width) ── */}
       <div className="col-span-1 sm:col-span-2 bg-white border border-dash-border rounded-[10px] overflow-hidden">

@@ -20,7 +20,7 @@ import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, a
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword, isTrivialEdit } from "../shared/text-similarity"
 import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
-import { computeCostUsd } from "../shared/cost-tracker"
+import { computeCostUsd, costOfChat } from "../shared/cost-tracker"
 import { EMBEDDING_MODEL } from "../OpenAIClientAdapter"
 import {
   AI_INPUT_LIMITS,
@@ -40,8 +40,8 @@ import {
 } from "../shared/ai-types"
 import { computeResumeScore } from "../shared/resume-score"
 import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats-matcher"
-import { buildMergeRoleInput } from "@/lib/ats/merge-candidates"
-import { findSemanticCandidates, findMergePairs } from "../shared/semantic-match"
+import { buildBulletSimilarityInput } from "@/lib/ats/merge-candidates"
+import { findSemanticCandidates, findBulletSimilarity } from "../shared/semantic-match"
 import { confirmEquivalences } from "../shared/skill-equivalence"
 import { findDemonstratedSoftSkills } from "../shared/soft-skill-evidence"
 import { answerHash, readAnswer, writeAnswer } from "../shared/answer-cache"
@@ -151,7 +151,7 @@ const DOCTRINE_FINGERPRINT = createHash("sha256")
  * no llegaría nunca a un CV ya analizado. Es exactamente el defecto que costó una
  * sesión entera: «si tocás un prompt y la pantalla no cambia, sospechá del caché».
  */
-const ANALYSIS_REVISION = `v4-${DOCTRINE_FINGERPRINT}`
+const ANALYSIS_REVISION = `v5-${DOCTRINE_FINGERPRINT}`
 
 export class AIReviewModule {
   /**
@@ -371,8 +371,8 @@ export class AIReviewModule {
      */
     const terms = postingTerms.filter((t) => t.trim()).slice(0, 30)
     const termsLine = terms.length === 0 ? "" : (en
-      ? `\n=== TERMS THIS POSTING SCORES ON ===\n${terms.join(", ")}\nA rewrite that drops one of these costs the candidate the match it was carrying. Keep the ones the line already earns; never claim one the résumé does not back.`
-      : `\n=== TÉRMINOS POR LOS QUE ESTA VACANTE PUNTÚA ===\n${terms.join(", ")}\nUna reescritura que suelte uno de éstos le cuesta al candidato la coincidencia que traía. Conservá los que la línea ya tenga; nunca afirmes uno que el CV no respalde.`)
+      ? `\n=== TERMS THIS POSTING SCORES ON ===\n${terms.join(", ")}\nA rewrite that drops one of these costs the candidate the match it was carrying. Keep the ones the line already earns; a term the résumé does not back would be one you added yourself.`
+      : `\n=== TÉRMINOS POR LOS QUE ESTA VACANTE PUNTÚA ===\n${terms.join(", ")}\nUna reescritura que suelte uno de éstos le cuesta al candidato la coincidencia que traía. Conservá los que la línea ya tenga; un término que el CV no respalda sería uno que pusiste vos.`)
 
     // Same resume, same posting, same language → the answer we already gave.
     // No call, no tokens, no quota: it is the identical question.
@@ -492,7 +492,7 @@ Hard rules:
 - DEPTH IS THE POINT. "issue" quotes the candidate's actual line. "why" names the concrete consequence for THIS posting (which requirement goes unmatched, what the recruiter concludes) — never a generic platitude. "fix" is the REPLACEMENT TEXT, ready to paste, written in the candidate's voice — not a description of what they should do. A fix the user cannot copy straight into their CV is a wasted fix.
 - "fix" IS NEVER EMPTY AND NEVER AN INSTRUCTION. Measured: on the thinnest résumé in the set, three fixes came back as an empty string and one read "Rewrite the line to name the process you handled" — the user is shown a button that writes nothing, or writes homework into their CV. If the line is thin, that is precisely when you write it: name what that trade's work consists of, using the bar above, and state no fact about the person. If you truly cannot write the replacement, use action.kind "manual" and put the advice in "fix" as a complete sentence addressed to the candidate — but never leave it blank.
 - WHEN THE LINE NEEDS A NUMBER THE CANDIDATE HAS NOT GIVEN: write "fix" as the sentence WITHOUT the number, ending naturally, and put the request in "needsFromYou" as ONE concrete example sentence showing what a finished version looks like — using an obviously illustrative figure. Write it as a single example, never as a menu: "e.g. 'reducing crash rate from 2.1% to 0.4% across 50k users'". NEVER emit bracket placeholders like [insert metric] or [timeframe] anywhere: a list of options inside brackets is not an example, it is homework, and if it reaches the CV a recruiter reads it verbatim.
-- Ground EVERYTHING in the real resume text — quote it. Never state a fact, metric or percentage the CV does not contain.
+- Ground EVERYTHING in the real resume text — quote it. A figure YOU chose, presented as fact, is the one thing that can never reach the CV: when the work plainly had a size, it goes in "needsFromYou" as one illustrative example for the candidate to confirm or correct — never inside "fix" as if he had said it.
 - Do NOT list which job-description keywords are missing — that is reported separately.
 - No generic filler ("use action verbs" with no example) — always tie the advice to the candidate's actual line.
 - The verdict MUST plainly state whether the resume is strong enough for THIS job and name the single biggest thing holding it back.
@@ -563,7 +563,7 @@ Reglas duras:
 - LA PROFUNDIDAD ES EL PUNTO. "issue" cita la línea real del candidato. "why" nombra la consecuencia concreta para ESTA vacante (qué requisito queda sin cubrir, qué concluye el reclutador) — nunca una generalidad. "fix" es el TEXTO DE REEMPLAZO, listo para pegar, escrito en la voz del candidato — no una descripción de lo que debería hacer. Un arreglo que el usuario no puede copiar tal cual a su CV es un arreglo desperdiciado.
 - "fix" NUNCA VA VACÍO NI ES UNA INSTRUCCIÓN. Medido: en el CV más flaco del set, tres arreglos volvieron como cadena vacía y uno decía "Reescribe la línea para nombrar el proceso real que manejaste" — al usuario le queda un botón que no escribe nada, o que le mete la tarea dentro del CV. Si la línea es flaca, es justo cuando la escribís: nombrá en qué consiste el trabajo de ese oficio, con la vara de arriba, sin afirmar ningún dato sobre la persona. Si de verdad no podés escribir el reemplazo, usá action.kind "manual" y poné el consejo en "fix" como una oración completa dirigida al candidato — pero nunca en blanco.
 - CUANDO LA LÍNEA NECESITA UN NÚMERO QUE EL CANDIDATO NO DIO: escribe "fix" como la oración SIN el número, terminada de forma natural, y pon el pedido en "needsFromYou" como UN ejemplo concreto que muestre cómo se ve la versión terminada, con una cifra obviamente ilustrativa. Escríbelo como un solo ejemplo, nunca como un menú: "ej.: 'reduciendo los crashes de 2,1% a 0,4% en 50.000 usuarios'". NUNCA uses marcadores entre corchetes como [inserta métrica] o [plazo]: una lista de opciones entre corchetes no es un ejemplo, es tarea, y si llega al CV el reclutador la lee tal cual.
-- Ancla TODO en el texto real del CV — cítalo. Nunca afirmes un dato, métrica ni porcentaje que el CV no diga.
+- Ancla TODO en el texto real del CV — cítalo. Una cifra elegida POR TI y presentada como hecho es lo único que nunca puede llegar al CV: cuando el trabajo evidentemente tenía un tamaño, va en "needsFromYou" como un ejemplo ilustrativo para que el candidato lo confirme o corrija — jamás dentro de "fix" como si él lo hubiera dicho.
 - NO listes qué keywords de la vacante faltan — eso se reporta aparte.
 - Sin relleno genérico ("usa verbos de acción" sin ejemplo) — siempre atá el consejo a la línea real del candidato.
 - El veredicto DEBE decir claramente si el CV es lo bastante fuerte para ESTE puesto y nombrar lo único más grande que lo frena.
@@ -604,7 +604,7 @@ Reglas duras:
         plan,
         promptTokens: usage?.prompt_tokens ?? 0,
         completionTokens: usage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+        costUsd: costOfChat(AI_MODEL_PROSE, usage),
       })
       const raw = response.choices[0]?.message?.content ?? "{}"
       const parsed = CvAnalysisSchema.safeParse(parseAIJson<unknown>(raw))
@@ -989,7 +989,7 @@ Reglas:
         plan,
         promptTokens: atsUsage?.prompt_tokens ?? 0,
         completionTokens: atsUsage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL, atsUsage?.prompt_tokens ?? 0, atsUsage?.completion_tokens ?? 0),
+        costUsd: costOfChat(AI_MODEL, atsUsage),
       })
     }
 
@@ -1216,8 +1216,8 @@ Reglas:
      * error yields an empty list and the merge card falls back to exactly what
      * it offered before.
      */
-    const mergePairs = await findMergePairs(
-      buildMergeRoleInput(data),
+    const { mergePairs, repeatedPairs } = await findBulletSimilarity(
+      buildBulletSimilarityInput(data),
       (texts) => this.aiClient.embed(texts, (u) =>
         logAIUsage(userId, "ats-score:embeddings", {
           model: EMBEDDING_MODEL,
@@ -1285,8 +1285,9 @@ Reglas:
       // they paid for. Everything else in the response is deterministic, so the
       // rest of the report is still valid; only this piece is gone.
       analysisUnavailable: !analysis,
-      writingChecks: analyzeWriting(data, mergePairs),
+      writingChecks: analyzeWriting(data, mergePairs, repeatedPairs),
       mergePairs,
+      repeatedPairs,
       inferredFromRole: useRole,
     }
   }
@@ -1356,10 +1357,11 @@ Reglas:
       // Live re-score is deterministic/no-LLM — the critique from the last full
       // analyze still stands; the client preserves it (never overwrites with null).
       analysis: null,
-      writingChecks: analyzeWriting(data, input.mergePairs ?? []),
+      writingChecks: analyzeWriting(data, input.mergePairs ?? [], input.repeatedPairs ?? []),
       // Carried, not recomputed: the live re-score makes no network call, and
       // dropping them would make the merge card vanish on the first keystroke.
       mergePairs: input.mergePairs ?? [],
+      repeatedPairs: input.repeatedPairs ?? [],
     }
   }
 
@@ -1755,8 +1757,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       const previewKind = hardCodedFactKind(cleanedPreview, resumeContext)
       // Placeholder y marca no declarada SÍ se descartan: no son un dato del
       // candidato para confirmar, son basura.
-      const fabricatedFact = previewKind === "placeholder" || previewKind === "brand"
-      if (fabricatedFact) {
+      const hardCodedFact = previewKind === "placeholder" || previewKind === "brand"
+      if (hardCodedFact) {
         this.logger.warn("[AIService.reviewCV] dropped hard-coded suggestion", {
           field,
           previewSample: cleanedPreview.slice(0, 120),

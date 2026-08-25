@@ -47,7 +47,7 @@ export default function PastDueBanner() {
 
   return (
     <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-3 mx-4 mt-4 text-sm">
-      <PendingScreen show={leaving} />
+      <PendingScreen show={loading || leaving} />
       <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
       <div className="flex-1 min-w-0">
         <p className="font-semibold">{t("title")}</p>

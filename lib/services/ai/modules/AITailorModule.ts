@@ -30,7 +30,7 @@
 
 import { validateAIInput } from "@/lib/ai-safety"
 import {
-  AI_MODEL,
+  AI_MODEL_PROSE,
   AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
   logAIUsage,
@@ -46,8 +46,9 @@ import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-emp
 import { isTrivialEdit, isCosmeticReword, isRedundantRewrite, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
 import { assessDescription, toFirstPersonOpener } from "../shared/bullet-quality"
 import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
+import { bulletFloorMisses, countWords, floorNudge, type FloorMiss } from "@/lib/ats/output-floor"
 import { hasCliche } from "../shared/cliches"
-import { computeCostUsd } from "../shared/cost-tracker"
+import { computeCostUsd, type ChatUsageLike } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { reportGuardDrops } from "../shared/guard-metrics"
 import {
@@ -309,13 +310,35 @@ Reglas:
 
     const systemPrompt = `You are an elite career coach. You rewrite résumé lines that already carry a diagnosis; you do not decide which lines need work. Return ONLY valid JSON. If the input is off-topic or nonsensical, return { "summary": null, "rewrites": [] }. Whether a line is already good is defined in the user message — apply that and nothing else. You never hard-code figures and never write bracket placeholders; a line the CV gives no number for is written without one. ${langInstruction}`
 
-    // Un CV rico (varios puestos × varias líneas) más el resumen pasa los 900
-    // tokens de JSON con facilidad — a 900 la respuesta se truncaba a mitad de
-    // objeto y todo el endpoint devolvía 500. 3000 cubre el peor caso realista.
+    /**
+     * EL MODELO Y EL PRESUPUESTO — las dos razones por las que salían básicas.
+     *
+     * ── EL MODELO (reportado por el CEO: «bullets muy básicos») ─────────────
+     *
+     * El proyecto tiene dos: `AI_MODEL` para EXTRAER datos y `AI_MODEL_PROSE`
+     * para ESCRIBIR prosa. La viñeta, el resumen, la fusión, la habilidad y la
+     * carta usan el de prosa. Este módulo —que reescribe puestos enteros del CV,
+     * el que más texto escribe de los seis— se había quedado con el de
+     * extracción. Reescribir la experiencia de alguien no es una extracción.
+     *
+     * ── EL PRESUPUESTO ─────────────────────────────────────────────────────
+     *
+     * 3000 tokens era un techo GLOBAL para todas las líneas de todos los puestos
+     * pedidos a la vez. Con muchas líneas le tocan unas pocas decenas de palabras
+     * a cada una, y el modelo escribe telegráfico para que entren todas: la misma
+     * trampa que ya se midió en la crítica del reclutador, donde subir de 3000 a
+     * 4500 fue la diferencia entre consejo superficial y consejo útil.
+     *
+     * Ahora el techo se calcula POR LÍNEA PEDIDA sobre un piso, para que una
+     * línea de cuatro renglones con volumen, herramienta y efecto quepa sin
+     * competir contra sus hermanas.
+     */
+    const lineasPedidas = grounded.length
+    const maxTokens = Math.min(8000, 900 + 260 * Math.max(1, lineasPedidas) + (input.rewriteSummary ? 400 : 0))
     let calls = 0
     const doChat = (nudge: string) => this.aiClient.chat({
-      model: AI_MODEL,
-      max_tokens: 3000,
+      model: AI_MODEL_PROSE,
+      max_tokens: maxTokens,
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
@@ -327,7 +350,7 @@ Reglas:
       ],
     })
 
-    const usages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = []
+    const usages: ChatUsageLike[] = []
     let lastParsed: TailorCVResultV2 | null = null
 
     const ask = async (attempt: number): Promise<TailorCVResultV2 | null> => {
@@ -391,6 +414,8 @@ Reglas:
       let droppedTerm = 0
       let droppedFigure = 0
       let droppedTrivial = 0
+      let droppedWeak = 0
+      const weakMisses: FloorMiss[] = []
       const seen = new Set<string>()
       const rewriteKey = (s: string) =>
         s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim()
@@ -472,6 +497,36 @@ Reglas:
           if (perdidos.length > 0) { droppedTerm += perdidos.length; continue }
         }
 
+        /**
+         * EL PISO DE SALIDA — reportado por el CEO: «bullets muy básicos».
+         *
+         * Los guards de arriba comprueban que la línea no PIERDA nada. Ninguno
+         * comprueba que GANE: una reescritura podía conservar cifra, términos y
+         * contenido, no ser trivial, y seguir siendo una línea floja.
+         *
+         * Tres condiciones, todas con piezas que ya existen; ninguna nace acá:
+         *
+         *  1. No abre con frase de tarea ni es una frase vacía. Lo dice
+         *     `scoreBullet`, el mismo que usa el informe para señalar líneas
+         *     débiles: si el panel la marcaría como floja, no la escribimos.
+         *  2. Al menos 12 palabras. Es el número de la propia doctrina —«menos
+         *     de doce no dice nada que no dijera ya el nombre del puesto»— y NO
+         *     hay techo: una línea de cuatro renglones con volumen, herramienta y
+         *     efecto es exactamente lo que se busca.
+         *  3. Mejora algo medible frente a la original: sube el puntaje de línea,
+         *     suma un término que la vacante pide, o dice más. Conservar es el
+         *     piso, no el mérito.
+         *
+         * Si no llega, NO se entrega: se cuenta y el reintento dice qué le faltó.
+         * Mejor ninguna sugerencia que una línea floja con un botón.
+         */
+        if (original) {
+          const ganoTermino = droppedPostingTerms(text, original, [...posting.hardSkills, ...posting.softSkills]).length > 0
+          const diceMas = countWords(text) > countWords(original)
+          const misses = bulletFloorMisses(text, { original, gainedTerm: ganoTermino, saysMore: diceMas })
+          if (misses.length > 0) { droppedWeak++; weakMisses.push(...misses); continue }
+        }
+
         // Reescritura lateral sobre una línea ya fuerte: distinta, no mejor.
         if (original) {
           const strong = assessDescription(original).weakOpenerIndices.length === 0 && !hasCliche(original)
@@ -502,7 +557,7 @@ Reglas:
         || isCosmeticReword(origSummary, summaryRaw)
         || figureDegraded(origSummary, summaryRaw)
       ) ? null : summaryRaw
-      return { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm }
+      return { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm, droppedWeak, weakMisses }
     }
 
     let out = applyGuards(raw)
@@ -514,6 +569,9 @@ Reglas:
       if (out.droppedFigure > 0) reasons.push(language === "en" ? "a figure the CV already states was dropped or altered" : "borró o cambió una cifra que el CV ya dice")
       if (out.droppedHardCoded > 0) reasons.push(language === "en" ? "a bracket placeholder or a tool the candidate never declared" : "un corchete de relleno o una herramienta que el candidato no declaró")
       if (out.droppedTrivial > 0) reasons.push(language === "en" ? "the line barely changed, or changed without gaining anything" : "la línea casi no cambió, o cambió sin ganar nada")
+      // El motivo sale del propio piso: le decimos QUÉ falló de lo que escribió,
+      // no una frase genérica. Un reintento mudo es otra moneda al aire.
+      if (out.droppedWeak > 0 && out.weakMisses.length > 0) reasons.push(floorNudge([...new Set(out.weakMisses)], language))
       // El motivo más caro se le dice con nombre: no es «mejorala otra vez», es
       // «conservá las palabras de la oferta que la línea ya decía».
       if (out.droppedTerm > 0) {
@@ -536,22 +594,25 @@ Reglas:
       }
     }
 
-    const { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm } = out
+    const { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm, droppedWeak } = out
 
     // UNA fila de AIUsageLog por petición: el panel de admin agrupa por conteo,
     // así que un reintento no puede figurar como dos llamadas.
     const promptTokens = usages.reduce((sum, u) => sum + (u.prompt_tokens ?? 0), 0)
     const completionTokens = usages.reduce((sum, u) => sum + (u.completion_tokens ?? 0), 0)
+    // Los tokens del prompt YA VISTO se cobran ~90% más baratos en la familia 5.4,
+    // y hasta hoy se sumaban al precio completo: el panel sobre-reportaba.
+    const cachedTokens = usages.reduce((sum, u) => sum + (u.prompt_tokens_details?.cached_tokens ?? 0), 0)
     logAIUsage(userId, "tailor-cv", {
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       plan,
       promptTokens,
       completionTokens,
-      costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
+      costUsd: computeCostUsd(AI_MODEL_PROSE, promptTokens, completionTokens, cachedTokens),
     })
 
     if (droppedHardCoded > 0 || droppedFigure > 0 || droppedTrivial > 0 || droppedTerm > 0) {
-      this.logger.warn("[AIService.tailorCV] dropped rewrites", { droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm })
+      this.logger.warn("[AIService.tailorCV] dropped rewrites", { droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm, droppedWeak })
       reportGuardDrops({
         endpoint: "tailor-cv",
         offered,
@@ -560,6 +621,7 @@ Reglas:
         figureLoss: droppedFigure,
         trivial: droppedTrivial,
         termLoss: droppedTerm,
+        weak: droppedWeak,
       })
     }
 

@@ -41,6 +41,39 @@ const FALLBACK_PRICING = { inputPer1M: 10.00, cachedInputPer1M: 10.00, outputPer
 
 let unknownModelWarned = false
 
+/**
+ * EL COSTO DE UNA LLAMADA, LEYENDO LO QUE LA API YA DEVUELVE.
+ *
+ * ── EL DEFECTO (auditoría, 2026-08-25) ─────────────────────────────────────
+ *
+ * `computeCostUsd` acepta los tokens cacheados desde hace tiempo y `MODEL_PRICING`
+ * lleva el precio cacheado POR MODELO —0.02 contra 0.20 en la 5.4-nano, un
+ * descuento del 90%—. Y de los veinte sitios que costean una llamada, NINGUNO
+ * los pasaba: el parámetro quedaba en 0 y todo prompt reusado se cobraba a precio
+ * completo. El panel de admin sobre-reporta el gasto.
+ *
+ * El dato estaba disponible en todos: `chat()` devuelve el objeto de la API tal
+ * cual, y ahí viene `usage.prompt_tokens_details.cached_tokens`. No faltaba
+ * información — faltaba leerla.
+ *
+ * Por eso esto recibe el `usage` entero en vez de tres números: quien costea una
+ * llamada no puede olvidarse de un campo que no tiene que escribir.
+ */
+export interface ChatUsageLike {
+  prompt_tokens?: number
+  completion_tokens?: number
+  prompt_tokens_details?: { cached_tokens?: number | null } | null
+}
+
+export function costOfChat(model: string, usage: ChatUsageLike | null | undefined): number {
+  return computeCostUsd(
+    model,
+    usage?.prompt_tokens ?? 0,
+    usage?.completion_tokens ?? 0,
+    usage?.prompt_tokens_details?.cached_tokens ?? 0,
+  )
+}
+
 export function computeCostUsd(
   model: string,
   promptTokens: number,
