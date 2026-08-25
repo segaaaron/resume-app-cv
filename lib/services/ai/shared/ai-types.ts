@@ -170,6 +170,9 @@ export interface ATSExtractedKeywords {
    * model's summary and every re-run silently fell back to the generic one.
    */
   summary?: string
+  /** Nivel y años que pide el aviso (F2). Informan; no entran al puntaje. */
+  seniority?: string
+  yearsRequired?: number
 }
 
 /** A suggestion plus the one-click action that carries it out. */
@@ -361,12 +364,49 @@ export const CvFixActionSchema = z
   .catch({ kind: "manual" as const })
 export type CvFixAction = z.infer<typeof CvFixActionSchema>
 
+/**
+ * LA FORMA QUE SE LE EXIGE AL MODELO — y por qué no es el mismo esquema.
+ *
+ * `ATSExtractionSchema` (abajo) es de PARSEO: tolera y repara con `.catch()`,
+ * porque su trabajo es no romperse ante una respuesta imperfecta. Ese mismo
+ * `.catch()` es un transform, y un transform no se puede expresar en JSON Schema:
+ * la conversión falla con «Transforms cannot be represented in JSON Schema».
+ *
+ * Son dos trabajos distintos y por eso son dos esquemas:
+ *   · éste declara la FORMA que la API va a exigir en la generación (F0.5);
+ *   · el de abajo declara qué aceptamos parsear.
+ *
+ * Un guard comprueba que tengan las mismas claves, así que la forma sigue
+ * teniendo un solo dueño aunque se escriba dos veces.
+ */
+export const ATSExtractionShape = z.object({
+  hardSkills: z.array(z.string()),
+  softSkills: z.array(z.string()),
+  jobTitle: z.string(),
+  mustHaves: z.array(z.string()),
+  summary: z.string(),
+  /**
+   * Lo que el puesto pide de nivel y de años (F2).
+   *
+   * Entran con PESO CERO: informan al usuario y al crítico, y no pueden bajarle
+   * el techo a nadie. Un dato que todavía no sabemos leer con certeza no castiga
+   * — ya pagamos una vez el falso negativo de un requisito mal juzgado.
+   */
+  seniority: z.string(),
+  yearsRequired: z.number(),
+  /** El centinela de «esto no es una vacante». Nulo cuando sí lo es. */
+  label: z.string().nullable(),
+})
+
 export const ATSExtractionSchema = z.object({
   hardSkills: cappedStringArray(30),
   softSkills: cappedStringArray(20),
   jobTitle: z.string().catch(""),
   mustHaves: cappedStringArray(20),
   summary: z.string().catch(""),
+  /** Nivel y años que pide el aviso (F2). Peso cero: informan, no castigan. */
+  seniority: z.string().catch(""),
+  yearsRequired: z.number().catch(0),
   /**
    * The extractor no longer writes suggestions.
    *
@@ -377,7 +417,15 @@ export const ATSExtractionSchema = z.object({
    * findings; this call is now pure extraction, which also makes its output
    * small enough to stop truncating and cheap enough to cache per posting.
    */
-  label: z.string().optional(), // only used to detect the off_topic guard
+  /**
+   * El centinela de «esto no es una vacante».
+   *
+   * `nullable` además de `optional` desde F0.5: en modo estricto TODOS los
+   * campos vienen siempre, así que un análisis normal ahora trae `label: null`
+   * en vez de omitirlo. Con sólo `.optional()` el parseo fallaba con la
+   * respuesta correcta — medido contra la API real la primera vez que se probó.
+   */
+  label: z.string().nullable().optional(),
 })
 
 export type ATSExtraction = z.infer<typeof ATSExtractionSchema>
@@ -1023,3 +1071,118 @@ export const AI_INPUT_LIMITS = {
   skillName: 100,
 } as const
 
+
+// ── LAS FORMAS DE RESPUESTA QUE NO TENÍAN ESQUEMA (F0.5) ────────────────────
+//
+// Estos seis sitios validaban a mano —un `typeof x === "string"` suelto— así que
+// la forma vivía sólo en la prosa del prompt y en los `if` de más abajo. Ahora
+// se declara UNA vez y viaja a la generación: el modelo no puede emitir un token
+// que la viole, y el `if` de abajo deja de ser la primera línea de defensa.
+//
+// Cada una copia LITERALMENTE el contrato que su prompt ya pedía; ninguna lo
+// amplía. Lo opcional se declara nulable porque el modo estricto exige que todo
+// campo esté en `required` —medido: omitir uno devuelve 400— y un campo que el
+// modelo debe emitir sí o sí dejaría de ser opcional.
+
+/** translate-cv: `{"t":[{"i":<índice>,"v":"<traducción>"}]}` */
+export const TranslateBatchShape = z.object({
+  t: z.array(z.object({ i: z.number(), v: z.string() })),
+})
+
+/** skill-bullet: el prompt ya licencia `{"targetId": null, "text": null}`. */
+export const SkillBulletShape = z.object({
+  targetId: z.string().nullable(),
+  text: z.string().nullable(),
+})
+
+/** merge-bullets: `{"status":"ok","text":"…"}` o `{"status":"not_mergeable"}`. */
+export const MergeBulletShape = z.object({
+  status: z.enum(["ok", "not_mergeable"]),
+  text: z.string().nullable(),
+})
+
+/**
+ * summary: el camino principal responde bajo `versions`; el relleno desde el
+ * puesto responde bajo `summaries`. Las dos claves conviven acá a propósito —
+ * es la misma llamada y el lector de abajo ya acepta cualquiera de las dos.
+ */
+export const SummaryVersionsShape = z.object({
+  versions: z.array(z.string()).nullable(),
+  summaries: z.array(z.string()).nullable(),
+})
+
+/** cover-letter, generar: `{"body":"<cuerpo completo>"}`. */
+export const CoverBodyShape = z.object({ body: z.string() })
+
+/**
+ * cover-letter, mejorar: el prompt pide `{"status":"already_optimized","versions":[]}`
+ * para una carta que ya está fuerte. `status` nació sin dueño en el tipo y el
+ * usuario recibía un 422 diciendo que su carta era off-topic; acá queda escrito.
+ */
+export const CoverVersionsShape = z.object({
+  versions: z.array(z.string()),
+  status: z.string().nullable(),
+})
+
+/** fill-profile por modos: `seed`, `certifications` y `bullets`, más el centinela. */
+export const ProfileModeShape = z.object({
+  summaries: z.array(z.string()).nullable(),
+  inferredSkills: z.array(z.string()).nullable(),
+  suggestedCertifications: z.array(z.string()).nullable(),
+  bullets: z.array(z.string()).nullable(),
+  off_topic: z.boolean().nullable(),
+})
+
+/**
+ * La forma de la crítica del reclutador, para EXIGIRLA en la generación.
+ *
+ * `CvAnalysisSchema` no se puede convertir a JSON Schema: cada campo lleva un
+ * `.catch()` —que es un transform— para que una respuesta a medias degrade en
+ * vez de tumbar el análisis. Eso sigue siendo lo correcto al PARSEAR, y por eso
+ * no se toca: acá se declara la misma forma sin las redes, que es lo único que
+ * viaja a la API. Gemela de `ATSExtractionShape`, y con el mismo candado: si una
+ * de las dos gana o pierde un campo, el test lo dice.
+ */
+export const CvAnalysisShape = z.object({
+  verdict: z.string(),
+  passRisk: z.enum(["low", "medium", "high"]),
+  criticalFixes: z.array(
+    z.object({
+      issue: z.string(),
+      why: z.string(),
+      fix: z.string(),
+      needsFromYou: z.string().nullable(),
+      severity: z.enum(["high", "medium"]),
+      action: z.object({
+        kind: z.enum(["rewrite_bullet", "rewrite_summary", "replace_text", "add_skill", "fix_dates", "remove_duplicates", "manual"]),
+        targetId: z.string().nullable(),
+        index: z.number().nullable(),
+        value: z.string().nullable(),
+        replacement: z.string().nullable(),
+      }),
+    }),
+  ),
+  strengths: z.array(z.string()),
+})
+
+/**
+ * Lo que el ejecutor devuelve, exigido en la generación.
+ *
+ * El centinela de off-topic del prompt es `{ "summary": null, "rewrites": [] }`,
+ * que esta forma admite tal cual: por eso `summary` es nulable y la lista puede
+ * venir vacía. Los tres campos de detalle van nulables porque el prompt los pide
+ * SÓLO cuando corresponden —una cifra que no existe no se nombra— y el modo
+ * estricto obliga a que estén todos declarados.
+ */
+export const TailorResultShape = z.object({
+  summary: z.string().nullable(),
+  rewrites: z.array(
+    z.object({
+      checkId: z.string(),
+      text: z.string(),
+      metricHint: z.string().nullable(),
+      demonstrates: z.string().nullable(),
+      needsFigureConfirm: z.boolean().nullable(),
+    }),
+  ),
+})

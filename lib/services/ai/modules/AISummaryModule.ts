@@ -19,6 +19,9 @@ import { buildModePrompt } from "./profile-modes"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { extractProfileMetrics } from "../shared/summary-quality"
 import { clicheBanList } from "../shared/cliches"
+import { readChat, truncatedNudge } from "@/lib/services/ai/shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { SummaryVersionsShape } from "@/lib/services/ai/shared/ai-types"
 import {
   AI_INPUT_LIMITS,
   type GenerateSummaryInput,
@@ -172,13 +175,18 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     // An empty answer here is a bad roll, not a verdict on the CV — and the
     // button that produced it already cost the user a use and a two-minute
     // cooldown. It is asked again before anyone is told "nothing came out".
+    // Una respuesta cortada por el techo da cero versiones, igual que una vacía,
+    // y `askUntilAnswered` reintentaba diciéndole al modelo que no había escrito
+    // nada — cuando el problema era el contrario: escribió de más y no entró.
+    // Pedirle lo mismo otra vez sólo vuelve a cortarse.
+    let seCorto = false
     const askModel = (attempt: number) => this.aiClient.chat({
       model: AI_MODEL_PROSE,
       max_tokens: 600,
       // generate-summary uses 0.6 to keep variety across the 3 versions while
       // staying anchored to the candidate profile.
       temperature: AI_TEMPERATURE_GENERATIVE,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("summary_versions", SummaryVersionsShape),
       messages: [
         {
           role: "system",
@@ -203,12 +211,17 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
                 "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
             langInstruction,
         },
-        { role: "user", content: attempt === 0 ? prompt : prompt + retryNudge(language) },
+        { role: "user", content: attempt === 0 ? prompt : prompt + (seCorto ? truncatedNudge(language) : retryNudge(language)) },
       ],
     })
 
     const readVersions = (r: Awaited<ReturnType<typeof askModel>>): string[] => {
-      const parsed = parseAIJson<{ versions?: unknown }>(r.choices[0]?.message?.content ?? "")
+      const leido = readChat(r)
+      seCorto = leido.truncated
+      if (leido.refusal) {
+        this.logger.warn("[AIService.summary] model refused", { refusal: leido.refusal.slice(0, 120) })
+      }
+      const parsed = parseAIJson<{ versions?: unknown }>(leido.text)
       return Array.isArray(parsed.versions)
         ? parsed.versions.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
         : []
@@ -232,7 +245,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
           model: AI_MODEL_PROSE,
           max_tokens: maxTokens,
           temperature: AI_TEMPERATURE_GENERATIVE,
-          response_format: { type: "json_object" },
+          response_format: strictJsonFormat("summary_versions", SummaryVersionsShape),
           messages: [{ role: "system", content: system }, { role: "user", content: user }],
         })
       },
@@ -243,7 +256,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     if (!answered) throw new AppError("off_topic", 422)
     const response = answered
     // The seed fallback answers under "summaries"; the main path under "versions".
-    const rawParsed = parseAIJson<{ versions?: unknown; summaries?: unknown }>(response.choices[0]?.message?.content ?? "")
+    const rawParsed = parseAIJson<{ versions?: unknown; summaries?: unknown }>(readChat(response).text)
     const list = (Array.isArray(rawParsed.versions) ? rawParsed.versions : rawParsed.summaries) as unknown
     const parsed = { versions: Array.isArray(list) ? list : [] }
 

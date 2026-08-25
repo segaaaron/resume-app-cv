@@ -243,6 +243,15 @@ export function useATSScore() {
   // infers the STANDARD requirements for that role (low-friction, approximate).
   const [mode, setMode] = useState<"jd" | "role">("jd")
   const [loading, setLoading] = useState(false)
+  /**
+   * EL PRIMER ACTO LLEGÓ Y EL VEREDICTO NO.
+   *
+   * Es estado de la PETICIÓN, igual que `analysisUnavailable`, y por eso vive
+   * acá y no en el panel: el informe describe el CV, no en qué punto va la
+   * llamada. El panel lo pinta; nadie tiene que deducirlo mirando si un campo
+   * del crudo vino en null, que además es una puerta que el informe cerró.
+   */
+  const [verdictPending, setVerdictPending] = useState(false)
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null)
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
   const [offTopic, setOffTopic] = useState(false)
@@ -370,9 +379,52 @@ export function useATSScore() {
         }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }
         if (res.status === 422) { track("ai_error_shown", { endpoint: "ats-score", error_type: "offtopic" }); setOffTopic(true); return }
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error)
-        setAtsResult(normalizeAtsResult(data))
+        /**
+         * DOS ACTOS: el informe apenas está, el veredicto cuando llega.
+         *
+         * La respuesta es NDJSON —una línea por acto— porque la crítica del
+         * reclutador corre después de la medición y tarda lo suyo. El puntaje,
+         * las brechas y los términos ya están listos mucho antes: mostrarlos de
+         * inmediato es la diferencia entre esperar tres segundos y esperar
+         * quince mirando una pantalla quieta.
+         *
+         * Todo lo que responde por código HTTP ya se resolvió arriba: acá
+         * siempre hay al menos una línea.
+         */
+        const actos: ATSResult[] = []
+        const cuerpo = res.body
+        if (!cuerpo) throw new Error("empty_response")
+        const lector = cuerpo.getReader()
+        const dec = new TextDecoder()
+        let pendiente = ""
+        const consumir = (linea: string) => {
+          const t = linea.trim()
+          if (!t) return
+          const sobre = JSON.parse(t) as { act?: number; result?: ATSResult; error?: string }
+          // El servidor sólo manda `act: 0` cuando el fallo ocurrió DESPUÉS de
+          // haber entregado el informe: se conserva lo que ya se mostró.
+          if (sobre.act === 0) throw new Error(sobre.error || "ai_error")
+          if (!sobre.result) return
+          actos.push(sobre.result)
+          // Acto 1 = informe sin veredicto. Acto 2 = ya está, o falló cerrado.
+          setVerdictPending(sobre.act === 1)
+          setAtsResult(normalizeAtsResult(sobre.result))
+        }
+        for (;;) {
+          const { done, value } = await lector.read()
+          if (done) break
+          pendiente += dec.decode(value, { stream: true })
+          let corte = pendiente.indexOf("\n")
+          while (corte !== -1) {
+            consumir(pendiente.slice(0, corte))
+            pendiente = pendiente.slice(corte + 1)
+            corte = pendiente.indexOf("\n")
+          }
+        }
+        consumir(pendiente)
+        // El último acto es el informe completo; los anteriores ya se pintaron.
+        const data = actos[actos.length - 1]
+        if (!data) throw new Error("empty_response")
         // Pin this posting's keywords so the next run scores against the SAME
         // requirements — any movement then comes from the CV, not from the model
         // reading the posting slightly differently.
@@ -412,6 +464,10 @@ export function useATSScore() {
       toast.error(t("error"))
     } finally {
       setLoading(false)
+      // Cubra el camino que cubra —éxito, error o corte a mitad del stream—, la
+      // espera del veredicto termina cuando termina la petición. Si no, un fallo
+      // dejaría girando para siempre un aviso que dice «ya viene».
+      setVerdictPending(false)
     }
   }, [input, mode, sectionData, locale, cvLanguage, t, aiT, loading, cooldownUntil])
 
@@ -577,6 +633,7 @@ export function useATSScore() {
     input, setInput,
     mode, setMode,
     loading,
+    verdictPending,
     atsResult, reviewResult,
     offTopic,
     hasResult,

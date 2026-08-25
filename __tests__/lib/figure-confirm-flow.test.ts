@@ -107,9 +107,15 @@ describe("el camino completo, de tailor a la tarjeta", () => {
    * dos tipos que se descartan sin preguntar sigan descartándose. De una rama
    * que no existe no hay comportamiento que ejecutar.
    */
+  /**
+   * El descarte ya no vive en el módulo: desde F0 lo aplica el motor, y el
+   * ejecutor sólo DECLARA que quiere esa regla. Se comprueba donde ahora ocurre.
+   */
   it("placeholder y marca se siguen cayendo sin preguntar", () => {
-    expect(read("lib/services/ai/modules/AITailorModule.ts"))
+    expect(read("lib/ats/write-gate.ts"))
       .toMatch(/kind === "placeholder" \|\| kind === "brand"/)
+    expect(read("lib/services/ai/modules/AITailorModule.ts"), "el ejecutor dejó de pedir la regla")
+      .toContain("nothing_burned")
   })
 
   it("y el aviso existe en los dos idiomas", () => {

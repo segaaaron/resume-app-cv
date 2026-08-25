@@ -142,12 +142,36 @@ describe("mergeBullets", () => {
     }
   })
 
-  it("lleva mensaje system y pide JSON", async () => {
+  /**
+   * El motor de escritura manda de verdad acá.
+   *
+   * Descubierto midiendo: al mover estos chequeos de cinco `if` al motor,
+   * desarmé `keeps_content` a propósito para ver si algún test lo notaba, y
+   * los trece pasaron igual. La regla que impide que una fusión se coma una
+   * palabra del candidato no tenía quién la mirara.
+   */
+  it("descarta la fusión que se come una palabra de las líneas originales", async () => {
+    // Pierde "SwiftUI" y nada más. Tiene que ser MÁS LARGA que la más larga de
+    // las dos originales: si no, la atrapa el chequeo de largo y el test pasaría
+    // sin que la regla de contenido haya corrido nunca — que es exactamente cómo
+    // se escribe un test que da verde con el producto roto.
+    const { mod } = moduleReturning("Built and improved the checkout screen loading behaviour with Combine")
+    const res = await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData }, "PRO")
+    expect(res.status).toBe("not_mergeable")
+  })
+
+  it("lleva mensaje system y exige la forma en la generación", async () => {
     const { mod, aiClient } = moduleReturning("x")
     await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData }, "PRO")
     const params = aiClient.chat.mock.calls[0][0]
     expect(params.messages[0].role).toBe("system")
-    expect(params.response_format).toEqual({ type: "json_object" })
+    // Antes esto afirmaba `json_object`, que sólo garantiza que el texto parsea.
+    // La forma ahora se exige mientras el modelo escribe: el test sigue mirando
+    // el mismo contrato, en su versión fuerte.
+    expect(params.response_format.type).toBe("json_schema")
+    expect(params.response_format.json_schema.strict).toBe(true)
+    expect(params.response_format.json_schema.name).toBe("merge_bullets")
+    expect(params.response_format.json_schema.schema.required).toEqual(["status", "text"])
   })
 
   // OpenAI cobra al precio de caché el PREFIJO común de la petición. Con los bullets

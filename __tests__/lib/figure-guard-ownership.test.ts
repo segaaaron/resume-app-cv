@@ -70,10 +70,12 @@ const src = (m: string) => readFileSync(join(process.cwd(), `lib/services/ai/mod
 describe("ningún módulo que reescribe el CV se salta la regla de la cifra", () => {
   for (const [m, porque] of Object.entries(REESCRIBEN)) {
     it(`${m} — ${porque}`, () => {
-      // La regla se consulta por el dueño único `figureDegraded` (que compone las
-      // dos formas de perderla) o, en prosa/fusión donde el verbo no aplica, por
-      // la primitiva `losesStatedFigure` directa. Cualquiera de las dos cuenta.
-      expect(src(m), `${m} no consulta la regla de la cifra`).toMatch(/figureDegraded|losesStatedFigure/)
+      // Tres formas válidas de consultarla, y ninguna más:
+      //  · el dueño único `figureDegraded`, que compone las dos maneras de perderla;
+      //  · la primitiva `losesStatedFigure`, en prosa/fusión donde el verbo no aplica;
+      //  · desde F0, DECLARANDO `figure_intact` en la lista que corre el motor.
+      // Lo que no puede pasar es que un módulo que reescribe el CV no diga nada.
+      expect(src(m), `${m} no consulta la regla de la cifra`).toMatch(/figureDegraded|losesStatedFigure|figure_intact/)
     })
   }
 
@@ -139,7 +141,10 @@ describe("ningún módulo que reescribe el CV se salta la regla de la cifra", ()
   }
   for (const [m, porque] of Object.entries(CONTRA_LA_VACANTE)) {
     it(`${m} protege los términos de la vacante — ${porque}`, () => {
-      expect(src(m), `${m} no consulta droppedPostingTerms`).toContain("droppedPostingTerms")
+      // Dos formas válidas: llamarla, o —desde F0— DECLARAR `keeps_terms` en la
+      // lista que corre el motor. La segunda es más fuerte: la lista se lee de un
+      // vistazo y un escritor nuevo que la omita se ve en su declaración.
+      expect(src(m), `${m} no protege los términos de la vacante`).toMatch(/droppedPostingTerms|keeps_terms/)
     })
   }
 
@@ -164,10 +169,18 @@ describe("ningún módulo que reescribe el CV se salta la regla de la cifra", ()
     }
   })
 
+  /**
+   * Desde F0 la alternativa corre el MISMO motor y la MISMA lista que la
+   * recomendada, con una sola diferencia declarada: `figurePolicy: "drop"`.
+   * Comprobar que llama al motor con esa lista es más fuerte que buscar el
+   * nombre de una regla suelta — antes podía faltarle cualquiera de las otras.
+   */
   it("las alternativas de improve-bullet pasan el mismo filtro", () => {
     const code = src("AIBulletModule")
     const alts = code.slice(code.indexOf("const alternatives"), code.indexOf(".slice(0, 2)"))
-    expect(alts, "una alternativa puede borrar la cifra").toMatch(/figureDegraded|losesStatedFigure/)
+    expect(alts, "la alternativa dejó de pasar por el motor").toContain("runWriteGate")
+    expect(alts, "la alternativa corre otra lista que la recomendada").toContain("BULLET_RULES")
+    expect(src("AIBulletModule"), "la lista dejó de exigir la cifra intacta").toContain("figure_intact")
   })
 
   /**
@@ -254,6 +267,22 @@ describe("cada módulo declara qué hace con una cifra propuesta", () => {
   for (const [m, { postura }] of Object.entries(POSTURA)) {
     it(`${m} sigue la postura ${postura}`, () => {
       const code = src(m)
+      /**
+       * DESDE EL MOTOR (F0), la postura puede estar DECLARADA en vez de escrita:
+       * un módulo migrado dice `figurePolicy: "confirm" | "drop"` y el motor
+       * aplica la regla. Las dos formas cuentan — lo que no puede pasar es que un
+       * módulo no diga cuál toma.
+       */
+      const declaraA = /figurePolicy:\s*"confirm"/.test(code)
+      const declaraB = /figurePolicy:\s*"drop"/.test(code)
+      if (postura === "A" && declaraA) {
+        expect(code, "declara la postura A pero no pide la regla al motor").toContain("figure_policy")
+        return
+      }
+      if (postura === "B" && declaraB) {
+        expect(code, "declara la postura B pero no pide la regla al motor").toContain("figure_policy")
+        return
+      }
       if (postura === "A") {
         // Postura A (CEO, 2026-08-22): la cifra NUNCA se borra. Se distingue con
         // hardCodedFactKind (placeholder/marca sí se tiran) y la CIFRA viaja con

@@ -69,6 +69,15 @@ const REGISTRO: Record<string, { max: number; razon: string }> = {
   "services/ai/cover-letter-no-jd.test.ts": { max: 1, razon: "el formulario tiene una sola caja, la de la vacante" },
   "lib/cover-letter-ats-merged.test.ts": { max: 1, razon: "el panel ATS de la carta vive dentro de generar con IA" },
   "lib/expire-subscriptions-guard.test.ts": { max: 1, razon: "el cron usa la constante compartida de degradación" },
+  // El descarte de placeholder/marca se mudó al motor (F0). Comprobar que sigue
+  // ahí es OWNERSHIP: el defecto sería que el motor deje de hacerlo o que el
+  // ejecutor deje de pedirlo, y ninguna de las dos se observa ejecutando una
+  // reescritura que ya pasó.
+  "lib/figure-confirm-flow.test.ts": { max: 2, razon: "el motor descarta el placeholder y el ejecutor declara que lo pide" },
+  // AUSENCIA: que NO exista un camino que aplique el ejemplo al CV. De un botón
+  // que no está no hay comportamiento que ejecutar, y sus cifras son de muestra:
+  // si alguien le pone onClick, entran al CV como si fueran del candidato.
+  "lib/example-never-applies.test.ts": { max: 3, razon: "el ejemplo se pinta y no se aplica: se comprueba que no haya camino" },
 
   // ── COMPOSICIÓN Y CONFIGURACIÓN ──────────────────────────────────────────
   // Ejecutarlo exigiría montar el panel entero con su store y su sesión para

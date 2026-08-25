@@ -21,14 +21,16 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { resolveLanguage, hasHardCodedFact, parseAIJson, losesStatedFigure } from "../shared/ai-helpers"
+import { resolveLanguage, parseAIJson } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
-import { contentDroppedFrom } from "../shared/text-similarity"
 import { clicheBanList } from "../shared/cliches"
-import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { reportGuardDrops } from "../shared/guard-metrics"
 import { cleanGeneratedText } from "../shared/clean-output"
+import { readChat } from "@/lib/services/ai/shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { MergeBulletShape } from "@/lib/services/ai/shared/ai-types"
+import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 
 export interface MergeBulletsInput {
   targetId: string
@@ -65,6 +67,22 @@ interface WorkRow {
   jobTitle?: string
   description?: string
 }
+
+/**
+ * Lo que una fusión tiene que cumplir. El orden lo decide el motor.
+ *
+ * `keeps_content` es la regla propia de este escritor: verifica que sobreviva
+ * cada palabra de LAS DOS líneas, no de una. Es más fuerte que `figure_intact`
+ * —cubre las palabras además de los números— pero las dos se declaran porque
+ * una cifra que cambia de verbo no es una palabra perdida.
+ */
+const MERGE_RULES: readonly GateRule[] = [
+  "nothing_burned",
+  "figure_policy",
+  "figure_intact",
+  "keeps_content",
+  "keeps_terms",
+]
 
 export class AIMergeBulletsModule {
   constructor(
@@ -157,7 +175,7 @@ BULLET B: ${b}`
       ],
       // One sentence; the cap covers the reasoning budget of the GPT-5 family.
       max_tokens: 1200,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("merge_bullets", MergeBulletShape),
     })
     try {
       // A network blip on a one-sentence call used to become a red 500 on a
@@ -180,7 +198,18 @@ BULLET B: ${b}`
       // registro caía en el catch de abajo y devolvía `ai_error` — la medición tumbando
       // la función que mide, sobre una respuesta del modelo que ya estaba bien.
       usage = completion.usage
-      text = (completion.choices[0]?.message?.content ?? "").trim()
+      const leido = readChat(completion)
+      // Una fusión cortada por el techo llegaba como JSON roto y salía por el
+      // mismo `not_mergeable` que se usa cuando las dos líneas de verdad no se
+      // pueden unir. Son cosas distintas: una es un techo corto —arreglable—,
+      // la otra es un juicio sobre el texto del usuario.
+      if (leido.truncated) {
+        this.logger.warn("[AIService.mergeBullets] output truncated by token ceiling", { targetId })
+      }
+      if (leido.refusal) {
+        this.logger.warn("[AIService.mergeBullets] model refused", { targetId, refusal: leido.refusal.slice(0, 120) })
+      }
+      text = leido.text
     } catch (err) {
       // Twice down. The user asked to merge two of their own lines; leaving them
       // exactly as they are is harmless, and a red error on an optional tidy-up
@@ -235,12 +264,33 @@ BULLET B: ${b}`
     text = text.replace(/^\s*[•·▪‣*\-–—]\s*/, "").replace(/^["'“”]|["'“”]$/g, "").trim()
 
     /**
-     * The merge is a promise: nothing the candidate wrote is lost, and nothing
-     * they did not write appears. Checked against BOTH source lines together —
-     * anything in the result that is grounded in neither is hard-coded.
+     * LA FUSIÓN DECLARA SU LISTA; EL MOTOR LA CORRE.
+     *
+     * Estas cinco preguntas —¿quemó un dato?, ¿la cifra sobrevivió?, ¿sobrevivió
+     * cada palabra de LAS DOS líneas?, ¿soltó un término de la vacante?— eran
+     * cinco `if` escritos a mano acá, que es como se llega a que un escritor
+     * corra cuatro chequeos y su hermano tres. `figurePolicy: "drop"` es la
+     * postura de este endpoint desde siempre: la fusión no puede proponer una
+     * cifra, porque no nace de un relato nuevo del candidato.
+     *
+     * El chequeo de largo se queda a mano: no es una regla del motor, es
+     * aritmética sobre estas dos líneas en particular.
      */
-    if (hasHardCodedFact(text, `${a}\n${b}`)) {
+    const veredicto = runWriteGate({
+      text,
+      source: `${a}\n${b}`,
+      mergedFrom: [a, b],
+      postingTerms: input.postingTerms ?? [],
+      figurePolicy: "drop",
+      language,
+    }, MERGE_RULES)
+
+    if (!veredicto.ok && veredicto.rule === "nothing_burned") {
       this.logger.warn("[AIService.mergeBullets] merged bullet introduced ungrounded content — discarded", { targetId })
+      return { status: "not_mergeable" }
+    }
+    if (!veredicto.ok && veredicto.rule === "figure_policy") {
+      this.logger.warn("[AIService.mergeBullets] merged bullet introduced a figure — discarded", { targetId })
       return { status: "not_mergeable" }
     }
 
@@ -248,41 +298,17 @@ BULLET B: ${b}`
     // content rather than combined it.
     if (text.length < Math.max(a.length, b.length)) return { status: "not_mergeable" }
 
-    /**
-     * "Keep every figure" was a prompt rule with nothing checking it.
-     *
-     * `findMergeCandidates` never offers a line carrying a digit, so this cannot
-     * fire on the panel's own suggestions — but the endpoint takes indexes from
-     * the request, and a merge that quietly drops the one number in the pair is
-     * exactly the loss the rest of this session made unrepresentable everywhere
-     * else. Same rule, same place: the response.
-     */
-    if (losesStatedFigure(`${a}\n${b}`, text)) {
+    if (!veredicto.ok && veredicto.rule === "figure_intact") {
       this.logger.warn("[AIService.mergeBullets] merged bullet dropped a stated figure — discarded", { targetId })
       reportGuardDrops({ endpoint: "merge-bullets", offered: 1, kept: 0, hardCoded: 0, figureLoss: 1, trivial: 0, termLoss: 0, weak: 0 })
       return { status: "not_mergeable" }
     }
 
-    /**
-     * And the same promise for words that are not numbers.
-     *
-     * "Perder uno es un fallo" was the prompt's rule and nothing enforced it.
-     * Measured: "Confirmé LOS TURNOS por teléfono el día anterior" came back as
-     * "…confirmando por teléfono el día anterior" — the object of the sentence
-     * gone, so the merged line no longer says what was confirmed. That is the
-     * "mixed together with no CV value" case: two lines went in and what came out
-     * says less than they did.
-     */
-    /**
-     * Y LA COINCIDENCIA CON LA VACANTE, que es lo que el usuario vino a comprar.
-     *
-     * `contentDroppedFrom` mide palabras del CV; esto mide las de la OFERTA. No
-     * es un sexto heurístico: usa las mismas dos funciones que el matcher
-     * (`termPresent`/`normalizeTerm`), así que el guard y el puntaje no pueden
-     * discrepar por construcción.
-     */
-    const lostTerms = droppedPostingTerms(`${a}\n${b}`, text, input.postingTerms ?? [])
-    const dropped = [...contentDroppedFrom(a, text), ...contentDroppedFrom(b, text), ...lostTerms]
+    // El motor ya dijo QUÉ se perdió: el reintento lo nombra en vez de recontarlo.
+    const perdioTermino = !veredicto.ok && veredicto.rule === "keeps_terms"
+    const dropped = !veredicto.ok && (veredicto.rule === "keeps_content" || perdioTermino)
+      ? (veredicto.dropped ?? [])
+      : []
     if (dropped.length > 0) {
       /**
        * ONE retry, saying exactly what went missing.
@@ -301,7 +327,7 @@ BULLET B: ${b}`
       const note = language === "en"
         ? `Your last answer dropped these words from the two lines: ${missed}. They are facts the candidate wrote. Write the merge again with every one of them in it.`
         : `Tu respuesta anterior perdió estas palabras de las dos líneas: ${missed}. Son datos que escribió el candidato. Escribí la fusión de nuevo con todas ellas adentro.`
-      const second = await this.retryMerge(note, callOnce, usages, a, b, targetId, input.postingTerms ?? [])
+      const second = await this.retryMerge(note, callOnce, usages, a, b, targetId, input.postingTerms ?? [], language)
       if (second) return { status: "ok", text: (await cleanGeneratedText([second], language, sectionData))[0] ?? second }
       this.logger.warn("[AIService.mergeBullets] merged bullet dropped content twice — discarded", { targetId, dropped: dropped.slice(0, 5) })
       // Y al panel de admin, no sólo a la consola del contenedor: una fusión
@@ -313,8 +339,8 @@ BULLET B: ${b}`
         kept: 0,
         hardCoded: 0,
         figureLoss: 0,
-        trivial: lostTerms.length > 0 ? 0 : 1,
-        termLoss: lostTerms.length > 0 ? 1 : 0,
+        trivial: perdioTermino ? 0 : 1,
+        termLoss: perdioTermino ? 1 : 0,
         weak: 0,
       })
       return { status: "not_mergeable" }
@@ -342,22 +368,35 @@ BULLET B: ${b}`
     b: string,
     targetId: string,
     postingTerms: readonly string[],
+    language: string,
   ): Promise<string | null> {
     try {
       const completion = await call(note)
       // Recorded, never billed here: the caller adds it to the single row.
       usages.push(completion.usage ?? {})
-      const parsed = parseAIJson<{ status?: unknown; text?: unknown }>((completion.choices[0]?.message?.content ?? "").trim() || "{}")
+      const segunda = readChat(completion)
+      if (segunda.truncated) {
+        this.logger.warn("[AIService.mergeBullets] retry truncated by token ceiling", { targetId })
+      }
+      const parsed = parseAIJson<{ status?: unknown; text?: unknown }>(segunda.text || "{}")
       if (parsed.status === "not_mergeable") return null
       let out = typeof parsed.text === "string" ? parsed.text.trim() : ""
       if (!out) return null
       out = out.replace(/^\s*[•·▪‣*\-–—]\s*/, "").replace(/^["\u2018\u2019\u201c\u201d']|["\u2018\u2019\u201c\u201d']$/g, "").trim()
-      // Every check the first answer had to pass, on the second one too.
-      if (hasHardCodedFact(out, `${a}\n${b}`)) return null
+      // La segunda respuesta pasa por EL MISMO motor y LA MISMA lista que la
+      // primera. Escrita a mano, esta copia ya se había desincronizado una vez:
+      // la de arriba corría cinco chequeos y ésta cuatro más el largo, y un
+      // hermano con un chequeo de menos es exactamente cómo se cuela lo que el
+      // otro rechaza.
+      if (!runWriteGate({
+        text: out,
+        source: `${a}\n${b}`,
+        mergedFrom: [a, b],
+        postingTerms,
+        figurePolicy: "drop",
+        language,
+      }, MERGE_RULES).ok) return null
       if (out.length < Math.max(a.length, b.length)) return null
-      if (losesStatedFigure(`${a}\n${b}`, out)) return null
-      if (contentDroppedFrom(a, out).length || contentDroppedFrom(b, out).length) return null
-      if (droppedPostingTerms(`${a}\n${b}`, out, postingTerms).length > 0) return null
       this.logger.info("[AIService.mergeBullets] second attempt kept every word", { targetId })
       return out
     } catch {

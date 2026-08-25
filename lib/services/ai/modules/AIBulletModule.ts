@@ -6,16 +6,17 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, resolveLanguage, hasHardCodedFact, hardCodedFactKind, figureDegraded } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
 import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { isTrivialEdit, isRedundantRewrite, dropsContentWithoutGain } from "../shared/text-similarity"
-import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
+import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 import { reportGuardDrops } from "../shared/guard-metrics"
-import { assessDescription, isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
+import { isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
 import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
-import { hasCliche } from "../shared/cliches"
+import { readChat } from "@/lib/services/ai/shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 import {
   AI_INPUT_LIMITS,
   BulletImprovementSchema,
@@ -23,9 +24,24 @@ import {
   type BulletResult,
   type ImproveBulletInput,
 } from "../shared/ai-types"
-import { defectStillPresent } from "../shared/repairable-defects"
 
 
+
+/**
+ * LO QUE ESTE ESCRITOR DECLARA. Su lista, no una línea perdida en el cuerpo.
+ *
+ * `no_lateral_loss` corre DESPUÉS de `adds_value` y antes de la cifra, como
+ * corría acá: una reescritura lateral sobre una línea ya fuerte es distinta, no
+ * mejor, y una línea que el panel diagnosticó no cuenta como «ya fuerte».
+ */
+const BULLET_RULES: readonly GateRule[] = [
+  "nothing_burned",
+  "figure_policy",
+  "adds_value",
+  "no_lateral_loss",
+  "figure_intact",
+  "keeps_terms",
+]
 
 export class AIBulletModule {
   constructor(
@@ -320,7 +336,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       max_tokens: wantsVariants ? 1800 : 1200,
       // improve-bullet uses low temperature (0.3) to reduce hard-coded facts.
       temperature: AI_TEMPERATURE_STRUCTURED,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("improve_bullet", ImproveBulletResponseSchema),
       messages: [
         {
           role: "system",
@@ -417,74 +433,38 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
          * Placeholder y marca no declarada se siguen descartando sin preguntar:
          * ésos no son una propuesta, son un dato falso sobre él.
          */
-        const factKind = hardCodedFactKind(suggested, source)
-        if (factKind === "placeholder" || factKind === "brand") { droppedHardCoded++; continue }
         /**
-         * Y la cifra sólo sobrevive SI ES UN RANGO A CONFIRMAR.
+         * EL MOTOR — este escritor DECLARA su lista (F0).
          *
-         * «Entre 50 y 100 transacciones por día» es una pregunta que él contesta;
-         * «reduje las fallas un 40%» es una afirmación que nunca hizo. La
-         * doctrina distingue las dos con esas palabras — el guard no lo hacía, y
-         * por eso tenía que elegir entre tirar la propuesta legítima (lo que
-         * hacía) o dejar pasar un resultado fabricado.
+         * El orden es el que este módulo ya corría; se conserva para que la
+         * mudanza no pueda cambiar una salida. `figurePolicy: "confirm"` es la
+         * POSTURA A: reescribe la viñeta que el candidato escribió, así que una
+         * cifra propuesta viaja a confirmar en vez de descartarse.
+         *
+         * `diagnosed` sigue viajando: si el panel señaló la línea, un cambio
+         * chico ES el arreglo, y descartarlo era lo que hacía que el panel
+         * marcara una viñeta floja y después se negara a arreglarla.
          */
-        // La cifra NO se borra: viaja con needsFigureConfirm (más abajo) para que
-        // el usuario la confirme. Borrarla era una regresión mía.
-        // No aporta: idéntica, un cambio de sinónimos, o las mismas palabras
-        // reordenadas / con relleno colgado. Las tres formas de devolver la línea
-        // que ya tenía, una sola pregunta — el MISMO set que corre tailor.
-        //
-        // `diagnosed` salta el guard de sinónimos: si el panel señaló la línea,
-        // un cambio chico ES el arreglo (un «Participé en…» → «Coordiné…» es
-        // pequeño por cualquier medida), y descartarlo es justo lo que hacía que
-        // el panel marcara una viñeta floja y después se negara a arreglarla.
-        if (isRedundantRewrite(original, suggested, { postingTerms, diagnosed })) { droppedTrivial++; continue }
-        // Lateral-rewrite guard: when the ORIGINAL is already strong (opens with a
-        // verb — no weak "responsible for" opener — and carries no cliché), a rewrite
-        // that STRIPS content it stated and adds nothing concrete is different, not
-        // better ("…to enhance iOS app functionality" → "…into the iOS app"). Leave
-        // the good bullet alone. A bullet the caller diagnosed is by definition not
-        // "already strong", so the guard does not apply to it either.
-        const originalIsStrong = !diagnosed
-          && assessDescription(original).weakOpenerIndices.length === 0
-          && !hasCliche(original)
-        if (originalIsStrong && dropsContentWithoutGain(original, suggested)) { droppedTrivial++; continue }
-        /**
-         * Y NUNCA BORRAR LA CIFRA QUE EL CANDIDATO ESCRIBIÓ.
-         *
-         * ── EL HUECO, ENCONTRADO BARRIENDO LOS CUATRO PRODUCTORES ─────────
-         *
-         * Esta regla se midió y se cerró el 2026-08-19 en tailor (viñetas y
-         * resumen), en review y en el ATS. `improve-bullet` escribe la misma
-         * clase de prosa, va al mismo campo del CV, y quedó afuera.
-         *
-         * Ninguno de los cuatro guards de arriba lo ve, y está documentado en
-         * el propio test de la regla: `hasHardCodedFact` caza cifras AÑADIDAS,
-         * no borradas · `isTrivialEdit` y `isCosmeticReword` no aplican porque
-         * la redacción SÍ cambió · `dropsContentWithoutGain` ve ganancia
-         * porque el texto creció, y además sólo corre si la línea original era
-         * fuerte.
-         *
-         * El caso medido entonces: «Cut medication errors from 12 to 3 per
-         * month» volvía más rica y sin el 12 ni el 3. El usuario aprieta un
-         * botón rotulado como mejora y pierde lo único de esa línea que un
-         * reclutador puede pesar.
-         */
-        if (figureDegraded(original, suggested)) { droppedFigure++; continue }
-        /**
-         * NI DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.
-         *
-         * La otra mitad de la regla 4: al modelo se le dice cuáles son, y acá se
-         * verifica que no se haya llevado ninguno puesto. Medido en el ejecutor,
-         * que tenía el mismo hueco: un CV entró con 23 y salió con 16 aplicando
-         * lo que el panel ofrecía, porque la reescritura —más rica, con las
-         * cifras intactas— se comía un término de la oferta.
-         *
-         * Se pregunta con `termPresent`, la misma función con la que el matcher
-         * cuenta la cobertura: el guard y el puntaje no pueden discrepar.
-         * Sin vacante analizada la lista viene vacía y esto no descarta nada.
-         */
-        if (droppedPostingTerms(original, suggested, postingTerms).length > 0) { droppedTerm++; continue }
+        const veredicto = runWriteGate({
+          text: suggested,
+          original,
+          source,
+          postingTerms,
+          diagnosed,
+          figurePolicy: "confirm",
+          language,
+        }, BULLET_RULES)
+
+        if (!veredicto.ok) {
+          switch (veredicto.rule) {
+            case "nothing_burned": droppedHardCoded++; break
+            case "figure_intact": droppedFigure++; break
+            case "keeps_terms": droppedTerm++; break
+            default: droppedTrivial++
+          }
+          continue
+        }
+        const needsConfirm = veredicto.needsFigureConfirm
 
         seenIndices.add(index)
 
@@ -500,15 +480,23 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             // En las alternativas sí se descarta la cifra propuesta: el usuario
             // elige una de tres con un clic, y confirmar un rango por cada opción
             // convierte una decisión en tres. La recomendada ya trae esa puerta.
-            && !hasHardCodedFact(a.text, source)
-            && !isTrivialEdit(original, a.text)
-            && !figureDegraded(original, a.text)
-            && droppedPostingTerms(original, a.text, postingTerms).length === 0
-            && !(originalIsStrong && dropsContentWithoutGain(original, a.text)))
+            // Misma puerta que la principal, con una sola diferencia declarada:
+            // acá la cifra propuesta SÍ se descarta (postura B), porque el usuario
+            // elige una de tres con un clic y confirmar un rango por cada opción
+            // convierte una decisión en tres. La recomendada ya trae esa puerta.
+            && runWriteGate({
+              text: a.text,
+              original,
+              source,
+              postingTerms,
+              diagnosed,
+              figurePolicy: "drop",
+              language,
+            }, BULLET_RULES).ok)
           .slice(0, 2)
 
         improvements.push({
-          ...(factKind === "figure" ? { needsFigureConfirm: true } : {}),
+          ...(needsConfirm ? { needsFigureConfirm: true } : {}),
           index,
           text: suggested,
           why: why?.trim() || undefined,
@@ -543,7 +531,18 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return improvements
     }
 
-    let improvements = harvest(response.choices[0]?.message?.content ?? "")
+    const leidoBullet = readChat(response)
+    // `improve-bullet` devuelve hasta 15 reescrituras: es de los que más cerca
+    // pasan del techo. Una lista cortada llegaba como cero mejoras, y cero
+    // mejoras se le muestra al usuario como «tu viñeta ya está bien» — la
+    // conclusión opuesta a la verdad, con el uso ya cobrado.
+    if (leidoBullet.truncated) {
+      this.logger.warn("[AIService.improveBullet] output truncated by token ceiling")
+    }
+    if (leidoBullet.refusal) {
+      this.logger.warn("[AIService.improveBullet] model refused", { refusal: leidoBullet.refusal.slice(0, 120) })
+    }
+    let improvements = harvest(leidoBullet.text)
 
     // One retry whenever the first pass came back empty.
     //
@@ -602,7 +601,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         completionTokens: retryUsage?.completion_tokens ?? 0,
         costUsd: costOfChat(AI_MODEL_PROSE, retryUsage),
       })
-      improvements = harvest(retry.choices[0]?.message?.content ?? "")
+      const leidoRetry = readChat(retry)
+      if (leidoRetry.truncated) {
+        this.logger.warn("[AIService.improveBullet] retry truncated by token ceiling")
+      }
+      improvements = harvest(leidoRetry.text)
     }
 
     // Nothing survived — or the model itself declined. Both mean the same thing

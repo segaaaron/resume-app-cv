@@ -442,7 +442,7 @@ describe("AIService", () => {
       expect(a.missingKeywords).toEqual(b.missingKeywords)
     })
 
-    it("truncates (does NOT 500) when the model returns more skills than the cap", async () => {
+    it("topa la vacante en 12 sin tumbar el análisis, y puntúa exactamente lo que muestra", async () => {
       // Regression guard: an over-eager extraction must never fail validation.
       const many = Array.from({ length: 18 }, (_, i) => `Skill${i + 1}`)
       const aiClient = makeMockAIClient(JSON.stringify({
@@ -458,18 +458,29 @@ describe("AIService", () => {
 
       expect(typeof result.score).toBe("number")
       /**
-       * ── QUÉ CAMBIÓ ACÁ, Y POR QUÉ (2026-08-22) ──────────────────────────
+       * ── LAS DOS INTENCIONES DE ESTE TEST, Y CUÁL SE AFINA (2026-08-25) ───
        *
-       * Este test nació para una cosa —una extracción larga NO puede tumbar el
-       * análisis— y de paso fijó el corte de 12 en la SALIDA. Ese corte era el
-       * defecto reportado: «los ATS no suben casi todos los skills que tengo,
-       * sólo me marca estos». El puntaje se calculaba sobre las 18 y la pantalla
-       * listaba 12, así que el número cobraba lo que la lista escondía.
+       * 1. Una extracción larga NO puede tumbar el análisis. Intacta.
        *
-       * La intención original se conserva y se afirma más fuerte: no revienta, y
-       * ahora además NO ESCONDE — las 18 que el modelo devolvió se reportan.
+       * 2. El número no puede cobrar lo que la lista esconde. Ésa nació del
+       *    defecto reportado —«los ATS no suben casi todos los skills que
+       *    tengo»— cuando el puntaje se calculaba sobre 18 y la pantalla
+       *    listaba 12. Se conserva, y es lo que se afirma abajo: lo que se
+       *    puntúa y lo que se muestra son EL MISMO conjunto.
+       *
+       * Lo que cambia es el número, no la regla. El plan de F2 pone el techo de
+       * la vacante en 12 y sólo lo levanta cuando entre la ponderación por
+       * prioridad; la ponderación se midió y no salió, así que el techo se
+       * queda. Sin él, medido: el mismo CV cae de 84 a 56.
+       *
+       * OJO — son dos lados distintos y sólo se topa uno: éste es el de la
+       * VACANTE (cuántas habilidades se le exigen al candidato). Las del CV no
+       * se topan nunca: `buildAtsHaystack` manda TODAS al matcher, que es lo que
+       * cierra el defecto reportado, y el test de abajo lo comprueba con la 15ª.
        */
-      expect(result.matchedKeywords.length + result.missingKeywords.length).toBe(many.length)
+      const reportadas = result.matchedKeywords.length + result.missingKeywords.length
+      expect(reportadas).toBe(12)
+      expect(reportadas).toBeLessThan(many.length)
     })
 
     it("matches a skill listed past the 12th — the full skills list feeds the ATS haystack", async () => {

@@ -12,9 +12,10 @@
 import { AI_MODEL } from "@/lib/ai-client"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
-import { parseAIJson, stripVersionLabel, hasHardCodedFact, ANY_METRIC_REGEX } from "./ai-helpers"
+import { parseAIJson, stripVersionLabel, ANY_METRIC_REGEX } from "./ai-helpers"
 import { assessSummary } from "./summary-quality"
 import { isTrivialEdit } from "./text-similarity"
+import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 
 export interface SummaryGateUsage {
   promptTokens: number
@@ -105,12 +106,31 @@ export function buildMetricGuidance(
 }
 
 /** Model output → what the user gets. Ranked, checked, retried once if needed. */
+/**
+ * EL RESUMEN DECLARA SU LISTA; EL MOTOR LA CORRE.
+ *
+ * Eran dos llamadas sueltas a `hasHardCodedFact` —una para la primera respuesta
+ * y otra para el reintento—, que es la misma pregunta escrita dos veces en el
+ * mismo archivo. `figurePolicy: "drop"` conserva la postura que este endpoint
+ * siempre tuvo: un resumen no propone una cifra, porque no nace de un relato
+ * nuevo del candidato sino de lo que su CV ya dice.
+ *
+ * Las reglas que comparan contra un original no se declaran: acá se juzgan tres
+ * versiones nuevas, no la reescritura de una línea. La calidad del resumen la
+ * sigue midiendo `assessSummary`, que es su propia vara y no la de una viñeta.
+ */
+const SUMMARY_RULES: readonly GateRule[] = ["nothing_burned", "figure_policy"]
+
+function pasaElMotor(text: string, source: string, language: string): boolean {
+  return runWriteGate({ text, source, figurePolicy: "drop", language }, SUMMARY_RULES).ok
+}
+
 export async function gateSummaryVersions(
   aiClient: IAIClient,
   logger: ILogger,
   input: SummaryGateInput,
 ): Promise<SummaryGateResult> {
-  const { rawVersions, source, metrics, endpoint } = input
+  const { rawVersions, source, metrics, endpoint, language } = input
   const profileHasMetrics = metrics.length > 0
 
   // Cap AFTER filtering, not before. Slicing first spends the three slots on
@@ -130,7 +150,7 @@ export async function gateSummaryVersions(
   // real summary.
   let dropped = 0
   const clean = candidates.filter((v) => {
-    if (hasHardCodedFact(v.text, source)) {
+    if (!pasaElMotor(v.text, source, language)) {
       dropped++
       return false
     }
@@ -182,7 +202,7 @@ export async function gateSummaryVersions(
 
   // The retry is model output too — it gets the same hard-coded fact check the
   // first attempt got. Skipping it here would make "retry" a way in.
-  const retryClean = retry.versions.filter((v) => !hasHardCodedFact(v.text, source))
+  const retryClean = retry.versions.filter((v) => pasaElMotor(v.text, source, language))
   const retryRanked = dropNearDuplicates(rank(retryClean, profileHasMetrics))
   if (retryRanked.length === 0) {
     logger.warn(`[${endpoint}] retry produced nothing usable — keeping the first result`)

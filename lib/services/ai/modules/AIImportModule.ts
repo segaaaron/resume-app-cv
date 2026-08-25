@@ -17,6 +17,7 @@
 // exactly as before — zero regression.
 
 import { AI_MODEL, AI_TEMPERATURE, logAIUsage } from "@/lib/ai-client"
+import { readChat } from "@/lib/services/ai/shared/chat-result"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { parseAIJson, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
@@ -83,6 +84,19 @@ export class AIImportModule {
         model: AI_MODEL,
         max_tokens: 4000, // worst case: a dense multi-section CV as JSON
         temperature: AI_TEMPERATURE,
+        // EL ÚNICO QUE SIGUE EN `json_object`, Y NO ES UN OLVIDO.
+        //
+        // Los otros trece sitios pasaron a esquema estricto. Éste no puede: el
+        // modo estricto exige `additionalProperties: false` con todas las
+        // propiedades enumeradas, y la forma de acá es deliberadamente abierta
+        // (`Record<string, unknown>[]` por sección) porque un CV importado trae
+        // campos que no sabemos de antemano y el mapeo posterior los acomoda.
+        // Cerrarla haría que la API DESCARTE en silencio todo campo no
+        // enumerado — perder datos del CV del usuario en la importación es
+        // exactamente el defecto que este proyecto ya pagó una vez.
+        //
+        // Lo que sí tiene: truncado y negativa como casos propios (arriba), y
+        // el parser determinista como red si nada de esto sirve.
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
@@ -94,10 +108,22 @@ export class AIImportModule {
       return null
     }
 
-    const raw = response.choices[0]?.message?.content ?? ""
+    const leido = readChat(response)
+    // Las tres razones para no tener JSON usable son distintas y el arreglo de
+    // cada una también: un CV que no entró en el techo pide subir el techo; una
+    // negativa no se arregla reintentando; un JSON roto sí. Las tres caen al
+    // parser determinista —eso está bien— pero el log tiene que decir cuál fue.
+    if (leido.refusal) {
+      this.logger.warn("[AIImport] model refused, will fall back", { refusal: leido.refusal.slice(0, 120) })
+      return null
+    }
+    if (leido.truncated) {
+      this.logger.warn("[AIImport] output truncated by token ceiling, will fall back")
+      return null
+    }
     let parsed: LlmResume
     try {
-      parsed = parseAIJson<LlmResume>(raw)
+      parsed = parseAIJson<LlmResume>(leido.text)
     } catch {
       this.logger.warn("[AIImport] unparseable model output, will fall back")
       return null

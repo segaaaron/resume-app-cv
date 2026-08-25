@@ -122,6 +122,12 @@ export interface ReportCheck {
    */
   fixHint?: string
   /**
+   * El ejemplo desarrollado de cómo se ve la línea terminada, con cifras de
+   * MUESTRA. Se muestra rotulado como ejemplo y nunca se aplica: los números son
+   * ilustrativos y sólo el candidato puede confirmar el suyo.
+   */
+  exampleHint?: string
+  /**
    * ESTO INFORMA. NO HAY NADA QUE APLICAR, Y ES A PROPÓSITO.
    *
    * ── POR QUÉ HIZO FALTA UN TERCER ESTADO (CEO, 2026-08-22) ────────────────
@@ -270,6 +276,15 @@ export interface ReportPosting {
   hardSkills: string[]
   softSkills: string[]
   mustHaves: string[]
+  /**
+   * Nivel y años que pide el aviso (F2).
+   *
+   * Viajan para INFORMAR: la tarjeta los muestra y el crítico los lee. No entran
+   * al puntaje —pesan cero— porque un dato que todavía no sabemos leer con
+   * certeza no puede bajarle el techo a nadie.
+   */
+  seniority?: string
+  yearsRequired?: number
 }
 
 /**

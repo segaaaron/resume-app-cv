@@ -56,6 +56,33 @@ export interface SectionPresence {
  * por encima de ese techo a propósito: existe para que una respuesta absurda no
  * llegue entera a la pantalla, no para decidir cuánto ve el usuario.
  */
+/**
+ * PONDERAR POR PRIORIDAD: MEDIDO, Y RECHAZADO. NO REINTRODUCIR SIN MEDIR.
+ *
+ * El plan de F2 traía ponderar las duras por la prioridad que les da la vacante
+ * —lo que el referente del mercado hace— usando el orden en que el extractor las
+ * devuelve. Se implementó y se midió antes de dejarlo entrar. Dos hallazgos:
+ *
+ *  1. CON EL PESO MÁS CONSERVADOR QUE DISTINGUE ALGO (las cinco primeras valen
+ *     el doble), el SOLO HECHO DE ORDENAR movía el puntaje 19 puntos: el mismo
+ *     CV y la misma vacante daban 81 o 62 según en qué orden llegara la lista.
+ *     El techo que el plan fijó es 3.
+ *
+ *  2. Y el motivo de fondo, que ningún ajuste del peso arregla: ese orden lo
+ *     decide un MODELO, y puede cambiar entre dos extracciones del mismo aviso.
+ *     Un puntaje que depende de él deja de ser reproducible — y reproducible es
+ *     la única promesa fuerte que este número puede hacer, porque contra
+ *     resultados de contratación no está validado.
+ *
+ * Lo que SÍ se conserva del trabajo: el extractor devuelve las duras ordenadas
+ * por prioridad, y ese orden alimenta los prompts, las sugerencias de
+ * habilidades y lo que el panel muestra primero. Informa sin decidir.
+ *
+ * Para reintroducirlo haría falta lo que hoy no tenemos: prioridad medida sobre
+ * el TEXTO del aviso (frecuencia, si está en el título, si está bajo
+ * «requisitos») en vez del orden que devuelve el modelo, y datos de resultado
+ * con los que calibrar el peso.
+ */
 const MAX_REPORTED = 40
 
 export interface ATSMatchResult {
@@ -217,10 +244,10 @@ function coverage(
    * Falla ABIERTO a propósito. La regla es que demostrar valga MÁS, no que no
    * poder demostrar valga menos.
    */
+  const canJudge = evidenceNorm.trim().length > 0
   // `demonstrated` YA arranca con `[...shown]` — sumarlo aparte lo contaba dos
   // veces y la cobertura llegaba a 200%. Juntos, `demonstrated` y `listedOnly`
   // cubren exactamente `matched + shown`, sin solaparse.
-  const canJudge = evidenceNorm.trim().length > 0
   const credited = canJudge
     ? demonstrated.length + listedOnly.length * LISTED_ONLY_CREDIT.value
     : matched.length + shown.length

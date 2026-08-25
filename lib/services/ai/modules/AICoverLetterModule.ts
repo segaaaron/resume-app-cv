@@ -29,6 +29,9 @@ import { detectCvLanguageOrNull } from "@/lib/resume/cv-language"
 import { detectLanguage } from "../shared/translate-fields"
 import { analyzeCoverLetterAts } from "@/lib/ats/cover-letter-ats"
 import { hasCliche, findCliches, clicheBanList, substituteCliches } from "../shared/cliches"
+import { readChat } from "@/lib/services/ai/shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { CoverBodyShape, CoverVersionsShape } from "@/lib/services/ai/shared/ai-types"
 import {
   AI_INPUT_LIMITS,
   type CoverLetterResult,
@@ -274,7 +277,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       // output. Variety now comes from the tone param and the human-voice rules, not
       // raw randomness — improveCoverLetter uses the same 0.3 for the same reason.
       temperature: AI_TEMPERATURE_STRUCTURED,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("cover_letter_body", CoverBodyShape),
       messages: [
         {
           role: "system",
@@ -292,8 +295,17 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       ],
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ body: string }>(raw)
+    const leido = readChat(response)
+    // Una carta cortada por el techo salía como `invalid_response_format` (500),
+    // que se lee como un bug del servidor. Es un techo corto sobre una carta
+    // larga, y el usuario merece saber que su carta no entró, no un 500 mudo.
+    if (leido.truncated) {
+      this.logger.warn("[AICoverLetter] body truncated by token ceiling")
+    }
+    if (leido.refusal) {
+      this.logger.warn("[AICoverLetter] model refused", { refusal: leido.refusal.slice(0, 120) })
+    }
+    const parsed = parseAIJson<{ body: string }>(leido.text)
 
     if (typeof parsed.body !== "string") throw new AppError("invalid_response_format", 500)
 
@@ -637,7 +649,7 @@ Nada sobre ESTA empresa puede salir de vos —ni logros, ni inversión, ni cultu
         model: AI_MODEL_PROSE,
         max_tokens: 900,
         temperature: AI_TEMPERATURE_STRUCTURED,
-        response_format: { type: "json_object" },
+        response_format: strictJsonFormat("cover_letter_body_retry", CoverBodyShape),
         messages: [
           // Las dos ramas, porque un `system` que existe en un idioma es un ROL que
           // el otro nunca recibe. El reintento es donde más importa, así que una
@@ -648,7 +660,9 @@ Nada sobre ESTA empresa puede salir de vos —ni logros, ni inversión, ni cultu
           { role: "user", content: `${basePrompt}\n\n${note}` },
         ],
       })
-      const parsed = parseAIJson<{ body?: unknown }>(res.choices[0]?.message?.content ?? "")
+      const reintento = readChat(res)
+      if (reintento.truncated) this.logger.warn("[AICoverLetter] retry body truncated by token ceiling")
+      const parsed = parseAIJson<{ body?: unknown }>(reintento.text)
       if (typeof parsed.body !== "string" || !parsed.body.trim()) return null
       return { body: parsed.body, usage: res.usage }
     } catch {
@@ -814,7 +828,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       // improve-cover-letter uses 0.3 — must stay close to the original body
       // and avoid hard-coding metrics or technologies.
       temperature: AI_TEMPERATURE_STRUCTURED,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("cover_letter_versions", CoverVersionsShape),
       messages: [
         {
           role: "system",
@@ -836,8 +850,14 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       ],
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ versions?: unknown; status?: unknown }>(raw)
+    const leidoMejora = readChat(response)
+    if (leidoMejora.truncated) {
+      this.logger.warn("[AICoverLetter] improve versions truncated by token ceiling")
+    }
+    if (leidoMejora.refusal) {
+      this.logger.warn("[AICoverLetter] model refused on improve", { refusal: leidoMejora.refusal.slice(0, 120) })
+    }
+    const parsed = parseAIJson<{ versions?: unknown; status?: unknown }>(leidoMejora.text)
 
     // Rule 7 of the prompt above asks the model to answer a strong letter with
     // {"status": "already_optimized", "versions": []}. Nothing read `status` —
@@ -1021,7 +1041,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
         model: AI_MODEL_PROSE,
         max_tokens: 1000,
         temperature: AI_TEMPERATURE_STRUCTURED,
-        response_format: { type: "json_object" },
+        response_format: strictJsonFormat("cover_letter_versions_retry", CoverVersionsShape),
         messages: [
           { role: "system", content: language === "en"
             ? `You are a senior CV writer. You never hard-code figures and never write placeholders. ${langInstruction}`
@@ -1029,7 +1049,9 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
           { role: "user", content: `${basePrompt}\n\n${note}${alsoTooLong ? lengthNote : ""}` },
         ],
       })
-      const parsed = parseAIJson<{ versions?: unknown }>(res.choices[0]?.message?.content ?? "")
+      const reintentoV = readChat(res)
+      if (reintentoV.truncated) this.logger.warn("[AICoverLetter] retry versions truncated by token ceiling")
+      const parsed = parseAIJson<{ versions?: unknown }>(reintentoV.text)
       return { versions: parsed.versions, usage: res.usage }
     } catch {
       // A failed retry is not a failed request — the first result still stands.

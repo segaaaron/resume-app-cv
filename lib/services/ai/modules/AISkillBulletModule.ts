@@ -8,6 +8,7 @@
 // The human-in-the-loop confirm is the honesty gate: an assertion the user never
 // did is rejected by them, exactly like every other suggestion in the editor.
 import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
+import { readChat } from "@/lib/services/ai/shared/chat-result"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL_PROSE,
@@ -20,13 +21,15 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { normalizeTerm, termPresent } from "@/lib/ats/vocabulary"
-import { parseAIJson, resolveLanguage, hasHardCodedFact } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
-import { bulletFloorMisses } from "@/lib/ats/output-floor"
 import { AI_INPUT_LIMITS, type SkillBulletInput, type SkillBulletResult } from "../shared/ai-types"
 import { noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { SkillBulletShape } from "@/lib/services/ai/shared/ai-types"
+import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 
 interface WorkRow { id?: string; jobTitle?: string; employer?: string; description?: string }
 
@@ -46,6 +49,19 @@ function bulletMentionsSkill(skill: string, haystackLower: string): boolean {
   // "async/await" is not counted present just because a bullet says "await".
   return tokens.every((w) => haystackLower.includes(w))
 }
+
+/**
+ * Lo que una línea nacida de cero tiene que cumplir.
+ *
+ * Sin `original` no hay nada contra qué medir ganancia, cifra conservada ni
+ * pérdida lateral: esas reglas no se declaran porque acá no tienen pregunta que
+ * responder, no porque se hayan olvidado.
+ */
+const SKILL_RULES: readonly GateRule[] = [
+  "nothing_burned",
+  "figure_policy",
+  "output_floor",
+]
 
 export class AISkillBulletModule {
   constructor(
@@ -247,7 +263,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       model: AI_MODEL_PROSE,
       max_tokens: 300,
       temperature: AI_TEMPERATURE_STRUCTURED,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("skill_bullet", SkillBulletShape),
       messages: [
         {
           role: "system",
@@ -270,7 +286,18 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       costUsd: costOfChat(AI_MODEL_PROSE, usage),
     })
 
-    const raw = parseAIJson<{ targetId?: unknown; text?: unknown }>(response.choices[0]?.message?.content ?? "{}")
+    const leido = readChat(response)
+    // El techo acá es holgado para una línea, así que si corta es una señal, no
+    // un accidente: sin este rótulo volvía como un `no_fit` mudo, y `no_fit`
+    // significa «no encontré dónde ponerla», que es otra cosa.
+    if (leido.truncated) {
+      this.logger.warn("[AIService.weaveSkillBullet] output truncated by token ceiling", { skill })
+    }
+    if (leido.refusal) {
+      this.logger.warn("[AIService.weaveSkillBullet] model refused", { refusal: leido.refusal.slice(0, 120) })
+      return { status: "no_fit" }
+    }
+    const raw = parseAIJson<{ targetId?: unknown; text?: unknown }>(leido.text || "{}")
     const targetId = chosenJob?.id ?? (typeof raw.targetId === "string" ? raw.targetId : "")
     const text = typeof raw.text === "string" ? raw.text.trim() : ""
     if (!targetId || !text) return { status: "no_fit" }
@@ -282,11 +309,28 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return { status: "no_fit" }
     }
 
-    // Anti-hard-coded fact: the new bullet may only introduce the skill itself, no other
-    // metric or technology absent from the CV.
-    if (hasHardCodedFact(text, groundingSource)) {
+    /**
+     * LA HABILIDAD DECLARA SU LISTA; EL MOTOR LA CORRE.
+     *
+     * Esta línea nace de cero —no reemplaza a ninguna—, así que las reglas que
+     * comparan contra un original no aplican y no se declaran. Quedan tres: no
+     * quemar un dato, no proponer una cifra (`drop`: sin relato del candidato
+     * detrás, el número sería del modelo) y el piso de salida.
+     *
+     * Escrito a mano, este módulo corría el chequeo de dato quemado y el piso
+     * como dos `if` separados por veinte líneas de otras reglas, y el orden
+     * entre ellos era casualidad.
+     */
+    const veredicto = runWriteGate({
+      text,
+      source: groundingSource,
+      figurePolicy: "drop",
+      language,
+    }, SKILL_RULES)
+
+    if (!veredicto.ok && (veredicto.rule === "nothing_burned" || veredicto.rule === "figure_policy")) {
       this.logger.warn("[AIService.weaveSkillBullet] dropped hard-coded bullet", {
-        skill, previewSample: text.slice(0, 120),
+        skill, rule: veredicto.rule, previewSample: text.slice(0, 120),
       })
       return { status: "no_fit" }
     }
@@ -318,9 +362,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
      * No se reintenta acá: `no_fit` ya es una salida honesta con su aviso en
      * pantalla, y un segundo intento por una sola línea gasta otro uso del plan.
      */
-    const misses = bulletFloorMisses(text)
-    if (misses.length > 0) {
-      this.logger.warn("[AIService.weaveSkillBullet] bullet below the floor", { skill, misses, previewSample: text.slice(0, 120) })
+    if (!veredicto.ok && veredicto.rule === "output_floor") {
+      this.logger.warn("[AIService.weaveSkillBullet] bullet below the floor", {
+        skill, misses: veredicto.misses, previewSample: text.slice(0, 120),
+      })
       return { status: "no_fit" }
     }
 

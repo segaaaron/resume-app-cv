@@ -20,6 +20,9 @@ import { parseAIJson } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { collectResumeSegments } from "../shared/translate-fields"
 import type { TranslateCVInput, TranslateCVResult } from "../shared/ai-types"
+import { readChat } from "@/lib/services/ai/shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { TranslateBatchShape } from "@/lib/services/ai/shared/ai-types"
 
 // A single prose field longer than this is left in its ORIGINAL language rather
 // than translated — never truncated. Real bullets/summaries sit far under it.
@@ -183,15 +186,24 @@ export class AITranslateModule {
         model: AI_MODEL,
         max_tokens: maxTokens,
         temperature: AI_TEMPERATURE_PRECISE,
-        response_format: { type: "json_object" },
+        response_format: strictJsonFormat("translate_cv", TranslateBatchShape),
         messages: [
           { role: "system", content: system },
           { role: "user", content: JSON.stringify({ items }) },
         ],
       })
 
-      const content = response.choices[0]?.message?.content ?? "{}"
-      const raw = parseAIJson<{ t?: Array<{ i?: number; v?: string }> }>(content)
+      const leido = readChat(response)
+      // Un lote truncado deja items sin traducir y el JSON a medio cerrar. Antes
+      // caía al catch de abajo rotulado «batch failed», que es lo mismo que se
+      // dice cuando se cae la red: dos causas distintas con un solo nombre.
+      if (leido.truncated) {
+        this.logger.warn("[AIService.translateCV] batch truncated by token ceiling", { size: batchIdx.length })
+      }
+      if (leido.refusal) {
+        this.logger.warn("[AIService.translateCV] model refused", { refusal: leido.refusal.slice(0, 120) })
+      }
+      const raw = parseAIJson<{ t?: Array<{ i?: number; v?: string }> }>(leido.text || "{}")
       for (const entry of raw.t ?? []) {
         if (typeof entry?.i !== "number" || typeof entry?.v !== "string") continue
         const global = batchIdx[entry.i]

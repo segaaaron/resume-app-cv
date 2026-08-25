@@ -40,17 +40,18 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, hardCodedFactKind, figureDegraded } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, figureDegraded } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
-import { isTrivialEdit, isCosmeticReword, isRedundantRewrite, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
-import { assessDescription, toFirstPersonOpener } from "../shared/bullet-quality"
-import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
-import { bulletFloorMisses, countWords, floorNudge, type FloorMiss } from "@/lib/ats/output-floor"
-import { hasCliche } from "../shared/cliches"
+import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
+import { floorNudge, type FloorMiss } from "@/lib/ats/output-floor"
+import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 import { computeCostUsd, type ChatUsageLike } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { reportGuardDrops } from "../shared/guard-metrics"
+import { readChat, truncatedNudge } from "../shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { TailorResultShape } from "@/lib/services/ai/shared/ai-types"
 import {
   AI_INPUT_LIMITS,
   type TailorCVInput,
@@ -118,6 +119,23 @@ const REASON_GUIDE: Record<TailorReason, { en: string; es: string }> = {
     es: "no tiene defecto — adaptala al vocabulario de esta vacante sin cambiar lo que afirma",
   },
 }
+
+/**
+ * LO QUE ESTE ESCRITOR DECLARA. Es su definición, no una línea perdida dentro de
+ * una función de doscientas líneas: un escritor nuevo que se olvide una regla se
+ * ve acá.
+ */
+const TAILOR_RULES: readonly GateRule[] = [
+  "nothing_burned",
+  "figure_policy",
+  "person",
+  "belongs_to_line",
+  "figure_intact",
+  "adds_value",
+  "keeps_terms",
+  "no_lateral_loss",
+  "output_floor",
+]
 
 export class AITailorModule {
   constructor(
@@ -340,7 +358,7 @@ Reglas:
       model: AI_MODEL_PROSE,
       max_tokens: maxTokens,
       temperature: AI_TEMPERATURE_STRUCTURED,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("tailor_cv", TailorResultShape),
       messages: [
         { role: "system", content: systemPrompt },
         // El empujón va sólo en el reintento y no dice nada nuevo: informa que la
@@ -353,15 +371,30 @@ Reglas:
     const usages: ChatUsageLike[] = []
     let lastParsed: TailorCVResultV2 | null = null
 
+    /**
+     * F0.5 — «probablemente truncado» deja de ser una suposición del log.
+     *
+     * La API lo dice (`finish_reason`), y el arreglo es distinto: si se cortó,
+     * repetir el mismo pedido lo vuelve a cortar en el mismo sitio; hay que
+     * pedir MENOS. Y si el modelo se negó, no hay reintento que lo cambie.
+     */
+    let ultimaLectura = { truncated: false, refusal: null as string | null }
     const ask = async (attempt: number): Promise<TailorCVResultV2 | null> => {
       calls++
-      const response = await doChat(attempt === 0 ? "" : retryNudge(language))
+      const nudgeBase = attempt === 0 ? "" : retryNudge(language)
+      const response = await doChat(nudgeBase + (ultimaLectura.truncated ? truncatedNudge(language) : ""))
       usages.push(response.usage ?? {})
+      const leido = readChat(response)
+      ultimaLectura = { truncated: leido.truncated, refusal: leido.refusal }
+      if (leido.refusal) {
+        this.logger.warn("[AIService.tailorCV] the model refused", { refusal: leido.refusal.slice(0, 160) })
+        return null
+      }
       try {
-        lastParsed = parseAIJson<TailorCVResultV2>(response.choices[0]?.message?.content ?? "{}")
+        lastParsed = parseAIJson<TailorCVResultV2>(leido.text || "{}")
         return lastParsed
       } catch {
-        this.logger.warn("[AIService.tailorCV] unparseable JSON (likely truncated)")
+        this.logger.warn("[AIService.tailorCV] unusable JSON", { truncated: leido.truncated })
         return null
       }
     }
@@ -433,105 +466,39 @@ Reglas:
         const original = bulletsByJob.get(item.targetId)?.[item.index] ?? ""
 
         /**
-         * Una cifra propuesta se MUESTRA para confirmar; no se tira. Lo que se
-         * sigue tirando sin preguntar es el placeholder —un "[X%]" jamás puede
-         * llegar al CV— y la marca que el candidato no declaró.
+         * EL MOTOR — este escritor DECLARA su lista, no la escribe a mano.
+         *
+         * El orden es el que este módulo ya corría, y se conserva a propósito: la
+         * mudanza no puede cambiar lo que el usuario ve, así que si mañana una
+         * salida difiere sabremos que fue el motor y no un reordenamiento.
+         *
+         * `figure_policy: "confirm"` es la POSTURA A: este texto nace de un
+         * relato del candidato, así que la cifra propuesta viaja con el chip
+         * «confirmá la cifra» en vez de descartarse. Lo que sí se descarta sin
+         * preguntar es el placeholder y la marca que él no declaró.
          */
-        const kind = hardCodedFactKind(text, groundingSource)
-        if (kind === "placeholder" || kind === "brand") { droppedHardCoded++; continue }
-        /**
-         * Y ACÁ ESTABA EL ERROR OPUESTO, encontrado en el mismo barrido.
-         *
-         * Este módulo fue el primero en dejar pasar la cifra con el chip
-         * «confirmá la cifra» — pero dejaba pasar CUALQUIERA, incluido un
-         * resultado exacto que el candidato nunca contó («reduje las fallas un
-         * 40%»). Un chip de confirmación no vuelve legítimo un hecho fabricado:
-         * la mayoría aplica sin leer, y lo que queda escrito en el CV es una
-         * afirmación que no puede defender en la entrevista.
-         *
-         * La doctrina ya lo decía: RANGO que confirma, nunca número exacto
-         * presentado como hecho.
-         */
-        // LA CIFRA NUNCA SE BORRA. Sigue al chip «confirmá la cifra» (más abajo),
-        // que es el diseño del CEO: la IA propone, el usuario confirma el único
-        // dato que la IA no puede saber. Borrarla era una regresión mía.
+        const veredicto = runWriteGate({
+          text,
+          original,
+          source: groundingSource,
+          postingTerms: [...posting.hardSkills, ...posting.softSkills],
+          figurePolicy: "confirm",
+          lines: bulletsByJob.get(item.targetId) ?? [],
+          index: item.index,
+          language,
+        }, TAILOR_RULES)
 
-        // TERCERA PERSONA: SE CORRIGE, NO SE BORRA (CEO, 2026-08-22).
-        // «Ejecutó suites…» / «He managed…» es una línea que puede ser excelente
-        // con un solo defecto de forma. Borrarla perdía todo su valor por el
-        // verbo. Se arregla la apertura a primera persona y la línea sigue por el
-        // resto de los guards como cualquier otra. Vale para es y en.
-        text = toFirstPersonOpener(text, language)
-
-        // El texto es la identidad: si la reescritura habla de otra línea del mismo
-        // puesto, aplicarla borraría una y duplicaría otra.
-        const lines = bulletsByJob.get(item.targetId) ?? []
-        if (rewriteBelongsTo(text, lines, item.index) !== item.index) { droppedTrivial++; continue }
-
-        // Borró la cifra del candidato, o la dejó puesta y le sacó el verbo que la
-        // explicaba («aumentar las ventas entre 15% y 20%» → «ventas de 15% a
-        // 20%»): las dos formas de perder lo mismo, una sola pregunta.
-        if (original && figureDegraded(original, text)) { droppedFigure++; continue }
-
-        // No aporta: idéntica, un cambio de sinónimos, o las mismas palabras
-        // reordenadas. El MISMO set que corre improve-bullet — antes tailor se
-        // saltaba el reordenado y una línea sin cambio real entraba por acá.
-        if (original && isRedundantRewrite(original, text, { postingTerms: [...posting.hardSkills, ...posting.softSkills] })) { droppedTrivial++; continue }
-
-        /**
-         * Y NUNCA DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.
-         *
-         * Medido de punta a punta: un CV entró con 23 y salió con 16 después de
-         * aplicar lo que este mismo panel ofreció. La reescritura era más rica,
-         * conservaba las cifras y decía más palabras — y por el camino se comía
-         * un término de la oferta. Las duras pesan .45: es la palanca más cara
-         * del informe, y ninguno de los cinco guards de arriba la mira, porque
-         * todos juzgan el TEXTO y éste juzga contra LA VACANTE.
-         *
-         * Se pregunta con `termPresent`, la misma función con la que el matcher
-         * cuenta la cobertura. No es un criterio nuevo: es el criterio del
-         * puntaje, aplicado antes de escribir en vez de después de perder.
-         */
-        if (original) {
-          const perdidos = droppedPostingTerms(original, text, [...posting.hardSkills, ...posting.softSkills])
-          if (perdidos.length > 0) { droppedTerm += perdidos.length; continue }
+        if (!veredicto.ok) {
+          switch (veredicto.rule) {
+            case "nothing_burned": droppedHardCoded++; break
+            case "figure_intact": droppedFigure++; break
+            case "keeps_terms": droppedTerm++; break
+            case "output_floor": droppedWeak++; weakMisses.push(...(veredicto.misses ?? [])); break
+            default: droppedTrivial++
+          }
+          continue
         }
-
-        /**
-         * EL PISO DE SALIDA — reportado por el CEO: «bullets muy básicos».
-         *
-         * Los guards de arriba comprueban que la línea no PIERDA nada. Ninguno
-         * comprueba que GANE: una reescritura podía conservar cifra, términos y
-         * contenido, no ser trivial, y seguir siendo una línea floja.
-         *
-         * Tres condiciones, todas con piezas que ya existen; ninguna nace acá:
-         *
-         *  1. No abre con frase de tarea ni es una frase vacía. Lo dice
-         *     `scoreBullet`, el mismo que usa el informe para señalar líneas
-         *     débiles: si el panel la marcaría como floja, no la escribimos.
-         *  2. Al menos 12 palabras. Es el número de la propia doctrina —«menos
-         *     de doce no dice nada que no dijera ya el nombre del puesto»— y NO
-         *     hay techo: una línea de cuatro renglones con volumen, herramienta y
-         *     efecto es exactamente lo que se busca.
-         *  3. Mejora algo medible frente a la original: sube el puntaje de línea,
-         *     suma un término que la vacante pide, o dice más. Conservar es el
-         *     piso, no el mérito.
-         *
-         * Si no llega, NO se entrega: se cuenta y el reintento dice qué le faltó.
-         * Mejor ninguna sugerencia que una línea floja con un botón.
-         */
-        if (original) {
-          const ganoTermino = droppedPostingTerms(text, original, [...posting.hardSkills, ...posting.softSkills]).length > 0
-          const diceMas = countWords(text) > countWords(original)
-          const misses = bulletFloorMisses(text, { original, gainedTerm: ganoTermino, saysMore: diceMas })
-          if (misses.length > 0) { droppedWeak++; weakMisses.push(...misses); continue }
-        }
-
-        // Reescritura lateral sobre una línea ya fuerte: distinta, no mejor.
-        if (original) {
-          const strong = assessDescription(original).weakOpenerIndices.length === 0 && !hasCliche(original)
-          if (strong && dropsContentWithoutGain(original, text)) { droppedTrivial++; continue }
-        }
+        text = veredicto.text
 
         const key = rewriteKey(text)
         if (key && seen.has(key)) { droppedTrivial++; continue }
@@ -541,7 +508,7 @@ Reglas:
         rewrites.push({
           checkId,
           text,
-          ...(kind === "figure" ? { needsFigureConfirm: true } : {}),
+          ...(veredicto.needsFigureConfirm ? { needsFigureConfirm: true } : {}),
           ...(typeof r.metricHint === "string" && r.metricHint.trim()
             ? { metricHint: r.metricHint.trim().slice(0, 160) } : {}),
           ...(typeof r.demonstrates === "string" && r.demonstrates.trim()
@@ -583,7 +550,15 @@ Reglas:
       const retryResponse = await doChat(rejectedNudge(language, reasons))
       usages.push(retryResponse.usage ?? {})
       try {
-        const second = parseAIJson<TailorCVResultV2>(retryResponse.choices[0]?.message?.content ?? "{}")
+        // La primera llamada ya distinguía truncado de inválido; el reintento
+        // seguía leyendo crudo, así que un segundo intento cortado por el techo
+        // volvía a caer en el catch de abajo como si el modelo no hubiera
+        // escrito nada. Es el mismo módulo contándose dos historias distintas.
+        const leidoRetry = readChat(retryResponse)
+        if (leidoRetry.truncated) {
+          this.logger.warn("[AIService.tailorCV] retry truncated by token ceiling", { lineasPedidas })
+        }
+        const second = parseAIJson<TailorCVResultV2>(leidoRetry.text || "{}")
         const retried = applyGuards(second)
         // Se queda con la que sobrevive; si la segunda tampoco sobrevive, no se
         // fabrica nada: una línea que el modelo no escribió no se puede escribir

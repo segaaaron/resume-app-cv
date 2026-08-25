@@ -107,8 +107,14 @@ export class AIService {
     return this.summaryModule.generateSummary(userId, input, plan)
   }
 
-  atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {
-    return this.reviewModule.atsScore(userId, input, plan)
+  atsScore(
+    userId: string,
+    input: ATSScoreInput,
+    plan: string,
+    /** Ver `AIReviewModule.atsScore`: el informe sin el veredicto, apenas está. */
+    onFirstAct?: (parcial: ATSScoreResult) => void,
+  ): Promise<ATSScoreResult> {
+    return this.reviewModule.atsScore(userId, input, plan, onFirstAct)
   }
 
   /** Deterministic re-score (no LLM, no quota) — reuses keywords from a prior atsScore. */

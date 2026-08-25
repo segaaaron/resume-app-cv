@@ -18,6 +18,23 @@ import { canonicalSkillName } from "@/lib/ats/skill-catalog"
 import { buildModePrompt } from "./profile-modes"
 import { assessDescription } from "../shared/bullet-quality"
 import { cleanGeneratedText } from "../shared/clean-output"
+import { readChat } from "@/lib/services/ai/shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
+import { ProfileModeShape } from "@/lib/services/ai/shared/ai-types"
+
+/**
+ * El texto de la respuesta, dejando constancia si el techo la cortó.
+ *
+ * El modo `seed`/`certifications`/`bullets` devuelve listas: si el techo corta,
+ * la lista llega a medias y el usuario recibe menos de lo que pagó sin que
+ * nada lo diga.
+ */
+function readChatProfile(r: Parameters<typeof readChat>[0], logger: ILogger): string {
+  const leido = readChat(r)
+  if (leido.truncated) logger.warn("[AIProfile] mode output truncated by token ceiling")
+  if (leido.refusal) logger.warn("[AIProfile] mode refused", { refusal: leido.refusal.slice(0, 120) })
+  return leido.text
+}
 import {
   AI_INPUT_LIMITS,
   FillProfileResponseSchema,
@@ -223,7 +240,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       // fill-profile uses 0.4 — needs some creativity to map natural-language
       // instructions to structured fields, but stays faithful to user input.
       temperature: AI_TEMPERATURE,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("fill_profile", FillProfileResponseSchema),
       messages: [
         {
           role: "system",
@@ -243,8 +260,18 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       ],
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<FillProfileResult>(raw)
+    const leido = readChat(response)
+    // ESTE es el módulo que ya pagó este defecto: en 2026-06 un techo de 700
+    // tokens para un JSON de 7 secciones cortó la respuesta y se perdió una
+    // sección entera del CV del usuario, en silencio. Un corte tiene que
+    // nombrarse; si no, es indistinguible de que el modelo no encontró nada.
+    if (leido.refusal) {
+      this.logger.warn("[AIProfile] model refused", { refusal: leido.refusal.slice(0, 120) })
+    }
+    if (leido.truncated) {
+      this.logger.warn("[AIProfile] output truncated by token ceiling — sections may be missing")
+    }
+    const parsed = parseAIJson<FillProfileResult>(leido.text)
 
     const hasContent = parsed.summary || parsed.jobTitle || parsed.hobbies ||
       parsed.suggestedSkills?.length || parsed.inferredSkills?.length ||
@@ -516,7 +543,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         model,
         max_tokens: maxTokens,
         temperature: AI_TEMPERATURE,
-        response_format: { type: "json_object" },
+        response_format: strictJsonFormat("fill_profile_mode", ProfileModeShape),
         messages: [
           { role: "system", content: system },
           { role: "user", content: attempt === 0 || !retryNote ? user : `${user}\n\n${retryNote}` },
@@ -533,7 +560,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         inferredSkills?: string[]
         suggestedCertifications?: string[]
         bullets?: string[]
-      }>(response.choices[0]?.message?.content ?? "")
+      }>(readChatProfile(response, this.logger))
 
       // The model saying "this names no job" is an answer, not a failure, and
       // it must not be retried — the second call would cost money to be told

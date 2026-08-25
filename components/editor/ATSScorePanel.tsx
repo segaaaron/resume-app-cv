@@ -101,6 +101,7 @@ export default function ATSScorePanel() {
   const {
     input, setInput,
     loading,
+    verdictPending: verdictPendingFromRequest,
     atsResult, reviewResult,
     offTopic,
     hasResult,
@@ -774,6 +775,40 @@ export default function ATSScorePanel() {
   const summary = (sectionData.summary as string) ?? ""
   const workExp = (sectionData.workExperience as unknown[]) ?? []
   const skills = (sectionData.skills as unknown[]) ?? []
+  /**
+   * QUÉ ESTÁ PASANDO MIENTRAS ESPERA (F1).
+   *
+   * Hasta F1 la crítica del reclutador corría EN PARALELO con la medición, y el
+   * análisis entero tardaba lo que tardaba el tramo más lento. Ahora corre
+   * DESPUÉS —porque necesita el puntaje para anclar su veredicto— y la espera
+   * pasó a ser la suma: entre 13 y 16 segundos medidos contra la API real.
+   *
+   * Un único «Analizando…» durante quince segundos se lee como que se colgó. Las
+   * tres etapas de abajo son las del pipeline REAL y en su orden real —se lee la
+   * vacante, se mide el CV contra ella, y recién entonces el modelo la juzga—,
+   * así que esto no es una barra de progreso inventada: es decir en voz alta lo
+   * que está ocurriendo. Los cortes salen de la medición, no de una estimación.
+   */
+  const [analysisStage, setAnalysisStage] = useState(0)
+  useEffect(() => {
+    if (!loading) { setAnalysisStage(0); return }
+    const a = setTimeout(() => setAnalysisStage(1), 3000)
+    return () => clearTimeout(a)
+  }, [loading])
+  /**
+   * EL VEREDICTO ESTÁ EN CAMINO.
+   *
+   * El informe llega en dos actos, y quién va en cuál lo sabe la petición —no se
+   * deduce mirando si un campo del crudo vino en null, que además es una puerta
+   * que el informe cerró a propósito—. Por eso el hook lo dice y el panel sólo
+   * lo pinta. Los dos primeros rótulos se estiman con el reloj; éste no: es un
+   * hecho.
+   */
+  const verdictPending = loading && verdictPendingFromRequest
+  const analyzingLabel = verdictPending
+    ? t("analyzing_reviewing")
+    : analysisStage === 0 ? t("analyzing_reading") : t("analyzing_measuring")
+
   const cvReady = summary.trim().length > 0 && workExp.length > 0 && skills.length > 0
 
   // Deterministic health verdict (no LLM, no JD) — recomputes live as the CV is
@@ -1454,9 +1489,12 @@ export default function ATSScorePanel() {
           </div>
         ) : (
           <button type="button" onClick={handleSubmit} disabled={loading || inCooldown || input.trim().length < (roleMode ? 3 : 15) || !cvReady}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white text-xs font-bold shadow-lg shadow-dash-cyan/30 hover:shadow-dash-cyan/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white text-xs font-bold shadow-lg shadow-dash-cyan/30 hover:shadow-dash-cyan/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+            // La etiqueta cambia sola mientras espera: sin esto, para un lector de
+            // pantalla el botón se queda mudo quince segundos.
+            aria-live="polite">
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inCooldown ? <Clock className="h-3.5 w-3.5" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
-            {loading ? t("analyzing") : inCooldown ? t("wait", { seconds: cooldownLabel }) : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : hasResult ? t("re_analyze") : t("analyze")}
+            {loading ? analyzingLabel : inCooldown ? t("wait", { seconds: cooldownLabel }) : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : hasResult ? t("re_analyze") : t("analyze")}
           </button>
         )}
 
@@ -1603,6 +1641,17 @@ export default function ATSScorePanel() {
                 captura, en otro sitio. El puntaje ya contesta si pasás el filtro,
                 el dial ya dice si estás listo, y el párrafo de abajo da los
                 matices — que es lo que este análisis sí aporta. */}
+            {/* Sin esto, el informe del primer acto se lee como terminado y al
+                usuario le aparece un párrafo de la nada diez segundos después. */}
+            {verdictPending && (
+              <div className="rounded-2xl border border-dash-cyan/25 bg-dash-cyan/[0.04] p-3.5 flex items-start gap-2.5" aria-live="polite">
+                <Loader2 className="h-3.5 w-3.5 text-dash-cyan shrink-0 mt-0.5 animate-spin" />
+                <p className="text-[11px] font-semibold text-[var(--a-ink-2)] leading-relaxed">
+                  {t("analyzing_reviewing")}
+                </p>
+              </div>
+            )}
+
             {report?.verdict && (
               /**
                * LA ÚNICA VOZ HUMANA DEL PANEL, y tiene que verse como tal.

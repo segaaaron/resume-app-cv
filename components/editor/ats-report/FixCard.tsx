@@ -203,6 +203,24 @@ export default function FixCard({
         </p>
       )}
 
+      {/* EL EJEMPLO DESARROLLADO (F2.5).
+          Se le pedía al modelo desde siempre, viajaba hasta acá y no lo pintaba
+          nadie: el ensamblador mapeaba sólo el arreglo. Va DESPUÉS del arreglo y
+          con otra piel —punteado, en cursiva, sin botón— porque no es texto para
+          pegar: sus números son de muestra y sólo el candidato puede poner el
+          suyo. Un ejemplo con la misma piel que el arreglo terminaría aplicado. */}
+      {!after && check.exampleHint && (
+        <p
+          className="mx-3.5 mt-2 rounded-lg border border-dashed px-3 py-2 text-[11.5px] italic leading-relaxed"
+          style={{ borderColor: "var(--a-border-2)", color: "var(--a-muted-2)" }}
+        >
+          <b className="mr-1 text-[9px] font-bold uppercase not-italic tracking-[0.08em]" style={{ color: "var(--a-muted-2)" }}>
+            {t("example_hint_label")}
+          </b>
+          {check.exampleHint}
+        </p>
+      )}
+
       {/* Sin reescritura, se muestran las líneas de las que habla: el usuario ve
           QUÉ se va a tocar antes de tocarlo, que es la regla que no cambia. */}
       {!after && evidence.length > 0 && (

@@ -85,6 +85,18 @@ export interface RecruiterFix {
   issue: string
   severity?: string
   fix?: string
+  /**
+   * EL EJEMPLO DESARROLLADO — una línea terminada, con cifras de muestra.
+   *
+   * Se lo pedimos al modelo desde siempre (`needsFromYou`), el modelo lo escribe,
+   * viaja hasta el cliente… y este ensamblador mapeaba únicamente `fix`. Es decir:
+   * pagábamos tokens por la mejor parte de la respuesta y la borrábamos antes de
+   * que el usuario la viera.
+   *
+   * NO es texto aplicable y no puede serlo: viaja en su propio campo, la tarjeta
+   * lo pinta como ejemplo, y el botón de aplicar sólo mira `fixHint`.
+   */
+  example?: string
   action?: CvFixAction
 }
 
@@ -143,6 +155,10 @@ export interface BuildReportInput {
    * dice su CV, no sólo lo que la vacante pide.
    */
   cvTitles?: readonly string[]
+  /** Años que suman las fechas del CV. Para la brecha de F2, que informa y no cobra. */
+  cvYears?: number
+  /** Términos que el CV sólo demuestra en puestos viejos (F3). Informan; no cobran. */
+  staleTerms?: readonly { term: string; jobTitle: string; year: number }[]
   /**
    * Las habilidades que el CV declara, tal como el usuario las escribió.
    *
@@ -881,6 +897,54 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     })
   }
 
+  /**
+   * LA BRECHA DE AÑOS — INFORMA, NO CASTIGA (F2).
+   *
+   * La vacante pide un número de años y las fechas del CV suman otro. Es de las
+   * señales que un ATS real sí extrae, así que decirlo es honesto; cobrarlo no,
+   * mientras no esté medido contra CVs reales: `weight: 0` y `state: "warn"`.
+   *
+   * Un requisito mal juzgado no baja unos puntos — baja el TECHO alcanzable, y
+   * eso ya se pagó una vez con la licenciatura que el CV sí tenía. Por eso esto
+   * no entra a `mustHaves` ni resta: se muestra, y el candidato decide.
+   */
+  /**
+   * EL TÉRMINO QUE SÓLO VIVE EN UN PUESTO VIEJO (F3).
+   *
+   * La recencia ya pesa en el TÍTULO —un cargo viejo cobra crédito reducido— y
+   * la investigación dice que los ATS reales la miran también en las
+   * habilidades. Acá se INFORMA y no se cobra: mover el número por una señal sin
+   * calibrar hace que el mismo CV valga distinto sin que el candidato toque
+   * nada, que es justo lo que la medición de la prioridad dejó demostrado.
+   *
+   * `owner: "user"`: sólo él sabe si sigue usando esa herramienta. Si la usa, la
+   * nombra en el puesto actual y el hallazgo se cierra solo.
+   */
+  for (const st of input.staleTerms ?? []) {
+    push({
+      id: `search.stale.${st.term}`,
+      section: "search",
+      state: "warn",
+      weight: 0,
+      titleKey: "check.stale_term",
+      params: { term: st.term, job: st.jobTitle, year: st.year },
+      owner: "user",
+    })
+  }
+
+  const yearsRequired = input.posting?.yearsRequired ?? 0
+  if (yearsRequired > 0 && input.cvYears !== undefined && input.cvYears < yearsRequired) {
+    push({
+      id: "search.years_gap",
+      section: "search",
+      state: "warn",
+      weight: 0,
+      titleKey: "check.years_gap",
+      params: { required: yearsRequired, actual: input.cvYears },
+      owner: "user",
+    })
+  }
+
   if (input.writing.yearsClaim) {
     push({
       id: "tips.years_claim",
@@ -1069,6 +1133,9 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
        * decir nunca qué iba a pasar al apretarlo.
        */
       fixHint: f.fix?.trim() || undefined,
+      // El ejemplo, por fin conectado (F2.5). Sin botón: es para leerlo y poner
+      // tu número, no para pegarlo.
+      exampleHint: f.example?.trim() || undefined,
     })
   })
 

@@ -29,6 +29,8 @@ import { buildAtsReport, type BuildReportInput, type RecruiterFix } from "./buil
 import { verifiedRecruiterFixes, verifyContextOf } from "./recruiter-verified"
 import { reportUxFailure } from "@/lib/client-error-reporter"
 import type { AtsReport } from "./report"
+import { cvExperienceYears } from "./experience-years"
+import { findStaleTerms } from "./stale-terms"
 
 /**
  * El CV como texto plano, sólo para contar apariciones por término.
@@ -136,8 +138,8 @@ export interface PanelResultLike {
   demonstratedSoftSkills?: string[]
   templateSafety?: "safe" | "caution"
   scoreBreakdown?: { categories: CategoryBreakdown[] } | null
-  extractedKeywords?: { jobTitle?: string; hardSkills?: string[]; softSkills?: string[]; mustHaves?: string[] } | null
-  analysis?: { criticalFixes?: RecruiterFix[]; verdict?: string } | null
+  extractedKeywords?: { jobTitle?: string; hardSkills?: string[]; softSkills?: string[]; mustHaves?: string[]; seniority?: string; yearsRequired?: number } | null
+  analysis?: { criticalFixes?: Array<RecruiterFix & { needsFromYou?: string }>; verdict?: string } | null
   typoWarnings?: { keyword: string; typed: string }[]
 }
 
@@ -336,7 +338,9 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
   const verified = verifiedRecruiterFixes(
     (result.analysis?.criticalFixes ?? [])
       .filter((f) => !accepted(f.fix))
-      .map((f) => ({ issue: f.issue, severity: f.severity, fix: f.fix, action: f.action })),
+      // `needsFromYou` es el EJEMPLO DESARROLLADO. Se pedía, se pagaba y se
+      // tiraba acá: este `map` no lo copiaba y el ensamblador nunca lo veía.
+      .map((f) => ({ issue: f.issue, severity: f.severity, fix: f.fix, example: f.needsFromYou, action: f.action })),
     verifyCtx,
   )
   const recruiterFixes: RecruiterFix[] = verified.kept
@@ -433,6 +437,8 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
           hardSkills: result.extractedKeywords.hardSkills ?? [],
           softSkills: result.extractedKeywords.softSkills ?? [],
           mustHaves: result.extractedKeywords.mustHaves ?? [],
+          seniority: result.extractedKeywords.seniority,
+          yearsRequired: result.extractedKeywords.yearsRequired,
         }
       : undefined,
     verdict: result.analysis?.verdict?.trim() || undefined,
@@ -443,6 +449,13 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
     credibility: input.credibility,
     structure: structureOf(sectionData),
     cvTitles: cvTitles(sectionData),
+    // Los años que suman sus fechas, para la brecha que informa (F2).
+    cvYears: cvExperienceYears(sectionData),
+    // F3: qué término de la vacante quedó sólo en un puesto viejo.
+    staleTerms: findStaleTerms(
+      [...(result.extractedKeywords?.hardSkills ?? [])],
+      sectionData,
+    ),
     // Sus habilidades, para la sección que existía vacía. Sin tope de producto:
     // el CV ya acota cuántas puede tener y esconder parte de su propia lista es
     // el defecto que esto viene a cerrar.

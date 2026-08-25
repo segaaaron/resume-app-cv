@@ -25,11 +25,14 @@ import { EMBEDDING_MODEL } from "../OpenAIClientAdapter"
 import {
   AI_INPUT_LIMITS,
   ATSExtractionSchema,
+  ATSExtractionShape,
   CvAnalysisSchema,
   type CvAnalysis,
   type CvFixAction,
   MAX_PREVIEW_CHARS,
   ReviewItemSchema,
+  CvAnalysisShape,
+  ReviewResponseSchema,
   type ATSScoreInput,
   type ATSScoreResult,
   type ATSRescoreInput,
@@ -56,6 +59,8 @@ import { splitFixText } from "@/lib/ats/fix-text"
 import { untrustedDataRule } from "../shared/untrusted-input"
 import { refineMissingRequirements } from "@/lib/ats/requirement-satisfied"
 import { fixesRepetition } from "@/lib/ats/repeated-content"
+import { readChat, truncatedNudge } from "../shared/chat-result"
+import { strictJsonFormat } from "../shared/strict-schema"
 
 /**
  * Hard requirements this CV provably meets, normalized for the matcher.
@@ -151,7 +156,24 @@ const DOCTRINE_FINGERPRINT = createHash("sha256")
  * no llegaría nunca a un CV ya analizado. Es exactamente el defecto que costó una
  * sesión entera: «si tocás un prompt y la pantalla no cambia, sospechá del caché».
  */
-const ANALYSIS_REVISION = `v5-${DOCTRINE_FINGERPRINT}`
+const ANALYSIS_REVISION = `v6-${DOCTRINE_FINGERPRINT}`
+
+/**
+ * EL NOMBRE DE CADA CRITERIO, EN PALABRAS.
+ *
+ * El modelo no puede ver identificadores internos: «mustHaves 40%» le pide que
+ * adivine qué es eso, y encima hace que un test que distingue las llamadas por
+ * su contenido confunda la crítica con la extracción. Se le dice en su idioma lo
+ * mismo que el panel le muestra al usuario.
+ */
+const CRITERIO_EN: Record<string, string> = {
+  hardSkills: "required skills", mustHaves: "hard requirements", title: "job title",
+  softSkills: "soft skills", sections: "standard sections", impact: "measurable results",
+}
+const CRITERIO_ES: Record<string, string> = {
+  hardSkills: "habilidades que pide", mustHaves: "requisitos duros", title: "cargo",
+  softSkills: "habilidades blandas", sections: "secciones estándar", impact: "resultados medibles",
+}
 
 export class AIReviewModule {
   /**
@@ -353,6 +375,18 @@ export class AIReviewModule {
     resumeId?: string,
     /** Lo que la vacante pide. Viaja hasta el guard que impide bajar el puntaje. */
     postingTerms: readonly string[] = [],
+    /**
+     * EL PERFIL DE BRECHAS — lo que la medición ya sabe (F1).
+     *
+     * Antes esta llamada arrancaba ANTES de que el puntaje existiera y corría en
+     * paralelo con él: dos opiniones calculadas de costado que nunca se hablaban.
+     * La IA no podía decir «estás en 67 por esto» porque no sabía que estaba en
+     * 67, ni ordenar sus arreglos por lo que mueve el número.
+     *
+     * Ahora recibe la medición y ancla su veredicto en ella. Ausente = no hubo
+     * medición (el camino de rol sin vacante), y el crítico sigue como antes.
+     */
+    gaps?: { score: number; categories: Array<{ category: string; coveragePct: number; recoverable: number }>; missing: readonly string[] },
   ): Promise<CvAnalysis | null> {
     /**
      * LOS TÉRMINOS QUE LA VACANTE PIDE, DICHOS AL MODELO.
@@ -370,6 +404,17 @@ export class AIReviewModule {
      * Se arregló en tailor y en improve-bullet; acá quedó vivo.
      */
     const terms = postingTerms.filter((t) => t.trim()).slice(0, 30)
+    /**
+     * LO QUE LA MEDICIÓN YA DIJO, EN EL PROMPT (F1).
+     *
+     * El crítico deja de opinar sobre un número que no conoce: recibe el puntaje,
+     * qué categoría está floja y qué requisitos faltan, y se le pide ordenar por
+     * lo que mueve la aguja. Es el mismo criterio del panel, dicho una sola vez.
+     */
+    const gapsBlock = !gaps ? "" : (en
+      ? `\n=== WHAT THE MEASUREMENT ALREADY FOUND ===\nMatch score: ${gaps.score}/100.\nBy criterion: ${gaps.categories.map((c) => `${CRITERIO_EN[c.category] ?? c.category} ${c.coveragePct}% (${c.recoverable} pts recoverable)`).join(" · ")}.\n${gaps.missing.length ? `Requirements the résumé does not state: ${gaps.missing.join(", ")}.` : "No stated requirement is missing."}\nOrder your fixes by what moves this. Do not restate the numbers — the panel already shows them.`
+      : `\n=== LO QUE LA MEDICIÓN YA ENCONTRÓ ===\nPuntaje de coincidencia: ${gaps.score}/100.\nPor criterio: ${gaps.categories.map((c) => `${CRITERIO_ES[c.category] ?? c.category} ${c.coveragePct}% (${c.recoverable} pts recuperables)`).join(" · ")}.\n${gaps.missing.length ? `Requisitos que el CV no dice: ${gaps.missing.join(", ")}.` : "No falta ningún requisito declarado."}\nOrdená tus arreglos por lo que mueve esto. No repitas los números — el panel ya los muestra.`)
+
     const termsLine = terms.length === 0 ? "" : (en
       ? `\n=== TERMS THIS POSTING SCORES ON ===\n${terms.join(", ")}\nA rewrite that drops one of these costs the candidate the match it was carrying. Keep the ones the line already earns; a term the résumé does not back would be one you added yourself.`
       : `\n=== TÉRMINOS POR LOS QUE ESTA VACANTE PUNTÚA ===\n${terms.join(", ")}\nUna reescritura que suelte uno de éstos le cuesta al candidato la coincidencia que traía. Conservá los que la línea ya tenga; un término que el CV no respalda sería uno que pusiste vos.`)
@@ -383,7 +428,19 @@ export class AIReviewModule {
     // the database — the fix shipped and the user still saw the bug, with no way
     // to tell which. Bump this whenever the prompt or the schema changes; the old
     // rows stay for audit and are simply never read again.
-    const cacheKey = `${ANALYSIS_REVISION}:${en ? "en" : "es"}:${createHash("sha256").update(`${resumeText}\u0000${jobContext}`).digest("hex")}`
+    /**
+     * LA HUELLA DE LA MEDICIÓN ENTRA EN LA CLAVE (F1).
+     *
+     * Hasta ahora la crítica dependía sólo del CV y de la vacante, y con eso la
+     * clave alcanzaba. Desde que RECIBE el perfil de brechas, un puntaje distinto
+     * es una pregunta distinta: sin esto, cambiar un peso o el techo de duras
+     * serviría la crítica vieja anclada a un número que ya no existe — que es
+     * exactamente el defecto que este mismo comentario documenta más arriba.
+     */
+    const gapPrint = gaps
+      ? `${gaps.score}|${gaps.categories.map((c) => `${c.category}:${c.coveragePct}`).join(",")}|${gaps.missing.join(",")}`
+      : ""
+    const cacheKey = `${ANALYSIS_REVISION}:${en ? "en" : "es"}:${createHash("sha256").update(`${resumeText}\u0000${jobContext}\u0000${gapPrint}`).digest("hex")}`
     const cachedAnalysis = this.analysisCache.get(cacheKey)
     if (!cachedAnalysis) this.spentAModelCall = true
     if (cachedAnalysis) {
@@ -452,7 +509,7 @@ Judge this RESUME for the JOB below the way you would in a 7-second screen, then
 
 === JOB ===
 ${jobContext}
-${termsLine}
+${termsLine}${gapsBlock}
 
 === RESUME ===
 ${resumeText}
@@ -493,7 +550,7 @@ Hard rules:
 - "fix" IS NEVER EMPTY AND NEVER AN INSTRUCTION. Measured: on the thinnest résumé in the set, three fixes came back as an empty string and one read "Rewrite the line to name the process you handled" — the user is shown a button that writes nothing, or writes homework into their CV. If the line is thin, that is precisely when you write it: name what that trade's work consists of, using the bar above, and state no fact about the person. If you truly cannot write the replacement, use action.kind "manual" and put the advice in "fix" as a complete sentence addressed to the candidate — but never leave it blank.
 - WHEN THE LINE NEEDS A NUMBER THE CANDIDATE HAS NOT GIVEN: write "fix" as the sentence WITHOUT the number, ending naturally, and put the request in "needsFromYou" as ONE concrete example sentence showing what a finished version looks like — using an obviously illustrative figure. Write it as a single example, never as a menu: "e.g. 'reducing crash rate from 2.1% to 0.4% across 50k users'". NEVER emit bracket placeholders like [insert metric] or [timeframe] anywhere: a list of options inside brackets is not an example, it is homework, and if it reaches the CV a recruiter reads it verbatim.
 - Ground EVERYTHING in the real resume text — quote it. A figure YOU chose, presented as fact, is the one thing that can never reach the CV: when the work plainly had a size, it goes in "needsFromYou" as one illustrative example for the candidate to confirm or correct — never inside "fix" as if he had said it.
-- Do NOT list which job-description keywords are missing — that is reported separately.
+- The measurement block above already names what is missing: use it to ORDER your fixes and to explain the cost of each one. Do not paste that list back — the panel already shows it.
 - No generic filler ("use action verbs" with no example) — always tie the advice to the candidate's actual line.
 - The verdict MUST plainly state whether the resume is strong enough for THIS job and name the single biggest thing holding it back.
 - Return up to 8 critical fixes, most damaging first. Empty array only if the resume is genuinely clean.
@@ -523,7 +580,7 @@ Evalúa este CV para el PUESTO de abajo como lo harías en un escaneo de 7 segun
 
 === PUESTO ===
 ${jobContext}
-${termsLine}
+${termsLine}${gapsBlock}
 
 === CV ===
 ${resumeText}
@@ -564,7 +621,7 @@ Reglas duras:
 - "fix" NUNCA VA VACÍO NI ES UNA INSTRUCCIÓN. Medido: en el CV más flaco del set, tres arreglos volvieron como cadena vacía y uno decía "Reescribe la línea para nombrar el proceso real que manejaste" — al usuario le queda un botón que no escribe nada, o que le mete la tarea dentro del CV. Si la línea es flaca, es justo cuando la escribís: nombrá en qué consiste el trabajo de ese oficio, con la vara de arriba, sin afirmar ningún dato sobre la persona. Si de verdad no podés escribir el reemplazo, usá action.kind "manual" y poné el consejo en "fix" como una oración completa dirigida al candidato — pero nunca en blanco.
 - CUANDO LA LÍNEA NECESITA UN NÚMERO QUE EL CANDIDATO NO DIO: escribe "fix" como la oración SIN el número, terminada de forma natural, y pon el pedido en "needsFromYou" como UN ejemplo concreto que muestre cómo se ve la versión terminada, con una cifra obviamente ilustrativa. Escríbelo como un solo ejemplo, nunca como un menú: "ej.: 'reduciendo los crashes de 2,1% a 0,4% en 50.000 usuarios'". NUNCA uses marcadores entre corchetes como [inserta métrica] o [plazo]: una lista de opciones entre corchetes no es un ejemplo, es tarea, y si llega al CV el reclutador la lee tal cual.
 - Ancla TODO en el texto real del CV — cítalo. Una cifra elegida POR TI y presentada como hecho es lo único que nunca puede llegar al CV: cuando el trabajo evidentemente tenía un tamaño, va en "needsFromYou" como un ejemplo ilustrativo para que el candidato lo confirme o corrija — jamás dentro de "fix" como si él lo hubiera dicho.
-- NO listes qué keywords de la vacante faltan — eso se reporta aparte.
+- El bloque de la medición ya nombra lo que falta: usalo para ORDENAR tus arreglos y explicar lo que cuesta cada uno. No lo copies de vuelta — el panel ya lo muestra.
 - Sin relleno genérico ("usa verbos de acción" sin ejemplo) — siempre atá el consejo a la línea real del candidato.
 - El veredicto DEBE decir claramente si el CV es lo bastante fuerte para ESTE puesto y nombrar lo único más grande que lo frena.
 - Devuelve hasta 8 arreglos críticos, el más dañino primero. Array vacío solo si el CV está genuinamente limpio.
@@ -592,7 +649,7 @@ Reglas duras:
         // telegraphically to fit, which read as shallow advice.
         max_tokens: 4500,
         temperature: AI_TEMPERATURE_PRECISE,
-        response_format: { type: "json_object" },
+        response_format: strictJsonFormat("cv_analysis", CvAnalysisShape),
         messages: [
           { role: "system", content: "You are a senior technical recruiter and ATS specialist. You are blunt, specific, and only report problems grounded in the actual resume text — you never hard-code them. " + langInstruction },
           { role: "user", content: prompt },
@@ -606,17 +663,24 @@ Reglas duras:
         completionTokens: usage?.completion_tokens ?? 0,
         costUsd: costOfChat(AI_MODEL_PROSE, usage),
       })
-      const raw = response.choices[0]?.message?.content ?? "{}"
+      const leido = readChat(response)
+      const raw = leido.text || "{}"
       const parsed = CvAnalysisSchema.safeParse(parseAIJson<unknown>(raw))
       if (!parsed.success) {
         // Was a bare `return null`: the analysis disappeared from the panel with
         // no log line anywhere, so the failure was invisible in production AND
-        // undiagnosable after the fact. Length is logged because truncation is
-        // the failure this call actually has.
+        // undiagnosable after the fact.
+        //
+        // F0.5: y ahora se dice CUÁL de los tres fallos fue. Truncado es el que
+        // esta llamada tiene de verdad —ocho arreglos con cita y texto listo es
+        // la respuesta más larga del producto— y se distingue de un JSON mal
+        // formado, que es un accidente de muestreo, y de una negativa, que no se
+        // arregla reintentando.
         this.logger.warn("[AIService.atsScore] recruiter analysis rejected by schema", {
           issues: parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`),
           rawLength: raw.length,
-          finishReason: response.choices[0]?.finish_reason ?? "unknown",
+          truncated: leido.truncated,
+          refused: !!leido.refusal,
         })
         return null
       }
@@ -723,7 +787,31 @@ Reglas duras:
     }
   }
 
-  async atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {
+  /**
+   * EL INFORME SE ENTREGA EN DOS ACTOS.
+   *
+   * F1 encadenó la crítica DESPUÉS de la medición —la necesita para anclar el
+   * veredicto en el número real—, y la espera pasó a ser la suma: 13 a 16
+   * segundos medidos. Sin partir la entrega, el usuario mira una pantalla
+   * quieta todo ese rato para ver un puntaje que estuvo listo en el primer
+   * tercio.
+   *
+   * `onFirstAct` recibe el informe COMPLETO menos el veredicto. Medido sobre el
+   * objeto de respuesta: los únicos dos campos que dependen de la crítica son
+   * `analysis` y `analysisUnavailable`; todo lo demás —puntaje, brechas,
+   * términos, desglose, chequeos de escritura— es determinista y ya está.
+   *
+   * Es UNA petición y UNA cuota: partir la entrega no puede cambiar lo que se
+   * le cobra a un plan. Y el primer acto se emite recién cuando todo lo que
+   * puede fallar con un código HTTP ya pasó, así que ningún error queda a mitad
+   * de un cuerpo ya enviado. La crítica falla cerrado como siempre.
+   */
+  async atsScore(
+    userId: string,
+    input: ATSScoreInput,
+    plan: string,
+    onFirstAct?: (parcial: ATSScoreResult) => void,
+  ): Promise<ATSScoreResult> {
     await enforceAIQuota(userId, "ats-score", plan)
     // Every model call this request makes flips this. A request that ends with it
     // still false spent nothing, and the daily slot goes back — the cap exists to
@@ -778,10 +866,13 @@ Return JSON with this exact shape:
   "softSkills": ["<soft skill the job requires>", ...],
   "jobTitle": "<the role title from the job description>",
   "mustHaves": ["<hard requirement: years of experience, degree, certification, license>", ...],
+  "seniority": "<junior | mid | senior | lead | none if the posting does not say>",
+  "yearsRequired": <number of years the posting asks for, or 0 if it does not say>,
 }
 
 Rules:
-- hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management"). Max ~12 hard skills.
+- hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management").
+- ORDER hardSkills BY PRIORITY: the ones the posting insists on, names in the title, or repeats go first; the "nice to have" go last. Return at most 12 — the 12 that matter most.
 - mustHaves: an ALTERNATIVE LIST IS ONE REQUIREMENT. If the posting says "Degree in Business Engineering, Business Administration, Marketing or related", that is a SINGLE mustHaves entry written as one string — never three entries, one per career. Split apart, each is judged on its own and at most one can ever be met, so the others are reported as unmet for every candidate alive. Same for "Excel or Google Sheets". Only split when the posting truly demands BOTH ("Excel AND SQL").
 - Extract ONLY what the job description actually asks for. Do not hard-code requirements.
 - WRITE EVERY ITEM IN THE OUTPUT LANGUAGE STATED ABOVE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
@@ -800,10 +891,13 @@ Devuelve JSON con esta forma exacta:
   "softSkills": ["<habilidad blanda que pide el puesto>", ...],
   "jobTitle": "<el título del puesto según la descripción>",
   "mustHaves": ["<requisito duro: años de experiencia, título, certificación, licencia>", ...],
+  "seniority": "<junior | mid | senior | lead | none si el aviso no lo dice>",
+  "yearsRequired": <cantidad de años que pide el aviso, o 0 si no lo dice>,
 }
 
 Reglas:
-- hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos"). Máx ~12 hard skills.
+- hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos").
+- ORDENA hardSkills POR PRIORIDAD: primero las que el aviso exige, nombra en el título o repite; al final las deseables. Devolvé como máximo 12 — las 12 que más importan.
 - mustHaves: UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO. Si el aviso dice "Licenciatura en Ingeniería Comercial, Administración de Empresas, Marketing o carreras afines", eso es UNA sola entrada de mustHaves escrita como una sola cadena — nunca tres entradas, una por carrera. Separadas, cada una se juzga sola y como mucho puede cumplirse una: las demás figuran como incumplidas para cualquier candidato del planeta. Lo mismo con "Excel o Google Sheets". Separá sólo cuando el aviso exige AMBAS ("Excel Y SQL").
 - Extrae SOLO lo que la descripción realmente pide. No agregues requisitos que no estén.
 - ESCRIBE CADA ÍTEM EN EL IDIOMA DE SALIDA INDICADO ARRIBA, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
@@ -881,6 +975,11 @@ Reglas:
         softSkills: cached.softSkills,
         mustHaves: cached.mustHaves,
         summary: cached.summary ?? "",
+        // El cliente no manda nivel ni años: son de F2 y viajan sólo desde la
+        // extracción del servidor. Vacíos = no se informan, y como pesan cero
+        // no cambian el puntaje de un análisis que reusa keywords.
+        seniority: "",
+        yearsRequired: 0,
         label: "ok",
       }
       extractionFromClient = true
@@ -957,7 +1056,14 @@ Reglas:
       // the headroom stays so a long posting cannot cut the JSON again.
       max_tokens: 1600,
       temperature: AI_TEMPERATURE_PRECISE,
-      response_format: { type: "json_object" },
+      /**
+       * F0.5 — LA FORMA SE EXIGE EN LA GENERACIÓN, no se descubre al parsear.
+       *
+       * En modo estricto el modelo no puede emitir un token que viole el
+       * esquema: los cinco campos vienen siempre, con su tipo. Lo que antes era
+       * «reintentar porque el JSON vino mal» deja de existir como caso.
+       */
+      response_format: strictJsonFormat("ats_extraction", ATSExtractionShape),
       messages: [
         {
           role: "system",
@@ -993,7 +1099,8 @@ Reglas:
       })
     }
 
-    const raw = response?.choices[0]?.message?.content ?? ""
+    const primera = readChat(response)
+    const raw = primera.text
     // One retry before failing the whole analysis. Extraction is mechanical, so
     // a bad body is a sampling accident, not a wrong request — and the user
     // getting "something went wrong" on a valid posting is the worst outcome.
@@ -1003,25 +1110,68 @@ Reglas:
     } else if (firstParse.success) {
       extraction = firstParse.data
     } else {
-      this.logger.warn("[AIService.atsScore] extraction unparseable, retrying once", {
+      /**
+       * TRUNCADO NO ES LO MISMO QUE MAL FORMADO (F0.5).
+       *
+       * Si el techo cortó la respuesta, el JSON está incompleto POR DISEÑO y
+       * repetir el mismo pedido vuelve a cortarlo en el mismo sitio. El
+       * reintento tiene que pedir MENOS, no pedir otra vez. Y si el modelo se
+       * negó, no hay reintento que valga: es un «no voy a hacer esto».
+       */
+      if (primera.refusal) {
+        this.logger.warn("[AIService.atsScore] extraction refused by the model", { refusal: primera.refusal.slice(0, 160) })
+        throw new AppError("off_topic", 422)
+      }
+      this.logger.warn("[AIService.atsScore] extraction unusable, retrying once", {
         rawLength: raw.length,
-        finishReason: response?.choices[0]?.finish_reason ?? "unknown",
+        truncated: primera.truncated,
       })
       const retry = await this.aiClient.chat({
         model: AI_MODEL,
         max_tokens: 1600,
         temperature: AI_TEMPERATURE_PRECISE,
-        response_format: { type: "json_object" },
+        // El reintento de la extracción exige la MISMA forma que el primer intento:
+        // pedir estricto una vez y laxo la otra es tener dos contratos para una
+        // pregunta, y el segundo es el que corre justo cuando el primero falló.
+        response_format: strictJsonFormat("ats_extraction", ATSExtractionShape),
         messages: [
           { role: "system", content: "Return ONLY valid, complete JSON matching the requested shape. No markdown." },
-          { role: "user", content: prompt },
+          { role: "user", content: prompt + (primera.truncated ? truncatedNudge(en ? "en" : "es") : "") },
         ],
       })
-      const retryParsed = ATSExtractionSchema.safeParse(
-        safeParseAIJson<unknown>(retry.choices[0]?.message?.content ?? ""),
-      )
+      const segunda = readChat(retry)
+      const retryParsed = ATSExtractionSchema.safeParse(safeParseAIJson<unknown>(segunda.text))
       if (!retryParsed.success) throw new AppError("invalid_response_format", 500)
       extraction = retryParsed.data
+    }
+
+    /**
+     * EL TECHO DEL DENOMINADOR, Y POR QUÉ SIGUE PUESTO.
+     *
+     * El plan de F2 lo decía en este orden y no es un detalle de redacción:
+     * «primero la prioridad, después el techo — recién con la ponderación
+     * adentro cae el tope de 12». La ponderación se midió y NO salió (movía 19
+     * puntos, y el gate de la fase corta en 3), así que el techo se queda: sin
+     * peso, cada dura vale lo mismo y sumar las «deseables» hunde la cobertura
+     * de un CV que no cambió.
+     *
+     * MEDIDO sobre una vacante de iOS con 12 prioritarias y 12 deseables: el
+     * mismo CV daba 84 con techo y 56 sin techo. Veintiocho puntos, que es
+     * exactamente el «100 → 70» reportado.
+     *
+     * Lo que sí cambió y se queda: las 12 ya no son las primeras que el modelo
+     * escribió, son las que la vacante insiste, nombra en el título o repite.
+     * El peso vive en las que importan; el conteo sólo las acota.
+     *
+     * En código además del prompt porque un prompt PIDE y el modelo puede
+     * devolver quince: el gate de la fase tiene que valer por construcción.
+     */
+    const TOPE_DURAS = 12
+    if (extraction.hardSkills.length > TOPE_DURAS) {
+      this.logger.info("[AIService.reviewCV] posting listed more hard skills than the ceiling", {
+        listadas: extraction.hardSkills.length, tope: TOPE_DURAS,
+      })
+      extraction = { ...extraction, hardSkills: extraction.hardSkills.slice(0, TOPE_DURAS) }
     }
 
     // Off-topic guard: explicit label, or the model extracted nothing usable.
@@ -1042,16 +1192,21 @@ Reglas:
       await writeAnswer("job-keywords", keywordsKey, extraction, AI_MODEL, resumeId)
     }
 
-    // Start the senior-recruiter analysis HERE — after the off-topic guard, so a
-    // non-job input never triggers it (no wasted call), but before the embedding
-    // recall pass + scoring below, so it overlaps that network work instead of
-    // adding a serial roundtrip. Fail-closed inside → never rejects; awaited at end.
+    /**
+     * LA CRÍTICA YA NO ARRANCA ACÁ (F1).
+     *
+     * Arrancaba en este punto, en paralelo con la medición, y por eso NUNCA veía
+     * el puntaje: dos opiniones calculadas de costado que no se hablaban. El
+     * prompt hasta le prohibía nombrar lo que faltaba, porque «eso se reporta
+     * aparte» — y así el usuario recibía un veredicto que no podía explicar el
+     * número que tenía delante.
+     *
+     * Ahora se dispara DESPUÉS del puntaje, con el perfil de brechas en la mano.
+     * Lo que se paga por eso es latencia: deja de solaparse con el pase de
+     * blandas y los embeddings. Lo que se gana es que cada hallazgo pueda decir a
+     * qué criterio pertenece y cuántos puntos mueve.
+     */
     const jobContext = useRole ? (roleTitle ?? "").trim() : jobDescriptionTruncated
-    // analyzeResume already swallows its own errors (returns null), and the only
-    // awaited work before we collect it (the embedding pass) fails closed too — so
-    // this promise can never dangle or reject. The .catch is a belt against a future
-    // edit adding a throwing call between here and the await.
-    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction, sectionData ?? {}, resumeId, [...extraction.hardSkills, ...extraction.softSkills]).catch(() => null)
 
     // ── Deterministic scoring in code ──────────────────────────────────────────
     const cvTitles = buildCVTitles(data)
@@ -1181,27 +1336,6 @@ Reglas:
     // Typos that break exact ATS matching, checked against the requirement set.
     const typoWarnings = findNearMisses([...keywords.hardSkills, ...keywords.mustHaves], atsHaystack)
 
-    // Collect the recruiter analysis started in parallel above (null on failure).
-    const analysis = await analysisPromise
-    // ENFORCE (not just prompt) the no-redundancy rule — but ONLY against the
-    // specific keywords/typos the deterministic layer already shows. A fix is dropped
-    // only when it NAMES one of those exact terms AND is an add/missing/spelling note
-    // about it. Everything else survives — critically, a PROSE spelling fix like
-    // "'more then' → 'more than'" (which is not a job keyword, so the typo detector
-    // never sees it) stays, and so does a generic structural fix ("add a summary").
-    if (analysis) {
-      const dupContext = /\b(add|include|missing|list|falta|falt[ae]n|a[ñn]ad[ae]|incluye|agrega|typos?|misspell\w*|spelling|ortograf)\b/i
-      const dupTerms = [
-        ...typoWarnings.flatMap((w) => [w.typed.toLowerCase(), w.keyword.toLowerCase()]),
-        ...match.missingKeywords.map((k) => k.toLowerCase()),
-      ].filter((t) => t.length > 2)
-      analysis.criticalFixes = analysis.criticalFixes.filter((f) => {
-        const text = `${f.issue} ${f.fix}`.toLowerCase()
-        const namesDupTerm = dupTerms.some((t) => text.includes(t))
-        return !(namesDupTerm && dupContext.test(text))
-      })
-    }
-
     /**
      * Which two lines of a role are one piece of work — proposed, not decided.
      *
@@ -1229,12 +1363,15 @@ Reglas:
       ),
     )
 
-    // Nothing was spent: give the slot back before returning. Best-effort — a
-    // failed refund costs one slot, never the response.
-    if (!this.spentAModelCall) {
-      await refundDailyQuota(userId, "ats-score", plan).catch(() => {})
-    }
-    return {
+    /**
+     * EL INFORME, UNA SOLA VEZ.
+     *
+     * Los dos actos son el MISMO objeto: el primero se emite con el veredicto en
+     * null y el segundo con el veredicto puesto. Escribirlo dos veces sería
+     * tener dos verdades para una pantalla, que es el defecto que este proyecto
+     * viene cerrando en todos lados.
+     */
+    const construirInforme = (analysis: CvAnalysis | null): ATSScoreResult => ({
       score: finalScore,
       label,
       summary,
@@ -1273,6 +1410,9 @@ Reglas:
         summary: extraction.summary,
         jobTitle: extraction.jobTitle,
         mustHaves: extraction.mustHaves,
+        // F2: informan al panel y al crítico; el puntaje no los mira.
+        seniority: extraction.seniority || undefined,
+        yearsRequired: extraction.yearsRequired || undefined,
       },
       contentQuality: assessResumeContent(data),
       gapPlan: buildGapPlan(match.gapLevers, match.score, finalScore, templateSafety),
@@ -1289,7 +1429,71 @@ Reglas:
       mergePairs,
       repeatedPairs,
       inferredFromRole: useRole,
+    })
+
+    /**
+     * PRIMER ACTO — todo lo que ya está, en pantalla ahora.
+     *
+     * Se arma acá, ANTES de la crítica, y con las mismas expresiones que usa el
+     * retorno de abajo: no hay dos verdades, hay un objeto que después se
+     * completa con su veredicto. `analysisUnavailable: false` porque en este
+     * momento la crítica no falló — está en camino.
+     */
+    const primerActo = (): ATSScoreResult => ({
+      ...construirInforme(null),
+      analysisUnavailable: false,
+    })
+    if (onFirstAct) {
+      try { onFirstAct(primerActo()) } catch { /* el cliente se cayó: seguimos igual */ }
     }
+
+    /**
+     * Y ACÁ SE PIDE, con la medición ya hecha (F1).
+     *
+     * `finalScore` es el número que el usuario ve —con la penalización de
+     * plantilla ya aplicada—, así que es el que tiene que anclar el veredicto.
+     * Falla cerrado: cualquier error devuelve null y el informe sigue sin su
+     * crítica, exactamente como antes.
+     */
+    const analysis = await this.analyzeResume(
+      userId, resumeText, jobContext, plan, en, langInstruction, sectionData ?? {}, resumeId,
+      [...extraction.hardSkills, ...extraction.softSkills],
+      {
+        score: finalScore,
+        categories: match.breakdown.categories.map((c) => ({
+          category: c.category,
+          coveragePct: c.coveragePct,
+          recoverable: c.recoverable,
+        })),
+        missing: stillMissingRequirements(keywords.mustHaves, sectionData ?? {}),
+      },
+    ).catch(() => null)
+    // ENFORCE (not just prompt) the no-redundancy rule — but ONLY against the
+    // specific keywords/typos the deterministic layer already shows. A fix is dropped
+    // only when it NAMES one of those exact terms AND is an add/missing/spelling note
+    // about it. Everything else survives — critically, a PROSE spelling fix like
+    // "'more then' → 'more than'" (which is not a job keyword, so the typo detector
+    // never sees it) stays, and so does a generic structural fix ("add a summary").
+    if (analysis) {
+      const dupContext = /\b(add|include|missing|list|falta|falt[ae]n|a[ñn]ad[ae]|incluye|agrega|typos?|misspell\w*|spelling|ortograf)\b/i
+      const dupTerms = [
+        ...typoWarnings.flatMap((w) => [w.typed.toLowerCase(), w.keyword.toLowerCase()]),
+        ...match.missingKeywords.map((k) => k.toLowerCase()),
+      ].filter((t) => t.length > 2)
+      analysis.criticalFixes = analysis.criticalFixes.filter((f) => {
+        const text = `${f.issue} ${f.fix}`.toLowerCase()
+        const namesDupTerm = dupTerms.some((t) => text.includes(t))
+        return !(namesDupTerm && dupContext.test(text))
+      })
+    }
+
+
+    // Nothing was spent: give the slot back before returning. Best-effort — a
+    // failed refund costs one slot, never the response.
+    if (!this.spentAModelCall) {
+      await refundDailyQuota(userId, "ats-score", plan).catch(() => {})
+    }
+    return construirInforme(analysis)
   }
 
   /**
@@ -1580,7 +1784,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // review-cv usa temperatura baja (0.3) para que el preview se ciña al texto del CV.
       // No afecta a otros endpoints — cada módulo elige la suya.
       temperature: AI_TEMPERATURE_STRUCTURED,
-      response_format: { type: "json_object" },
+      response_format: strictJsonFormat("review_cv", ReviewResponseSchema),
       messages: [
         {
           role: "system",
@@ -1606,7 +1810,17 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const usages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = []
     let response = await askReview(0)
     usages.push(response.usage ?? {})
-    let raw = response.choices[0]?.message?.content ?? ""
+    const primeraRevision = readChat(response)
+    // El techo de esta llamada es 4500 porque la revisión devuelve ocho arreglos
+    // con cita, motivo y texto listo. Si corta, el JSON llega partido y el
+    // usuario ve la pantalla vacía habiendo gastado el uso: hay que nombrarlo.
+    if (primeraRevision.truncated) {
+      this.logger.warn("[AIService.reviewCV] output truncated by token ceiling")
+    }
+    if (primeraRevision.refusal) {
+      this.logger.warn("[AIService.reviewCV] model refused", { refusal: primeraRevision.refusal.slice(0, 120) })
+    }
+    let raw = primeraRevision.text
     let parsed = parseAIJson<ReviewResult & { answer: string }>(raw)
 
     if (parsed.answer === "off_topic") {
@@ -1622,7 +1836,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       this.logger.warn("[AIService.reviewCV] no applicable suggestion — asking once more")
       response = await askReview(1, retryNote(parsed))
       usages.push(response.usage ?? {})
-      raw = response.choices[0]?.message?.content ?? ""
+      const segundaRevision = readChat(response)
+      if (segundaRevision.truncated) {
+        this.logger.warn("[AIService.reviewCV] retry truncated by token ceiling")
+      }
+      raw = segundaRevision.text
       const second = parseAIJson<ReviewResult & { answer: string }>(raw)
       // Keep the second answer only if it actually improved on the first; a
       // second helping of advice is not worth losing the first one's wording.
