@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { buildPanelReport, type PanelReportInput } from "@/lib/ats/panel-report"
 import { allChecks, criticalChecks, isReadyToSend, openChecks } from "@/lib/ats/report"
 import type { ATSScoreResult } from "@/lib/services/ai/shared/ai-types"
-import type { WritingChecks } from "@/lib/ats/writing-checks"
+import { analyzeWriting, type WritingChecks } from "@/lib/ats/writing-checks"
 
 /**
  * EL ADAPTADOR. Único punto donde la respuesta del servidor se vuelve informe.
@@ -307,10 +307,9 @@ describe("el equilibrio de viñetas depende de la antigüedad", () => {
   const year = new Date().getFullYear()
 
   it("seis viñetas están bien en el puesto actual", () => {
-    const r = buildPanelReport(input({
-      sectionData: { workExperience: [{ id: "j1", jobTitle: "Cajero", currentlyWorking: true, description: Array.from({ length: 6 }, (_, i) => `• línea ${i}`).join("\n") }] },
-    }))
-    expect(allChecks(r).map((c) => c.id)).not.toContain("tips.role_range.j1")
+    const cv = { workExperience: [{ id: "j1", jobTitle: "Cajero", currentlyWorking: true, description: Array.from({ length: 6 }, (_, i) => `• Atendí la ventanilla número ${i} y cuadré su caja al cierre`).join("\n") }] }
+    const r = buildPanelReport(input({ sectionData: cv, writing: analyzeWriting(cv) }))
+    expect(allChecks(r).map((c) => c.id)).not.toContain("tips.balance.j1")
   })
 
   /**
@@ -322,22 +321,30 @@ describe("el equilibrio de viñetas depende de la antigüedad", () => {
    * línea de sobra, con la línea nombrada y el botón que la corta.
    */
   it("y en uno de hace diez años el excedente se ofrece para cortar, con su línea", () => {
-    const r = buildPanelReport(input({
-      sectionData: { workExperience: [{ id: "j1", jobTitle: "Cajero", endDate: `06/${year - 10}`, description: Array.from({ length: 6 }, (_, i) => `• línea ${i}`).join("\n") }] },
-    }))
+    const cv = { workExperience: [{ id: "j1", jobTitle: "Cajero", endDate: `06/${year - 10}`, description: Array.from({ length: 6 }, (_, i) => `• Atendí la ventanilla número ${i} y cuadré su caja al cierre`).join("\n") }] }
+    const r = buildPanelReport(input({ sectionData: cv, writing: analyzeWriting(cv) }))
     const cortes = allChecks(r).filter((x) => x.id.startsWith("tips.cut.j1."))
     expect(cortes.length).toBe(3)
-    for (const c of cortes) expect(c.evidence?.[0]).toMatch(/^línea \d$/)
+    for (const c of cortes) expect(c.evidence?.[0]).toMatch(/^Atendí la ventanilla/)
     // Y la voz vieja, la que no llevaba a ningún lado, se calla.
-    expect(allChecks(r).map((c) => c.id)).not.toContain("tips.role_range.j1")
+    expect(allChecks(r).map((c) => c.id)).not.toContain("tips.balance.j1")
   })
 
   /** El piso importa igual: un puesto con una línea se lee como si no hubiera hecho nada. */
+  /**
+   * ── UNA TARJETA, UN PRODUCTOR (2026-08-25) ────────────────────────────────
+   *
+   * El aviso de volumen salía de DOS lugares —`bulletBalance` acá y un
+   * `roleBalance` propio del adaptador— que medían lo mismo, y había un filtro
+   * para que no se pisaran. Ahora lo produce `analyzeWriting` y sólo él, así que
+   * el id es `tips.balance.*` y el rango viaja dentro del mismo hallazgo.
+   */
   it("una sola línea en el puesto actual también se avisa", () => {
-    const r = buildPanelReport(input({
-      sectionData: { workExperience: [{ id: "j1", jobTitle: "Cajero", currentlyWorking: true, description: "• única línea" }] },
-    }))
-    expect(allChecks(r).find((x) => x.id === "tips.role_range.j1")?.titleKey).toBe("check.role_under")
+    const cv = { workExperience: [{ id: "j1", jobTitle: "Cajero", currentlyWorking: true, description: "• Atendí la ventanilla y cuadré la caja al cierre del turno" }] }
+    const r = buildPanelReport(input({ sectionData: cv, writing: analyzeWriting(cv) }))
+    const c = allChecks(r).find((x) => x.id === "tips.balance.j1")
+    expect(c?.titleKey).toBe("check.role_under")
+    expect(c?.params).toMatchObject({ count: 1, min: 4, max: 6 })
   })
 })
 

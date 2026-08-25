@@ -1859,7 +1859,6 @@
         "orphan_fragment": "A line in {job} is the tail of the one above it, split on import",
         "near_duplicate": "{job} has two lines telling the same achievement",
         "near_duplicate_across": "The same line shows up in both {job} and {otherJob}",
-        "role_too_many_bullets": "{job} carries {count} bullets — your best lines compete with your weakest",
         "role_no_bullets": "{job} has no bullets at all",
         "years_claim": "Your summary claims {claimed} years and your dates add up to {actual}",
         "years_gap": "The posting asks for {required} years and your dates add up to {actual}",

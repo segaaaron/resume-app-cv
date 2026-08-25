@@ -53,11 +53,30 @@ export interface ClicheBullet {
 }
 
 /** A role whose bullet count is off the 3–5 recruiter sweet spot. */
+/**
+ * Cuántas líneas lleva un puesto contra las que su antigüedad admite.
+ *
+ * ── POR QUÉ TRAE EL RANGO (2026-08-25) ──────────────────────────────────────
+ *
+ * Este dato lo producían DOS lugares: acá, con el conteo pelado, y un
+ * `roleBalance` dentro del adaptador del panel, con el rango. Los dos medían lo
+ * mismo, así que el informe emitía dos tarjetas sobre el mismo puesto —«lleva 7
+ * viñetas» y «lleva 7; para su antigüedad, 4-6»— y hubo que separarlas con un
+ * filtro. Un filtro que tapa dos productores del mismo dato es exactamente el
+ * parche que este proyecto no admite: el arreglo es que haya UN productor.
+ *
+ * `too_few` no existía acá y sí en el otro: un puesto con una sola línea se lee
+ * como si el candidato no hubiera hecho nada ahí, y esa mitad se habría perdido
+ * al unificar.
+ */
 export interface BulletBalance {
   targetId: string
   jobTitle: string
   count: number
-  kind: "too_many" | "none"
+  /** El rango que su antigüedad admite, para que la tarjeta lo pueda decir. */
+  min: number
+  max: number
+  kind: "too_many" | "too_few" | "none"
 }
 
 /** A bullet opening with a duty phrase ("Responsible for…") — recruiters skim the
@@ -301,11 +320,10 @@ export function analyzeWriting(
      */
     const presupuesto = roleBudget(j)
     if (id && hasContent && bulletBalance.length < MAX_BALANCE) {
-      if (presupuesto.state === "over") {
-        bulletBalance.push({ targetId: id, jobTitle: j.jobTitle ?? "", count: presupuesto.count, kind: "too_many" })
-      } else if (presupuesto.count === 0) {
-        bulletBalance.push({ targetId: id, jobTitle: j.jobTitle ?? "", count: 0, kind: "none" })
-      }
+      const fila = { targetId: id, jobTitle: j.jobTitle ?? "", count: presupuesto.count, min: presupuesto.min, max: presupuesto.max }
+      if (presupuesto.count === 0) bulletBalance.push({ ...fila, kind: "none" })
+      else if (presupuesto.state === "over") bulletBalance.push({ ...fila, kind: "too_many" })
+      else if (presupuesto.state === "under") bulletBalance.push({ ...fila, kind: "too_few" })
     }
 
     for (const d of [j.startDate, j.endDate]) {

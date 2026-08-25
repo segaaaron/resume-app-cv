@@ -203,8 +203,6 @@ export interface BuildReportInput {
   stuffedTerms?: readonly { term: string; count: number; sharePct: number }[]
   /** Viñetas escritas en pasiva: el trabajo existe y el autor desaparece. */
   passiveBullets?: readonly { targetId: string; jobTitle: string; index: number; text: string }[]
-  /** Puestos fuera del rango de viñetas que su antigüedad admite. */
-  roleBalance?: readonly { targetId: string; jobTitle: string; count: number; min: number; max: number }[]
   /** Huecos de empleo de seis meses o más. */
   gaps?: readonly { months: number; after: string; before: string }[]
   /** El texto de la vacante, sólo para contar apariciones por término. */
@@ -833,10 +831,11 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       max: KEEP_PER_ROLE,
     })
   }
-  for (const b of input.roleBalance ?? []) {
-    if (b.count <= b.max) continue
+  for (const b of input.writing.bulletBalance) {
+    if (b.kind !== "too_many") continue
     // El más exigente de los dos topes manda: el de la banda es el que el
-    // reclutador aplica, y es siempre igual o más estricto que el global.
+    // reclutador aplica, y es siempre igual o más estricto que el global con el
+    // que `bulletRanking` ordenó.
     const prev = overloaded.get(b.targetId)
     overloaded.set(b.targetId, {
       jobTitle: b.jobTitle || prev?.jobTitle || "",
@@ -998,52 +997,32 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     })
   }
 
+  /**
+   * CUÁNTAS LÍNEAS LLEVA EL PUESTO — una tarjeta, con su rango.
+   *
+   * Eran DOS —`tips.balance` y `tips.role_range`— alimentadas por dos
+   * productores del mismo dato, y decían lo mismo con distinta cuenta. Se
+   * separaban con un filtro; ahora hay un solo productor y una sola tarjeta.
+   */
   for (const b of input.writing.bulletBalance) {
     // El puesto que ya recibió tarjetas de CORTE no vuelve a recibir el aviso de
     // volumen: es el mismo dato dicho dos veces, y la segunda vez sin salida.
-    if (b.kind !== "none" && cutIndexes.has(b.targetId)) continue
-    /**
-     * NI EL QUE YA TIENE EL AVISO CON SU RANGO.
-     *
-     * Cazado por QA: desde que las dos fuentes miden con la misma banda, un
-     * puesto recargado sin nada que rankear producía DOS tarjetas —«lleva 7
-     * viñetas» y «lleva 7; para su antigüedad, 4-6»—. La segunda dice todo lo que
-     * dice la primera y además el rango, así que la que sobra es ésta. Antes no
-     * se pisaban por casualidad: una contaba con el tope plano y la otra con la
-     * banda, y justo por eso podían contradecirse.
-     */
-    if (b.kind !== "none" && (input.roleBalance ?? []).some((r) => r.targetId === b.targetId && r.count > r.max)) continue
+    if (b.kind === "too_many" && cutIndexes.has(b.targetId)) continue
     push({
       id: `tips.balance.${b.targetId}`,
       section: "tips",
       state: "warn",
       weight: 0,
-      titleKey: b.kind === "none" ? "check.role_no_bullets" : "check.role_too_many_bullets",
-      params: { job: b.jobTitle, count: b.count },
+      titleKey: b.kind === "none"
+        ? "check.role_no_bullets"
+        : b.kind === "too_few" ? "check.role_under" : "check.role_over",
+      params: { job: b.jobTitle, count: b.count, min: b.min, max: b.max },
       // Cuántas líneas lleva un puesto no se arregla reescribiendo una: se
       // arregla cortando, y cuál cortar lo dice `tips.dilutes` con su botón.
       owner: "user",
-      // SIN EVIDENCIA. El título ya dice el puesto —«Marketing Digital /
-      // Community Manager tiene 5 viñetas»— y debajo se pintaba una ficha gris
-      // con ese mismo nombre otra vez. Repetir el dato no lo vuelve accionable:
-      // ocupa alto, se lee como si fuera un botón, y no lleva a ningún lado.
-    })
-  }
-
-  for (const r of input.roleBalance ?? []) {
-    // Y la TERCERA voz sobre el mismo puesto. «Lleva 11 viñetas» y «lleva 11;
-    // para su antigüedad, 4-6» son la misma frase con un dato más: el rango ya
-    // viaja dentro de la tarjeta de corte, que además tiene tijera.
-    if (r.count > r.max && cutIndexes.has(r.targetId)) continue
-    push({
-      id: `tips.role_range.${r.targetId}`,
-      section: "tips",
-      state: "warn",
-      weight: 0,
-      titleKey: r.count > r.max ? "check.role_over" : "check.role_under",
-      params: { job: r.jobTitle, count: r.count, min: r.min, max: r.max },
-      owner: "user",
-      // Misma razón: el título ya nombra el puesto y dice la cuenta.
+      // SIN EVIDENCIA. El título ya dice el puesto y la cuenta; repetirlo debajo
+      // en una ficha gris no lo vuelve accionable, ocupa alto y no lleva a ningún
+      // lado.
     })
   }
 

@@ -203,16 +203,25 @@ describe("los huecos que QA encontró en lo recién escrito", () => {
    * El aviso de volumen y el del rango contaban lo mismo con topes distintos. Que
    * midan igual es la mitad; la otra es que no se digan dos veces.
    */
-  it("un puesto recargado recibe UNA sola tarjeta de volumen, la que trae el rango", () => {
+  /**
+   * ── CERRADO DE RAÍZ (2026-08-25) ─────────────────────────────────────────
+   *
+   * La primera versión de esto separaba DOS tarjetas con un filtro, porque el
+   * dato lo producían dos lugares. Eso es un parche: el arreglo es que haya UN
+   * productor. `bulletBalance` trae ahora el rango y `roleBalance` desapareció,
+   * así que la tarjeta es una sola y dice las dos cosas.
+   */
+  it("un puesto recargado recibe UNA sola tarjeta de volumen, con su rango adentro", () => {
     const r = buildAtsReport(input({
       writing: emptyWriting({
-        bulletBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 7, kind: "too_many" }] as unknown as WritingChecks["bulletBalance"],
+        bulletBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 7, min: 4, max: 6, kind: "too_many" }] as unknown as WritingChecks["bulletBalance"],
       }),
-      roleBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 7, min: 4, max: 6 }],
     }))
-    const volumen = allChecks(r).filter((c) => c.id === "tips.balance.job-1" || c.id === "tips.role_range.job-1")
+    const volumen = allChecks(r).filter((c) => c.id.startsWith("tips.balance.") || c.id.startsWith("tips.role_range."))
     expect(volumen).toHaveLength(1)
-    expect(volumen[0].id).toBe("tips.role_range.job-1")
+    expect(volumen[0].id).toBe("tips.balance.job-1")
+    expect(volumen[0].titleKey).toBe("check.role_over")
+    expect(volumen[0].params).toMatchObject({ count: 7, min: 4, max: 6 })
   })
 })
 

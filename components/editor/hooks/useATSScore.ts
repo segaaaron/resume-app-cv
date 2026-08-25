@@ -144,7 +144,7 @@ export interface ATSResult {
     weakVerbBullets: { targetId: string; jobTitle: string; index: number; text: string }[]
     duplicateBullets: { targetId: string; jobTitle: string; index: number; text: string; duplicateOfJobTitle: string }[]
     dateInconsistency: { formats: string[] } | null
-    bulletBalance: { targetId: string; jobTitle: string; count: number; kind: "too_many" | "none" }[]
+    bulletBalance: { targetId: string; jobTitle: string; count: number; min: number; max: number; kind: "too_many" | "too_few" | "none" }[]
   }
 }
 

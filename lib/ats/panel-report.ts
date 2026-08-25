@@ -30,7 +30,6 @@ import { reportUxFailure } from "@/lib/client-error-reporter"
 import type { AtsReport } from "./report"
 import { cvExperienceYears } from "./experience-years"
 import { findStaleTerms } from "./stale-terms"
-import { roleBudget } from "./role-budget"
 
 /**
  * El CV como texto plano, sólo para contar apariciones por término.
@@ -201,6 +200,7 @@ function structureOf(sectionData: Record<string, unknown>): NonNullable<BuildRep
  * comodidad: si acá nombráramos otro campo, la tarjeta le diría que cambie algo
  * que el número no está mirando.
  */
+
 /**
  * Sólo la experiencia laboral. Una habilidad que aparece acá está DEMOSTRADA; la
  * misma sólo en la lista es una afirmación. Es la distinción que el matcher ya
@@ -221,22 +221,6 @@ function cvTitles(sectionData: Record<string, unknown>): string[] {
   return [pd?.jobTitle ?? "", ...work.map((w) => w?.jobTitle ?? "")]
     .map((x) => x.trim())
     .filter(Boolean)
-}
-
-function roleBalance(sectionData: Record<string, unknown>): Array<{ targetId: string; jobTitle: string; count: number; min: number; max: number }> {
-  const work = Array.isArray(sectionData.workExperience)
-    ? (sectionData.workExperience as Array<{ id?: string; jobTitle?: string; description?: string; endDate?: string; currentlyWorking?: boolean }>)
-    : []
-  const out: Array<{ targetId: string; jobTitle: string; count: number; min: number; max: number }> = []
-
-  for (const j of work) {
-    const budget = roleBudget(j)
-    if (budget.count === 0) continue
-    if (budget.state === "over" || budget.state === "under") {
-      out.push({ targetId: j.id ?? "", jobTitle: j.jobTitle ?? "", count: budget.count, min: budget.min, max: budget.max })
-    }
-  }
-  return out
 }
 
 /**
@@ -469,7 +453,6 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
         : []
       ).map((j) => ({ id: j.id, jobTitle: j.jobTitle, bullets: parseBullets(j.description ?? "") })),
     ),
-    roleBalance: roleBalance(sectionData),
     gaps: employmentGaps(sectionData),
   })
 }

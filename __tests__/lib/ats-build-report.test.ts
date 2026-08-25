@@ -553,7 +553,7 @@ describe("el volumen de viñetas se dice una sola vez y con tijera", () => {
   const conPuesto = () =>
     input({
       writing: emptyWriting({
-        bulletBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, kind: "too_many" }] as WritingChecks["bulletBalance"],
+        bulletBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, min: 4, max: 6, kind: "too_many" }] as WritingChecks["bulletBalance"],
         bulletRanking: [{
           targetId: "job-1",
           jobTitle: "iOS Developer",
@@ -562,7 +562,6 @@ describe("el volumen de viñetas se dice una sola vez y con tijera", () => {
           weakestHidden: 0,
         }] as unknown as WritingChecks["bulletRanking"],
       }),
-      roleBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, min: 4, max: 6 }],
     })
 
   it("emite exactamente el excedente, ni una tarjeta más", () => {
@@ -670,8 +669,8 @@ describe("qué línea se ofrece cortar primero", () => {
           weakest: [6, 7, 8, 9, 10].map((index) => ({ index, text: `Línea ${index} con contenido suficiente para el puesto`, score: 0 })),
           weakestHidden: 0,
         }] as unknown as WritingChecks["bulletRanking"],
+        bulletBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, min: 4, max: 6, kind: "too_many" }] as WritingChecks["bulletBalance"],
       }),
-      roleBalance: [{ targetId: "job-1", jobTitle: "iOS Developer", count: 11, min: 4, max: 6 }],
       // La 9 y la 10 son las únicas que NO aterrizan un término de la vacante.
       bullets: [6, 7, 8, 9, 10].map((index) => ({
         targetId: "job-1", index, text: `Línea ${index} con contenido suficiente para el puesto`,

@@ -41,10 +41,10 @@ describe("the second number", () => {
     const r = computeCredibility(with_({
       yearsClaim: { claimed: 15, actual: 8 },
       bulletBalance: [
-        { targetId: "a", jobTitle: "A", count: 9, kind: "too_many" },
-        { targetId: "b", jobTitle: "B", count: 11, kind: "too_many" },
-        { targetId: "c", jobTitle: "C", count: 12, kind: "too_many" },
-        { targetId: "d", jobTitle: "D", count: 10, kind: "too_many" },
+        { targetId: "a", jobTitle: "A", count: 9, min: 4, max: 6, kind: "too_many" },
+        { targetId: "b", jobTitle: "B", count: 11, min: 4, max: 6, kind: "too_many" },
+        { targetId: "c", jobTitle: "C", count: 12, min: 4, max: 6, kind: "too_many" },
+        { targetId: "d", jobTitle: "D", count: 10, min: 4, max: 6, kind: "too_many" },
       ],
       dateInconsistency: { formats: ["MM/YYYY", "YYYY"], jobsMissingMonth: [] },
     }))
@@ -77,7 +77,7 @@ describe("the second number", () => {
       yearsClaim: { claimed: 20, actual: 3 },
       duplicateBullets: Array.from({ length: 10 }, (_, i) => ({ targetId: "j", jobTitle: "x", index: i, text: "x".repeat(40), duplicateOfJobTitle: "x" })),
       clicheBullets: Array.from({ length: 10 }, (_, i) => ({ targetId: "j", jobTitle: "x", index: i, text: "x".repeat(40), cliches: ["team player"] })),
-      bulletBalance: [{ targetId: "a", jobTitle: "A", count: 12, kind: "too_many" }],
+      bulletBalance: [{ targetId: "a", jobTitle: "A", count: 12, min: 4, max: 6, kind: "too_many" }],
       dateInconsistency: { formats: ["MM/YYYY", "YYYY"], jobsMissingMonth: [] },
     }))
     expect(r.score).toBe(20)
