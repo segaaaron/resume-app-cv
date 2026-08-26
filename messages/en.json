@@ -1695,6 +1695,7 @@
       "summary_fix_reason": "Summary rewritten for this posting",
       "prove_action": "Write a bullet that proves it",
       "set_title_reason": "Write “{title}” in your headline",
+      "prove_summary_reason": "Your summary tailored to this job. It proposes a figure your CV does not state: the number is yours to write.",
       "prove_skill_reason": "Prove “{skill}” with real work instead of only listing it",
       "dedupe_title": "{count, plural, one {# repeated line in your resume} other {# repeated lines in your resume}}",
       "dedupe_done": "{count, plural, one {# repeated line removed} other {# repeated lines removed}}",
@@ -2034,6 +2035,9 @@
       "legend_tip": "Manual tip",
       "diff_changes": "Changes",
       "options_title": "Choose a version",
+      "figure_fill_label": "Fill in the figure",
+      "figure_fill_pending": "The number is missing: type it where the ___ is and you'll be able to apply the change.",
+      "figure_fill_done": "Done — that number is yours, not ours.",
       "confirm_figure": "Check the figure: we proposed it from what you describe, and only you know the real number. Correct it before applying if it does not fit."
     },
     "ai_profile_fill": {

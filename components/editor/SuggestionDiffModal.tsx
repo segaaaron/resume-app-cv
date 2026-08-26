@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { useTranslations } from "next-intl"
+import { slotsFilled, withFigureSlots } from "@/lib/ats/figure-slots"
 import {
   Dialog,
   DialogContent,
@@ -31,7 +33,14 @@ export interface Suggestion {
 interface SuggestionDiffModalProps {
   open: boolean
   onClose: () => void
-  onConfirm: () => void
+  /**
+   * Confirmar devuelve el texto que se va a escribir.
+   *
+   * Antes no devolvía nada y el llamador aplicaba `suggestion.preview`. Con la
+   * cifra editable eso escribiría el número del modelo en vez del que el
+   * candidato escribió — el dato equivocado, en su CV.
+   */
+  onConfirm: (text?: string) => void
   suggestion: Suggestion | undefined
   currentValue: string
   /**
@@ -87,25 +96,87 @@ export default function SuggestionDiffModal({
   needsFigureConfirm,
 }: SuggestionDiffModalProps) {
   const t = useTranslations("editor.cv_review")
+  /**
+   * Lo que el candidato escribió en el hueco de la cifra.
+   *
+   * ARRIBA DEL `return` CONDICIONAL a propósito: un hook detrás de un `return`
+   * cambia el orden de hooks entre renders y React tira el árbol. Casi lo dejo
+   * ahí abajo, junto a lo que lo usa.
+   */
+  /**
+   * Lo que el candidato escribió en el hueco de la cifra, Y SOBRE QUÉ TEXTO.
+   *
+   * Los dos juntos, no el texto solo: es lo que hace que la regla de abajo sea
+   * derivada en vez de un efecto que resetea. Ver `shownAfter`.
+   */
+  const [edit, setEdit] = useState<{ base: string; text: string } | null>(null)
+
+  /**
+   * El «después», calculado ANTES del `return` condicional.
+   *
+   * No es orden estético: abajo hay un `useEffect` que depende de este valor, y
+   * un hook detrás de un `return` cambia el orden de hooks entre renders. React
+   * tira el árbol entero. Es el segundo hook que casi dejo del lado equivocado.
+   *
+   * Mirrors applySuggestion exactly: a bullet list appends on a NEW LINE
+   * (serializeBullets), every other field appends with a space. A preview that
+   * joins differently from the write is a lie shown right before the user
+   * confirms it.
+   */
+  const appendSeparator = suggestion?.field === "workExperience.description" ? "\n" : " "
+  const afterValue = afterFromCaller ?? (suggestion?.type === "append"
+    ? [currentValue, suggestion.preview].filter(Boolean).join(appendSeparator)
+    : suggestion?.preview ?? "")
+
+  /**
+   * LA CIFRA LA ESCRIBE ÉL, ACÁ, ANTES DE APLICAR.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-25) ────────────────────────
+   *
+   * El aviso «confirmá la cifra» era un cartel amarillo y nada más: el botón
+   * aplicaba igual, con el número que eligió el modelo. Un dato sobre el
+   * candidato que él nunca confirmó, escrito en su CV.
+   *
+   * `figure-slots` existía desde el 2026-08-19 para exactamente esto —marcar el
+   * hueco donde va la cifra y comprobar que se llenó— y no lo llamaba nadie.
+   *
+   * LO QUE NO CAMBIA: al CV nunca entra un `___`. El botón está apagado mientras
+   * quede un hueco, y no por un `if` del llamador: no hay forma de confirmar un
+   * texto incompleto desde esta pantalla.
+   */
+  const slotted = needsFigureConfirm ? withFigureSlots(afterValue, currentValue) : null
+  /**
+   * LO ESCRITO PERTENECE AL TEXTO SOBRE EL QUE SE ESCRIBIÓ.
+   *
+   * ── EL DEFECTO (pase de QA, 2026-08-25) ───────────────────────────────────
+   *
+   * La misma pantalla muestra la reescritura recomendada y sus alternativas, y
+   * cambiar de ángulo NO desmonta el componente. Sin esto, alguien escribía el
+   * número en la recomendada, elegía otra alternativa… y lo que se aplicaba
+   * seguía siendo la PRIMERA con su número: elegía B y se le escribía A. Peor
+   * todavía porque al elegir una alternativa la pregunta de la cifra se retira,
+   * así que ni el hueco quedaba a la vista para notarlo.
+   *
+   * DERIVADO, NO UN EFECTO QUE RESETEA. La primera versión era un `useEffect`
+   * que ponía el estado en nulo cuando cambiaba la propuesta, y eslint la
+   * rechazó con razón: un `setState` dentro de un efecto dispara un render en
+   * cascada. Guardar SOBRE QUÉ texto se escribió convierte la regla en una
+   * comparación —si la propuesta ya no es aquélla, lo tipeado no le pertenece— y
+   * desaparece el estado que había que limpiar.
+   */
+  const shownAfter = edit?.base === afterValue ? edit.text : (slotted?.text ?? afterValue)
+  const bloqueado = !!slotted && slotted.slots.length > 0 && !slotsFilled(shownAfter)
 
   // Defensive guard: never render the diff modal without a concrete suggestion.
-  // Normal flow already prevents this (panel only opens modal when suggestion exists),
-  // but this keeps the component safe if invoked elsewhere.
+  // Normal flow already prevents this (panel only opens modal when suggestion
+  // exists), but this keeps the component safe if invoked elsewhere. Va DESPUÉS
+  // de los hooks: ninguno puede quedar detrás de un `return`.
   if (!suggestion) return null
 
-  // Mirrors applySuggestion exactly: a bullet list appends on a NEW LINE
-  // (serializeBullets), every other field appends with a space. A preview that
-  // joins differently from the write is a lie shown right before the user
-  // confirms it.
-  const appendSeparator = suggestion.field === "workExperience.description" ? "\n" : " "
-  const afterValue = afterFromCaller ?? (suggestion.type === "append"
-    ? [currentValue, suggestion.preview].filter(Boolean).join(appendSeparator)
-    : suggestion.preview)
-
-  const diff = diffLines(currentValue, afterValue)
+  const diff = diffLines(currentValue, shownAfter)
   // One-liner fields keep the classic before/after; multi-line ones (bullet
   // lists) get the line diff, which is the only readable form at that size.
-  const isMultiLine = diff.length > 2
+  const isMultiLine = diff.length > 2 && !slotted
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
@@ -231,9 +302,24 @@ export default function SuggestionDiffModal({
 
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{t("diff_after")}</p>
-                <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
-                  {afterValue}
-                </div>
+                {slotted && slotted.slots.length > 0 ? (
+                  <>
+                    <textarea
+                      value={shownAfter}
+                      onChange={(e) => setEdit({ base: afterValue, text: e.target.value })}
+                      rows={3}
+                      aria-label={t("figure_fill_label")}
+                      className="w-full resize-y rounded-xl border border-emerald-300 bg-white px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[72px] outline-none focus:border-emerald-500"
+                    />
+                    <p className="mt-1.5 text-[10.5px] leading-snug text-[#854D0E]">
+                      {bloqueado ? t("figure_fill_pending") : t("figure_fill_done")}
+                    </p>
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
+                    {shownAfter}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -250,8 +336,9 @@ export default function SuggestionDiffModal({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            className="flex-1 flex justify-center items-center px-3 sm:px-4 py-3 sm:py-[11px] text-[13px] font-semibold text-white rounded-xl border-none cursor-pointer bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[0_2px_8px_rgba(16,185,129,0.3)] transition-all duration-150 hover:shadow-[0_4px_14px_rgba(16,185,129,0.4)] hover:-translate-y-px min-h-[44px]"
+            onClick={() => onConfirm(slotted ? shownAfter : undefined)}
+            disabled={bloqueado}
+            className="flex-1 flex justify-center items-center px-3 sm:px-4 py-3 sm:py-[11px] text-[13px] font-semibold text-white rounded-xl border-none cursor-pointer bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[0_2px_8px_rgba(16,185,129,0.3)] transition-all duration-150 hover:shadow-[0_4px_14px_rgba(16,185,129,0.4)] hover:-translate-y-px min-h-[44px] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
           >
             {t("diff_confirm")}
           </button>

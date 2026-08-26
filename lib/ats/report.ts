@@ -427,10 +427,51 @@ export function tailorWorkload(report: AtsReport): ReportCheck[] {
  * puntaje—. Vivía como un bucle suelto dentro de un componente de 1.700 líneas,
  * donde ningún test podía mirarlo de verdad: sólo leer que la línea existía.
  */
+/**
+ * Arreglos que se ejecutan SOLOS: con sus propios parámetros, sin modelo, sin
+ * cuota y sin abrir nada. Son los únicos que un clic masivo puede disparar N
+ * veces sin consecuencias.
+ */
+const SE_APLICAN_SOLAS = new Set(["fix_dates", "remove_duplicates", "add_skill", "replace_text", "set_title", "strip_glyphs"])
+
+/**
+ * ¿ESTE HALLAZGO PUEDE ENTRAR EN «APLICAR TODO»?
+ *
+ * ── POR QUÉ ES UNA REGLA Y NO UNA LISTA DE EXCEPCIONES (2026-08-25) ─────────
+ *
+ * Esto se venía escribiendo como excepciones enumeradas —«todo menos los cortes»,
+ * después «menos el tejido de términos», después «menos las que piden una
+ * cifra»— y se olvidó DOS VECES seguidas. Cada olvido tuvo la misma forma: un
+ * clic disparaba N llamadas al modelo, se cobraban N cuotas, cada una terminaba
+ * en la MISMA pantalla de confirmación y sobrevivía la última. Las demás,
+ * pagadas y tiradas.
+ *
+ * La regla que las cubre a todas, y a la que venga: **el masivo aplica lo que ya
+ * está escrito o se ejecuta solo. Lo que necesita una llamada nueva o un dato del
+ * usuario, se acepta de a uno.** Así un hallazgo nuevo no entra por olvido: entra
+ * sólo si cumple, y si no cumple queda afuera sin que nadie tenga que acordarse.
+ */
+function entraAlMasivo(c: ReportCheck, ready?: ReadonlySet<string>): boolean {
+  const kind = c.action?.kind
+  if (!kind) return false
+  if (SE_APLICAN_SOLAS.has(kind)) return true
+  // Lo demás pide texto: sólo entra si el ejecutor YA lo escribió y no quedó
+  // ningún dato pendiente de su parte.
+  return ready?.has(c.id) ?? false
+}
+
 export function applyAllPlan(
   report: AtsReport,
   appliedIds: ReadonlySet<string>,
   addedTerms?: ReadonlySet<string>,
+  /**
+   * Los hallazgos que YA tienen su texto escrito y listo para aplicar.
+   *
+   * Lo sabe quien tiene las reescrituras en la mano —el panel—, no este archivo:
+   * acá no llegan. Sin este conjunto, «aplicar todo» sólo aplica lo determinista,
+   * que es el lado seguro de equivocarse.
+   */
+  ready?: ReadonlySet<string>,
 ): { checkIds: string[]; terms: string[] } {
   return {
     /**
@@ -453,7 +494,7 @@ export function applyAllPlan(
      * esperas»—, que no se había extendido al hermano nuevo.
      */
     checkIds: solvableChecks(report)
-      .filter((c) => !appliedIds.has(c.id) && !c.id.startsWith("tips.cut.") && c.action?.kind !== "weave_term")
+      .filter((c) => !appliedIds.has(c.id) && !c.id.startsWith("tips.cut.") && entraAlMasivo(c, ready))
       .map((c) => c.id),
     // Los «sólo en la lista» NO se filtran por `addedTerms`: ese conjunto marca
     // lo agregado a Habilidades, y estos YA estaban ahí — lo que les falta es la

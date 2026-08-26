@@ -36,6 +36,14 @@ export interface TailorOutput {
   rewrites: readonly TailorRewriteOut[]
   /** El resumen adaptado, o `null` si el informe no lo pidió. */
   tailoredSummary?: string | null
+  /**
+   * El resumen propone una cifra que el CV no dice.
+   *
+   * Viaja para que la tarjeta lo mande a confirmar en vez de escribirlo. Las
+   * viñetas ya pasaban por esa puerta; el resumen se aplicaba directo, así que un
+   * número inventado entraba en la primera línea del CV — la que todos leen.
+   */
+  summaryNeedsFigureConfirm?: boolean
   /** El resumen que hay hoy, para el mismo antes/después. */
   currentSummary?: string
 }
@@ -91,7 +99,14 @@ export function tailorResolutions(
     // estaba bien. Sin texto no hay resolución, y la tarjeta apaga el botón en
     // vez de ofrecer aplicar un vacío que borraría el párrafo del candidato.
     const check = allChecks(report).find((c) => c.action?.kind === "rewrite_summary" && c.owner === "tailor")
-    if (check) resolutions.push({ checkId: check.id, text: summary, before: out.currentSummary ?? "" })
+    if (check) {
+      resolutions.push({
+        checkId: check.id,
+        text: summary,
+        before: out.currentSummary ?? "",
+        ...(out.summaryNeedsFigureConfirm ? { needsFigureConfirm: true } : {}),
+      })
+    }
   }
 
   return resolutions

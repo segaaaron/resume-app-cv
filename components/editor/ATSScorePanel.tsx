@@ -764,9 +764,17 @@ export default function ATSScorePanel() {
    */
   /** Rows on screen at once — the rest are one click away. */
 
-  function confirmBulletFix() {
+  /**
+   * `escrito` — el texto tal como quedó en la pantalla de confirmación.
+   *
+   * Cuando la reescritura proponía una cifra, el modal la pinta como un hueco y
+   * el candidato escribe el número. Aplicar `improved` en ese caso escribiría el
+   * número del MODELO en su CV, que es exactamente lo que la doctrina prohíbe.
+   */
+  function confirmBulletFix(escrito?: string) {
     if (!bulletFix) return
-    const { targetId, index, improved } = bulletFix
+    const { targetId, index } = bulletFix
+    const improved = escrito?.trim() || bulletFix.improved
     try {
       const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
       const job = work.find((j) => j.id === targetId)
@@ -1294,6 +1302,7 @@ export default function ATSScorePanel() {
           {
             rewrites: tailor.rewrites,
             tailoredSummary: tailor.tailoredSummary,
+            summaryNeedsFigureConfirm: tailor.summaryNeedsFigureConfirm,
             currentSummary: (sectionData.summary as string) ?? "",
           },
           // parseBullets, NO un split crudo: la descripción se guarda con "• " y
@@ -1306,7 +1315,7 @@ export default function ATSScorePanel() {
           },
         )
       : []),
-    [report, tailor.rewrites, tailor.tailoredSummary, sectionData.summary, sectionData.workExperience],
+    [report, tailor.rewrites, tailor.tailoredSummary, tailor.summaryNeedsFigureConfirm, sectionData.summary, sectionData.workExperience],
   )
 
   /**
@@ -1451,6 +1460,33 @@ export default function ATSScorePanel() {
       const claimed = (report?.terms ?? []).filter((x) => x.section !== "other" && x.cv > 0).map((x) => x.term)
       const lost = postingTermsLost(resolution.before ?? "", resolution.text, claimed)
       if (lost.length > 0) { toast.error(t("rewrite_loses_terms", { terms: lost.slice(0, 3).join(", ") })); return }
+      /**
+       * UNA CIFRA PROPUESTA NO SE APLICA SOLA. Ni por esta puerta.
+       *
+       * ── EL DEFECTO (barrido de cierre, 2026-08-25) ─────────────────────────
+       *
+       * La tarjeta pintaba el aviso «confirmá la cifra» y su botón escribía
+       * igual, directo al CV, con el número que eligió el modelo. El aviso era un
+       * cartel; el dato entraba sin que nadie lo confirmara.
+       *
+       * Cuando la reescritura trae una cifra que el CV no respalda, pasa por la
+       * pantalla de confirmación, que la pinta como un hueco: el candidato
+       * escribe el número y recién ahí se puede aplicar. El otro camino —el de
+       * `improve-bullet`— ya lo hacía; éste no.
+       */
+      if (resolution.needsFigureConfirm) {
+        setBulletFix({
+          targetId: action.targetId,
+          index: action.index,
+          appliedCheckId: checkId,
+          current: resolution.before ?? "",
+          improved: resolution.text,
+          why: resolution.metricHint || t("content_quality_hint"),
+          recommended: resolution.text,
+          needsFigureConfirm: true,
+        })
+        return
+      }
       if (writeBullet(action.targetId, action.index, resolution.before ?? "", resolution.text, true, checkId)) {
         /**
          * LA BLANDA QUE ACABA DE QUEDAR DEMOSTRADA, ACREDITADA YA.
@@ -1479,6 +1515,40 @@ export default function ATSScorePanel() {
       // reescritura es de una sola oración: escribir el campo entero borraba el
       // resto del párrafo — medido, 56 palabras a 24.
       const current = (sectionData.summary as string) ?? ""
+      /**
+       * Y SI EL RESUMEN PROPONE UNA CIFRA, SE CONFIRMA COMO LA DE UNA VIÑETA.
+       *
+       * ── EL AGUJERO (barrido de cierre, 2026-08-25) ────────────────────────
+       *
+       * Las viñetas pasaban por la pantalla donde el candidato escribe el
+       * número; el resumen se escribía directo. O sea: un dato inventado sobre
+       * él, en la PRIMERA LÍNEA de su CV, que es la que todo el mundo lee, sin
+       * que nadie se lo preguntara.
+       *
+       * Se manda el texto ya empalmado —lo que de verdad va a quedar— para que
+       * el antes/después de la pantalla sea el del campo entero y no el de una
+       * frase suelta.
+       */
+      if (resolution.needsFigureConfirm) {
+        // `null` = no hay nada que escribir (el reemplazo vino vacío). Ese caso
+        // ya lo cubre el camino de abajo, que no aplica un vacío sobre el
+        // párrafo del candidato.
+        const empalmado = spliceSummary(current, resolution.text)
+        if (!empalmado) return
+        setModal({
+          suggestion: {
+            field: "summary",
+            type: "replace",
+            preview: empalmado,
+            reason: t("prove_summary_reason"),
+            needsFigureConfirm: true,
+          },
+          currentValue: current,
+          itemKey: "fix-summary",
+          appliedCheckId: checkId,
+        })
+        return
+      }
       updateSectionData("summary", spliceSummary(current, resolution.text) as never)
       markFixApplied(resolution.text)
       appliedWithUndo(t("toast_change_applied"), [["summary", current]], { checkId, signature: resolution.text })
@@ -1692,10 +1762,13 @@ export default function ATSScorePanel() {
   }
 
 
-  function handleConfirmApply() {
+  function handleConfirmApply(escrito?: string) {
     if (!modal) return
     const { suggestion, itemKey } = modal
-    const { field, type, preview, targetId } = suggestion
+    const { field, type, targetId } = suggestion
+    // Lo que quedó en la pantalla: con la cifra que escribió el candidato, no la
+    // que propuso el modelo. Ver `confirmBulletFix`.
+    const preview = escrito?.trim() || suggestion.preview
 
     try {
       const result = applySuggestion(
@@ -1724,7 +1797,7 @@ export default function ATSScorePanel() {
 
       // El preview es el texto que acaba de entrar al CV: su firma es lo que
       // impide que el análisis siguiente proponga una variante de él.
-      markFixApplied(suggestion.preview)
+      markFixApplied(preview)
       if (modal.appliedCheckId) markCheckApplied(modal.appliedCheckId)
       // The bullet we just wrote demonstrates the skill we asked it to
       // demonstrate. Credit it now; waiting for the next full analysis meant the
@@ -1732,7 +1805,7 @@ export default function ATSScorePanel() {
       if (itemKey.startsWith("soft-")) creditSoftSkill(itemKey.slice("soft-".length))
       appliedWithUndo(t("toast_change_applied"), [[result.section, antesDeAplicar]], {
         checkId: modal.appliedCheckId,
-        signature: suggestion.preview,
+        signature: preview,
       })
       // The same write also collapses a line the CV stated twice; say it.
       if (result.section === "workExperience" && (result.duplicatesRemoved ?? 0) > 0) {
@@ -2327,7 +2400,9 @@ export default function ATSScorePanel() {
             // La lista sale de `applyAllPlan`, que es una función pura y por eso
             // se puede probar de verdad. Antes era un bucle suelto acá adentro y
             // el único test posible era leer que la línea existía.
-            const plan = applyAllPlan(report, appliedCheckIds, addedKeywords)
+            // Lo que YA está escrito y no espera un dato suyo. Ver `entraAlMasivo`.
+            const listas = new Set(resolutions.filter((r) => r.text.trim() && !r.needsFigureConfirm).map((r) => r.checkId))
+            const plan = applyAllPlan(report, appliedCheckIds, addedKeywords, listas)
             for (const id of plan.checkIds) applyCheck(id)
             // Los términos se AGREGAN, no se tejen: tejer son cinco llamadas al
             // modelo y cinco esperas. Para el filtro, el término dentro del CV ya

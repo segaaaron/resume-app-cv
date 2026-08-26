@@ -156,13 +156,15 @@ describe("pedir una cifra, pero sólo hasta la banda", () => {
     expect(metricas.length).toBeGreaterThan(0)
     expect(metricas[0].weight).toBeGreaterThan(0)
     /**
-     * SIN BOTÓN, y es lo correcto: el tamaño lo sabe el candidato y el motor de
-     * reescritura tiene PROHIBIDO poner un número. Ofrecerlo era prometer lo que
-     * su propio motor no puede dar — reportado con captura: «¿para qué ponemos
-     * improve bullet si al final no nos dejará realizarlo?».
+     * CON BOTÓN, y del motor correcto. El ejecutor puede proponer el tamaño como
+     * RANGO —es la doctrina— y la pantalla de confirmación lo pinta como un hueco
+     * que el candidato completa: hasta que no escriba el número no se puede
+     * aplicar. Lo que se reportó con captura era otra cosa: el botón llamaba a
+     * `improve-bullet`, que tiene PROHIBIDO poner una cifra, así que prometía lo
+     * que su propio motor no podía dar.
      */
-    expect(metricas[0].owner).toBe("user")
-    expect(metricas[0].action).toBeUndefined()
+    expect(metricas[0].owner).toBe("tailor")
+    expect(metricas[0].action).toMatchObject({ kind: "rewrite_bullet" })
   })
 
   it("dentro de la banda no pide ninguna: llenar de números lee fabricado", () => {
@@ -392,5 +394,39 @@ describe("las gemelas no repiten tarjeta sobre la misma línea", () => {
       .filter((c) => c.id.startsWith("tips.near_dup"))
       .flatMap((c) => [c.action?.index, c.params?.otherIndex])
     expect(new Set(usadas).size).toBe(usadas.length)
+  })
+})
+
+/**
+ * «APLICAR TODO» NO ABRE CINCO PANTALLAS A LA VEZ.
+ *
+ * Una reescritura que propone una cifra abre la pantalla donde el candidato
+ * escribe el número, y esa pantalla es UNA: aplicar cinco de golpe abría cinco y
+ * sobrevivía la última. Es el mismo Blocker que QA encontró con el tejido de
+ * términos, un día antes, por otra puerta.
+ */
+describe("aplicar todo no apila confirmaciones", () => {
+  const conDos = () => buildAtsReport(input({
+    writing: emptyWriting({
+      nearDuplicates: [
+        { targetId: "job-1", jobTitle: "iOS", index: 1, text: "Implementé Core Data para el almacenamiento local del listado", otherIndex: 0, otherText: "Implementé Core Data para almacenamiento local y offline" },
+      ] as unknown as WritingChecks["nearDuplicates"],
+    }),
+    bullets: [0, 1].map((index) => ({
+      targetId: "job-1", index, text: `Implementé Core Data ${index}`, verb: true, metric: false, words: 8, keywords: [],
+    })),
+  }))
+
+  it("la que todavía no está escrita queda fuera del plan masivo", () => {
+    const r = conDos()
+    const id = allChecks(r).find((c) => c.id.startsWith("tips.near_dup"))!.id
+    // Sin texto listo: aplicarla dispararía una llamada al modelo por cabeza.
+    expect(applyAllPlan(r, new Set(), new Set()).checkIds).not.toContain(id)
+  })
+
+  it("y con su texto ya escrito, entra", () => {
+    const r = conDos()
+    const id = allChecks(r).find((c) => c.id.startsWith("tips.near_dup"))!.id
+    expect(applyAllPlan(r, new Set(), new Set(), new Set([id])).checkIds).toContain(id)
   })
 })

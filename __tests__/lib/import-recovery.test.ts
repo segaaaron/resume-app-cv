@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { appearsIn, normaliseFigures, recoverContact, hostOf, linesForRole, tighten } from "@/lib/services/ai/shared/import-recovery"
+import { appearsIn, recoverContact, hostOf, linesForRole, tighten } from "@/lib/services/ai/shared/import-recovery"
 import { hasHardCodedFact, isGroundedIn } from "@/lib/services/ai/shared/ai-helpers"
 
 /**
@@ -59,22 +59,37 @@ describe("what the PDF says, the CV keeps", () => {
    * —que la línea no se corte por un reespaciado— sigue cubierto, y ahora por
    * construcción.
    */
-  it("a re-spaced figure is never an invented one", () => {
+  it("a re-spaced figure is never treated as one the CV does not state", () => {
     const source = "• Improved software quality, reducing production bugs by 15%"
     const model = "Improved software quality, reducing production bugs by 15 %"
     expect(hasHardCodedFact(model, source)).toBe(false)
-    expect(hasHardCodedFact(normaliseFigures(model), normaliseFigures(source))).toBe(false)
   })
 
   it("still catches a figure that is genuinely not in the CV", () => {
     // The protection that matters is intact: 20% is not 15%.
-    const source = "• Reduced production bugs by 15%"
-    const invented = "Reduced production bugs by 20%"
-    expect(hasHardCodedFact(normaliseFigures(invented), normaliseFigures(source))).toBe(true)
+    expect(hasHardCodedFact("Reduced production bugs by 20%", "• Reduced production bugs by 15%")).toBe(true)
   })
 
+  /**
+   * Y EL SEPARADOR DE MILES TAMPOCO ENGAÑA — sin normalizar nada.
+   *
+   * Acá vivía `normaliseFigures`, que uniformaba porcentajes y separadores antes
+   * de preguntar. Se fue el 2026-08-25: medido sobre once casos —seis de cifras
+   * escritas distinto, dos que DEBEN detectarse y cuatro de marcas—, la respuesta
+   * es idéntica con y sin ella, porque el detector compara por DÍGITOS. Una capa
+   * que no cambia ninguna respuesta sólo puede derivar. Estos casos se quedan
+   * para que nadie la vuelva a agregar «por las dudas».
+   */
   it("reads thousands separators as one number", () => {
-    expect(normaliseFigures("atendí 1.200 clientes")).toBe(normaliseFigures("atendí 1200 clientes"))
+    const source = "atendí 1.200 clientes en ventanilla"
+    expect(hasHardCodedFact("atendí 1,200 clientes en ventanilla", source)).toBe(false)
+    expect(hasHardCodedFact("atendí 1200 clientes en ventanilla", source)).toBe(false)
+    // Y 1.500 no es 1.200.
+    expect(hasHardCodedFact("atendí 1.500 clientes en ventanilla", source)).toBe(true)
+  })
+
+  it("«15 por ciento» y «15%» son el mismo número", () => {
+    expect(hasHardCodedFact("bajé la mora un 15 por ciento", "bajé la mora un 15%")).toBe(false)
   })
 
   /**

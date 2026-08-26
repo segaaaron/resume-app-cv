@@ -34,20 +34,6 @@ export function tighten(value: string): string {
   return value.toLowerCase().replace(/[\s ._\-()[\]]/g, "")
 }
 
-/**
- * Percentages, thousands separators and currency spacing made uniform, so a
- * figure the model re-rendered is recognised as the figure the CV states.
- * "15 %" / "15%" / "15 por ciento" are one number; "15%" and "20%" are two.
- */
-export function normaliseFigures(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/\s*%/g, "%")
-    .replace(/\s*(por ciento|percent|pct)\b/g, "%")
-    .replace(/(\d)[.,](\d{3})\b/g, "$1$2")
-    .replace(/\s+/g, " ")
-}
-
 /** True when `value` appears in `source` once spacing and case stop counting. */
 export function appearsIn(value: string, source: string): boolean {
   const v = tighten(value)

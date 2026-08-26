@@ -92,15 +92,33 @@ describe("ningún servicio de IA conserva el vocabulario viejo", () => {
    * contextos que no son prompts (el blog lista «Reinventé» como verbo de acción
    * válido para un CV, y eso es correcto).
    */
-  it("el barrido cubre todos los módulos y compartidos", () => {
-    const files = readdirSync(join(process.cwd(), "lib/services/ai/modules"))
-      .concat(readdirSync(join(process.cwd(), "lib/services/ai/shared")).map((f) => `../shared/${f}`))
-      .filter((f) => f.endsWith(".ts"))
-    const sucios: string[] = []
-    for (const f of files) {
-      const src = readFileSync(join(process.cwd(), "lib/services/ai/modules", f), "utf8")
-      if (/\binvent[a-z]*\b|hallucinat/i.test(src)) sucios.push(f)
-    }
+  /**
+   * ── EL BARRIDO SE DERIVA, NO SE ENUMERA (CEO, 2026-08-25) ────────────────
+   *
+   *   «Esa palabrita, para servicios y especialmente para las AI, no se debería
+   *    usar porque nos generaron problemas en el pasado.»
+   *
+   * Y este guard listaba DOS carpetas a mano —`modules` y `shared`—, así que
+   * `AIService.ts` y `OpenAIClientAdapter.ts`, que viven en la raíz de
+   * `lib/services/ai`, nunca se miraron. Una carpeta nueva tampoco se habría
+   * mirado. Un guard que enumera su propio alcance protege lo que alguien se
+   * acordó de escribir, y el olvido es justamente lo que hay que atrapar.
+   *
+   * Se recorre el árbol entero. Un archivo nuevo entra al barrido por existir.
+   */
+  const todosLosTs = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? todosLosTs(join(dir, e.name))
+        : e.name.endsWith(".ts") ? [join(dir, e.name)] : [])
+
+  it("el barrido cubre TODO lib/services/ai, no una lista de carpetas", () => {
+    const raiz = join(process.cwd(), "lib/services/ai")
+    const archivos = todosLosTs(raiz)
+    // Si alguien mueve el árbol, el guard no puede quedarse mirando un vacío.
+    expect(archivos.length).toBeGreaterThan(10)
+    const sucios = archivos
+      .filter((f) => /\binvent[a-z]*\b|hallucinat/i.test(readFileSync(f, "utf8")))
+      .map((f) => f.slice(raiz.length + 1))
     expect(sucios).toEqual([])
   })
 })

@@ -24,6 +24,8 @@ import { useEditorPro } from "../EditorContext"
  */
 export interface TailorResult {
   summary: string | null
+  /** El resumen propone una cifra que el CV no dice: se confirma, no se aplica. */
+  summaryNeedsFigureConfirm?: boolean
   rewrites: Array<{
     checkId: string
     text: string
@@ -157,6 +159,7 @@ export function useTailorCV({ posting, workload, rewriteSummary = false, autoRun
     loading,
     /** Tailored summary, or null when the report did not ask for one. */
     tailoredSummary: result?.summary ?? null,
+    summaryNeedsFigureConfirm: result?.summaryNeedsFigureConfirm ?? false,
     /** Lo escrito, indexado por hallazgo. El panel lo cruza con el informe. */
     rewrites: result?.rewrites ?? [],
     runTailor,

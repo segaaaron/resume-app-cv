@@ -133,9 +133,18 @@ export default function TailorModal({
    * mismo defecto que este panel ya pagó tres veces — un número que cuenta lo que
    * la función SABE en vez de lo que la función HACE.
    */
+  /** Lo que el ejecutor ya escribió y no espera un dato del candidato. */
+  const listas = useMemo(
+    () => new Set(resolutions.filter((r) => r.text.trim() && !r.needsFigureConfirm).map((r) => r.checkId)),
+    [resolutions],
+  )
   const applyAll = useMemo(
-    () => applyAllPlan(report, appliedIds, addedTerms),
-    [report, appliedIds, addedTerms],
+    // EL BOTÓN CUENTA LO QUE HACE. Las reescrituras que piden un número abren
+    // una pantalla por cabeza y el masivo no las toca: contarlas acá sería
+    // prometer un trabajo que el clic no ejecuta — el defecto que este panel ya
+    // pagó tres veces.
+    () => applyAllPlan(report, appliedIds, addedTerms, listas),
+    [report, appliedIds, addedTerms, listas],
   )
   const applyAllTotal = applyAll.checkIds.length + applyAll.terms.length
   const gain = useMemo(() => recoverablePoints(report), [report])

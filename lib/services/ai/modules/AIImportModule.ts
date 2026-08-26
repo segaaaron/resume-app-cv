@@ -21,7 +21,7 @@ import { readChat } from "@/lib/services/ai/shared/chat-result"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { parseAIJson, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
-import { appearsIn, normaliseFigures, recoverContact, hostOf, linesForRole } from "../shared/import-recovery"
+import { appearsIn, recoverContact, hostOf, linesForRole } from "../shared/import-recovery"
 import { costOfChat } from "../shared/cost-tracker"
 import { ResumeSectionsSchema, type ResumeSections } from "@/types/resume"
 import { normalizeDescription } from "@/lib/utils"
@@ -255,11 +255,26 @@ ${rawText}`
       const lines = val.split("\n").map((l) => l.trim()).filter(Boolean)
       if (lines.length < 2) { dropped++; return "" }
 
-      // Figures are compared on normalised text: the CV that says "15%" and the
-      // model that writes "15 %" are stating the same number, and cutting the
-      // line over the space deletes the user's own achievement.
-      const normalisedSource = normaliseFigures(rawText)
-      const kept = lines.filter((line) => !hasHardCodedFact(normaliseFigures(line), normalisedSource))
+      /**
+       * LA CIFRA SE COMPARA POR DÍGITOS, Y ESO YA LO HACE EL DETECTOR.
+       *
+       * ── POR QUÉ SE FUE LA NORMALIZACIÓN (medido, 2026-08-25) ─────────────
+       *
+       * Acá se normalizaba el texto antes de preguntar —«15 %» y «15%» son el
+       * mismo número, y cortar la línea por un espacio le borra al usuario su
+       * propio logro—. Esa razón era real: el detector comparaba la cifra como
+       * SUBCADENA.
+       *
+       * Desde que la pregunta tiene un dueño (`unsourcedFigures`), la comparación
+       * es por DÍGITOS: «15 %», «15%», «15 por ciento», «1.400» y «1,400» ya
+       * caen del mismo lado sin que nadie normalice nada.
+       *
+       * Medido antes de sacarlo, sobre once casos de un PDF re-renderizado —seis
+       * de cifras con separador o unidad distinta, dos que DEBEN detectarse, y
+       * cuatro de marcas—: la respuesta es idéntica con y sin normalizar. Se va
+       * porque una capa que no cambia ninguna respuesta sólo puede derivar.
+       */
+      const kept = lines.filter((line) => !hasHardCodedFact(line, rawText))
       dropped += lines.length - kept.length
       return kept.join("\n")
     }

@@ -40,7 +40,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, figureDegraded } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, figureDegraded, hardCodedFactKind } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
 import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
@@ -545,7 +545,32 @@ Reglas:
         || isCosmeticReword(origSummary, summaryRaw)
         || figureDegraded(origSummary, summaryRaw)
       ) ? null : summaryRaw
-      return { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm, droppedWeak, weakMisses }
+      /**
+       * Y EL RESUMEN TAMBIÉN PUEDE TRAER UNA CIFRA QUE EL CV NO DICE.
+       *
+       * ── EL AGUJERO (barrido de cierre, 2026-08-25) ────────────────────────
+       *
+       * Las viñetas pasan por el motor y una cifra propuesta vuelve marcada para
+       * que el candidato la confirme. El resumen corría OTROS tres chequeos
+       * —trivial, cosmético, cifra degradada— y ninguno pregunta si el número es
+       * suyo. Así que un número que decidió el modelo entraba en la primera línea de
+       * su CV, que es la que todo el mundo lee, sin que nadie se lo confirmara.
+       *
+       * Misma postura que la viñeta: nace de su propio texto, así que la cifra
+       * viaja MARCADA en vez de descartarse. El panel la pinta como un hueco.
+       */
+      /**
+       * Se juzga contra el CV ENTERO, no contra el resumen viejo.
+       *
+       * Cazado en el pase de QA: con el resumen como única fuente, una cifra que
+       * el candidato ya declara en una viñeta —«bajé los crashes un 10%»— y que
+       * el ejecutor sube legítimamente al resumen contaba como no respaldada, y
+       * le pedíamos confirmar un número que es suyo desde el principio. Es la
+       * misma fuente que juzga las viñetas, y por eso las dos no pueden discrepar.
+       */
+      const summaryNeedsFigureConfirm = !!summary
+        && hardCodedFactKind(summary, groundingSource) === "figure"
+      return { summary, summaryNeedsFigureConfirm, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm, droppedWeak, weakMisses }
     }
 
     let out = applyGuards(raw)
@@ -622,6 +647,6 @@ Reglas:
     }
 
 
-    return { summary, rewrites } satisfies TailorCVResultV2
+    return { summary, summaryNeedsFigureConfirm: out.summaryNeedsFigureConfirm, rewrites } satisfies TailorCVResultV2
   }
 }

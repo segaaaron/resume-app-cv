@@ -241,7 +241,7 @@ describe("aplicar todo aplica todo", () => {
    * El botón decía «aplicar las 5» con 10 pendientes: las reescrituras entraban y
    * los términos —la palanca más grande del puntaje— quedaban afuera.
    */
-  const plan = (over: Partial<AtsReport> = {}, applied = new Set<string>(), added?: Set<string>) =>
+  const plan = (over: Partial<AtsReport> = {}, applied = new Set<string>(), added?: Set<string>, listas?: Set<string>) =>
     applyAllPlan({
       score: 70,
       sections: [{ id: "hard", scoreCategory: "hardSkills", coveragePct: 40, checks: [
@@ -255,13 +255,26 @@ describe("aplicar todo aplica todo", () => {
       ],
       bullets: [], overOptimised: false, recoverable: 0, credibility: { score: 100, band: null },
       ...over,
-    }, applied, added)
+    }, applied, added, listas)
 
-  it("aplica los chequeos resolubles Y los términos que faltan", () => {
-    expect(plan()).toEqual({ checkIds: ["c1"], terms: ["Excel"] })
+  /**
+   * ── ACTUALIZADO (2026-08-25) ─────────────────────────────────────────────
+   *
+   * `c1` es un `rewrite_summary`: NO se ejecuta solo, necesita el texto que el
+   * ejecutor escribió. Entra al masivo únicamente cuando ese texto ya está —lo
+   * dice el conjunto `ready`—, porque un clic que dispara N llamadas al modelo
+   * termina abriendo N confirmaciones sobre UNA sola pantalla y tirando las que
+   * no sobrevivieron. Ver `entraAlMasivo`.
+   */
+  it("aplica lo que el ejecutor YA escribió, y los términos que faltan", () => {
+    expect(plan(undefined, undefined, undefined, new Set(["c1"]))).toEqual({ checkIds: ["c1"], terms: ["Excel"] })
+  })
+
+  it("y lo que todavía no está escrito no entra: se acepta de a uno", () => {
+    expect(plan()).toEqual({ checkIds: [], terms: ["Excel"] })
   })
 
   it("no repite lo ya aplicado ni el término ya agregado", () => {
-    expect(plan({}, new Set(["c1"]), new Set(["Excel"]))).toEqual({ checkIds: [], terms: [] })
+    expect(plan({}, new Set(["c1"]), new Set(["Excel"]), new Set(["c1"]))).toEqual({ checkIds: [], terms: [] })
   })
 })

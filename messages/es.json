@@ -1721,6 +1721,7 @@
       "summary_fix_reason": "Resumen reescrito para esta vacante",
       "prove_action": "Escribir un bullet que lo demuestre",
       "set_title_reason": "Escribir «{title}» en tu titular",
+      "prove_summary_reason": "Tu resumen adaptado a esta vacante. Propone una cifra que tu CV no dice: el número lo escribís vos.",
       "prove_skill_reason": "Demuestra «{skill}» con trabajo real en vez de solo listarla",
       "dedupe_title": "{count, plural, one {# línea repetida en tu CV} other {# líneas repetidas en tu CV}}",
       "dedupe_done": "{count, plural, one {# línea repetida eliminada} other {# líneas repetidas eliminadas}}",
@@ -2034,6 +2035,9 @@
       "legend_tip": "Consejo manual",
       "diff_changes": "Cambios",
       "options_title": "Elige una versión",
+      "figure_fill_label": "Completá la cifra",
+      "figure_fill_pending": "Falta el número: escribilo donde dice ___ y podrás aplicar el cambio.",
+      "figure_fill_done": "Listo: ese número es tuyo, no nuestro.",
       "confirm_figure": "Revisá la cifra: la propusimos a partir de lo que contás, y sólo vos sabés el número real. Corregila antes de aplicar si no cuadra."
     },
     "ai_profile_fill": {

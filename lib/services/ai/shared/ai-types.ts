@@ -1101,6 +1101,14 @@ export interface TailorRewrite {
  */
 export interface TailorCVResultV2 {
   summary: string | null   // null = el informe no lo pidió, o ya estaba bien
+  /**
+   * El resumen adaptado propone una cifra que el CV no dice.
+   *
+   * Misma puerta que la viñeta: se muestra marcada para que el candidato la
+   * confirme, no se aplica como un hecho suyo. Sin esto, un número que eligió el modelo
+   * entraba en la primera línea de su CV — la que todo el mundo lee.
+   */
+  summaryNeedsFigureConfirm?: boolean
   rewrites: TailorRewrite[]
 }
 

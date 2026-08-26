@@ -1122,13 +1122,17 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
          * se cierra solo en cuanto lo escribe, porque este informe se recalcula
          * con cada tecla.
          *
-         * PENDIENTE DECLARADO, no olvido: la salida sin salir del panel existe a
-         * medio construir. `lib/ats/figure-slots.ts` marca el hueco donde va la
-         * cifra y comprueba que se haya llenado, y nadie lo usa todavía —le falta
-         * el campo en el modal de confirmación. Con eso, esta tarjeta pasa a
-         * tener un botón que sí puede cumplir.
+         * ── Y AHORA TIENE BOTÓN, PORQUE HAY UN MOTOR QUE PUEDE CUMPLIRLO ───
+         *
+         * El ejecutor SÍ tiene permiso para proponer el tamaño como RANGO —es la
+         * doctrina de la casa— y su reescritura llega marcada. La pantalla de
+         * confirmación pinta la cifra propuesta como un hueco, el candidato
+         * escribe el número, y hasta que no lo escriba no se puede aplicar. El
+         * producto pone lo que sabe —dónde va la cifra—; él pone lo que sólo él
+         * sabe. Nadie inventa nada y nadie queda sin salida.
          */
-        owner: "user",
+        owner: "tailor",
+        action: { kind: "rewrite_bullet", targetId: dueño.targetId, index: dueño.index },
         evidence: [dueño.text],
       })
     }
