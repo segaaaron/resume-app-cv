@@ -125,3 +125,42 @@ describe("los extras viajan CON la viñeta", () => {
     expect(r.demonstrates).toBeUndefined()
   })
 })
+
+/**
+ * EL «ANTES» LO DICE QUIEN ESCRIBIÓ, NO EL ÍNDICE AL PINTAR.
+ *
+ * ── EL DEFECTO (reportado con captura, 2026-08-25) ─────────────────────────
+ *
+ * La tarjeta enfrentaba «Integré herramientas de depuración… un 10% menos de
+ * crashes» con una reescritura sobre Core Data: dos líneas distintas, una al
+ * lado de la otra, y el guard del panel rechazándola por perder términos que esa
+ * reescritura nunca tuvo que conservar.
+ *
+ * El índice es una PISTA, no la identidad. Entre la llamada y el render el
+ * usuario aplica otros arreglos —se colapsa una repetida, se corta una línea— y
+ * los índices se corren: el «antes» pasaba a ser otra línea.
+ */
+describe("el antes viaja con la reescritura", () => {
+  const informe = report([
+    check({ id: "c1", action: { kind: "rewrite_bullet", targetId: "w1", index: 0 } }),
+  ])
+
+  it("usa el original que mandó el ejecutor, no lo que hay hoy en ese índice", () => {
+    const out = tailorResolutions(
+      informe,
+      { rewrites: [{ checkId: "c1", text: "• Línea reescrita", original: "Línea que el ejecutor vio" }] },
+      // El CV ya se movió: en ese índice hay OTRA línea.
+      () => "Otra línea que quedó en ese lugar",
+    )
+    expect(out[0].before).toBe("Línea que el ejecutor vio")
+  })
+
+  it("y sin él cae al índice, para respuestas anteriores a este cambio", () => {
+    const out = tailorResolutions(
+      informe,
+      { rewrites: [{ checkId: "c1", text: "• Línea reescrita" }] },
+      () => "La línea de ese índice",
+    )
+    expect(out[0].before).toBe("La línea de ese índice")
+  })
+})

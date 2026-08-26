@@ -49,12 +49,21 @@ describe("what the PDF says, the CV keeps", () => {
 
   /**
    * "15 %" and "15%" are the same achievement. The old check cut the line.
+   *
+   * ── Y DESDE 2026-08-25 EL DETECTOR YA NO SE DEJA ENGAÑAR ─────────────────
+   *
+   * El primer assert exigía que la comparación FALLARA antes de normalizar,
+   * porque el detector comparaba la cifra como SUBCADENA. Ahora la pregunta la
+   * contesta `unsourcedFigures`, que compara por DÍGITOS: "15 %" y "15%" son la
+   * misma cifra sin necesidad de normalizar nada. El caso que este test protege
+   * —que la línea no se corte por un reespaciado— sigue cubierto, y ahora por
+   * construcción.
    */
-  it("stops treating a re-spaced figure as an invented one", () => {
+  it("a re-spaced figure is never an invented one", () => {
     const source = "• Improved software quality, reducing production bugs by 15%"
     const model = "Improved software quality, reducing production bugs by 15 %"
-    expect(hasHardCodedFact(model, source)).toBe(true)                                   // before
-    expect(hasHardCodedFact(normaliseFigures(model), normaliseFigures(source))).toBe(false) // after
+    expect(hasHardCodedFact(model, source)).toBe(false)
+    expect(hasHardCodedFact(normaliseFigures(model), normaliseFigures(source))).toBe(false)
   })
 
   it("still catches a figure that is genuinely not in the CV", () => {

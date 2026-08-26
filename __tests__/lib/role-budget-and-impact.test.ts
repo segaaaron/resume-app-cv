@@ -155,7 +155,14 @@ describe("pedir una cifra, pero sólo hasta la banda", () => {
     const metricas = allChecks(r).filter((c) => c.id.startsWith("tips.metric."))
     expect(metricas.length).toBeGreaterThan(0)
     expect(metricas[0].weight).toBeGreaterThan(0)
-    expect(metricas[0].owner).toBe("tailor")
+    /**
+     * SIN BOTÓN, y es lo correcto: el tamaño lo sabe el candidato y el motor de
+     * reescritura tiene PROHIBIDO poner un número. Ofrecerlo era prometer lo que
+     * su propio motor no puede dar — reportado con captura: «¿para qué ponemos
+     * improve bullet si al final no nos dejará realizarlo?».
+     */
+    expect(metricas[0].owner).toBe("user")
+    expect(metricas[0].action).toBeUndefined()
   })
 
   it("dentro de la banda no pide ninguna: llenar de números lee fabricado", () => {

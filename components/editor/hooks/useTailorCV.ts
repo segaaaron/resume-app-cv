@@ -27,6 +27,8 @@ export interface TailorResult {
   rewrites: Array<{
     checkId: string
     text: string
+    /** La línea que reemplaza, dicha por quien la reescribió — no deducida por índice. */
+    original?: string
     metricHint?: string
     demonstrates?: string
     needsFigureConfirm?: boolean

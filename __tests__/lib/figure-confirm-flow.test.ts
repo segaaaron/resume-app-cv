@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { runWriteGate } from "@/lib/ats/write-gate"
 import { readFileSync } from "node:fs"
 import { tailorResolutions } from "@/lib/ats/tailor-resolutions"
 import type { AtsReport } from "@/lib/ats/report"
@@ -51,15 +52,28 @@ describe("por que se disparo el guard", () => {
   })
 
   /**
-   * Movido desde el borrado `figure-policy` (2026-08-22): ese archivo duplicaba
-   * la clasificación de cifra que este ya cubre. Éste era su único caso propio —
-   * el matiz de que `METRIC_REGEX` sólo acusa un número cuando lleva una de sus
-   * unidades (%, users/usuarios…). «clientes» no está en la lista, así que un
-   * rango con esa palabra da null; con «usuarios», figure.
+   * ── LO QUE ESTE CASO DOCUMENTABA ERA UN AGUJERO (medido, 2026-08-25) ──────
+   *
+   * Decía que un rango sólo se acusa si lleva una de las nueve unidades de
+   * `METRIC_REGEX`, y que «clientes» no está en la lista — así que
+   * «entre 50 y 100 clientes» daba `null` y entraba al CV SIN que el candidato
+   * confirmara nada. Es justo lo contrario de la regla de la casa: «un rango que
+   * el usuario ajusta es suyo; un número que decidió el modelo, no».
+   *
+   * El defecto se vio con el CV del CEO: una reescritura con «10 to 15 edge
+   * cases per sprint» pasaba con `needsFigureConfirm: false`.
+   *
+   * La pregunta tiene un solo dueño ahora —`unsourcedFigures`— y la vara no es
+   * una lista de unidades sino si el número CUANTIFICA: lo sigue una palabra.
    */
-  it("una cifra solo se acusa cuando lleva una unidad de la lista", () => {
-    expect(hardCodedFactKind("Atendi entre 50 y 100 clientes", "Atendi clientes")).toBe(null)
+  it("cualquier cifra que cuantifique y el CV no respalde se manda a confirmar", () => {
+    expect(hardCodedFactKind("Atendi entre 50 y 100 clientes", "Atendi clientes")).toBe("figure")
     expect(hardCodedFactKind("Atendi entre 20 y 30 usuarios", "Atendi clientes")).toBe("figure")
+  })
+
+  /** Y un dígito que no mide nada no es una afirmación: no se acusa. */
+  it("un dígito suelto no es una cifra afirmada", () => {
+    expect(hardCodedFactKind("Mantengo el parser alert(1) al dia", "Mantengo el parser")).toBe(null)
   })
 })
 
@@ -123,5 +137,50 @@ describe("el camino completo, de tailor a la tarjeta", () => {
       const m = JSON.parse(read(`messages/${loc}.json`)).editor.ats
       expect(m.reason_confirm_figure_hint, loc).toBeTruthy()
     }
+  })
+})
+
+/**
+ * EL AGUJERO DEL CHIP, CERRADO Y MEDIDO (2026-08-25).
+ *
+ * ── LO QUE SE MIDIÓ ────────────────────────────────────────────────────────
+ *
+ * Con la lista cerrada de nueve unidades, una reescritura con «clarifying 10 to
+ * 15 edge cases per sprint» salía del motor con `needsFigureConfirm: FALSE`: el
+ * número que eligió el modelo entraba al CV sin que nadie se lo confirmara al
+ * candidato. Es lo contrario de la regla de la casa — «un rango que el usuario
+ * ajusta es suyo; un número que decidió el modelo, no».
+ *
+ * La vara ya no es qué unidad lleva, sino si el número CUANTIFICA: lo sigue una
+ * palabra. Y la pregunta tiene un solo dueño, `unsourcedFigures`, que además
+ * compara por dígitos — «1.400» y «1,400» son la misma cifra en dos locales.
+ */
+describe("cualquier rango sin respaldo se manda a confirmar", () => {
+  const CV = "Implemented iOS Security practices across Swift and SwiftUI feature work by clarifying edge cases during sprint planning."
+
+  it("un rango con una unidad que ninguna lista previó", () => {
+    const v = runWriteGate({
+      text: "Implemented iOS Security practices across Swift and SwiftUI, clarifying 10 to 15 edge cases per sprint for secure delivery.",
+      original: CV, source: CV, figurePolicy: "confirm", language: "en",
+    }, ["figure_policy"])
+    expect(v.ok && v.needsFigureConfirm).toBe(true)
+  })
+
+  it("y la misma cifra escrita en otro locale no se acusa dos veces", () => {
+    const fuente = "Procesé 1.400 transacciones por turno"
+    const v = runWriteGate({
+      text: "Procesé 1,400 transacciones por turno con cuadre diario",
+      original: fuente, source: fuente, figurePolicy: "confirm", language: "es",
+    }, ["figure_policy"])
+    expect(v.ok && v.needsFigureConfirm).toBe(false)
+  })
+
+  it("donde la política es descartar, un número inventado no pasa", () => {
+    const v = runWriteGate({
+      text: "Atendí entre 50 y 100 clientes por día en ventanilla",
+      original: "Atendí clientes en ventanilla", source: "Atendí clientes en ventanilla",
+      figurePolicy: "drop", language: "es",
+    }, ["figure_policy"])
+    expect(v.ok).toBe(false)
   })
 })

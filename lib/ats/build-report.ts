@@ -1101,8 +1101,34 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
         titleKey: "check.add_metric",
         detailKey: "check.add_metric_detail",
         params: { pct: pctCifra, min: QUANTIFICATION_BAND.min, max: QUANTIFICATION_BAND.max },
-        owner: "tailor",
-        action: { kind: "rewrite_bullet", targetId: dueño.targetId, index: dueño.index },
+        /**
+         * EL TAMAÑO LO PONE EL CANDIDATO. Y por eso acá no va un botón.
+         *
+         * ── EL DEFECTO (reportado con captura, 2026-08-25) ──────────────────
+         *
+         *   «¿Para qué ponemos improve bullet si al final no nos dejará
+         *    realizarlo? Si no hay mejora no debería salir.»
+         *
+         * Tenía razón, y el defecto era mío: emití esta tarjeta con botón, y el
+         * botón llama a un motor que TIENE PROHIBIDO poner una cifra. Su
+         * instrucción es literal —«nunca escribas un número y nunca lo pidas; si
+         * la fuente no tiene cifra, mejorá la redacción»—, así que sobre una
+         * línea ya bien escrita contestaba lo único honesto que podía: «no puedo
+         * mejorarla sin inventar datos». Un botón que promete lo que su motor
+         * tiene prohibido dar.
+         *
+         * El número lo sabe una sola persona. La tarjeta dice QUÉ falta y DÓNDE
+         * —eso es lo que el candidato no sabe—; el dato lo pone él, y el chequeo
+         * se cierra solo en cuanto lo escribe, porque este informe se recalcula
+         * con cada tecla.
+         *
+         * PENDIENTE DECLARADO, no olvido: la salida sin salir del panel existe a
+         * medio construir. `lib/ats/figure-slots.ts` marca el hueco donde va la
+         * cifra y comprueba que se haya llenado, y nadie lo usa todavía —le falta
+         * el campo en el modal de confirmación. Con eso, esta tarjeta pasa a
+         * tener un botón que sí puede cumplir.
+         */
+        owner: "user",
         evidence: [dueño.text],
       })
     }

@@ -508,6 +508,27 @@ Reglas:
         rewrites.push({
           checkId,
           text,
+          /**
+           * LA LÍNEA QUE ESTE TEXTO REEMPLAZA, DICHA POR QUIEN LA REESCRIBIÓ.
+           *
+           * ── EL DEFECTO (reportado con captura, 2026-08-25) ────────────────
+           *
+           * La tarjeta mostraba «ACTUAL: Integré herramientas de depuración… un
+           * 10% menos de crashes» contra una reescritura sobre Core Data — dos
+           * líneas distintas enfrentadas, y el guard del panel rechazándola por
+           * perder términos que esa reescritura nunca tuvo que conservar.
+           *
+           * La causa: el panel volvía a leer el «antes» POR ÍNDICE al pintar. Y
+           * el índice es una PISTA, no la identidad (`bullet-locate.ts`): entre
+           * la llamada y el render el usuario aplica otros arreglos, se colapsa
+           * una repetida, se corta una línea — y los índices se corren. El «antes»
+           * pasaba a ser otra línea, mientras el texto seguía siendo el de ésta.
+           *
+           * Se manda con la respuesta y no se vuelve a deducir. Es el mismo
+           * principio que ya rige el emparejamiento del `checkId`: lo que se sabe
+           * en el momento de escribir no se re-adivina después.
+           */
+          original,
           ...(veredicto.needsFigureConfirm ? { needsFigureConfirm: true } : {}),
           ...(typeof r.metricHint === "string" && r.metricHint.trim()
             ? { metricHint: r.metricHint.trim().slice(0, 160) } : {}),

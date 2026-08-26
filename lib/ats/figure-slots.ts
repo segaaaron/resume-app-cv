@@ -18,8 +18,24 @@
 // llena no se aplica. Esa regla es la que impide que un `[X%]` termine impreso
 // delante de un reclutador, y sigue intacta.
 
-/** Cifras del texto: porcentajes, montos, cantidades. Ignora años sueltos. */
-const FIGURE = /\d+(?:[.,]\d+)?\s*%|\$\s?\d+(?:[.,]\d+)*|\b\d+(?:[.,]\d+)*\b/g
+/**
+ * Cifras que AFIRMAN algo: un porcentaje, un monto, o un número que cuantifica la
+ * palabra que le sigue. Ignora los años sueltos.
+ *
+ * ── POR QUÉ NO ES «CUALQUIER DÍGITO» (medido, 2026-08-25) ───────────────────
+ *
+ * Al volverse el dueño de «¿esta cifra está respaldada?» —antes lo decidía una
+ * lista cerrada de nueve unidades que dejaba pasar «10 to 15 edge cases»—, la
+ * primera versión marcaba cualquier número. Y eso acusaba a `alert(1)` dentro de
+ * un texto escapado: un dígito suelto no es una afirmación sobre el candidato, y
+ * el guard de la carta reintentaba por él. Lo cazó su propio test.
+ *
+ * La regla es la que ya usa `bullet-strength` para reconocer un resultado: un
+ * número CUANTIFICA cuando lo sigue una palabra. Por eso el número entra en la
+ * coincidencia y la palabra sólo se mira —así el hueco reemplaza la cifra y deja
+ * el sustantivo en su lugar—.
+ */
+const FIGURE = /\d+(?:[.,]\d+)?\s*%|\$\s?\d+(?:[.,]\d+)*|\b\d+(?:[.,]\d+)*\b(?=\s+\p{L}{3,})/gu
 
 const digitsOf = (s: string) => s.replace(/[^\d]/g, "")
 

@@ -25,6 +25,8 @@ import { allChecks } from "./report"
 export interface TailorRewriteOut {
   checkId: string
   text: string
+  /** La línea que este texto reemplaza, tal como la vio quien la reescribió. */
+  original?: string
   metricHint?: string
   demonstrates?: string
   needsFigureConfirm?: boolean
@@ -60,7 +62,17 @@ export function tailorResolutions(
     const check = known.get(r.checkId)
     if (!check || !r.text.trim()) continue
     const a = check.action
-    const before = a?.kind === "rewrite_bullet" && a.targetId && typeof a.index === "number"
+    /**
+     * EL «ANTES» LO DICE QUIEN ESCRIBIÓ, no el índice al pintar.
+     *
+     * Volver a leer por índice en el render enfrentaba la reescritura de una
+     * línea con el texto de otra en cuanto el usuario aplicaba algo en el medio
+     * y los índices se corrían. `readBullet` queda como respaldo para respuestas
+     * de antes de este cambio, no como la fuente.
+     */
+    const before = r.original?.trim()
+      ? r.original
+      : a?.kind === "rewrite_bullet" && a.targetId && typeof a.index === "number"
       ? readBullet(a.targetId, a.index)
       : ""
     resolutions.push({

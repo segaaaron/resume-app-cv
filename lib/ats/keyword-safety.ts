@@ -18,7 +18,14 @@
 // candidate can still write anything they want by hand; what we will not do is
 // hand them a button that lowers their own score.
 
-import { normalizeTerm, termPresent } from "./vocabulary"
+// ── UN SOLO DUEÑO, Y ESTE ARCHIVO NO LO ERA (reportado con captura, 2026-08-25)
+//
+// La misma pregunta estaba escrita DOS VECES: acá, para el botón del panel, y
+// como `droppedPostingTerms` en `rewrite-keeps-match.ts`, para el guard del
+// servidor. Dos copias de un `filter` sobre `termPresent` que hoy coincidían y
+// mañana no. Ahora esta función DELEGA: hay una implementación.
+
+import { droppedPostingTerms } from "./rewrite-keeps-match"
 
 /**
  * Posting terms present in `current` and missing from `next`.
@@ -27,10 +34,7 @@ import { normalizeTerm, termPresent } from "./vocabulary"
  * lost, so the caller can say so instead of silently dropping the suggestion.
  */
 export function postingTermsLost(current: string, next: string, postingTerms: string[]): string[] {
-  if (!current.trim() || !next.trim() || postingTerms.length === 0) return []
-  const cur = normalizeTerm(current)
-  const nxt = normalizeTerm(next)
-  return postingTerms.filter((kw) => termPresent(kw, cur) && !termPresent(kw, nxt))
+  return droppedPostingTerms(current, next, postingTerms)
 }
 
 /** True when the rewrite keeps every posting term the current text already had. */

@@ -62,8 +62,31 @@ const DEFAULT_WEIGHT: WeightOf = () => 1
 
 export function impactOf(b: ImpactBullet, weightOf: WeightOf = DEFAULT_WEIGHT): RankedImpact {
   const relevance = (b.keywords ?? []).reduce((sum, term) => sum + (Number.isFinite(weightOf(term)) ? weightOf(term) : 1), 0)
-  const writing = scoreBullet(b.text).score
-  return { ...b, relevance, writing, expendable: relevance === 0 || isImprovableLine(b.text) }
+  const { score: writing, reasons } = scoreBullet(b.text)
+  /**
+   * UN RESULTADO MEDIBLE NO SE SACRIFICA POR NO NOMBRAR UN TÉRMINO.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-25) ────────────────────────
+   *
+   * El intercambio propuso sacar «Implementé la arquitectura TCA… reduciendo la
+   * deuda técnica un 20% en 4 releases» —una línea con cifra, con verbo y bien
+   * escrita— sólo porque no aterrizaba ninguna palabra de ESA oferta. Y la regla
+   * decía exactamente eso: `relevance === 0` la volvía prescindible.
+   *
+   * Es el error de leer «bajo impacto para esta posición» como «no sirve». Un
+   * logro medido lo lee cualquiera que abra el CV, y borrarlo para meter una
+   * línea de capacidad es cambiar oro por bronce. Sigue pesando menos que una
+   * línea que además aterriza el término —el orden no cambia—, pero deja de ser
+   * candidata a que la borren: si en el puesto no hay ninguna otra que sacar, la
+   * respuesta honesta es que ahí no entra nada.
+   */
+  const declaraResultado = reasons.includes("anchored_result") || reasons.includes("has_figure")
+  return {
+    ...b,
+    relevance,
+    writing,
+    expendable: !declaraResultado && (relevance === 0 || isImprovableLine(b.text)),
+  }
 }
 
 /**

@@ -1074,6 +1074,15 @@ export interface TailorExperienceResult {
 export interface TailorRewrite {
   checkId: string
   text: string
+  /**
+   * La línea que este texto reemplaza, tal como la vio quien la reescribió.
+   *
+   * El panel la re-leía POR ÍNDICE al pintar, y el índice es una pista, no la
+   * identidad: si el usuario aplicaba otro arreglo en el medio, los índices se
+   * corrían y la tarjeta enfrentaba esta reescritura con OTRA línea. Viaja con
+   * la respuesta para que el «antes» no se vuelva a deducir.
+   */
+  original?: string
   /** Qué medir en ESA línea. Nunca la cifra: el número lo pone el candidato. */
   metricHint?: string
   /** La blanda que esa línea pasa a demostrar. */

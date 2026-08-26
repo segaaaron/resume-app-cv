@@ -2,6 +2,7 @@
 // Shared helpers used across multiple AI modules.
 import { AppError } from "@/lib/services/auth/AppError"
 import { parseBullets, renderBulletsForPrompt } from "./bullets"
+import { unsourcedFigures } from "@/lib/ats/figure-slots"
 
 /** Safe JSON parser — throws AppError("parse_error", 500) on failure. */
 export function parseAIJson<T>(raw: string): T {
@@ -103,12 +104,29 @@ export const TECH_BUZZWORDS: readonly string[] = [
 ]
 
 /**
- * Metric tokens that count as hard-coded when they appear in AI output but not in
- * the source. Deliberately NARROW: every token here that the model writes and
- * the source lacks costs the user their whole suggestion, so a false positive
- * is expensive. Only units that are unambiguously performance claims.
+ * Unidades que, pegadas a un número, son inequívocamente una afirmación de
+ * rendimiento. Ya NO decide si una cifra está respaldada — eso lo contesta
+ * `unsourcedFigures` (`lib/ats/figure-slots.ts`), que es el dueño.
  *
- * Not the same list as ANY_METRIC_REGEX, and that is on purpose — see there.
+ * ── POR QUÉ DEJÓ DE DECIDIRLO (medido, 2026-08-25) ──────────────────────────
+ *
+ * Su comentario decía «deliberadamente ESTRECHA: un falso positivo le cuesta al
+ * usuario la sugerencia entera». Eso era cierto cuando el guard devolvía un
+ * booleano y quien lo llamaba tiraba la respuesta. Desde que la política se
+ * partió en dos —`confirm` PREGUNTA, `drop` descarta— el costo de un falso
+ * positivo dejó de ser el mismo en los dos caminos, y la lista estrecha se
+ * convirtió en un agujero:
+ *
+ *   «clarifying 10 to 15 edge cases per sprint»  →  ninguna unidad de la lista
+ *
+ * Medido ejecutando el motor con esa reescritura: `{ok:true,
+ * needsFigureConfirm:FALSE}`. Un número que el modelo eligió entraba al CV sin
+ * que nadie se lo confirmara al candidato — exactamente lo contrario de la regla
+ * de la casa: «un rango que el usuario ajusta es suyo; un número que decidió el
+ * modelo, no».
+ *
+ * Se conserva exportada porque nombra algo real —«esto es una métrica de
+ * rendimiento»— y hay tests que la citan; lo que se fue es su papel de juez.
  */
 export const METRIC_REGEX =
   /(\d+(?:[.,]\d+)?)\s*(%|percent|x\b|users?|usuarios?|requests?|peticiones?|reduction|reducci[oó]n|increase|aumento|decrease|improvement|mejora)/gi
@@ -486,11 +504,19 @@ export function hardCodedFactKind(
     if (re.test(text) && !re.test(sourceContext)) return "brand"
   }
   if (namesUndeclaredSystem(text, sourceContext)) return "brand"
-  const sourceLower = sourceContext.toLowerCase()
-  for (const metric of text.match(METRIC_REGEX) ?? []) {
-    if (!sourceLower.includes(metric.toLowerCase())) return "figure"
-  }
-  return null
+  /**
+   * ¿QUÉ CIFRAS DE ESTE TEXTO NO ESTÁN RESPALDADAS? Una sola función lo contesta.
+   *
+   * Antes se comparaba `METRIC_REGEX` por SUBCADENA contra el source, y ese par
+   * tenía dos agujeros: la lista de unidades dejaba pasar cualquier rango con
+   * una unidad no prevista, y comparar por subcadena hacía que «1.400» y «1,400»
+   * —la misma cifra en dos locales— contaran como distintas.
+   *
+   * `unsourcedFigures` ya resolvía las dos cosas y no lo llamaba nadie: compara
+   * por DÍGITOS e ignora los años sueltos, que son contexto temporal y no un
+   * resultado. Es el mismo módulo que sabe pintar el hueco donde va la cifra.
+   */
+  return unsourcedFigures(text, sourceContext).length > 0 ? "figure" : null
 }
 
 /**

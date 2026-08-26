@@ -499,9 +499,22 @@ export default function ATSScorePanel() {
     return out.slice(0, 3)
   }
 
+  /**
+   * `checkId` — el hallazgo que esta mejora cierra.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-25) ────────────────────────
+   *
+   *   «Cuando realizo el improve bullet no lo marca como realizado.»
+   *
+   * El botón conocía el hallazgo —lo usaba para armar la clave del spinner— y no
+   * lo guardaba en ningún lado, así que `confirmBulletFix` no tenía qué cerrar:
+   * el usuario aceptaba la mejora, la línea se escribía en el CV, y la tarjeta
+   * seguía ofreciendo el mismo trabajo.
+   */
   async function improveMetricless(
     b: { text: string; targetId: string; jobTitle: string; index: number; reasons?: string[] },
     key: string,
+    checkId?: string,
   ) {
     if (improvingKey) return
     setImprovingKey(key)
@@ -561,6 +574,7 @@ export default function ATSScorePanel() {
       setBulletFix({
         targetId: b.targetId,
         index: b.index,
+        appliedCheckId: checkId,
         current: b.text,
         improved: first.text,
         why: first.why,
@@ -1378,6 +1392,7 @@ export default function ATSScorePanel() {
           reasons: focusForLine(checkId, line),
         },
         `check-${checkId}`,
+        checkId,
       )
       return
     }
@@ -1413,10 +1428,27 @@ export default function ATSScorePanel() {
        * escritura, que es el único lugar por donde pasa todo lo que toca el CV.
        * Sin él, una línea más linda podía costar la coincidencia que la traía.
        */
-      // Los términos que el CV YA dice, según el informe. Salían del crudo del
-      // servidor; el informe los tiene con su conteo a los dos lados y es el que
-      // se rehace cuando el CV cambia.
-      const claimed = (report?.terms ?? []).filter((x) => x.cv > 0).map((x) => x.term)
+      /**
+       * LOS TÉRMINOS DE LA VACANTE — no todo lo que el CV dice.
+       *
+       * ── EL DEFECTO (reportado con captura, 2026-08-25) ────────────────────
+       *
+       *   «Error: esa reescritura perdería términos que la vacante busca:
+       *    Debugging.»
+       *
+       * Y la vacante NO buscaba Debugging. La lista se armaba con TODOS los
+       * términos del informe con `cv > 0`, y ahí adentro vive la sección «otras
+       * palabras clave»: habilidades que el candidato tiene y que esta oferta no
+       * pide, publicadas para que vea que el análisis las ve. Se colaban al
+       * guard, que bloqueaba reescrituras buenas con un mensaje que afirmaba algo
+       * falso — el guard mintiendo y frenando a la vez.
+       *
+       * Y era además la mitad de una discrepancia: el servidor corre este mismo
+       * chequeo con `posting.hardSkills + softSkills`, así que las dos puertas
+       * juzgaban con listas distintas y el usuario veía pasar del servidor lo que
+       * el cliente después rechazaba.
+       */
+      const claimed = (report?.terms ?? []).filter((x) => x.section !== "other" && x.cv > 0).map((x) => x.term)
       const lost = postingTermsLost(resolution.before ?? "", resolution.text, claimed)
       if (lost.length > 0) { toast.error(t("rewrite_loses_terms", { terms: lost.slice(0, 3).join(", ") })); return }
       if (writeBullet(action.targetId, action.index, resolution.before ?? "", resolution.text, true, checkId)) {
