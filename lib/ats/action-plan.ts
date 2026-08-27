@@ -29,6 +29,7 @@
 
 import { FILLER_WORDS } from "@/lib/services/ai/shared/text-similarity"
 import { normalizeTerm } from "./vocabulary"
+import { READY_SCORE } from "./report"
 
 export type PlanSource = "critical" | "bullet" | "merge" | "soft" | "structure"
 
@@ -148,7 +149,12 @@ export function buildActionPlan<T extends PlanInput>(items: T[], appliedSignatur
  * respuesta legítima y hay que darla en voz alta — es la mitad del valor de la
  * herramienta, y es lo que convierte una lista de reproches en un semáforo.
  */
-export const READY_SCORE = 80
+/**
+ * El umbral NO se redeclara acá: lo posee `report.ts` junto al semáforo entero.
+ * Estaban los dos, con el mismo valor y su propio `isReadyToSend` al lado, que es
+ * exactamente cómo dos pantallas empiezan a contestar distinto la misma pregunta.
+ */
+export { READY_SCORE }
 
 export function isReadyToSend(score: number | null | undefined, criticalCount: number): boolean {
   return typeof score === "number" && score >= READY_SCORE && criticalCount === 0

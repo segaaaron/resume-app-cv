@@ -5,7 +5,6 @@ import { AlertTriangle, Sparkles } from "lucide-react"
 import {
   criticalChecks,
   isReadyToSend,
-  openChecks,
   recoverablePoints,
   solvableChecks,
   weavableTerms,
@@ -71,7 +70,6 @@ export default function ReportRail({
   // dato, y el usuario creyendo que el panel no registró su trabajo.
   const noAplicado = (c: ReportCheck) => !appliedIds?.has(c.id)
   const crits = criticalChecks(report).filter(noAplicado)
-  const open = openChecks(report).filter(noAplicado)
   const workload = solvableChecks(report).filter(noAplicado)
   // Los términos que faltan cuentan como trabajo: son la palanca más grande del
   // puntaje (.45 las duras) y el botón no puede ofrecer menos de lo que resuelve.
@@ -181,9 +179,21 @@ export default function ReportRail({
         {[
           { n: `${report.terms.filter((x) => x.section === "hard" && x.cv > 0).length}/${report.terms.filter((x) => x.section === "hard").length}`,
             k: "tally_hard", count: null as number | null, tone: "var(--a-ok)" },
-          { n: String(open.length), k: "tally_open", count: open.length, tone: "var(--a-warn)" },
-          { n: String(report.terms.filter((x) => x.cv === 0).length), k: "tally_missing",
-            count: report.terms.filter((x) => x.cv === 0).length, tone: "var(--a-bad)" },
+          /*
+            LOS CHIPS CUENTAN LO MISMO QUE EL BOTÓN RESUELVE.
+            ── EL DEFECTO (reportado con captura, 2026-08-27) ──────────────────
+            La cabecera decía «13 open checks» con el botón ofreciendo «Solve 15
+            open items» justo debajo. Los dos números eran CIERTOS y contaban
+            cosas distintas: el chip miraba `openChecks` —hallazgos— y el botón
+            `solvableChecks + términos`, que incluye el trabajo que no es un
+            hallazgo. Y el tercer chip contaba `terms.cv === 0` mientras el botón
+            teje `weavableTerms`, otra tercera cuenta sobre el mismo dato.
+            La regla ya estaba escrita en este proyecto: dos números que cuentan
+            cosas distintas, uno al lado del otro, se leen como una mentira aunque
+            los dos sean ciertos. O se explican, o uno de los dos sobra.
+          */
+          { n: String(solvable), k: "tally_open", count: solvable, tone: "var(--a-warn)" },
+          { n: String(missing.length), k: "tally_missing", count: missing.length, tone: "var(--a-bad)" },
         ].map((x) => (
           <div key={x.k} className="rounded-xl px-2.5 py-2 text-center" style={{ background: "var(--a-surface)", border: "1px solid var(--a-border)" }}>
             <span className="block text-[16px] font-bold leading-none tabular-nums" style={{ color: x.tone }}>{x.n}</span>

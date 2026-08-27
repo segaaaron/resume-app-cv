@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { ChevronDown, FileText, Search, Sparkles, Tag, User, Briefcase } from "lucide-react"
-import type { ReportSection, ReportSectionId, ReportCheck } from "@/lib/ats/report"
+import { scoreBand, type ReportSection, type ReportSectionId, type ReportCheck } from "@/lib/ats/report"
 
 /**
  * Una sección del informe.
@@ -44,6 +44,8 @@ export default function ReportSectionCard({ section, defaultOpen = false, render
   const total = section.checks.length
   const scored = section.scoreCategory !== null
   const pct = section.coveragePct
+  /** Rojo, amarillo o verde — decidido por el único dueño de la regla. */
+  const banda = scored && pct !== null ? scoreBand(pct) : null
 
   return (
     <div
@@ -68,28 +70,52 @@ export default function ReportSectionCard({ section, defaultOpen = false, render
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="flex w-full flex-col gap-1.5 px-3.5 py-3 text-left transition-colors hover:brightness-[0.985] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2"
+        className="flex w-full flex-col gap-2 px-3.5 py-3 text-left transition-colors hover:brightness-[0.985] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2"
         style={{ outlineColor: "var(--a-accent-ink)" }}
       >
         <span className="flex w-full items-center gap-2.5">
+          {/*
+            EL SEMÁFORO SE VE, Y NO SÓLO POR EL COLOR.
+            La regla del CEO —<55 rojo · 55-79 amarillo · ≥80 verde— vivía sólo en
+            una barra de 1px al pie: con el rojo y el verde a esa altura, las seis
+            tarjetas se leían iguales de un vistazo. El punto la pone a la altura
+            del título, y como el color por sí solo no puede portar significado
+            (un daltónico ve seis puntos grises), el estado viaja además en el
+            `aria-label` y en la palabra que acompaña al número.
+          */}
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: "var(--a-surface-3)", color: "var(--a-ink-2)" }}
+            style={
+              banda
+                ? { background: `var(--a-${banda}-soft)`, color: `var(--a-${banda}-ink)` }
+                : { background: "var(--a-surface-3)", color: "var(--a-ink-2)" }
+            }
           >
             <Icon className="h-3.5 w-3.5" />
           </span>
 
-          <span
-            className="min-w-0 flex-1 text-[13px] font-bold leading-snug"
-            style={{ color: "var(--a-ink)" }}
-          >
-            {t(`section_${section.id}`)}
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold leading-snug" style={{ color: "var(--a-ink)" }}>
+              {t(`section_${section.id}`)}
+            </span>
+            {/* La excepción se dice; la regla no. «Mueve el puntaje» repetido en
+                las seis tarjetas era ruido que ocupaba el lugar de la señal. */}
+            {!scored && (
+              <span className="block text-[10px] leading-tight" style={{ color: "var(--a-muted-2)" }}>
+                {t("section_no_score")}
+              </span>
+            )}
           </span>
 
           {scored && pct !== null && (
-            <span className="shrink-0 text-[15px] font-bold tabular-nums" style={{ color: "var(--a-ink)" }}>
-              {pct}
-              <small className="ml-0.5 text-[9px] font-semibold" style={{ color: "var(--a-muted-2)" }}>%</small>
+            <span className="flex shrink-0 items-baseline gap-1">
+              <span
+                className="text-[17px] font-black leading-none tabular-nums"
+                style={{ color: `var(--a-${banda}-ink)` }}
+              >
+                {pct}
+              </span>
+              <small className="text-[9px] font-semibold" style={{ color: "var(--a-muted-2)" }}>%</small>
             </span>
           )}
 
@@ -100,47 +126,40 @@ export default function ReportSectionCard({ section, defaultOpen = false, render
         </span>
 
         {/*
-          LA LÍNEA QUE MIDE, alineada bajo el título (28 del icono + 10 del gap).
-          La barra vive ACÁ y no al pie de la tarjeta. Antes era una franja de
-          3px a todo lo ancho, pegada al borde inferior: se leía como un
-          subrayado suelto, desprendido de la fila que describe — sobre todo con
-          el rojo y el naranja, que parecían un error de render. Adentro, con las
-          puntas redondeadas y su propio carril, se lee como lo que es: cuánto de
-          esta sección está cubierto.
+          LA BARRA OCUPA EL ANCHO, y el chip se apoya en su derecha. Antes competía
+          con el rótulo repetido y quedaba de ~90px: a esa medida un 25% y un 60%
+          se ven casi igual, que es lo contrario de lo que una barra sirve.
         */}
-        <span className="flex w-full items-center gap-2 pl-[38px]">
-          <span className="shrink-0 text-[10px] leading-tight" style={{ color: "var(--a-muted-2)" }}>
-            {scored ? t("section_moves_score") : t("section_no_score")}
-          </span>
-
-          {scored && pct !== null && (
-            <span
-              className="h-1 min-w-0 flex-1 overflow-hidden rounded-full"
-              style={{ background: "var(--a-track)" }}
-            >
+        {(scored && pct !== null) || total > 0 ? (
+          <span className="flex w-full items-center gap-2 pl-[38px]">
+            {scored && pct !== null && (
               <span
-                className="block h-full rounded-full transition-[width] duration-500"
-                style={{
-                  width: `${pct}%`,
-                  background: pct >= 80 ? "var(--a-ok)" : pct >= 55 ? "var(--a-warn)" : "var(--a-bad)",
-                }}
-              />
-            </span>
-          )}
+                className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full"
+                style={{ background: "var(--a-track)" }}
+                role="img"
+                aria-label={`${pct}% — ${t(`section_band_${banda}`)}`}
+              >
+                <span
+                  className="block h-full rounded-full transition-[width] duration-500"
+                  style={{ width: `${pct}%`, background: `var(--a-${banda})` }}
+                />
+              </span>
+            )}
 
-          {total > 0 && (
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold ${scored && pct !== null ? "" : "ml-auto"}`}
-              style={
-                openCount > 0
-                  ? { background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }
-                  : { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
-              }
-            >
-              {openCount > 0 ? t("section_open", { count: openCount }) : t("section_clean", { count: total })}
-            </span>
-          )}
-        </span>
+            {total > 0 && (
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold ${scored && pct !== null ? "" : "ml-auto"}`}
+                style={
+                  openCount > 0
+                    ? { background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }
+                    : { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
+                }
+              >
+                {openCount > 0 ? t("section_open", { count: openCount }) : t("section_clean", { count: total })}
+              </span>
+            )}
+          </span>
+        ) : null}
       </button>
 
       {open && (

@@ -371,6 +371,25 @@ export function openChecks(report: AtsReport): ReportCheck[] {
   return allChecks(report).filter((c) => c.state !== "pass" && !c.informational)
 }
 
+/**
+ * ── NO SE PINTA AL LADO DEL BOTÓN. Y ES LA RAZÓN DE QUE NO TENGA CONSUMIDOR ──
+ *
+ * Contesta «¿qué hallazgos siguen abiertos?», que NO es la pregunta que contesta
+ * el botón de resolver: ése ofrece `solvableChecks` MÁS los términos que faltan,
+ * y un término que la vacante pide no es un hallazgo. Los dos números son
+ * ciertos y cuentan cosas distintas.
+ *
+ * Puestos uno al lado del otro se leyeron como una mentira: reportado con
+ * captura el 2026-08-27, la cabecera decía «13 open checks» mientras el botón
+ * debajo ofrecía «Solve 15 open items». El riel pasó a contar lo que el botón
+ * resuelve, y esta función se quedó sin llamador en la app A PROPÓSITO.
+ *
+ * Sigue acá porque es la definición de dominio de «abierto» y sus tests
+ * ejercitan el contrato del informe —que un informativo nunca cuente como
+ * pendiente, que arreglar cierre de verdad—. Lo que no puede volver a pasar es
+ * que su número se pinte junto a otro que cuenta distinto.
+ */
+
 /** Los que descalifican. Con uno abierto, el CV no está listo para mandar. */
 export function criticalChecks(report: AtsReport): ReportCheck[] {
   return allChecks(report).filter((c) => c.state === "crit")
@@ -595,6 +614,34 @@ export function recoverablePoints(report: AtsReport): number {
  * honesta es que todavía no.
  */
 export const READY_SCORE = 80
+
+/**
+ * Debajo de esto el CV no compite: no es «podría mejorar», es que el filtro lo
+ * deja afuera. Entre este número y `READY_SCORE`, amarillo — hay con qué trabajar.
+ */
+export const WARN_SCORE = 55
+
+/** Rojo, amarillo o verde. La regla del CEO, en un solo lugar. */
+export type ScoreBand = "bad" | "warn" | "ok"
+
+/**
+ * EL SEMÁFORO, CON UN DUEÑO.
+ *
+ * ── EL DEFECTO (auditoría del 2026-08-27) ───────────────────────────────────
+ *
+ * La misma regla —«<55 rojo · 55-79 amarillo · ≥80 verde», del CEO— vivía
+ * escrita a mano en TRES lugares: el `toneOf` privado del dial, el ternario de
+ * `ReportSectionCard` y un `CVCompletenessWidget` que además usaba hex crudos
+ * en vez de los tokens del panel. Tres copias de un umbral es cómo dos pantallas
+ * terminan pintando colores distintos para el mismo número.
+ *
+ * Y `READY_SCORE` estaba DECLARADO DOS VECES —acá y en `action-plan.ts`— con su
+ * propio `isReadyToSend` al lado. Dos fuentes de verdad para «¿puede mandarlo?».
+ */
+export function scoreBand(pct: number): ScoreBand {
+  if (pct >= READY_SCORE) return "ok"
+  return pct >= WARN_SCORE ? "warn" : "bad"
+}
 
 export function isReadyToSend(report: AtsReport): boolean {
   return report.score >= READY_SCORE && criticalChecks(report).length === 0

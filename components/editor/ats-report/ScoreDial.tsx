@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { READY_SCORE } from "@/lib/ats/report"
+import { READY_SCORE, scoreBand } from "@/lib/ats/report"
 
 /**
  * El número, y lo que significa.
@@ -54,16 +54,8 @@ type Tone = "ok" | "warn" | "bad"
  * crítico tiene su propia tarjeta, en rojo, con su propio texto. Cada cosa dicha
  * una vez, en su lugar: la regla de este panel desde el principio.
  */
-function toneOf(score: number): Tone {
-  if (score >= READY_SCORE) return "ok"
-  return score >= WARN_SCORE ? "warn" : "bad"
-}
-
-/**
- * Debajo de esto el CV no compite: no es «podría mejorar», es que el filtro lo
- * deja afuera. Entre esto y el umbral, amarillo — hay con qué trabajar.
- */
-const WARN_SCORE = 55
+/** El dueño de la regla es `scoreBand`; acá sólo se le pregunta. */
+const toneOf = scoreBand
 
 const TONE_VAR: Record<Tone, string> = {
   ok: "var(--a-ok)",

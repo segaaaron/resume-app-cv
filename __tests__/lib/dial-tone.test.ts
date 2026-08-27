@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { scoreBand, READY_SCORE, WARN_SCORE } from "@/lib/ats/report"
 
 /**
  * EL SEMÁFORO DEL ANILLO TIENE QUE PODER CAMBIAR.
@@ -13,23 +14,19 @@ import { join } from "node:path"
  * El tono miraba también los hallazgos críticos, y entre ellos va el requisito
  * duro que el propio panel declara SIN salida. A un candidato al que le falta un
  * título eso le dejaba el anillo naranja para siempre: 88 de puntaje, todo lo
- * demás cerrado, y el color quieto. Su pregunta fue «¿el anillo sólo maneja un
- * color?» — y para él la respuesta era sí.
+ * demás cerrado, y el color quieto.
  *
- * Comprueba la FUNCIÓN, no el componente: montarlo pediría el store y la sesión
- * enteros para leer un color que sólo depende de un número.
+ * ── Y AHORA EJECUTA LA FUNCIÓN (auditoría del 2026-08-27) ─────────────────
+ *
+ * Este archivo RE-IMPLEMENTABA la regla leyendo el fuente con dos regex y
+ * comparando números — el antipatrón que la casa ya tenía escrito: un test que
+ * re-implementa la lógica en vez de ejecutar la función exportada da verde con
+ * el producto roto. Se sostenía porque el umbral vivía dentro del componente.
+ * Ahora `scoreBand` es el dueño público de la regla y se le pregunta a él.
  */
 const SRC = readFileSync(join(process.cwd(), "components/editor/ats-report/ScoreDial.tsx"), "utf8")
 
-/** Se re-deriva del fuente para que ajustar los umbrales no deje el test mintiendo. */
-function tono(score: number): string {
-  const ready = Number(/READY_SCORE\s*=\s*(\d+)/.exec(
-    readFileSync(join(process.cwd(), "lib/ats/scoring-config.ts"), "utf8") + SRC,
-  )?.[1] ?? 80)
-  const warn = Number(/WARN_SCORE\s*=\s*(\d+)/.exec(SRC)?.[1] ?? 55)
-  if (score >= ready) return "ok"
-  return score >= warn ? "warn" : "bad"
-}
+const tono = scoreBand
 
 describe("el anillo recorre los tres colores", () => {
   it("por debajo de lo mínimo, rojo", () => {
@@ -55,7 +52,15 @@ describe("el anillo recorre los tres colores", () => {
    * dato no hay forma de mirarlo.
    */
   it("y no mira nada más que el puntaje", () => {
-    expect(SRC, "toneOf volvió a recibir los críticos").toMatch(/function toneOf\(score: number\): Tone/)
+    // `scoreBand` recibe UN número: de una firma así no hay forma de mirar los
+    // críticos. Lo que queda por comprobar es que el anillo le pase el puntaje
+    // y nada más — eso sí vive en el componente.
     expect(SRC, "el tono se calcula con algo además del puntaje").toContain("toneOf(score)")
+    expect(SRC, "el dial volvió a tener su propia copia del umbral").not.toMatch(/WARN_SCORE\s*=\s*\d+/)
+  })
+
+  /** Los umbrales son los de la regla, y salen del dueño. */
+  it("usa exactamente los números que el CEO fijó", () => {
+    expect([WARN_SCORE, READY_SCORE]).toEqual([55, 80])
   })
 })

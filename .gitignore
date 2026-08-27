@@ -85,7 +85,17 @@ temp/
 .claude/
 
 # ── Internal docs (private) ───────────────────────────────────────────────────
-docs/
+#
+# La carpeta se ignora porque acá viven handoffs de sesión, spikes y notas que
+# no son del producto. PERO un documento que describe CÓMO TIENE QUE COMPORTARSE
+# el producto sí lo es, y guardarlo acá adentro era garantizar que se pierda: el
+# plan del ATS vivía en `scratchpad/`, que el proyecto borra, y desapareció — y
+# moverlo a `docs/` no lo habría salvado, porque esta línea lo ignora igual.
+#
+# La regla, entonces: se ignora todo salvo lo que se declare abajo. Un contrato
+# del producto se declara y viaja con el código que lo cumple.
+docs/*
+!docs/ats-contrato.md
 
 # ── Project-specific ignores ──────────────────────────────────────────────────
 CLAUDE.md
