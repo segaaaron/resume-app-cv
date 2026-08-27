@@ -103,7 +103,7 @@ describe("a proposal still answers to every filter this file already had", () =>
   const roles = [{ targetId: "j", jobTitle: "Recepcionista", bullets: CROWDED }]
 
   it("offers the proposed pair", () => {
-    const got = findMergeCandidates(roles, 4, [{ targetId: "j", indexes: [0, 1], score: 0.6 }])
+    const got = findMergeCandidates(roles, 4, [{ targetId: "j", indexes: [0, 1], texts: [CROWDED[0], CROWDED[1]], score: 0.6 }])
     expect(got).toHaveLength(1)
     expect(got[0].texts[0]).toContain("agenda médica")
   })
@@ -113,7 +113,7 @@ describe("a proposal still answers to every filter this file already had", () =>
       "Gestioné la agenda médica de 120 pacientes por semana en el consultorio",
       ...CROWDED.slice(1),
     ] }]
-    const got = findMergeCandidates(withFigure, 4, [{ targetId: "j", indexes: [0, 1], score: 0.9 }])
+    const got = findMergeCandidates(withFigure, 4, [{ targetId: "j", indexes: [0, 1], texts: [withFigure[0].bullets[0], withFigure[0].bullets[1]], score: 0.9 }])
     expect(got).toHaveLength(0)
   })
 
@@ -123,18 +123,18 @@ describe("a proposal still answers to every filter this file already had", () =>
       "Gestioné la agenda médica de los profesionales",
       ...CROWDED.slice(2),
     ] }]
-    const got = findMergeCandidates(dup, 4, [{ targetId: "j", indexes: [0, 1], score: 0.99 }])
+    const got = findMergeCandidates(dup, 4, [{ targetId: "j", indexes: [0, 1], texts: [dup[0].bullets[0], dup[0].bullets[1]], score: 0.99 }])
     expect(got).toHaveLength(0)
   })
 
   it("refuses a role a recruiter would not call crowded", () => {
     const small = [{ targetId: "j", jobTitle: "R", bullets: CROWDED.slice(0, 2) }]
-    const got = findMergeCandidates(small, 4, [{ targetId: "j", indexes: [0, 1], score: 0.9 }])
+    const got = findMergeCandidates(small, 4, [{ targetId: "j", indexes: [0, 1], texts: [small[0].bullets[0], small[0].bullets[1]], score: 0.9 }])
     expect(got).toHaveLength(0)
   })
 
   it("ignores a proposal pointing at a bullet that is not there", () => {
-    const got = findMergeCandidates(roles, 4, [{ targetId: "j", indexes: [0, 99], score: 0.9 }])
+    const got = findMergeCandidates(roles, 4, [{ targetId: "j", indexes: [0, 99], texts: [CROWDED[0], "una línea que ya no está en el puesto"], score: 0.9 }])
     expect(got).toHaveLength(0)
   })
 
@@ -150,6 +150,41 @@ describe("a proposal still answers to every filter this file already had", () =>
       ...CROWDED.slice(2),
     ] }]
     expect(findMergeCandidates(twins).length).toBeGreaterThan(0)
+  })
+
+  /**
+   * EL PAR SE CALCULÓ ANTES, Y EL CV CAMBIÓ DESPUÉS. Reportado por el CEO el
+   * 2026-08-27: «cuando realizo un merge… luego me pide que lo elimine o que
+   * está repetido».
+   *
+   * El par vive un análisis y se reusa en cada recálculo instantáneo, que no paga
+   * embeddings. Llevando sólo la posición, fusionar —que borra una línea y corre
+   * todas las de abajo— lo dejaba apuntando a dos líneas que nadie emparejó, y el
+   * panel ofrecía fusionar la línea recién fusionada con una vecina cualquiera.
+   *
+   * Los otros casos de este archivo NO cubrían esto: todos pasan un par cuyos
+   * índices siguen siendo correctos, así que daban verde con la resolución por
+   * texto desarmada. Verificado quitándola: éste es el único que se pone rojo.
+   */
+  it("descarta el par cuyas líneas ya no están donde el análisis las vio", () => {
+    const fusionada = "Gestioné la agenda médica y confirmé los turnos por teléfono el día anterior"
+    // Cuatro líneas: el puesto sigue estando recargado, así que si el par se
+    // descarta es por lo que este caso mide y no porque no hubiera nada que unir.
+    const despues = [{ targetId: "j", jobTitle: "Recepcionista", bullets: [
+      fusionada, ...CROWDED.slice(2), "Redacté los informes semanales del área de admisión",
+    ] }]
+    // El par que el análisis publicó: las dos líneas que acaban de fusionarse.
+    const congelado = [{ targetId: "j", indexes: [0, 1] as [number, number], texts: [CROWDED[0], CROWDED[1]] as [string, string], score: 0.6 }]
+    expect(findMergeCandidates(despues, 4, congelado)).toHaveLength(0)
+  })
+
+  /** Y el par que SIGUE vivo se sigue ofreciendo: esto no es "descartar todo". */
+  it("conserva el par cuyas dos líneas siguen en el puesto, aunque se hayan corrido", () => {
+    const corrido = [{ targetId: "j", jobTitle: "Recepcionista", bullets: ["Redacté los informes semanales del área de admisión", ...CROWDED] }]
+    const congelado = [{ targetId: "j", indexes: [0, 1] as [number, number], texts: [CROWDED[0], CROWDED[1]] as [string, string], score: 0.6 }]
+    const got = findMergeCandidates(corrido, 4, congelado)
+    expect(got).toHaveLength(1)
+    expect(got[0].indexes).toEqual([1, 2])
   })
 })
 

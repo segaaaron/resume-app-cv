@@ -224,9 +224,34 @@ export const REPEAT_PAIR_THRESHOLD = 0.62
  * anterior al siguiente, que es exactamente lo que el detector viejo no podía
  * ver porque comparaba sólo dentro de cada puesto.
  */
+/**
+ * UN PAR VIAJA CON SU TEXTO. Sin él, es una posición, y una posición caduca.
+ *
+ * ── EL DEFECTO (reportado por el CEO, 2026-08-27) ──────────────────────────
+ *
+ *   «Cuando realizo un merge, agrego un hardskill o softskill, luego me pide que
+ *    lo elimine o que está repetido.»
+ *
+ * Estos pares se calculan en el análisis y el panel los reusa en cada recálculo
+ * instantáneo, porque no puede pagar embeddings por tecla. Llevaban SÓLO el
+ * índice, y el índice se corre en cuanto el usuario aplica algo: fusionar dos
+ * líneas borra una, y desde ahí todas las de abajo cambian de posición. Medido
+ * ejecutando el motor, un puesto de seis líneas:
+ *
+ *   antes de fusionar : par [0,1] → «Gestioné la agenda…»  ++  «Confirmé los turnos…»
+ *   después           : par [0,1] → «Gestioné la agenda…»  ++  «Preparé informes…»
+ *
+ * El panel ofrecía fusionar la línea recién fusionada con otra cualquiera, y la
+ * tarjeta de repeticiones acusaba de gemelas a dos líneas que no lo son.
+ *
+ * El proyecto ya tenía la regla escrita y el dueño para aplicarla —«el índice es
+ * pista, el texto es identidad», `resolveBulletIndex`—; a estos pares les faltaba
+ * el dato con el que preguntar. Ahora lo llevan, y sus dos consumidores resuelven
+ * por texto: si la línea se fue, el par se descarta en vez de señalar a otra.
+ */
 export interface RepeatedPair {
-  a: { targetId: string; index: number }
-  b: { targetId: string; index: number }
+  a: { targetId: string; index: number; text: string }
+  b: { targetId: string; index: number; text: string }
   score: number
 }
 
@@ -239,6 +264,8 @@ export interface RoleBullets {
 export interface SemanticPair {
   targetId: string
   indexes: [number, number]
+  /** Las dos líneas tal como estaban al calcular el par. Ver `RepeatedPair`. */
+  texts: [string, string]
   score: number
 }
 
@@ -314,8 +341,8 @@ export async function findBulletSimilarity(
       const score = cosineSimilarity(vectors[i], vectors[j])
       if (score < REPEAT_PAIR_THRESHOLD) continue
       candidates.push({
-        a: { targetId: flat[i].targetId, index: flat[i].index },
-        b: { targetId: flat[j].targetId, index: flat[j].index },
+        a: { targetId: flat[i].targetId, index: flat[i].index, text: flat[i].text },
+        b: { targetId: flat[j].targetId, index: flat[j].index, text: flat[j].text },
         score,
         ia: i,
         ib: j,
@@ -345,7 +372,7 @@ export async function findBulletSimilarity(
     offset += role.bullets.length
     const eligible = new Set(role.mergeEligible)
     const local = role.bullets
-      .map((b, k) => ({ index: b.index, vec: vectors[base + k] }))
+      .map((b, k) => ({ index: b.index, text: b.text, vec: vectors[base + k] }))
       .filter((b) => eligible.has(b.index))
     if (local.length < 2) continue
 
@@ -358,7 +385,12 @@ export async function findBulletSimilarity(
         if (repeated.has(`${role.targetId}#${local[i].index}`) || repeated.has(`${role.targetId}#${local[j].index}`)) continue
         const score = cosineSimilarity(local[i].vec, local[j].vec)
         if (score < MERGE_PAIR_THRESHOLD) continue
-        pairs.push({ targetId: role.targetId, indexes: [local[i].index, local[j].index], score })
+        pairs.push({
+          targetId: role.targetId,
+          indexes: [local[i].index, local[j].index],
+          texts: [local[i].text, local[j].text],
+          score,
+        })
       }
     }
     // Best first, and no bullet in two proposals: two cards offering to fold the

@@ -28,6 +28,10 @@ const cv = {
 const resumeText =
   "Ejecutivo Comercial. Implementar estrategias comerciales y promociones orientadas a la rotación de productos, logrando aumentar las ventas entre un 15% y 20%. Atención a clientes en sala."
 
+/** La primera línea del puesto, tal como el análisis la habría visto. */
+const PRIMERA_LINEA =
+  "Implementar estrategias comerciales y promociones orientadas a la rotación de productos, logrando aumentar las ventas entre un 15% y 20%."
+
 const ctx = () => verifyContextOf(cv, resumeText)
 
 const fix = (over: Partial<RecruiterFix> = {}): RecruiterFix => ({
@@ -104,9 +108,31 @@ describe("lo que NO se juzga acá", () => {
    * El índice es una PISTA, no la identidad (`bullet-locate.ts`). Exigir que
    * caiga justo descartaría hallazgos buenos cuyo número se corrió porque el
    * usuario editó el puesto entre el análisis y la lectura.
+   *
+   * ── CÓMO SE RESUELVE HOY (CEO, 2026-08-27) ──────────────────────────────
+   *
+   * Este caso se protegía dejando pasar CUALQUIER índice, y ese permiso era el
+   * bug: sin poder ubicar la línea, el verificador juzgaba otra —o la línea 0 por
+   * el viejo `?? 0`— y un tip ya corregido sobrevivía. Reportado: «me lanza tips
+   * que ya se corrigieron y él los vuelve a levantar».
+   *
+   * El hallazgo viaja ahora con `originalText`, así que el índice corrido deja de
+   * importar: se busca por texto. La intención de este caso queda intacta y sin
+   * necesitar el permiso que lo rompía.
    */
-  it("un índice corrido no descarta el hallazgo", () => {
-    expect(rejectionOf(fix({ action: { kind: "rewrite_bullet", targetId: "j1", index: 7 } }), ctx())).toBeNull()
+  it("un índice corrido no descarta el hallazgo: la línea se encuentra por su texto", () => {
+    const f = fix({ action: { kind: "rewrite_bullet", targetId: "j1", index: 7, originalText: PRIMERA_LINEA } })
+    expect(rejectionOf(f, ctx())).toBeNull()
+  })
+
+  /**
+   * Y SIN FORMA DE UBICARLA, NO SE MUESTRA. Un consejo sobre una línea que no
+   * podemos señalar es el «diagnóstico sin salida» que este archivo impide: su
+   * botón escribiría en el renglón equivocado, o en ninguno.
+   */
+  it("descarta el hallazgo que no trae texto y cuyo índice no existe", () => {
+    const f = fix({ action: { kind: "rewrite_bullet", targetId: "j1", index: 7 } })
+    expect(rejectionOf(f, ctx())).toBe("missing_target")
   })
 
   /**

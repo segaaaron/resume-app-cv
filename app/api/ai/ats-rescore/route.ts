@@ -40,13 +40,21 @@ const schema = z.object({
   mergePairs: z.array(z.object({
     targetId: z.string().max(64),
     indexes: z.tuple([z.number().int().min(0).max(200), z.number().int().min(0).max(200)]),
+    // EL TEXTO DEL PAR TIENE QUE CRUZAR ESTE BORDE O EL ARREGLO NO EXISTE.
+    // Zod descarta en silencio lo que no declara: sin esta línea el par llegaría
+    // al recálculo con el índice pelado y volvería a señalar la línea equivocada
+    // en cuanto el usuario aplique algo. El tope es holgado y `.catch` degrada un
+    // texto imposible al comportamiento viejo en vez de tumbar el recálculo
+    // entero con un 422 — un par perdido es una tarjeta menos, un 422 es el panel.
+    texts: z.tuple([z.string().max(2000), z.string().max(2000)]).optional().catch(undefined),
     score: z.number().min(0).max(1),
   })).max(40).optional(),
   // Ídem las repeticiones: mismo embebido, mismo acarreo, mismos límites. Un
   // par vive entre DOS puestos, así que cada lado trae el suyo.
   repeatedPairs: z.array(z.object({
-    a: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200) }),
-    b: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200) }),
+    // Cada lado con su texto, por lo mismo que arriba.
+    a: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200), text: z.string().max(2000).optional().catch(undefined) }),
+    b: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200), text: z.string().max(2000).optional().catch(undefined) }),
     score: z.number().min(0).max(1),
   })).max(40).optional(),
 })
@@ -63,10 +71,30 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return apiError(422, "invalid_data", { req })
 
+  /**
+   * UN PAR SIN SU TEXTO NO ENTRA. Falla cerrado, y a propósito.
+   *
+   * El tipo `SemanticPair` exige el texto porque un par identificado sólo por su
+   * posición vuelve a señalar la línea equivocada en cuanto el usuario aplica
+   * algo. Acá llega de un cliente, así que el tipo no alcanza: el esquema lo
+   * acepta ausente —un navegador con el bundle viejo, una pestaña abierta desde
+   * antes del deploy— y ES ACÁ donde se descarta.
+   *
+   * Lo que se pierde es una tarjeta de fusión hasta el próximo análisis completo.
+   * Lo que se evita es ofrecer fusionar dos líneas que nadie emparejó.
+   */
+  const entrada = {
+    ...parsed.data,
+    mergePairs: parsed.data.mergePairs?.filter((p): p is typeof p & { texts: [string, string] } => !!p.texts),
+    repeatedPairs: parsed.data.repeatedPairs?.filter(
+      (p): p is typeof p & { a: typeof p.a & { text: string }; b: typeof p.b & { text: string } } => !!p.a.text && !!p.b.text,
+    ),
+  }
+
   try {
-    const result = aiService.atsRescore(parsed.data)
+    const result = aiService.atsRescore(entrada)
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email, payload: parsed.data })
+    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email, payload: entrada })
   }
 }

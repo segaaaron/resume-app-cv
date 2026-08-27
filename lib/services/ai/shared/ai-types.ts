@@ -381,6 +381,16 @@ export const CvFixActionSchema = z
     targetId: z.string().max(64).optional(),
     /** rewrite_bullet: 0-based bullet index inside that job. */
     index: z.number().int().min(0).max(60).optional(),
+    /**
+     * rewrite_bullet: la línea que el hallazgo señala, tal como estaba al
+     * analizar. NO la escribe el modelo — la pone el servidor después de
+     * resolverla, que es el único momento sin deriva de índices.
+     *
+     * Está declarada acá porque Zod descarta en silencio lo que no declara: sin
+     * esta línea el campo se borraría al validar y el hallazgo volvería a
+     * identificarse sólo por su posición, que es el defecto que vino a cerrar.
+     */
+    originalText: z.string().max(2000).optional(),
     /** add_skill: the exact skill to add. replace_text: the wrong wording. set_title: el cargo a escribir en el titular. weave_term: el término a demostrar. */
     value: z.string().max(200).optional(),
     /**

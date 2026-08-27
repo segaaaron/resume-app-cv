@@ -1,5 +1,6 @@
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
 import { isImprovableLine } from "./bullet-strength"
+import { resolveBulletIndex } from "./bullet-locate"
 import type { RecruiterFix } from "./build-report"
 
 /**
@@ -179,9 +180,39 @@ export function rejectionOf(fix: RecruiterFix, ctx: VerifyContext): RejectReason
    * que falta no se juzgan por la calidad de una línea.
    */
   if (a?.kind === "rewrite_bullet") {
+    /**
+     * LA LÍNEA SE BUSCA POR SU TEXTO, NO POR SU POSICIÓN.
+     *
+     * ── LO REPORTADO (CEO, 2026-08-27) ──────────────────────────────────────
+     *
+     *   «Me lanza tips que ya se corrigieron y él los vuelve a levantar.»
+     *
+     * Esto no corre sólo en el servidor: `panel-report` lo vuelve a ejecutar en
+     * CADA tecla, con hallazgos congelados del último análisis. Ahí sí hay
+     * deriva — aplicar un arreglo borra o mueve líneas y todos los índices de
+     * abajo se corren—, así que `bullets[a.index]` devolvía una línea distinta
+     * de la señalada: el tip ya resuelto se comparaba contra una línea sana
+     * ajena, `isImprovableLine` decía «esa está bien», y el hallazgo sobrevivía.
+     *
+     * Y el `?? 0` era peor que el drift: un hallazgo SIN índice se juzgaba
+     * contra la primera línea del puesto, siempre, fuera cual fuera la que
+     * nombraba.
+     *
+     * Ahora manda `originalText`, que el servidor adjunta cuando todavía no hay
+     * deriva. Sin forma de identificar la línea el hallazgo NO se muestra: un
+     * consejo sobre una línea que no podemos señalar es exactamente el «diagnóstico
+     * sin salida» que este archivo existe para impedir.
+     */
     const role = ctx.roles.find((r) => r.id === a.targetId)
-    const linea = role ? parseBullets(role.description ?? "")[a.index ?? 0] : undefined
-    if (linea && !isImprovableLine(linea)) return "line_has_no_defect"
+    if (!role) return "missing_target"
+    const lineas = parseBullets(role.description ?? "")
+    const at = a.originalText?.trim()
+      ? resolveBulletIndex(lineas, a.index ?? 0, a.originalText)
+      : a.index !== undefined
+      ? a.index
+      : -1
+    if (at < 0 || at >= lineas.length) return "missing_target"
+    if (!isImprovableLine(lineas[at])) return "line_has_no_defect"
   }
 
   // 2. Una frase que quedó sin su nombre no se muestra.
