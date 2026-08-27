@@ -966,8 +966,8 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
      * infinito que el CEO preguntó si existía. Existía.
      *
      * Que un puesto tenga demasiadas líneas es un problema de VOLUMEN y se
-     * arregla cortando, no reescribiendo. Eso ya tiene dueño: `tips.balance` y
-     * `tips.role_range`, sin botón, porque cuál cortar lo decide él.
+     * arregla cortando, no reescribiendo. Eso ya tiene dueño: `tips.balance`,
+     * sin botón, porque cuál cortar lo decide él.
      */
     // UNA VIÑETA, UN LUGAR. Una línea que ya tiene tarjeta de CORTE no puede
     // tener además tarjeta de REESCRITURA: son dos consejos opuestos sobre el
@@ -1000,8 +1000,8 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   /**
    * CUÁNTAS LÍNEAS LLEVA EL PUESTO — una tarjeta, con su rango.
    *
-   * Eran DOS —`tips.balance` y `tips.role_range`— alimentadas por dos
-   * productores del mismo dato, y decían lo mismo con distinta cuenta. Se
+   * Eran DOS —`tips.balance` y la desaparecida `tips.role_range`— alimentadas
+   * por dos productores del mismo dato, y decían lo mismo con distinta cuenta. Se
    * separaban con un filtro; ahora hay un solo productor y una sola tarjeta.
    */
   for (const b of input.writing.bulletBalance) {
@@ -1062,8 +1062,28 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
   const conCifra = todasLasVinetas.filter((b) => b.metric).length
   const pctCifra = todasLasVinetas.length > 0 ? Math.round((conCifra / todasLasVinetas.length) * 100) : 0
   if (todasLasVinetas.length > 0 && pctCifra < QUANTIFICATION_BAND.min) {
-    const objetivo = Math.ceil((todasLasVinetas.length * QUANTIFICATION_BAND.min) / 100)
-    const faltan = Math.max(0, objetivo - conCifra)
+    /**
+     * SE SEÑALAN LAS LÍNEAS SIN CIFRA, NO «LAS QUE FALTAN PARA EL UMBRAL».
+     *
+     * ── LO REPORTADO (CEO, 2026-08-27) ────────────────────────────────────
+     *
+     *   «Las métricas nunca las vi, no sé si se aplican.»
+     *
+     * Y no las veía por aritmética, no por un fallo. El cupo era
+     * `ceil(total × 60%) − conCifra`: en un CV de diez líneas con cinco
+     * cuantificadas eso da UNA sola tarjeta, y esa una todavía tenía que
+     * sobrevivir al filtro de abajo, que descarta toda línea ya reclamada por
+     * otra tarjeta. Con una tarjeta de gemelas activa quedaban CERO. Medido con
+     * las líneas de su CV: 5 de 10 con cifra, detección sin falsos positivos, y
+     * ni una tarjeta en pantalla.
+     *
+     * El aviso no existe para empujar un porcentaje: existe para decir «a esta
+     * línea le falta el tamaño de lo que hiciste». Así que se ofrecen las de
+     * MÁS impacto que no lo dicen, hasta el tope de la pantalla. El umbral sigue
+     * decidiendo SI se habla del tema —un CV ya cuantificado no recibe el
+     * sermón—; lo que deja de decidir es CUÁNTAS se nombran.
+     */
+    const faltan = MAX_METRIC_ASKS
     // Una viñeta, un lugar: la que ya tiene tarjeta (corte, gemela, fusión,
     // reescritura) no recibe una segunda que pida otra cosa sobre el mismo renglón.
     const reclamadas = new Set(
@@ -1086,7 +1106,7 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       .map((b) => ({ vineta: b, impacto: impactOf({ index: b.index, text: b.text, keywords: b.keywords }, weightOfTerm) }))
       // Al revés que el corte: primero la que MÁS aporta.
       .sort((a, b) => compareImpact(b.impacto, a.impacto))
-    const elegidas = candidatas.slice(0, Math.min(faltan, MAX_METRIC_ASKS))
+    const elegidas = candidatas.slice(0, faltan)
     // El peso REAL, repartido: la categoría existe y se puede recuperar entera
     // arreglando estas líneas. Prometer más de lo que el desglose devuelve sería
     // la contradicción que el dial ya pagó una vez.
@@ -1136,6 +1156,52 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
         evidence: [dueño.text],
       })
     }
+  }
+
+  /**
+   * LA LÍNEA QUE ABRE NOMBRANDO UNA TAREA — y por fin con tarjeta.
+   *
+   * ── EL AGUJERO, MEDIDO DE PUNTA A PUNTA (CEO, 2026-08-27) ─────────────────
+   *
+   * `writing.weakVerbBullets` se calculaba en cada análisis y NO TENÍA UN SOLO
+   * CONSUMIDOR: un balde que alguien llenaba y nadie leía. La única tarjeta que
+   * preguntaba `isImprovableLine` sale de `rankRoleBullets`, o sea de las líneas
+   * que CAEN del ranking de su puesto — así que una línea mal escrita sólo
+   * recibía atención si además el puesto estaba sobrecargado. En un puesto de
+   * tres líneas no había ninguna salida.
+   *
+   * Esa era la mitad de la ceguera del CV reportado; la otra mitad —que
+   * `opensWeakly` no veía las aperturas nominales— se cerró en `bullet-quality`.
+   *
+   * Tope y respeto por «una viñeta, un lugar»: la línea que ya tiene tarjeta de
+   * corte, gemela, fusión o cifra no recibe una segunda pidiéndole otra cosa.
+   */
+  const yaTienenTarjeta = new Set(
+    checks
+      .filter((c) => c.action?.kind === "rewrite_bullet" && typeof c.action.index === "number")
+      .map((c) => `${c.action?.targetId}::${c.action?.index}`),
+  )
+  const porPuesto = new Map<string, { jobTitle: string; lineas: { index: number; text: string }[] }>()
+  for (const b of input.writing.weakVerbBullets) {
+    if (yaTienenTarjeta.has(`${b.targetId}::${b.index}`)) continue
+    const actual = porPuesto.get(b.targetId) ?? { jobTitle: b.jobTitle, lineas: [] }
+    if (actual.lineas.length >= MAX_METRIC_ASKS) continue
+    actual.lineas.push({ index: b.index, text: b.text })
+    porPuesto.set(b.targetId, actual)
+  }
+  for (const [targetId, { jobTitle, lineas }] of porPuesto) {
+    push({
+      id: `tips.weak_opener.${targetId}`,
+      section: "tips",
+      state: "warn",
+      weight: 0,
+      titleKey: "check.weak_opener",
+      detailKey: "check.weak_opener_detail",
+      params: { job: jobTitle, count: lineas.length },
+      owner: "tailor",
+      action: { kind: "rewrite_bullet", targetId, index: lineas[0].index },
+      evidence: lineas.map((l) => l.text),
+    })
   }
 
   for (const g of input.gaps ?? []) {

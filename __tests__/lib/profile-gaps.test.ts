@@ -163,21 +163,21 @@ describe("computeProfileGaps", () => {
    * owner of "does another line fit". An assistant pushing past a limit its own
    * analyser penalises makes both look untrustworthy.
    *
-   * ── UPDATED (CEO, 2026-08-25) ────────────────────────────────────────────
+   * ── UPDATED (CEO, 2026-08-27) ────────────────────────────────────────────
    *
-   * The ceiling is not a single global number any more: it depends on how old
-   * the role is (6 on the current one, 4 on the previous, 3 on the old ones),
-   * which is the same band the report already used to say "this role carries too
-   * many lines". With the flat 6, a role from 2015 was offered a sixth bullet
-   * while the report asked it to come down to three — two of our own features
-   * pulling opposite ways, which is exactly what was reported.
+   * It was briefly a band that varied by the role's age (6 current, 4 previous,
+   * 3 old). That produced the contradiction it meant to fix, one layer over: the
+   * EDITOR lets you write six lines on any role and says so, so a role from 2015
+   * accepted a fifth line and the report then asked to delete it. The ceiling is
+   * the editor's ceiling, the floor is three, and both come from `scoring-config`
+   * so no layer can hold a stricter number of its own.
    */
   describe("more bullets, up to the limit the rest of the product enforces", () => {
     const withBullets = (n: number, job = FULL_JOB) => ({
       ...COMPLETE,
       workExperience: [{ ...job, description: Array.from({ length: n }, (_, i) => `• Línea ${i + 1}`).join("\n") }],
     })
-    /** FULL_JOB ended in 2015: an old role, where a recruiter reads two or three. */
+    /** FULL_JOB ended in 2015. Its budget is the same as any other role's: 3 to 6. */
     const CURRENT_JOB = { ...FULL_JOB, endDate: "", currentlyWorking: true }
 
     it("offers another line while there is room", () => {
@@ -186,10 +186,18 @@ describe("computeProfileGaps", () => {
       expect(kinds(withBullets(5, CURRENT_JOB))).toContain("moreBullets")
     })
 
-    it("stops at the ceiling that role's age admits", () => {
-      // El puesto viejo: tres es su techo, así que con tres ya no se ofrece.
-      expect(kinds(withBullets(3))).not.toContain("moreBullets")
-      expect(kinds(withBullets(4))).not.toContain("moreBullets")
+    /**
+     * EL TECHO ES EL DEL EDITOR, Y NO DEPENDE DE LA ANTIGÜEDAD (2026-08-27).
+     *
+     * Este caso ataba lo contrario —«tres es el techo de un puesto viejo»— y esa
+     * era la contradicción reportada: el editor deja escribir seis en cualquier
+     * puesto, así que ofrecer una cuarta línea en uno de 2015 no puede terminar
+     * en otra tarjeta pidiendo borrarla.
+     */
+    it("stops at the ceiling the editor enforces, whatever the role's age", () => {
+      expect(kinds(withBullets(4))).toContain("moreBullets")
+      expect(kinds(withBullets(6))).not.toContain("moreBullets")
+      expect(kinds(withBullets(7))).not.toContain("moreBullets")
       expect(kinds(withBullets(6, CURRENT_JOB))).not.toContain("moreBullets")
       expect(kinds(withBullets(7, CURRENT_JOB))).not.toContain("moreBullets")
     })

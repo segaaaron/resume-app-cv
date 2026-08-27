@@ -31,6 +31,8 @@ import {
   type IncompleteEducation,
 } from "./resume-integrity"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
+import { opensWeakly } from "@/lib/services/ai/shared/bullet-quality"
+import { resolveBulletIndex } from "./bullet-locate"
 import type { RepeatedPair } from "@/lib/services/ai/shared/semantic-match"
 
 interface WorkRow {
@@ -157,17 +159,15 @@ export interface WritingChecks {
 // Duty-phrase openers that read as a task list, not achievements. High-signal
 // (unambiguous) on purpose — single overused verbs like "Managed"/"Led" are left
 // out to avoid flagging legitimately strong bullets.
-const WEAK_OPENERS: readonly string[] = [
-  "responsible for", "in charge of", "assisted with", "helped with", "worked on",
-  "duties included", "tasked with", "involved in", "participated in", "contributed to",
-  "responsable de", "encargado de", "encargada de", "apoyé en", "apoye en",
-  "ayudé con", "ayude con", "trabajé en", "trabaje en", "mis funciones incluían",
-  "participé en", "participe en", "colaboré en",
-]
-function opensWeak(bullet: string): boolean {
-  const l = bullet.toLowerCase().replace(/^[\s•·▪◦‣∙●○*–—-]+/, "").trim()
-  return WEAK_OPENERS.some((o) => l.startsWith(o))
-}
+/**
+ * UN SOLO DUEÑO: `opensWeakly`, en `bullet-quality`.
+ *
+ * Acá vivía una copia que sólo consultaba `WEAK_OPENERS`, y por eso este archivo
+ * no sabía nada de las aperturas NOMINALES que el dueño sí juzga —medido con el
+ * CV reportado el 2026-08-27, cuatro líneas rotas y `weakVerbBullets` vacío—.
+ * Dos funciones para una pregunta es como una acaba sabiendo algo que la otra no.
+ */
+const opensWeak = opensWeakly
 
 /** Classify a free-text date into a comparable format family (null = empty/unknown). */
 function dateFormatClass(raw: string): string | null {
@@ -226,11 +226,21 @@ function mergeRepeats(
 ): NearDuplicate[] {
   if (pairs.length === 0) return lexical
   const byId = new Map(work.filter((j) => j.id).map((j) => [j.id as string, j]))
-  const lineOf = (targetId: string, index: number) => {
+  /**
+   * Dónde está HOY la línea del par, resuelta por su texto.
+   *
+   * Leía `bullets[index]` a secas y su comentario prometía que «un índice que ya
+   * no existe se descarta en silencio». No era eso lo que pasaba: el índice sigue
+   * existiendo después de borrar una línea, sólo que apunta a OTRA. La tarjeta
+   * acusaba de gemelas a dos líneas que nadie comparó.
+   */
+  const lineOf = (targetId: string, index: number, snapshot?: string) => {
     const job = byId.get(targetId)
     if (!job) return null
-    const text = parseBullets(job.description ?? "")[index]
-    return text ? { text, jobTitle: job.jobTitle?.trim() ?? "" } : null
+    const bullets = parseBullets(job.description ?? "")
+    const at = snapshot ? resolveBulletIndex(bullets, index, snapshot) : index
+    const text = at >= 0 ? bullets[at] : undefined
+    return text ? { text, index: at, jobTitle: job.jobTitle?.trim() ?? "" } : null
   }
   const key = (a: { targetId: string; index: number }, b: { targetId: string; index: number }) =>
     [`${a.targetId}#${a.index}`, `${b.targetId}#${b.index}`].sort().join("|")
@@ -240,20 +250,33 @@ function mergeRepeats(
     lexical.map((n) => key({ targetId: n.targetId, index: n.index }, { targetId: n.otherTargetId ?? n.targetId, index: n.otherIndex })),
   )
   for (const p of pairs) {
-    const k = key(p.a, p.b)
-    if (seen.has(k)) continue
-    const a = lineOf(p.a.targetId, p.a.index)
-    const b = lineOf(p.b.targetId, p.b.index)
-    // El CV pudo cambiar entre el análisis y este recálculo: un índice que ya no
-    // existe se descarta en silencio, nunca se muestra una línea que no está.
+    // El CV pudo cambiar entre el análisis y este recálculo: un par cuya línea ya
+    // no está se descarta en silencio, nunca se muestra una línea que no está.
+    const a = lineOf(p.a.targetId, p.a.index, p.a.text)
+    const b = lineOf(p.b.targetId, p.b.index, p.b.text)
     if (!a || !b) continue
+    // Y si las dos resuelven al MISMO renglón, no hay par: el hallazgo diría que
+    // una línea es gemela de sí misma. Pasa cuando una de las dos ya se fusionó.
+    if (p.a.targetId === p.b.targetId && a.index === b.index) continue
+    /**
+     * LA CLAVE SE ARMA CON LOS ÍNDICES VIVOS, no con los del análisis.
+     *
+     * Cazado en el pase de QA de este mismo cambio: `seen` se siembra con los
+     * pares léxicos, que ya vienen con posiciones actuales, y acá se comparaba
+     * contra las CONGELADAS. Dos claves distintas para el mismo par de líneas =
+     * la tarjeta se emitía dos veces, y con el mismo id, porque el id se arma con
+     * el índice resuelto. Es el defecto de las dos tarjetas iguales que este
+     * bloque ya había pagado una vez.
+     */
+    const k = key({ targetId: p.a.targetId, index: a.index }, { targetId: p.b.targetId, index: b.index })
+    if (seen.has(k)) continue
     seen.add(k)
     out.push({
       targetId: p.b.targetId,
       jobTitle: b.jobTitle,
-      index: p.b.index,
+      index: b.index,
       text: b.text,
-      otherIndex: p.a.index,
+      otherIndex: a.index,
       otherText: a.text,
       otherTargetId: p.a.targetId,
       otherJobTitle: a.jobTitle,
@@ -312,11 +335,13 @@ export function analyzeWriting(
      *
      * Cazado por QA antes de subir: la migración a `roleBudget` había dejado
      * afuera justo el cálculo que alimenta la CREDIBILIDAD (`overloaded_roles`) y
-     * la tarjeta `tips.balance`. Con el tope plano, un puesto de hace diez años
-     * con cuatro líneas —recargado para su antigüedad y así lo decía la tarjeta
-     * `tips.role_range`— no le costaba un punto de credibilidad; y un puesto
-     * actual con siete producía DOS tarjetas diciendo lo mismo con distinta
-     * cuenta. El número y la pantalla tienen que salir del mismo dueño.
+     * la tarjeta `tips.balance`: un puesto actual con siete líneas producía DOS
+     * tarjetas diciendo lo mismo con distinta cuenta. El número y la pantalla
+     * tienen que salir del mismo dueño.
+     *
+     * El rango que compara es 3-6 para todo puesto, el mismo que el editor deja
+     * escribir. Una banda más estricta acá —la había, por antigüedad— es pedirle
+     * al usuario que borre la línea que el editor le acaba de aceptar.
      */
     const presupuesto = roleBudget(j)
     if (id && hasContent && bulletBalance.length < MAX_BALANCE) {

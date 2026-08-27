@@ -35,6 +35,7 @@ import { BULLETS_PER_ROLE_MAX } from "./scoring-config"
 import { roleBand } from "./role-budget"
 import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
+import { resolveBulletIndex } from "./bullet-locate"
 
 export interface MergeCandidate {
   targetId: string
@@ -147,7 +148,16 @@ export function findMergeCandidates(
       // is not a sentence, and a pair where one adds nothing is a duplicate and
       // belongs to the delete flow.
       for (const p of proposed) {
-        const [a, b] = p.indexes
+        // EL ÍNDICE ES PISTA, EL TEXTO ES IDENTIDAD. El par se calculó en el
+        // análisis y el usuario pudo aplicar cosas desde entonces: fusionar borra
+        // una línea y corre todas las de abajo. Sin esto, el par [0,1] de un
+        // puesto ya fusionado señalaba la línea nueva contra una vecina que nadie
+        // emparejó — medido, y es lo que el CEO reportó como «hago el merge y me
+        // vuelve a pedir lo mismo». Un par cuya línea ya no está se descarta.
+        const [a, b] = p.texts
+          ? [resolveBulletIndex(bullets, p.indexes[0], p.texts[0]), resolveBulletIndex(bullets, p.indexes[1], p.texts[1])]
+          : p.indexes
+        if (a < 0 || b < 0 || a === b) continue
         if (!eligible.has(a) || !eligible.has(b)) continue
         const ta = bullets[a]?.trim() ?? ""
         const tb = bullets[b]?.trim() ?? ""

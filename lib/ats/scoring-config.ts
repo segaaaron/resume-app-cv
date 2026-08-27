@@ -188,6 +188,22 @@ export const BULLETS_PER_ROLE_MAX: Tunable = {
 }
 
 /**
+ * Bullets below which a role reads as if nothing happened there.
+ *
+ * THE FLOOR AND THE CEILING ARE ONE BAND, AND IT IS THE SAME FOR EVERY ROLE.
+ * They live side by side because a role's budget is a single decision: the editor
+ * lets you write up to MAX on any role and says so, so nothing downstream may
+ * measure that same role against a smaller number. A second, stricter ceiling
+ * anywhere else is the contradiction the panel spent sessions producing — write
+ * a line the editor allows, get told to delete it.
+ */
+export const BULLETS_PER_ROLE_MIN: Tunable = {
+  value: 3,
+  basis: "convention",
+  why: "Under three lines a role reads as a placeholder rather than a job someone did.",
+}
+
+/**
  * Everything above, for a UI that wants to show its work.
  *
  * A score you can audit beats a "better" one nobody can question: the user sees
@@ -201,6 +217,7 @@ export const ALL_TUNABLES: Record<string, Tunable> = {
   listedOnlyCredit: LISTED_ONLY_CREDIT,
   multiColumnPenalty: MULTI_COLUMN_PENALTY,
   semanticThreshold: SEMANTIC_THRESHOLD,
+  bulletsPerRoleMin: BULLETS_PER_ROLE_MIN,
   bulletsPerRoleMax: BULLETS_PER_ROLE_MAX,
 }
 

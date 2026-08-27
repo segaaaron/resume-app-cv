@@ -7,6 +7,7 @@ import { DECORATIVE_OPENER, stripDecorativeOpener } from "@/lib/services/ai/shar
 import type { WritingChecks } from "@/lib/ats/writing-checks"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { computeCredibility } from "@/lib/ats/credibility"
+import { BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN } from "@/lib/ats/scoring-config"
 
 /**
  * LOS DOS DUEÑOS NUEVOS, Y EL CASO REPORTADO CON CAPTURA.
@@ -19,10 +20,27 @@ import { computeCredibility } from "@/lib/ats/credibility"
 const bullets = (n: number) => Array.from({ length: n }, (_, i) => `• Línea ${i + 1} con contenido suficiente`).join("\n")
 
 describe("roleBudget — un solo dueño de «¿cabe otra línea?»", () => {
-  it("el techo depende de la antigüedad del puesto", () => {
-    expect(roleBand({ currentlyWorking: true }, 2026).max).toBe(6)
-    expect(roleBand({ endDate: "10/2023" }, 2026).max).toBe(4)
-    expect(roleBand({ endDate: "10/2015" }, 2026).max).toBe(3)
+  /**
+   * EL RANGO ES EL MISMO PARA TODO PUESTO — 3 a 6, la regla del CEO.
+   *
+   * Antes dependía de la antigüedad (6/4/3) y ESA era la contradicción reportada
+   * el 2026-08-27: el editor deja escribir hasta 6 en cualquier puesto y lo
+   * anuncia, mientras el informe medía un puesto de 2024 contra 4 y le pedía
+   * borrar la línea que el editor acababa de aceptar.
+   */
+  it("el rango no depende de la antigüedad: es el mismo que el editor aplica", () => {
+    for (const job of [{ currentlyWorking: true }, { endDate: "10/2023" }, { endDate: "10/2015" }]) {
+      expect(roleBand(job, 2026)).toEqual({ min: 3, max: 6 })
+    }
+  })
+
+  it("y sale de `scoring-config`, así que mover el número mueve editor e informe a la vez", () => {
+    expect(roleBand({ currentlyWorking: true }, 2026).max).toBe(BULLETS_PER_ROLE_MAX.value)
+    expect(roleBand({ currentlyWorking: true }, 2026).min).toBe(BULLETS_PER_ROLE_MIN.value)
+  })
+
+  it("un puesto viejo con cinco líneas NO recibe la orden de borrar", () => {
+    expect(roleBudget({ description: bullets(5), endDate: "10/2015" }, 2026).surplus).toBe(0)
   })
 
   it("un puesto en su techo no tiene lugar, y lo dice", () => {
@@ -253,9 +271,14 @@ describe("el consejo mira la banda; la confianza mira el techo duro", () => {
     }],
   })
 
-  it("un puesto viejo con cuatro líneas recibe el consejo de recortar", () => {
+  it("un puesto viejo con cuatro líneas NO recibe consejo de recortar: está dentro de 3-6", () => {
     const w = analyzeWriting(puestoViejo(4))
-    expect(w.bulletBalance.find((b) => b.kind === "too_many")?.count).toBe(4)
+    expect(w.bulletBalance.some((b) => b.kind === "too_many")).toBe(false)
+  })
+
+  it("…y con siete SÍ, porque ahí pasó el techo que el editor también aplica", () => {
+    const w = analyzeWriting(puestoViejo(7))
+    expect(w.bulletBalance.find((b) => b.kind === "too_many")?.count).toBe(7)
   })
 
   it("…y NO le cuesta un punto de confianza: es lo que el producto recomienda", () => {

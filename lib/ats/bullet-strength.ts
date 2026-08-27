@@ -17,7 +17,7 @@
 // does not have to mean throwing information away.
 
 import { isEmptyPhrasing } from "@/lib/services/ai/shared/empty-phrasing"
-import { WEAK_OPENERS, opensInThirdPersonEs } from "@/lib/services/ai/shared/bullet-quality"
+import { opensWeakly, opensInThirdPersonEs } from "@/lib/services/ai/shared/bullet-quality"
 import { hasCliche } from "@/lib/services/ai/shared/cliches"
 
 export interface RankedBullet {
@@ -73,8 +73,24 @@ const ANCHORED = [
  * "responsible for medication rounds" fails for the same reason an engineer's
  * "responsible for the build" does.
  */
-const DUTY_OPENER =
-  /^(responsible for|in charge of|tasked with|duties included|worked on|helped|assisted with|participated in|involved in|encargado de|encargada de|responsable de|a cargo de|colabor[oó] en|particip[oó] en|apoy[oó] en)\b/i
+/**
+ * ── LA SÉPTIMA COPIA, Y LA MÁS CARA (pase de QA, 2026-08-27) ─────────────────
+ *
+ * Esto era un regex propio con SU PROPIA lista: dieciséis frases contra las
+ * veintitrés de `WEAK_OPENERS`, más las aperturas nominales que el dueño ya
+ * juzga. Y no es un detector cualquiera: de acá sale `duty_opener`, que alimenta
+ * `scoreBullet` —el ranking de qué línea es la más débil— y el PISO DE SALIDA
+ * que acepta o rechaza las reescrituras del modelo.
+ *
+ * Medido sobre ocho líneas, DISCREPABAN CINCO. Este detector daba por sanas
+ * «Contributed to the redesign…», «Mis funciones incluían…», «Ayudé con…»,
+ * «Trabajé en…» y «Active use of…» — todas marcadas mal por el resto del
+ * producto. O sea: el panel señalaba la línea y el piso aceptaba una reescritura
+ * que no la arreglaba, porque para él nunca había estado rota.
+ *
+ * Una pregunta, un dueño.
+ */
+const DUTY_OPENER = { test: (t: string) => opensWeakly(t) }
 
 /** Something specific enough that only this candidate could have written it. */
 function namesSomethingConcrete(text: string): boolean {
@@ -186,8 +202,8 @@ const DEFECTOS = new Set(["duty_opener", "empty_phrasing", "too_short", "too_lon
  *
  * Un puesto con nueve líneas diluye aunque las nueve sean excelentes: el
  * problema es el VOLUMEN, y se arregla CORTANDO. Eso ya tiene dueño —
- * `tips.balance` y `tips.role_range`, con `owner: "user"` y sin botón, porque
- * cuál cortar lo decide quien hizo el trabajo.
+ * `tips.balance`, con `owner: "user"` y sin botón, porque cuál cortar lo decide
+ * quien hizo el trabajo.
  *
  * Así que la reescritura se ofrece sólo sobre lo que la reescritura arregla, y
  * el recorte queda con quien ya lo tenía. Un dueño por objetivo.
@@ -218,8 +234,17 @@ export function isImprovableLine(text: string): boolean {
   if (hasCliche(limpio)) return true
   if (opensInThirdPersonEs(limpio)) return true
   if (opensWithInfinitive(limpio)) return true
-  const primera = limpio.toLowerCase()
-  return WEAK_OPENERS.some((w) => primera.startsWith(w.toLowerCase()))
+  /**
+   * Y ACÁ SE PREGUNTA AL DUEÑO, que es lo que el comentario de arriba prometía.
+   *
+   * Esta línea reimplementaba el chequeo —`WEAK_OPENERS.some(startsWith)`— por
+   * cuarta vez en el repo, justo debajo del párrafo que dice que una vara
+   * reimplementada es cómo dos pantallas terminan opinando distinto sobre la
+   * misma línea. Y pasó: `opensWeakly` aprendió a ver las aperturas NOMINALES
+   * («Active use of…», el CV reportado el 2026-08-27) y esta copia siguió ciega,
+   * así que el informe marcaba la línea y el ejecutor no la recibía.
+   */
+  return opensWeakly(limpio)
 }
 
 /**

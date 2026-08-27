@@ -319,12 +319,24 @@ describe("el equilibrio de viñetas depende de la antigüedad", () => {
    * con la nota «esto sólo lo sabés vos». El CEO lo reportó con captura: un
    * dato repetido y sin salida. Ahora el mismo puesto recibe UNA tarjeta por
    * línea de sobra, con la línea nombrada y el botón que la corta.
+   *
+   * ── Y LA ANTIGÜEDAD DEJÓ DE DECIDIR (2026-08-27) ─────────────────────────
+   *
+   * Este caso pedía cortar TRES de seis líneas por ser un puesto de hace diez
+   * años. Seis es lo que el editor permite en cualquier puesto: la tijera sale
+   * sólo cuando se pasa de ahí, y por eso ahora el corte se prueba con ocho.
    */
-  it("y en uno de hace diez años el excedente se ofrece para cortar, con su línea", () => {
+  it("un puesto viejo con seis líneas NO recibe tijera: seis es lo que el editor permite", () => {
     const cv = { workExperience: [{ id: "j1", jobTitle: "Cajero", endDate: `06/${year - 10}`, description: Array.from({ length: 6 }, (_, i) => `• Atendí la ventanilla número ${i} y cuadré su caja al cierre`).join("\n") }] }
     const r = buildPanelReport(input({ sectionData: cv, writing: analyzeWriting(cv) }))
+    expect(allChecks(r).filter((x) => x.id.startsWith("tips.cut.j1.")).length).toBe(0)
+  })
+
+  it("pasado el techo, el excedente se ofrece para cortar con su línea nombrada", () => {
+    const cv = { workExperience: [{ id: "j1", jobTitle: "Cajero", endDate: `06/${year - 10}`, description: Array.from({ length: 8 }, (_, i) => `• Atendí la ventanilla número ${i} y cuadré su caja al cierre`).join("\n") }] }
+    const r = buildPanelReport(input({ sectionData: cv, writing: analyzeWriting(cv) }))
     const cortes = allChecks(r).filter((x) => x.id.startsWith("tips.cut.j1."))
-    expect(cortes.length).toBe(3)
+    expect(cortes.length).toBe(2)
     for (const c of cortes) expect(c.evidence?.[0]).toMatch(/^Atendí la ventanilla/)
     // Y la voz vieja, la que no llevaba a ningún lado, se calla.
     expect(allChecks(r).map((c) => c.id)).not.toContain("tips.balance.j1")
@@ -344,7 +356,7 @@ describe("el equilibrio de viñetas depende de la antigüedad", () => {
     const r = buildPanelReport(input({ sectionData: cv, writing: analyzeWriting(cv) }))
     const c = allChecks(r).find((x) => x.id === "tips.balance.j1")
     expect(c?.titleKey).toBe("check.role_under")
-    expect(c?.params).toMatchObject({ count: 1, min: 4, max: 6 })
+    expect(c?.params).toMatchObject({ count: 1, min: 3, max: 6 })
   })
 })
 
