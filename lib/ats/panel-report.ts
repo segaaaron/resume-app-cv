@@ -22,7 +22,7 @@ import { findStuffedTerms } from "./keyword-density"
 import { findPassiveBullets } from "./passive-voice"
 import { DECORATIVE_OPENER, parseBullets } from "@/lib/services/ai/shared/bullets"
 import { hasAnyMetric } from "@/lib/services/ai/shared/ai-helpers"
-import { WEAK_OPENERS } from "@/lib/services/ai/shared/bullet-quality"
+import { opensWeakly } from "@/lib/services/ai/shared/bullet-quality"
 import type { ReportBullet } from "./report"
 import { buildAtsReport, type BuildReportInput, type RecruiterFix } from "./build-report"
 import { verifiedRecruiterFixes, verifyContextOf } from "./recruiter-verified"
@@ -107,7 +107,11 @@ function bulletsOf(sectionData: Record<string, unknown>, terms: readonly string[
         targetId: job.id ?? "",
         index,
         text,
-        verb: !!clean && !WEAK_OPENERS.some((o) => clean.startsWith(o)),
+        // «¿Abre con el trabajo?» es la NEGACIÓN de `opensWeakly`, y se le
+        // pregunta a él: repetir la lista acá dejaba este campo ciego a las
+        // aperturas nominales, así que el panel pintaba «✓ verbo» sobre una
+        // línea que empieza «Active use of…».
+        verb: !!clean && !opensWeakly(clean),
         metric: hasAnyMetric(text),
         keywords: terms.filter((term) => {
           const escaped = norm(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")

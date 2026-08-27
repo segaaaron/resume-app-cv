@@ -7,7 +7,7 @@
 // drop it here rather than show the user a diff with nothing in it.
 import { distance } from "fastest-levenshtein"
 import { isKnownSkill } from "@/lib/ats/skills-dictionary"
-import { WEAK_OPENERS } from "./bullet-quality"
+import { opensWeakly } from "./bullet-quality"
 
 /** Collapses whitespace/case/markers so only real edits register. */
 function normalize(text: string): string {
@@ -156,11 +156,16 @@ export const COSMETIC_REWORD_SIMILARITY = 0.82
  * Only when BOTH a real word left and a real word came in (a swap) on an otherwise
  * near-identical sentence is it cosmetic.
  */
-/** Abría con una apertura de tarea y ya no. La lista se LEE, no se repite. */
+/**
+ * Abría mal y ya no.
+ *
+ * Le pregunta al DUEÑO (`opensWeakly`) en vez de releer la lista: consultando
+ * sólo `WEAK_OPENERS`, una reescritura que arregla una apertura NOMINAL —«Active
+ * use of…» → «Accelerated…»— no contaba como arreglo, y el guard de reescritura
+ * cosmética podía descartar justo la corrección que el informe había pedido.
+ */
 function fixesWeakOpener(original: string, suggested: string): boolean {
-  const opens = (t: string) =>
-    WEAK_OPENERS.some((w) => normalize(t).replace(/^[^a-z0-9]+/, "").startsWith(w))
-  return opens(original) && !opens(suggested)
+  return opensWeakly(original) && !opensWeakly(suggested)
 }
 
 /**

@@ -23,14 +23,30 @@ import type { ATSContentQuality } from "./ai-types"
  * because "particip" is a prefix of both languages' word. The split is data now,
  * not a guess.
  */
+/**
+ * ── «helped», NO «helped with» (pase de QA, 2026-08-27) ─────────────────────
+ *
+ * Al unificar el séptimo detector apareció que el regex privado de
+ * `bullet-strength` cazaba `helped` A SECAS y esta lista —la canónica— sólo
+ * «helped with». O sea que «Helped customers on the sales floor» era una
+ * apertura débil para el ranking y una línea sana para todo lo demás.
+ *
+ * Gana la forma corta: el defecto es el verbo, no la preposición que lo sigue.
+ * `startsWith` hace que «helped with» siga cubierto por «helped», así que la
+ * lista se acorta sin perder nada. Ídem «ayudé/ayude» en español.
+ *
+ * OJO: esta lista viaja al prompt (`bannedOpeners`) y entra en el
+ * `DOCTRINE_FINGERPRINT`, así que tocarla invalida el caché del análisis. Es lo
+ * correcto: la doctrina cambió de verdad.
+ */
 export const WEAK_OPENERS_EN: readonly string[] = [
-  "responsible for", "in charge of", "assisted with", "helped with",
+  "responsible for", "in charge of", "assisted with", "helped",
   "worked on", "duties included", "tasked with", "involved in",
   "participated in", "contributed to",
 ]
 export const WEAK_OPENERS_ES: readonly string[] = [
   "responsable de", "encargado de", "encargada de", "apoyé en", "apoye en",
-  "ayudé con", "ayude con", "trabajé en", "trabaje en",
+  "ayudé", "ayude", "trabajé en", "trabaje en",
   "mis funciones incluían", "participé en", "participe en", "colaboré en",
 ]
 export const WEAK_OPENERS: readonly string[] = [...WEAK_OPENERS_EN, ...WEAK_OPENERS_ES]
@@ -216,9 +232,89 @@ export interface DescriptionQuality {
   weakOpenerIndices: number[]
 }
 
-function opensWeakly(text: string): boolean {
-  const lower = text.toLowerCase().trim()
-  return WEAK_OPENERS.some((o) => lower.startsWith(o))
+/**
+ * Determinantes y preposiciones: listas GRAMATICALES cerradas, no una colección
+ * de frases que se nos ocurrieron. Un idioma tiene las que tiene.
+ */
+const DET_EN = new Set(["a", "an", "the", "this", "that", "these", "those", "my", "our", "its", "their"])
+const DET_ES = new Set(["el", "la", "los", "las", "un", "una", "unos", "unas", "su", "sus", "mi", "mis", "este", "esta", "estos", "estas"])
+const PREP_EN = new Set(["of", "for", "on", "in", "with", "to", "across", "over"])
+const PREP_ES = new Set(["de", "del", "para", "por", "en", "con", "sobre", "entre"])
+
+/**
+ * ¿La línea abre con un SINTAGMA NOMINAL en vez de con el trabajo hecho?
+ *
+ * ── EL AGUJERO (reportado con captura, CEO 2026-08-27) ──────────────────────
+ *
+ * El CV de producción llevaba «Active use of AI-assisted development tools…» y
+ * «A point of view on using AI-assisted development tools…». Medido ejecutando
+ * el motor sobre esas líneas: `weakVerbBullets` vacío e `isImprovableLine` en NO
+ * para las cuatro que probé. El producto era CIEGO a esa forma, y la ceguera se
+ * propagaba entera: sin defecto no hay tarjeta, sin tarjeta el ejecutor no
+ * recibe la línea, y si el reclutador la señalaba `rejectionOf` la descartaba
+ * como `line_has_no_defect`. Nadie las arreglaba nunca.
+ *
+ * ── POR QUÉ NO SE AGREGAN A `WEAK_OPENERS` ─────────────────────────────────
+ *
+ * Porque esa lista ENUMERA frases, y la lista siguiente siempre va a llegar
+ * tarde: «Ongoing maintenance of», «Responsibility for», «A point of view on»…
+ * son infinitas. La regla se DERIVA de la gramática: la línea no arranca con el
+ * verbo del trabajo, y el sintagma que sí encabeza queda anclado por su
+ * determinante o su preposición.
+ *
+ * ── MEDIDO ANTES DE ESCRIBIRLA (21 líneas, es + en) ────────────────────────
+ *
+ *   6 de 6 aperturas nominales detectadas   ·   0 falsos positivos sobre 15 sanas
+ *
+ * La ventana de la preposición es DOS palabras, no tres, y eso salió de la
+ * medición: con tres, «Reduje el tiempo DE cierre contable» caía como nominal.
+ * Un pretérito irregular no lleva tilde y por eso no lo salva el test de verbo.
+ */
+export function opensNominally(text: string): boolean {
+  const palabras = text
+    .toLowerCase()
+    .replace(/^[\s•·▪◦‣∙●○*–—-]+/, "")
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}-]/gu, ""))
+    .filter(Boolean)
+  if (palabras.length < 3) return false
+  const primera = palabras[0]
+  /**
+   * ── NO SE ADIVINA EL IDIOMA (cazado en el pase de QA, 2026-08-27) ──────────
+   *
+   * La primera versión lo deducía con `/[áéíóúñ]/`, y ESO ERA UN HUECO: medio
+   * currículum latinoamericano se escribe sin tildes, así que una línea española
+   * caía por la rama inglesa, donde «de» no es preposición ni «la» determinante.
+   * Medido: «Responsabilidad de la atencion al cliente» y «Uso constante de
+   * sistemas de facturacion» NO se detectaban, y por lo tanto `isImprovableLine`
+   * las daba por sanas y el ejecutor no las recibía nunca — el mismo defecto que
+   * esta función vino a cerrar, vivo en el otro idioma.
+   *
+   * Y mi propia medición lo tapó: la sonda pasaba el idioma a mano mientras el
+   * código real nunca lo pasa.
+   *
+   * Se juzga con los DOS idiomas a la vez. No hace falta saber cuál es: si la
+   * primera palabra es un verbo conjugado de cualquiera de los dos, la línea abre
+   * con el trabajo; si es un determinante de cualquiera de los dos, abre con un
+   * sintagma nominal. Un CV bilingüe —los hay— queda cubierto por lo mismo.
+   */
+  if (/(ed|ded|ted)$/.test(primera)) return false
+  if (/(é|í|ó|amos|imos|aron|ieron)$/.test(primera)) return false
+  if (DET_EN.has(primera) || DET_ES.has(primera)) return true
+  return palabras.slice(1, 3).some((w) => PREP_EN.has(w) || PREP_ES.has(w))
+}
+
+/**
+ * ¿Esta línea abre mal? UN SOLO DUEÑO de la pregunta.
+ *
+ * Vivía contestada en dos lugares —acá y en `writing-checks`— con dos funciones
+ * casi iguales, que es como una acaba sabiendo algo que la otra no. Las dos
+ * formas de abrir mal se juzgan juntas: la frase de tarea que ENUMERA la lista,
+ * y el sintagma nominal que se DERIVA de la gramática.
+ */
+export function opensWeakly(text: string): boolean {
+  const lower = text.toLowerCase().replace(/^[\s•·▪◦‣∙●○*–—-]+/, "").trim()
+  return WEAK_OPENERS.some((o) => lower.startsWith(o)) || opensNominally(text)
 }
 
 /**

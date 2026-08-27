@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { hasAnyMetric } from "@/lib/services/ai/shared/ai-helpers"
-import { WEAK_OPENERS } from "@/lib/services/ai/shared/bullet-quality"
+import { opensWeakly } from "@/lib/services/ai/shared/bullet-quality"
 
 /**
  * La viñeta, medida a los dos lados.
@@ -23,10 +23,15 @@ import { WEAK_OPENERS } from "@/lib/services/ai/shared/bullet-quality"
 const WORD_MIN = 15
 const WORD_MAX = 25
 
+/**
+ * El comentario de arriba prometía no crear «una cuarta» copia de esta pregunta,
+ * y esta función ERA esa cuarta copia: consultaba la lista en vez de al dueño, y
+ * por eso marcaba «abre con acción» sobre «Active use of…».
+ */
 function opensWithAction(text: string): boolean {
   const clean = text.toLowerCase().replace(/^[\s•·▪◦‣∙●○*–—-]+/, "").trim()
   if (!clean) return false
-  return !WEAK_OPENERS.some((o) => clean.startsWith(o))
+  return !opensWeakly(clean)
 }
 
 function wordsOf(text: string): number {
