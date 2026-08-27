@@ -1655,7 +1655,37 @@ export default function ATSScorePanel() {
         })
         return
       }
-      updateSectionData("summary", spliceSummary(current, resolution.text) as never)
+      /**
+       * EL RESUMEN TAMBIÉN SE MUESTRA ANTES DE ESCRIBIRLO.
+       *
+       * ── LO PREGUNTADO (CEO, 2026-08-27) ──────────────────────────────────
+       *
+       *   «Al sugerir mejorar, hacer merge, borrar o cualquier cosa con bullets
+       *    o summary, ¿le decimos al usuario cómo será su cambio?»
+       *
+       * Con las viñetas sí; con el resumen NO, salvo que la reescritura trajera
+       * una cifra por confirmar. Y es el peor sitio para escribir callado: es la
+       * PRIMERA línea del CV, la que todo el mundo lee, y se reemplaza entera.
+       *
+       * Se reusa `openSummaryDiff`, el mismo camino que ya usa el selector de
+       * versiones. Un segundo camino de confirmación es como las dos pantallas
+       * terminan mostrando cosas distintas.
+       *
+       * EN LOTE NO: «Aplicar todo» ya es la aceptación del conjunto, igual que
+       * con las viñetas.
+       */
+      const empalmadoFinal = spliceSummary(current, resolution.text)
+      if (!empalmadoFinal) return
+      if (!enLote) {
+        setModal({
+          suggestion: { field: "summary", type: "replace", preview: empalmadoFinal, reason: t("summary_fix_reason") },
+          currentValue: current,
+          itemKey: "fix-summary",
+          appliedCheckId: checkId,
+        })
+        return
+      }
+      updateSectionData("summary", empalmadoFinal as never)
       markFixApplied(resolution.text)
       appliedWithUndo(t("toast_change_applied"), [["summary", current]], { checkId, signature: resolution.text })
       void runRescore()
@@ -2557,7 +2587,22 @@ export default function ATSScorePanel() {
             // of your own resume that arrives bare can only be accepted on trust.
             reason: bulletFix.why?.trim() || t("content_quality_hint"),
           }}
-          currentValue={bulletFix.current}
+          /**
+           * EN UN MERGE, EL «ANTES» SON LAS DOS LÍNEAS.
+           *
+           * ── EL HUECO (auditoría del 2026-08-27) ─────────────────────────
+           *
+           * Fusionar escribe una línea Y BORRA LA OTRA. El diálogo mostraba
+           * sólo la primera, así que el usuario aceptaba un borrado que nunca
+           * vio: la segunda desaparecía de su CV sin haber aparecido en la
+           * pantalla que le pedía confirmar.
+           *
+           * Con las dos arriba, el diff dice lo que de verdad pasa —dos líneas
+           * se convierten en una— y el conteo del puesto cuadra con lo que se
+           * ve. `removeCurrent` sólo existe en el merge; en cualquier otro
+           * camino esto es exactamente lo que era.
+           */
+          currentValue={[bulletFix.current, bulletFix.removeCurrent].filter(Boolean).join("\n")}
           /**
            * DÓNDE cae el cambio. El número que se muestra es la posición VIVA de
            * la línea, resuelta por su texto: enseñar el índice del análisis
@@ -2654,6 +2699,16 @@ export default function ATSScorePanel() {
             reason: t("bullet_remove_reason"),
           }}
           currentValue={pendingRemove.text}
+          /* Qué línea y de qué puesto se está por borrar. Borrar es lo más caro
+             de revertir a mano —la línea deja de estar a la vista—, así que es
+             donde más vale decir exactamente dónde cae el cambio. */
+          where={(() => {
+            const trabajo = ((sectionData.workExperience ?? []) as WorkExperienceItem[]).find((j) => j.id === pendingRemove.targetId)
+            if (!trabajo?.jobTitle?.trim()) return undefined
+            const lineas = parseBullets(trabajo.description ?? "")
+            const at = resolveBulletIndex(lineas, pendingRemove.index, pendingRemove.text)
+            return at < 0 ? undefined : { jobTitle: trabajo.jobTitle.trim(), line: at + 1 }
+          })()}
         />
       )}
 
