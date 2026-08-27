@@ -533,7 +533,20 @@ export default function AIProfileInterview() {
       await onSuccess()
       const added = writeBullets(g, lines)
       setAddingBullet(null)
-      toast.success(added > 0 ? t("bullets_added") : t("bullets_full"))
+      /**
+       * SI NO ENTRARON TODAS, SE DICE CUÁNTAS SE TIRARON.
+       *
+       * `writeBullets` recorta al techo del puesto, y el aviso era binario:
+       * «agregadas» o «está lleno». Dictabas cinco actividades, entraban dos, y
+       * el mensaje decía «agregadas» — las otras tres desaparecían sin que nadie
+       * las nombrara. Es contenido que el usuario acaba de contar con sus
+       * palabras, y un recorte que no se declara se lee como que el producto no
+       * lo escuchó.
+       */
+      const descartadas = lines.length - added
+      if (added === 0) toast.info(t("bullets_full"))
+      else if (descartadas > 0) toast.success(t("bullets_added_partial", { added, dropped: descartadas, max: MAX_BULLETS }))
+      else toast.success(t("bullets_added"))
     } catch {
       toast.error(t("error_generic"))
     } finally {

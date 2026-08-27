@@ -2074,6 +2074,7 @@
         "btn_write_bullets": "Write bullets",
         "bullets_too_short": "Tell me a bit more so I can write it",
         "bullets_no_result": "I couldn't build bullets from that. Try adding a detail or two.",
+        "bullets_added_partial": "{added, plural, one {# bullet added} other {# bullets added}} — {dropped, plural, one {the remaining one did not fit} other {the remaining # did not fit}}: this role reached {max}.",
         "bullets_added": "Bullets added",
         "q_education": "Where did you study and what did you graduate in?",
         "f_institution": "University or institute",

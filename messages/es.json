@@ -2074,6 +2074,7 @@
         "btn_write_bullets": "Armar viñetas",
         "bullets_too_short": "Contame un poco más para poder armarlo",
         "bullets_no_result": "No pude armar viñetas con eso. Probá dando algún detalle más.",
+        "bullets_added_partial": "{added, plural, one {Se agregó # viñeta} other {Se agregaron # viñetas}} — {dropped, plural, one {la restante no entró} other {las # restantes no entraron}}: el puesto llegó a {max}.",
         "bullets_added": "Viñetas agregadas",
         "q_education": "¿Dónde estudiaste y qué título tenés?",
         "f_institution": "Universidad o instituto",
