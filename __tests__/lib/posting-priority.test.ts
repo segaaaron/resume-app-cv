@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { measurePostingPriority, weightOf, BASE_WEIGHT, MIN_WEIGHT, MAX_WEIGHT } from "@/lib/ats/posting-priority"
+import { measurePostingPriority, weightOf, topHardSkills, BASE_WEIGHT, MIN_WEIGHT, MAX_WEIGHT } from "@/lib/ats/posting-priority"
 
 /**
  * LA PRIORIDAD SE MIDE SOBRE EL AVISO, Y POR ESO ES REPRODUCIBLE.
@@ -95,5 +95,50 @@ describe("la prioridad sale del texto del aviso", () => {
     // Y un consumidor sin mapa —un re-cálculo viejo— no puede romperse.
     expect(weightOf("cualquier cosa", undefined)).toBe(BASE_WEIGHT)
     expect(weightOf("no medido", { otro: 1.5 })).toBe(BASE_WEIGHT)
+  })
+})
+
+/**
+ * CUANDO EL AVISO TRAE MÁS DE LAS QUE ENTRAN, SOBREVIVEN LAS QUE EXIGE.
+ *
+ * ── LA ORDEN (CEO, 2026-08-27) ──────────────────────────────────────────────
+ *
+ *   «Quiero que entren 20, y las principales deberían ser los skills que
+ *    solicita el puesto.»
+ *
+ * El prompt ya pedía ese orden, pero el orden lo devuelve un modelo y puede
+ * cambiar entre dos lecturas del mismo aviso — por eso el peso se mide sobre el
+ * TEXTO. El corte usaba el orden del modelo, o sea su opinión justo en el
+ * momento en que más importa: cuando hay que descartar.
+ *
+ * Se comprueba la regla de ordenamiento, que es lo que decide qué sobrevive.
+ */
+describe("el corte se queda con lo que la vacante exige", () => {
+  const AVISO = `iOS Developer (Swift)
+Requisitos: Swift, UIKit, Core Data. Trabajamos con Swift todos los días y Swift
+es excluyente para el puesto.
+Deseable: Kotlin, Flutter, Jenkins`
+  const CONTEXTO = { posting: AVISO, jobTitle: "iOS Developer (Swift)" }
+
+  it("una deseable nunca desplaza a una exigida, aunque el modelo la escriba antes", () => {
+    // El modelo devolvió las deseables PRIMERO — un orden perfectamente posible,
+    // y por eso el corte no puede confiar en él.
+    const comoLasDevolvióElModelo = ["Kotlin", "Flutter", "Jenkins", "Swift", "UIKit", "Core Data"]
+    expect(topHardSkills(comoLasDevolvióElModelo, 3, CONTEXTO)).toEqual(["Swift", "UIKit", "Core Data"])
+  })
+
+  it("el empate lo decide el orden en que llegaron, que es la única señal que queda", () => {
+    expect(topHardSkills(["UIKit", "Core Data"], 2, CONTEXTO)).toEqual(["UIKit", "Core Data"])
+    expect(topHardSkills(["Core Data", "UIKit"], 2, CONTEXTO)).toEqual(["Core Data", "UIKit"])
+  })
+
+  it("si no sobra ninguna, no se reordena nada", () => {
+    const tal_cual = ["Kotlin", "Swift"]
+    expect(topHardSkills(tal_cual, 5, CONTEXTO)).toEqual(tal_cual)
+  })
+
+  it("falla ABIERTO: sin aviso que medir, se conserva el orden del modelo", () => {
+    const orden = ["Kotlin", "Flutter", "Swift"]
+    expect(topHardSkills(orden, 2, { posting: "", jobTitle: "" })).toEqual(["Kotlin", "Flutter"])
   })
 })

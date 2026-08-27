@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { AI_DAILY_CAP } from "@/lib/plans"
 import { AIService } from "@/lib/services/ai/AIService"
+import { TOPE_DURAS } from "@/lib/services/ai/modules/AIReviewModule"
 import type { IAIClient, ChatCompletion } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
@@ -453,6 +454,44 @@ describe("AIService", () => {
       expect(a.missingKeywords).toEqual(b.missingKeywords)
     })
 
+    /**
+     * UN TÉRMINO NO PUEDE SER DURA Y BLANDA A LA VEZ.
+     *
+     * ── EL CRUCE (reportado por el CEO, 2026-08-27) ────────────────────────
+     *
+     *   «¿Aún se pisan de información hard skills, soft skills y recruiter tips?»
+     *
+     * Entre las dos listas del extractor no había nada que deduplicara. Medido:
+     * una vacante que pide «Teamwork» lo sacaba en la tabla de duras Y en la de
+     * blandas. No es sólo que se lea repetido — son dos categorías del puntaje
+     * con pesos distintos (.45 y .10), así que el mismo requisito entraba dos
+     * veces al denominador.
+     */
+    it("un término listado como dura y como blanda entra UNA sola vez", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        ...validExtraction,
+        hardSkills: ["Kubernetes", "Teamwork"],
+        softSkills: ["Teamwork", "Communication"],
+      }))
+      const service = new AIService(aiClient, logger)
+      const result = await service.atsScore("user-1", {
+        jobDescription: "We need Kubernetes and Teamwork.",
+        sectionData: richSectionData,
+      }, "PRO")
+
+      const duras = [...result.matchedKeywords, ...result.missingKeywords].map((t) => t.toLowerCase())
+      // El resultado sólo publica las blandas que FALTAN; una que quedó en las
+      // dos listas y el CV no demuestra aparecería acá.
+      const blandas = (result.missingSoftSkills ?? []).map((t) => t.toLowerCase())
+
+      expect(duras).toContain("teamwork")
+      // Gana DURA: es la lista que el matcher exige literal y la que mueve el
+      // puntaje. Quedarse en blandas lo cobraría a un quinto de lo que pide la
+      // vacante; quedarse en las dos lo cobra dos veces.
+      expect(blandas, "el término quedó en las dos categorías del puntaje").not.toContain("teamwork")
+      expect(blandas).toContain("communication")
+    })
+
     it("topa la vacante en 12 sin tumbar el análisis, y puntúa exactamente lo que muestra", async () => {
       // Regression guard: an over-eager extraction must never fail validation.
       const many = Array.from({ length: 18 }, (_, i) => `Skill${i + 1}`)
@@ -479,10 +518,14 @@ describe("AIService", () => {
        *    listaba 12. Se conserva, y es lo que se afirma abajo: lo que se
        *    puntúa y lo que se muestra son EL MISMO conjunto.
        *
-       * Lo que cambia es el número, no la regla. El plan de F2 pone el techo de
-       * la vacante en 12 y sólo lo levanta cuando entre la ponderación por
-       * prioridad; la ponderación se midió y no salió, así que el techo se
-       * queda. Sin él, medido: el mismo CV cae de 84 a 56.
+       * Lo que cambia es el número, no la regla — y por eso este caso CITA la
+       * constante en vez de repetir su valor. Ataba un 12 literal, así que subir
+       * el techo lo ponía en rojo sin que nada se hubiera roto: un test que se
+       * queja del número correcto entrena a que se lo ignore.
+       *
+       * El techo es hoy 20, por orden del CEO (2026-08-27). Medido antes de
+       * subirlo, mismo CV y mismo aviso: 78 con 12, 67 con 20. El denominador
+       * crece y el número baja; las que entran son las que el aviso EXIGE.
        *
        * OJO — son dos lados distintos y sólo se topa uno: éste es el de la
        * VACANTE (cuántas habilidades se le exigen al candidato). Las del CV no
@@ -490,8 +533,7 @@ describe("AIService", () => {
        * cierra el defecto reportado, y el test de abajo lo comprueba con la 15ª.
        */
       const reportadas = result.matchedKeywords.length + result.missingKeywords.length
-      expect(reportadas).toBe(12)
-      expect(reportadas).toBeLessThan(many.length)
+      expect(reportadas).toBe(Math.min(many.length, TOPE_DURAS))
     })
 
     it("matches a skill listed past the 12th — the full skills list feeds the ATS haystack", async () => {

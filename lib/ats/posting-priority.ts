@@ -205,3 +205,43 @@ export function weightOf(term: string, weights?: Record<string, number>): number
   // produce la medición, así que acotar no cambia nada legítimo.
   return Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, w))
 }
+
+/**
+ * LAS QUE ENTRAN CUANDO NO ENTRAN TODAS.
+ *
+ * ── LA ORDEN (CEO, 2026-08-27) ──────────────────────────────────────────────
+ *
+ *   «Quiero que entren 20, y las principales deberían ser los skills que
+ *    solicita el puesto.»
+ *
+ * El prompt ya pedía ese orden, pero el orden lo devuelve un modelo y puede
+ * cambiar entre dos lecturas del mismo aviso — medido en este proyecto, y es la
+ * razón de que el peso se mida sobre el TEXTO. Cortar por el orden del modelo
+ * era quedarse con su opinión justo en el momento en que más importa: cuando hay
+ * que descartar.
+ *
+ * Vive acá, y no dentro del módulo de análisis, para que se pueda EJECUTAR en un
+ * test. La primera versión de este corte se probó replicando el `sort` dentro del
+ * propio test: eso da verde con el módulo desconectado, que es el defecto que
+ * este proyecto ya pagó más de una vez.
+ *
+ * Sin mapa —modo «sólo título», o un aviso vacío— todos pesan igual y el orden
+ * del modelo se conserva: falla abierto, sin reordenar por criterio propio.
+ *
+ * @param tope cuántas entran. Devuelve la lista tal cual si no sobra ninguna.
+ */
+export function topHardSkills(
+  terms: readonly string[],
+  tope: number,
+  input: PriorityInput,
+): string[] {
+  if (terms.length <= tope) return [...terms]
+  const pesos = measurePostingPriority(terms, input)
+  return terms
+    .map((term, i) => ({ term, i }))
+    // Por peso medido; el empate lo decide el orden en que llegaron, que es la
+    // única señal que queda. Orden estable, sin criterio nuestro encima.
+    .sort((a, b) => (weightOf(b.term, pesos) - weightOf(a.term, pesos)) || (a.i - b.i))
+    .slice(0, tope)
+    .map((x) => x.term)
+}

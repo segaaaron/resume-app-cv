@@ -41,8 +41,30 @@ const BULLET_RULES: readonly GateRule[] = [
   "no_lateral_loss",
   "figure_intact",
   "keeps_terms",
+  /**
+   * ── POR QUÉ ESTE ESCRITOR NO DECLARA `output_floor` (medido, 2026-08-27) ──
+   *
+   * El plan de F1.5 pedía el piso en «ejecutor, viñeta y habilidad», y la matriz
+   * del motor lo muestra ausente sólo acá. Parece un olvido; se intentó cerrarlo
+   * y la medición dijo que no.
+   *
+   * El piso exige `MIN_BULLET_WORDS` (12). El ejecutor reescribe con la vacante
+   * en la mano y produce líneas largas, así que ahí no molesta. Este endpoint
+   * mejora UNA línea que puede ser corta por naturaleza: con el piso puesto,
+   * «Led the team that delivered every project on schedule» —diez palabras, una
+   * reescritura perfectamente buena— se rechaza, y el usuario recibe
+   * `already_optimized` habiendo gastado el uso y el cooldown. Eso es
+   * exactamente lo que `never-empty` existe para impedir.
+   *
+   * Medido en las dos direcciones: sobre las cuatro reescrituras reales que la
+   * API devolvió hoy, el piso no rechaza ninguna (son largas); sobre la suite,
+   * rechaza nueve casos de líneas cortas legítimas.
+   *
+   * Lo que el piso protege y sí importa acá —que la salida no abra con una frase
+   * de tarea— ya lo cubre `opensWeakly`, que desde hoy ve también las aperturas
+   * nominales y alimenta el ranking y el diagnóstico de esta misma línea.
+   */
 ]
-
 export class AIBulletModule {
   constructor(
     private readonly aiClient: IAIClient,

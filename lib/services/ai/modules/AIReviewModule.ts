@@ -61,7 +61,7 @@ import { refineMissingRequirements } from "@/lib/ats/requirement-satisfied"
 import { fixesRepetition } from "@/lib/ats/repeated-content"
 import { readChat, truncatedNudge } from "../shared/chat-result"
 import { strictJsonFormat } from "../shared/strict-schema"
-import { measurePostingPriority } from "@/lib/ats/posting-priority"
+import { measurePostingPriority, topHardSkills } from "@/lib/ats/posting-priority"
 
 /**
  * Hard requirements this CV provably meets, normalized for the matcher.
@@ -138,6 +138,27 @@ const ANALYSIS_CACHE_MAX = 100
  * que cambiar la doctrina invalida el caché solo. Un humano no puede olvidarse de
  * algo que no tiene que hacer.
  */
+/**
+ * CUÁNTAS DURAS ENTRAN AL DENOMINADOR. Una constante, y el prompt la CITA.
+ *
+ * ── LA ORDEN (CEO, 2026-08-27) ──────────────────────────────────────────────
+ *
+ *   «Veo que sólo ingresan 12 skills, quiero que entren 20.»
+ *
+ * Estaba escrita en CINCO lugares: esta constante y el número suelto dentro de
+ * los cuatro prompts (jd/rol × es/en). Subirla a mano en unos y no en otros deja
+ * al prompt pidiendo doce mientras el código acepta veinte — el modelo devuelve
+ * lo que se le pide y el resto se descarta después, gastando tokens en términos
+ * que nadie va a leer. Ahora el texto se interpola y no puede desincronizarse.
+ *
+ * EFECTO MEDIDO antes de subirla, mismo CV y mismo aviso (10 exigidas + 10
+ * deseables, con la ponderación puesta): **78 con tope 12, 67 con tope 20**. El
+ * denominador crece y el número baja once puntos. Es la consecuencia esperada de
+ * medir contra más requisitos, no un defecto — y por eso el corte, cuando toca,
+ * se queda con las que el aviso EXIGE y no con las que el modelo puso primero.
+ */
+export const TOPE_DURAS = 20
+
 const DOCTRINE_FINGERPRINT = createHash("sha256")
   // LAS DOS RAMAS, y eso no es simetría decorativa: la huella existe para que un
   // cambio en la doctrina invalide el caché solo. Calculada sólo sobre el
@@ -918,7 +939,7 @@ Return JSON with this exact shape:
 
 Rules:
 - hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management").
-- ORDER hardSkills BY PRIORITY: the ones the posting insists on, names in the title, or repeats go first; the "nice to have" go last. Return at most 12 — the 12 that matter most.
+- ORDER hardSkills BY PRIORITY: the ones the posting insists on, names in the title, or repeats go first; the "nice to have" go last. Return at most ${TOPE_DURAS} — the ${TOPE_DURAS} that matter most.
 - mustHaves: an ALTERNATIVE LIST IS ONE REQUIREMENT. If the posting says "Degree in Business Engineering, Business Administration, Marketing or related", that is a SINGLE mustHaves entry written as one string — never three entries, one per career. Split apart, each is judged on its own and at most one can ever be met, so the others are reported as unmet for every candidate alive. Same for "Excel or Google Sheets". Only split when the posting truly demands BOTH ("Excel AND SQL").
 - Extract ONLY what the job description actually asks for. Do not hard-code requirements.
 - WRITE EVERY ITEM IN THE OUTPUT LANGUAGE STATED ABOVE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
@@ -943,7 +964,7 @@ Devuelve JSON con esta forma exacta:
 
 Reglas:
 - hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos").
-- ORDENA hardSkills POR PRIORIDAD: primero las que el aviso exige, nombra en el título o repite; al final las deseables. Devolvé como máximo 12 — las 12 que más importan.
+- ORDENA hardSkills POR PRIORIDAD: primero las que el aviso exige, nombra en el título o repite; al final las deseables. Devolvé como máximo ${TOPE_DURAS} — las ${TOPE_DURAS} que más importan.
 - mustHaves: UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO. Si el aviso dice "Licenciatura en Ingeniería Comercial, Administración de Empresas, Marketing o carreras afines", eso es UNA sola entrada de mustHaves escrita como una sola cadena — nunca tres entradas, una por carrera. Separadas, cada una se juzga sola y como mucho puede cumplirse una: las demás figuran como incumplidas para cualquier candidato del planeta. Lo mismo con "Excel o Google Sheets". Separá sólo cuando el aviso exige AMBAS ("Excel Y SQL").
 - Extrae SOLO lo que la descripción realmente pide. No agregues requisitos que no estén.
 - ESCRIBE CADA ÍTEM EN EL IDIOMA DE SALIDA INDICADO ARRIBA, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
@@ -969,7 +990,7 @@ Return JSON with this exact shape:
 }
 
 Rules:
-- Only STANDARD requirements for this role. Max ~12 hard skills.
+- Only STANDARD requirements for this role. Max ~${TOPE_DURAS} hard skills.
 - Do NOT add niche or company-specific requirements — only what a typical posting for this role lists.
 - If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
@@ -988,7 +1009,7 @@ Devuelve JSON con esta forma exacta:
 }
 
 Reglas:
-- Solo requisitos ESTÁNDAR de este rol. Máx ~12 hard skills.
+- Solo requisitos ESTÁNDAR de este rol. Máx ~${TOPE_DURAS} hard skills.
 - NO quemes requisitos de nicho/específicos de empresa — solo lo que una oferta típica del rol lista.
 - Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
@@ -1214,12 +1235,72 @@ Reglas:
      * En código además del prompt porque un prompt PIDE y el modelo puede
      * devolver quince: el gate de la fase tiene que valer por construcción.
      */
-    const TOPE_DURAS = 12
     if (extraction.hardSkills.length > TOPE_DURAS) {
-      this.logger.info("[AIService.reviewCV] posting listed more hard skills than the ceiling", {
-        listadas: extraction.hardSkills.length, tope: TOPE_DURAS,
+      /**
+       * LAS QUE SOBREVIVEN AL CORTE SON LAS QUE EL AVISO EXIGE, no las que el
+       * modelo escribió primero.
+       *
+       * ── LA ORDEN (CEO, 2026-08-27) ─────────────────────────────────────────
+       *
+       *   «Quiero que entren 20, y las principales deberían ser los skills que
+       *    solicita el puesto.»
+       *
+       * El prompt YA pide ese orden, pero el orden lo decide un modelo y puede
+       * cambiar entre dos lecturas del mismo aviso — eso ya está medido en este
+       * proyecto y es por lo que el peso se mide sobre el TEXTO
+       * (`posting-priority`). Cortar por el orden del modelo era quedarse con su
+       * opinión justo en el momento en que más importa: cuando hay que descartar.
+       *
+       * Ahora se ordena por el peso MEDIDO —título 1.5, repetida 1.25, deseable
+       * 0.5— y se corta abajo. Empate: gana la que el modelo puso antes, que es
+       * la única señal que queda y no agrega criterio nuestro. Orden estable.
+       */
+      const ordenadas = topHardSkills(extraction.hardSkills, TOPE_DURAS, {
+        // El aviso tal como llegó. `jobContext` todavía no existe en este punto
+        // y en modo «sólo título» no hay texto que medir: todos pesan igual y se
+        // conserva el orden del modelo, que es lo único que hay.
+        posting: useRole ? (roleTitle ?? "").trim() : jobDescriptionTruncated,
+        jobTitle: extraction.jobTitle,
       })
-      extraction = { ...extraction, hardSkills: extraction.hardSkills.slice(0, TOPE_DURAS) }
+      this.logger.info("[AIService.reviewCV] posting listed more hard skills than the ceiling", {
+        listadas: extraction.hardSkills.length,
+        tope: TOPE_DURAS,
+        // Qué quedó fuera, para que un corte no sea silencioso.
+        descartadas: extraction.hardSkills.length - ordenadas.length,
+      })
+      extraction = { ...extraction, hardSkills: ordenadas }
+    }
+
+    /**
+     * UN TÉRMINO NO PUEDE SER DURA Y BLANDA A LA VEZ.
+     *
+     * ── EL CRUCE (reportado por el CEO, 2026-08-27) ────────────────────────
+     *
+     *   «¿Aún se pisan de información hard skills, soft skills y recruiter tips?»
+     *
+     * Los tips ya no: hay un filtro que descarta el hallazgo del reclutador que
+     * nombra un término con fila propia en la tabla. Pero entre las DOS LISTAS
+     * del extractor no había nada. Medido con una vacante que pide «Teamwork»:
+     * salía en la tabla de duras Y en la de blandas.
+     *
+     * No es sólo que se lea repetido. Son DOS CATEGORÍAS DEL PUNTAJE con pesos
+     * distintos (.45 y .10), así que el mismo requisito entraba dos veces al
+     * denominador y su cobertura se contaba dos veces.
+     *
+     * Gana DURA, y no es arbitrario: es la lista que el matcher exige de forma
+     * literal y la que mueve el puntaje. Dejarlo en blandas además de duras lo
+     * cobra dos veces; dejarlo sólo en blandas lo cobraría a un quinto de lo que
+     * la vacante pide. Se compara con `normalizeTerm`, la misma función con la
+     * que el matcher decide presencia — dos varas para «¿es el mismo término?»
+     * es el defecto que este proyecto viene cerrando en todos lados.
+     */
+    const durasNorm = new Set(extraction.hardSkills.map((t) => normalizeTerm(t)).filter(Boolean))
+    const blandasSinDuplicar = extraction.softSkills.filter((t) => !durasNorm.has(normalizeTerm(t)))
+    if (blandasSinDuplicar.length !== extraction.softSkills.length) {
+      this.logger.info("[AIService.reviewCV] a term was listed as both hard and soft", {
+        repetidas: extraction.softSkills.length - blandasSinDuplicar.length,
+      })
+      extraction = { ...extraction, softSkills: blandasSinDuplicar }
     }
 
     // Off-topic guard: explicit label, or the model extracted nothing usable.
