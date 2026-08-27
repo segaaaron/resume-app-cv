@@ -186,7 +186,28 @@ export class AIReviewModule {
    * for something nobody bought, and it is what put a day of honest testing into
    * "you have reached today's limit".
    */
-  private spentAModelCall = false
+  /**
+   * ── EL DEFECTO (auditoría profunda del 2026-08-27) ──────────────────────────
+   *
+   * Esto era un CAMPO DE INSTANCIA, `private spentAModelCall = false`, y
+   * `aiService` es un singleton de módulo (`lib/controllers/ai-deps.ts`): una
+   * sola instancia para TODAS las peticiones del proceso. O sea, estado de una
+   * petición viviendo en un objeto compartido.
+   *
+   * La carrera, con dos usuarios a la vez:
+   *
+   *   A gasta una llamada al modelo   → la bandera queda en `true`
+   *   B entra y la resetea            → `false`, porque B arranca su propio análisis
+   *   A llega al final y la lee       → `false`
+   *   → a A le DEVUELVEN la ranura diaria que sí gastó
+   *
+   * Y al revés: B puede quedarse sin el reembolso que le corresponde. El tope
+   * diario existe para frenar el gasto (`AI_DAILY_CAP`), así que filtrarlo es
+   * dinero. Con tres usuarios es improbable; con tráfico, es sistemático.
+   *
+   * El estado de una petición viaja AHORA con la petición: se crea en `atsScore`
+   * y se pasa a quien lo toca. Dos peticiones concurrentes no pueden verse.
+   */
 
   constructor(
     private readonly aiClient: IAIClient,
@@ -280,6 +301,28 @@ export class AIReviewModule {
        * degrading to `manual` keeps the diagnosis and removes only the write.
        */
       const target = targetTextFor(f.action, sectionData)
+      /**
+       * LA LÍNEA QUE ESTE HALLAZGO SEÑALA, GUARDADA CON ÉL.
+       *
+       * ── LO REPORTADO (CEO, 2026-08-27) ─────────────────────────────────
+       *
+       *   «El recruiter tips no está bien cableado con tailor: me lanza tips que
+       *    ya se corrigieron, y él los vuelve a levantar.»
+       *
+       * El hallazgo viajaba identificado SÓLO por `targetId` + `index`, y el
+       * panel lo re-verifica en cada tecla (`rejectionOf` → `panel-report`).
+       * En cuanto el usuario aplica algo los índices se corren, así que el
+       * verificador leía OTRA línea: un tip ya resuelto se juzgaba contra una
+       * línea sana ajena y sobrevivía. Es la misma clase de defecto que los pares
+       * de fusión y de repetición — identidad por posición — en su tercer sitio.
+       *
+       * Acá es el único lugar sin deriva posible: el CV es el que se analizó.
+       * `targetTextFor` YA resolvía esa línea para el guard de la cifra y la
+       * tiraba; ahora se conserva y el verificador pregunta por texto.
+       */
+      if (target && f.action.kind === "rewrite_bullet") {
+        f.action = { ...f.action, originalText: target }
+      }
       if (target && f.fix?.trim() && figureDegraded(target, f.fix)) {
         this.logger.warn("[AIService.atsScore] fix would delete a stated figure — degraded to advice", {
           kind: f.action.kind,
@@ -388,6 +431,8 @@ export class AIReviewModule {
      * medición (el camino de rol sin vacante), y el crítico sigue como antes.
      */
     gaps?: { score: number; categories: Array<{ category: string; coveragePct: number; recoverable: number }>; missing: readonly string[] },
+    /** El gasto de ESTA petición. Ver el bloque grande de arriba. */
+    gasto?: { spent: boolean },
   ): Promise<CvAnalysis | null> {
     /**
      * LOS TÉRMINOS QUE LA VACANTE PIDE, DICHOS AL MODELO.
@@ -443,7 +488,7 @@ export class AIReviewModule {
       : ""
     const cacheKey = `${ANALYSIS_REVISION}:${en ? "en" : "es"}:${createHash("sha256").update(`${resumeText}\u0000${jobContext}\u0000${gapPrint}`).digest("hex")}`
     const cachedAnalysis = this.analysisCache.get(cacheKey)
-    if (!cachedAnalysis) this.spentAModelCall = true
+    if (!cachedAnalysis && gasto) gasto.spent = true
     if (cachedAnalysis) {
       this.logger.info("[AIService.analyzeResume] cache hit (memory)")
       return this.groundForThisResume(cachedAnalysis, sectionData, postingTerms)
@@ -459,7 +504,7 @@ export class AIReviewModule {
       if (restored.success) {
         // Served from the durable cache after all: the flag set above was
         // pessimistic, and a request that reaches here made no call.
-        this.spentAModelCall = false
+        if (gasto) gasto.spent = false
         this.logger.info("[AIService.analyzeResume] cache hit (stored)")
         this.analysisCache.set(cacheKey, restored.data)
         return this.groundForThisResume(restored.data, sectionData, postingTerms)
@@ -817,7 +862,7 @@ Reglas duras:
     // Every model call this request makes flips this. A request that ends with it
     // still false spent nothing, and the daily slot goes back — the cap exists to
     // stop spending, not to charge for cache hits.
-    this.spentAModelCall = false
+    const gasto = { spent: false }
 
     const { jobDescription, roleTitle, sectionData, language: rawLanguage, templateId, resumeId } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
@@ -1041,7 +1086,7 @@ Reglas:
     let keywordsFromStore = false
     if (!extraction) {
       const storedKeywords = await readAnswer("job-keywords", keywordsKey)
-      if (!storedKeywords) this.spentAModelCall = true
+      if (!storedKeywords) gasto.spent = true
       if (storedKeywords) {
         const parsed = ATSExtractionSchema.safeParse(storedKeywords)
         if (parsed.success) { extraction = parsed.data; keywordsFromStore = true }
@@ -1490,6 +1535,10 @@ Reglas:
         })),
         missing: stillMissingRequirements(keywords.mustHaves, sectionData ?? {}),
       },
+      // El gasto de ESTA petición, para que el reembolso mire lo que gastó ella
+      // y no lo que gastó la de otro usuario. Sin este argumento el análisis no
+      // podría marcar su llamada y el tope diario se devolvería siempre.
+      gasto,
     ).catch(() => null)
     // ENFORCE (not just prompt) the no-redundancy rule — but ONLY against the
     // specific keywords/typos the deterministic layer already shows. A fix is dropped
@@ -1513,7 +1562,7 @@ Reglas:
 
     // Nothing was spent: give the slot back before returning. Best-effort — a
     // failed refund costs one slot, never the response.
-    if (!this.spentAModelCall) {
+    if (!gasto.spent) {
       await refundDailyQuota(userId, "ats-score", plan).catch(() => {})
     }
     return construirInforme(analysis)
