@@ -103,7 +103,6 @@ export default function ATSScorePanel() {
   const {
     input, setInput,
     loading,
-    analysisRun,
     verdictPending: verdictPendingFromRequest,
     atsResult, reviewResult,
     offTopic,
@@ -325,6 +324,15 @@ export default function ATSScorePanel() {
      * número, contradiciendo la doctrina que le pide proponerlo. Ahora llega, y
      * el modal PREGUNTA en vez de aplicarlo como si fuera un hecho suyo.
      */
+    /**
+     * La blanda que esta línea deja demostrada, acreditada al confirmar.
+     *
+     * El camino que escribía derecho llamaba a `creditSoftSkill`; al mandar la
+     * reescritura por la pantalla de confirmación ese crédito se habría perdido
+     * en silencio y el porcentaje de blandas no se movería al aplicar — el mismo
+     * defecto que se reportó con captura el 2026-08-22, entrando por otra puerta.
+     */
+    demonstrates?: string
     needsFigureConfirm?: boolean
     /**
      * A merge: the second line this replacement absorbs, deleted on confirm.
@@ -725,6 +733,34 @@ export default function ATSScorePanel() {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const job = work.find((j) => j.id === targetId)
     const bullets = parseBullets(job?.description ?? "")
+    /**
+     * SIN SABER QUÉ LÍNEA ERA, NO SE ESCRIBE Y NO SE MARCA NADA.
+     *
+     * ── LO REPORTADO CON CAPTURA (CEO, 2026-08-27) ────────────────────────────
+     *
+     *   «Dice applied… al parecer no aplicó ni mierda, y me sale un toast que no
+     *    es de color rojo así que no creo que sea un error, pero desaparece rápido.»
+     *
+     * Era literal, y la cadena entera está medida: cuando el modelo no devuelve
+     * el `original`, el «antes» se leía POR ÍNDICE (`tailor-resolutions`), y un
+     * índice corrido devuelve `""`. Con el texto vacío `resolveBulletIndex`
+     * contesta -1 SIEMPRE —no puede identificar una línea sin texto—, y acá abajo
+     * eso se trataba como «la línea ya no está»: toast informativo, hallazgo
+     * marcado como aplicado, y el CV sin tocar.
+     *
+     * Son dos situaciones distintas y sólo una es inofensiva:
+     *
+     *   · `current` con texto y no aparece → la línea SE FUE. El defecto ya no
+     *     existe, la fila es vieja y retirarla es correcto.
+     *   · `current` vacío → NO SABEMOS qué línea era. Nada se fue: perdimos la
+     *     identidad. Marcarlo como aplicado le miente al usuario y le esconde el
+     *     hallazgo, que es lo peor de los dos mundos.
+     */
+    if (!current.trim()) {
+      reportUxFailure("bullet_write_no_identity", { jobFound: !!job, index, bullets: bullets.length })
+      toast.error(t("toast_change_error"))
+      return false
+    }
     const at = job ? resolveBulletIndex(bullets, index, current) : -1
     if (at < 0) {
       // The line is not in the CV any more — deleted, or rewritten in another
@@ -817,6 +853,8 @@ export default function ATSScorePanel() {
       // Same key the Content tab's guard uses: this write IS AI output, so the
       // "improve" button over there must not come back offering to improve it.
       markContentOptimized(`opt_bullet_${targetId}`, nextDescription)
+      // La blanda que esta línea deja demostrada. Ver el campo `demonstrates`.
+      if (bulletFix.demonstrates) creditSoftSkill(bulletFix.demonstrates)
       if (bulletFix.appliedCheckId) markCheckApplied(bulletFix.appliedCheckId)
       appliedWithUndo(t("toast_change_applied"), [["workExperience", work]], {
         checkId: bulletFix.appliedCheckId,
@@ -1208,20 +1246,40 @@ export default function ATSScorePanel() {
   )
 
   /**
-   * UN ANÁLISIS COMPLETO BORRA LAS MARCAS, y eso es lo correcto.
+   * UN ANÁLISIS COMPLETO NO BORRA LAS MARCAS. Ese reset ERA el defecto.
    *
-   * La mitad de los hallazgos se recalcula con cada tecla y se cierra sola: si el
-   * defecto se fue, la tarjeta no existe. La otra mitad —lo que escribe el
-   * reclutador— viene congelada del último análisis y por eso necesita la marca.
-   * Cuando llega un análisis NUEVO, esa mitad se volvió a leer sobre el CV de
-   * ahora: lo que siga listado sigue abierto, lo diga la marca o no.
+   * ── LO REPORTADO (CEO, 2026-08-27) ────────────────────────────────────────
    *
-   * La señal es `analysisRun`, un contador del hook que sólo avanza en la corrida
-   * completa: el re-cálculo instantáneo no lo mueve, así que esto no se dispara al
-   * teclear. Mirar la identidad de `result.analysis` habría sido leer el crudo del
-   * servidor, que es la puerta que el informe cerró.
+   *   «En el tailor, si voy solucionando, me dice que tengo 25 por arreglar,
+   *    arreglo como 10, y cuando le doy a volver a analizar el ATS se vuelven a
+   *    habilitar y me salen otras opciones.»
+   *
+   * Acá vivía `useEffect(() => setAppliedFingerprints(new Map()), [analysisRun])`:
+   * cada corrida completa vaciaba la memoria entera, así que los diez arreglos
+   * volvían con su botón como si nunca hubieran pasado.
+   *
+   * Y no era un descuido nuevo. `lib/ats/applied-memory.ts` documenta ESTE MISMO
+   * defecto como su motivo de existir —«el panel ya recordaba lo aplicado, pero
+   * sólo hasta la siguiente corrida (`setAppliedItems(new Set())` al re-analizar);
+   * esa memoria tenía que durar más que el análisis»—. Se borró aquella línea y se
+   * reescribió la misma con otro nombre.
+   *
+   * ── POR QUÉ EL ARGUMENTO QUE LO JUSTIFICABA NO SE SOSTIENE ────────────────
+   *
+   * Decía: «lo que escribe el reclutador se volvió a leer sobre el CV de ahora,
+   * así que lo que siga listado sigue abierto». Pero el análisis se le pide al
+   * modelo DE CERO —la clave de caché lleva el texto del CV, que acaba de
+   * cambiar—, y entonces el modelo vuelve a opinar sobre el párrafo que él mismo
+   * escribió. Que algo vuelva listado no prueba que siga abierto; es exactamente
+   * el caso que `applied-memory` existe para no repetir.
+   *
+   * El caso que el reset quería cubrir —un defecto que VUELVE de verdad— ya está
+   * cubierto y con mejor puntería por la huella: un hallazgo que reaparece
+   * señalando otra línea, otro conteo u otro texto tiene otra huella y recupera su
+   * botón solo. Lo que vuelve idéntico sigue cerrado, que es lo que el usuario ve.
+   *
+   * Queda UNA memoria de «esto ya lo hice», no dos.
    */
-  useEffect(() => { setAppliedFingerprints(new Map()) }, [analysisRun])
 
   const [tailorOpen, setTailorOpen] = useState(false)
   const [focusCheckId, setFocusCheckId] = useState<string | null>(null)
@@ -1327,7 +1385,23 @@ export default function ATSScorePanel() {
    * escritor nuevo acá habría sido una segunda forma de escribir en el CV, con su
    * propia manera de perder datos.
    */
-  function applyCheck(checkId: string): void {
+  /**
+   * @param enLote  Viene de «Aplicar todo», donde el usuario ya aceptó el
+   *   conjunto: ahí se escribe sin preguntar de a una. Un clic suelto SIEMPRE
+   *   pasa por la pantalla de confirmación — ver `confirmarReescritura`.
+   */
+  function applyCheck(checkId: string, opts?: { enLote?: boolean }): void {
+    /**
+     * EL MODO VA EN UN OBJETO, NO EN UN BOOLEANO POSICIONAL.
+     *
+     * Cazado en el pase de QA (2026-08-27): esta función se pasa POR REFERENCIA
+     * a la tarjeta (`onApply={applyCheck}`). Con un `enLote = false` posicional,
+     * el día que alguien escriba `onClick={applyCheck}` React entrega el EVENTO
+     * como segundo argumento — un objeto, siempre truthy— y la pantalla de
+     * confirmación desaparecería sin que nada falle ni ningún test se ponga rojo.
+     * Un `opts.enLote` sólo se activa si alguien lo escribe a propósito.
+     */
+    const enLote = opts?.enLote === true
     if (!report) return
     const check = allChecks(report).find((c) => c.id === checkId)
     const action = check?.action
@@ -1484,6 +1558,38 @@ export default function ATSScorePanel() {
           why: resolution.metricHint || t("content_quality_hint"),
           recommended: resolution.text,
           needsFigureConfirm: true,
+        })
+        return
+      }
+      /**
+       * QUÉ SE VA A ESCRIBIR Y DÓNDE, ANTES DE ESCRIBIRLO.
+       *
+       * ── LO REPORTADO (CEO, 2026-08-27) ───────────────────────────────────
+       *
+       *   «Antes para mejorar un bullet me decías cómo la IA lo iba a generar,
+       *    ahora lo aplica de callado… es más verídico si muestras al usuario qué
+       *    estás aplicando y dónde.»
+       *
+       * Y era cierto: esta puerta escribía derecho al CV, y la pantalla de
+       * confirmación sólo se abría cuando la reescritura traía una cifra. Las dos
+       * necesitan lo mismo —el texto es SU currículum— así que la confirmación
+       * deja de ser un caso especial de la cifra y pasa a ser el camino.
+       *
+       * EN LOTE NO: «Aplicar todo» ya es la aceptación del conjunto, y abrir N
+       * diálogos encadenados lo volvería inusable. Es la misma distinción que
+       * `entraAlMasivo` ya hace — lo que necesita un dato del usuario se acepta
+       * de a uno; esto necesita su visto bueno, no un dato.
+       */
+      if (!enLote) {
+        setBulletFix({
+          targetId: action.targetId,
+          index: action.index,
+          appliedCheckId: checkId,
+          current: resolution.before ?? "",
+          improved: resolution.text,
+          why: resolution.metricHint || t("content_quality_hint"),
+          recommended: resolution.text,
+          demonstrates: resolution.demonstrates,
         })
         return
       }
@@ -2403,7 +2509,7 @@ export default function ATSScorePanel() {
             // Lo que YA está escrito y no espera un dato suyo. Ver `entraAlMasivo`.
             const listas = new Set(resolutions.filter((r) => r.text.trim() && !r.needsFigureConfirm).map((r) => r.checkId))
             const plan = applyAllPlan(report, appliedCheckIds, addedKeywords, listas)
-            for (const id of plan.checkIds) applyCheck(id)
+            for (const id of plan.checkIds) applyCheck(id, { enLote: true })
             // Los términos se AGREGAN, no se tejen: tejer son cinco llamadas al
             // modelo y cinco esperas. Para el filtro, el término dentro del CV ya
             // cuenta; escribirlo dentro de una viñeta sigue disponible tarjeta por
@@ -2452,6 +2558,18 @@ export default function ATSScorePanel() {
             reason: bulletFix.why?.trim() || t("content_quality_hint"),
           }}
           currentValue={bulletFix.current}
+          /**
+           * DÓNDE cae el cambio. El número que se muestra es la posición VIVA de
+           * la línea, resuelta por su texto: enseñar el índice del análisis
+           * mandaría al usuario a mirar una línea distinta si ya aplicó algo.
+           */
+          where={(() => {
+            const trabajo = ((sectionData.workExperience ?? []) as WorkExperienceItem[]).find((j) => j.id === bulletFix.targetId)
+            if (!trabajo?.jobTitle?.trim()) return undefined
+            const lineas = parseBullets(trabajo.description ?? "")
+            const at = resolveBulletIndex(lineas, bulletFix.index, bulletFix.current)
+            return at < 0 ? undefined : { jobTitle: trabajo.jobTitle.trim(), line: at + 1 }
+          })()}
           /* Sólo sobre la recomendada: las alternativas se filtran contra la
              cifra propuesta, así que elegir una de ellas retira la pregunta. */
           needsFigureConfirm={bulletFix.needsFigureConfirm && bulletFix.improved === bulletFix.recommended}

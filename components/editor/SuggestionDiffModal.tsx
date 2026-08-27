@@ -44,6 +44,20 @@ interface SuggestionDiffModalProps {
   suggestion: Suggestion | undefined
   currentValue: string
   /**
+   * DÓNDE cae este cambio: el puesto y el número de línea.
+   *
+   * ── LO PEDIDO (CEO, 2026-08-27) ──────────────────────────────────────────
+   *
+   *   «Es más verídico si muestras al usuario qué estás aplicando y dónde.»
+   *
+   * El diálogo mostraba QUÉ cambia y nunca DÓNDE. Con cuarenta viñetas repartidas
+   * en cinco puestos, un antes/después sin dirección obliga a confiar: el usuario
+   * no puede verificar que se va a escribir en la línea que él cree. La ubicación
+   * es opcional porque hay campos que no la necesitan —el resumen es uno solo—,
+   * y ausente el diálogo se ve exactamente como se veía.
+   */
+  where?: { jobTitle: string; line: number }
+  /**
    * The resulting text, computed by the caller with `previewSuggestion` — i.e.
    * by running the ACTUAL write and reading it back. Whenever the caller applies
    * through applySuggestion it must pass this, so the preview can never drift
@@ -91,6 +105,7 @@ export default function SuggestionDiffModal({
   onConfirm,
   suggestion,
   currentValue,
+  where,
   afterValue: afterFromCaller,
   options,
   needsFigureConfirm,
@@ -203,6 +218,20 @@ export default function SuggestionDiffModal({
               >
                 {t("diff_title")} — {t(FIELD_KEYS[suggestion.field])}
               </div>
+              {where && (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10.5px] leading-none">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-[rgba(0,212,255,0.28)] bg-[rgba(0,212,255,0.07)] px-1.5 py-1 font-semibold text-[#1a2e4a]">
+                    <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <rect x="1.5" y="3" width="9" height="7.5" rx="1.4" stroke="currentColor" strokeWidth="1.3" />
+                      <path d="M4.2 3V2.1c0-.4.3-.7.7-.7h2.2c.4 0 .7.3.7.7V3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                    <span className="max-w-[190px] truncate">{where.jobTitle}</span>
+                  </span>
+                  <span className="rounded-md bg-[#EEF2F8] px-1.5 py-1 font-semibold text-[#5A6B80] tabular-nums">
+                    {t("diff_where_line", { n: where.line })}
+                  </span>
+                </div>
+              )}
               <div className="text-[11px] sm:text-[11.5px] text-[#6B7A8C] mt-[2px] leading-snug">{suggestion.reason}</div>
               {needsFigureConfirm && (
                 <div

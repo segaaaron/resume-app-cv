@@ -83,6 +83,19 @@ export function tailorResolutions(
       : a?.kind === "rewrite_bullet" && a.targetId && typeof a.index === "number"
       ? readBullet(a.targetId, a.index)
       : ""
+    /**
+     * UNA REESCRITURA QUE NO SABE A QUÉ LÍNEA REEMPLAZA NO ES APLICABLE.
+     *
+     * Cuando el modelo no manda el `original` y el índice ya se corrió, el
+     * respaldo por índice devuelve vacío. Antes esa resolución se publicaba igual
+     * y su botón llegaba a la pantalla: el usuario lo apretaba, no se escribía
+     * nada —el escritor no puede identificar una línea sin texto— y el hallazgo
+     * quedaba marcado como aplicado. Reportado con captura el 2026-08-27.
+     *
+     * No se ofrece lo que no se puede escribir. Sin resolución, la tarjeta
+     * conserva su otro camino en vez de mentir con un botón muerto.
+     */
+    if (a?.kind === "rewrite_bullet" && !before.trim()) continue
     resolutions.push({
       checkId: r.checkId,
       text: r.text,

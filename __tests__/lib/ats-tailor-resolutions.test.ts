@@ -41,6 +41,30 @@ describe("cada texto va con su hallazgo", () => {
   })
 
   /**
+   * SIN «ANTES» NO HAY RESOLUCIÓN — reportado con captura (CEO, 2026-08-27).
+   *
+   * El modelo no mandó `original` y el respaldo por índice devolvió vacío porque
+   * el índice ya se había corrido. La resolución se publicaba igual, su botón
+   * llegaba a la tarjeta, y al apretarlo el escritor no podía identificar la
+   * línea: no escribía nada Y marcaba el hallazgo como aplicado. La pantalla
+   * decía «Applied» con el CV intacto.
+   */
+  it("descarta la reescritura cuya línea no se puede identificar", () => {
+    const r = tailorResolutions(report([check({ id: "a" })]), {
+      rewrites: [{ checkId: "a", text: "Nueva línea" }],
+    }, () => "")
+    expect(r).toEqual([])
+  })
+
+  /** Y con el `original` del modelo alcanza, aunque el índice ya no sirva. */
+  it("se queda con la que trae su original, sin depender del índice", () => {
+    const r = tailorResolutions(report([check({ id: "a" })]), {
+      rewrites: [{ checkId: "a", text: "Nueva línea", original: "La línea que el modelo reescribió" }],
+    }, () => "")
+    expect(r).toEqual([{ checkId: "a", text: "Nueva línea", before: "La línea que el modelo reescribió" }])
+  })
+
+  /**
    * EL EMPAREJAMIENTO DESAPARECIÓ, y eso es el arreglo.
    *
    * Este archivo cruzaba puesto+índice contra el hallazgo, y ese cruce era donde
