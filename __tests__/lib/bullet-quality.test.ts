@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { assessDescription, assessResumeContent } from "@/lib/services/ai/shared/bullet-quality"
+import { assessDescription, assessResumeContent, opensNominally, opensWeakly } from "@/lib/services/ai/shared/bullet-quality"
 
 describe("assessDescription", () => {
   it("returns an empty assessment for an empty description", () => {
@@ -102,5 +102,75 @@ describe("assessResumeContent", () => {
     // sectionData is client-controlled — a non-array must degrade, not 500.
     expect(() => assessResumeContent({ workExperience: "oops" as unknown })).not.toThrow()
     expect(assessResumeContent({ workExperience: 42 as unknown }).totalBullets).toBe(0)
+  })
+})
+
+/**
+ * LA APERTURA NOMINAL — la regla que se derivó, con sus casos permanentes.
+ *
+ * ── EL AGUJERO (reportado con captura, CEO 2026-08-27) ──────────────────────
+ *
+ * El CV de producción llevaba «Active use of AI-assisted development tools…» y
+ * nadie la arreglaba nunca: `weakVerbBullets` salía vacío e `isImprovableLine`
+ * decía NO. Sin defecto no hay tarjeta, sin tarjeta el ejecutor no recibe la
+ * línea, y si el reclutador la señalaba el árbitro la descartaba como «no tiene
+ * defecto».
+ *
+ * `WEAK_OPENERS` ENUMERA frases y la lista siguiente siempre llega tarde
+ * —«Ongoing maintenance of», «A point of view on»… son infinitas—, así que la
+ * regla se DERIVA de la gramática: la línea no arranca con el verbo del trabajo
+ * y el sintagma que la encabeza queda anclado por su determinante o preposición.
+ *
+ * ── POR QUÉ ESTOS CASOS Y NO OTROS ──────────────────────────────────────────
+ *
+ * Son los que la medición usó para elegir la vara, y quedan fijos para que nadie
+ * la afloje sin volver a pasarlos. Dos cosas que costaron caro:
+ *
+ *   · NO SE ADIVINA EL IDIOMA. La primera versión lo deducía con `/[áéíóúñ]/`, y
+ *     medio currículum latinoamericano se escribe sin tildes: una línea española
+ *     caía por la rama inglesa, donde «de» no es preposición. Peor, mi propia
+ *     sonda lo tapó pasando el idioma a mano cuando el código real nunca lo pasa.
+ *   · LA VENTANA DE LA PREPOSICIÓN ES DE DOS PALABRAS, y ese número salió de la
+ *     medición: con tres, «Reduje el tiempo DE cierre contable» caía como
+ *     nominal, porque un pretérito irregular no lleva tilde.
+ */
+describe("una línea que abre con un sintagma nominal, no con el trabajo", () => {
+  const NOMINALES = [
+    "Active use of AI-assisted development tools to accelerate Swift refactoring",
+    "A point of view on using AI-assisted development tools to speed up Swift",
+    "Responsibility for the migration of the payment module to a new provider",
+    "Ongoing maintenance of the internal documentation used by the mobile team",
+    "Responsabilidad de la atencion al cliente en el mostrador principal",
+    "Uso constante de sistemas de facturacion para el cierre del turno",
+  ]
+  const SANAS = [
+    "Integrated advanced debugging tools to optimize app responsiveness",
+    "Resolved critical bugs to improve app stability and user experience",
+    "Led a team of eight through the migration to a new payment provider",
+    "Built the internal tooling used by the mobile team every sprint",
+    "Wrote the onboarding guide for new engineers joining the team",
+    "Coordiné la compra de insumos de oficina con tres proveedores",
+    "Gestioné la agenda médica de los profesionales del consultorio",
+    "Reduje el tiempo de cierre contable de cinco días a dos",
+    "Capacité a dos compañeros nuevos en el sistema interno",
+  ]
+
+  it("las detecta SIN que nadie le diga el idioma — así la llama el código real", () => {
+    for (const l of NOMINALES) expect(opensNominally(l), l).toBe(true)
+  })
+
+  it("y no toca una línea que abre con el trabajo, en ninguno de los dos idiomas", () => {
+    for (const l of SANAS) expect(opensNominally(l), l).toBe(false)
+  })
+
+  it("«Reduje el tiempo DE cierre contable» NO es nominal: el pretérito irregular no lleva tilde", () => {
+    // El caso que fijó la ventana en dos palabras. Con tres, caía.
+    expect(opensNominally("Reduje el tiempo de cierre contable de cinco días a dos")).toBe(false)
+  })
+
+  it("y `opensWeakly` junta las dos formas de abrir mal: la lista y la derivada", () => {
+    expect(opensWeakly("Responsible for the migration of the payment module")).toBe(true)
+    expect(opensWeakly("Active use of AI-assisted development tools to accelerate work")).toBe(true)
+    expect(opensWeakly("Resolved critical bugs to improve app stability")).toBe(false)
   })
 })
