@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeProfileGaps } from "@/lib/ats/profile-gaps"
+import { computeProfileGaps } from "@/lib/skills/profile-gaps"
 
 const FULL_JOB = {
   id: "w1",

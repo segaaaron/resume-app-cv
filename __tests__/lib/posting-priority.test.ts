@@ -26,12 +26,32 @@ describe("la prioridad sale del texto del aviso", () => {
     expect(w["python"]).toBeGreaterThan(w["ruby"])
   })
 
-  it("el que vive SÓLO bajo «deseable» pesa menos: lo dijo el propio aviso", () => {
+  /**
+   * ── QUIÉN DICE QUÉ ES DESEABLE (cambió el 2026-08-28) ─────────────────────
+   *
+   * Antes lo adivinaba el código buscando catorce encabezados dentro del aviso.
+   * Un aviso que dijera «valorable» o «no imprescindible» no existía para esa
+   * lista y todo quedaba como exigido; y «plusvalía» contenía «plus», así que
+   * una vacante de contador se descontaba entera.
+   *
+   * Ahora lo dice el modelo que leyó ESE aviso, en `optionalTerms`. Por eso
+   * estos casos lo pasan explícitamente: es lo que llega del ATS.
+   */
+  it("el que el aviso marcó como deseable pesa menos", () => {
+    const w = measurePostingPriority(["Java", "Scala"], {
+      posting: "Se requiere Java.\nDeseable: Scala",
+      jobTitle: "Backend",
+      optionalTerms: ["Scala"],
+    })
+    expect(w["scala"]).toBeLessThan(w["java"])
+  })
+
+  it("y sin que el aviso lo diga, NADIE pierde peso — falla del lado seguro", () => {
     const w = measurePostingPriority(["Java", "Scala"], {
       posting: "Se requiere Java.\nDeseable: Scala",
       jobTitle: "Backend",
     })
-    expect(w["scala"]).toBeLessThan(w["java"])
+    expect(w["scala"]).toBe(w["java"])
   })
 
   it("un término exigido que ADEMÁS aparece en deseables no se castiga", () => {
@@ -85,6 +105,9 @@ describe("la prioridad sale del texto del aviso", () => {
     const w = measurePostingPriority(["CI/CD", "Docker"], {
       posting: "Backend. Se requiere Docker.\nDeseable: integración continua",
       jobTitle: "Backend",
+      // El aviso lo nombró por su alias y el modelo devuelve el término tal como
+      // lo extrajo: el descuento tiene que encontrarlo igual.
+      optionalTerms: ["CI/CD"],
     })
     expect(w["ci/cd"]).toBeLessThan(w["docker"])
   })
@@ -118,7 +141,13 @@ describe("el corte se queda con lo que la vacante exige", () => {
 Requisitos: Swift, UIKit, Core Data. Trabajamos con Swift todos los días y Swift
 es excluyente para el puesto.
 Deseable: Kotlin, Flutter, Jenkins`
-  const CONTEXTO = { posting: AVISO, jobTitle: "iOS Developer (Swift)" }
+  const CONTEXTO = {
+    posting: AVISO,
+    jobTitle: "iOS Developer (Swift)",
+    // Lo que el modelo devolvería leyendo ese aviso: son las que están bajo
+    // «deseable». El corte usa el peso, y el peso ahora sale de acá.
+    optionalTerms: ["Kotlin", "Flutter", "Jenkins"],
+  }
 
   it("una deseable nunca desplaza a una exigida, aunque el modelo la escriba antes", () => {
     // El modelo devolvió las deseables PRIMERO — un orden perfectamente posible,

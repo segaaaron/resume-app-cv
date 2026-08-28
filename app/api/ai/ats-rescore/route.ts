@@ -26,6 +26,23 @@ const schema = z.object({
      * carry-over de `semanticMatches` existe para evitar.
      */
     hardWeights: z.record(z.string().max(120), z.number().min(0).max(3)).optional(),
+    /**
+     * Las variantes con que ESE oficio escribe cada requisito, dichas por el
+     * modelo que leyó la vacante. Mismo motivo que `hardWeights`: sin declararlas
+     * Zod las borra sin fallar y el re-cálculo mediría con el diccionario
+     * mientras el análisis midió con la vacante — el número saltaría al teclear.
+     *
+     * Acotadas porque entran por un borde HTTP. Sólo pueden agregar formas de
+     * matchear, nunca quitar una.
+     */
+    termVariants: z.record(z.string().max(120), z.array(z.string().max(120)).max(8))
+      /**
+       * Y el NÚMERO de entradas, que `z.record` no acota por su cuenta: sin este
+       * tope el cuerpo es ilimitado en un borde HTTP. El techo de duras es 20 y
+       * el esquema de extracción admite 60, así que 60 es el peor caso real.
+       */
+      .refine((v) => Object.keys(v).length <= 60, { message: "too many terms" })
+      .optional(),
   }),
   sectionData: z.record(z.string(), z.unknown()).optional(),
   language: z.enum(["es", "en"]).optional(),

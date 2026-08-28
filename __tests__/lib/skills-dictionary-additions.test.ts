@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { isKnownSkill, ATS_SKILLS } from "@/lib/ats/skills-dictionary"
-import { SKILL_CATALOG, displaySkill, filterSkills } from "@/lib/ats/skill-catalog"
+import { SKILL_CATALOG, displaySkill, filterSkills } from "@/lib/skills/skill-catalog"
 
 /**
  * Measured before the batch was written: Product was missing 21 of 30 terms and

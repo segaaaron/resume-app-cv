@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { checkSpelling } from "@/lib/ats/spellcheck"
-import { collectSpellcheckText, collectProperNouns } from "@/lib/ats/spellcheck-collect"
-import { applySpellingFix, replaceWord } from "@/lib/ats/apply-spelling"
+import { checkSpelling } from "@/lib/spellcheck/spellcheck"
+import { collectSpellcheckText, collectProperNouns } from "@/lib/spellcheck/spellcheck-collect"
+import { applySpellingFix, replaceWord } from "@/lib/spellcheck/apply-spelling"
 
 const typed = (issues: { typed: string }[]) => issues.map((i) => i.typed.toLowerCase())
 

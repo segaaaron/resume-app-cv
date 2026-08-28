@@ -69,7 +69,11 @@ const BASURA: Array<[string, string]> = [
   ["• Atendí 80 clientes por día", "• Atendí clientes en ventanilla con buen trato"],
   ["• Integré APIs RESTful con Swift", "• Integré APIs con buenas prácticas"],
   ["• Hice pruebas de la app", "• Escribí pruebas con [N] casos de prueba"],
-  ["• Trabajé en la app", "• Trabajé en la app usando Kubernetes y Terraform"],
+  // Nombre con mayúscula interna: lo caza la FORMA, que vale para cualquier rubro.
+  // La lista de 40 marcas de tecnología se borró — descartaba 6 de 6 líneas buenas
+  // de oficios no técnicos y sólo protegía a uno. Medición en `ai-helpers`; una
+  // marca de una sola palabra la cubre ahora la doctrina, en los dos idiomas.
+  ["• Trabajé en la app", "• Trabajé en la app usando OpenShift4 y TerraGrunt"],
 ]
 
 describe("la cadena de guards, corrida entera", () => {

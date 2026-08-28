@@ -118,8 +118,14 @@ function fixesTypoToKnownTerm(original: string, suggested: string): boolean {
   return known(o, cambiada) !== ahora
 }
 
-/** Significant words of a normalized string (drops leading markers, empties). */
-function wordsOf(text: string): string[] {
+/**
+ * Las palabras de un texto normalizado, sin marcadores ni vacíos.
+ *
+ * Exportada porque estaba copiada en `cover-letter-ats` con otra definición —una
+ * partía por espacios a secas y la otra normalizaba primero—, y dos formas de
+ * contar palabras es el mismo cruce que cierra `contentWords`.
+ */
+export function wordsOf(text: string): string[] {
   return normalize(text).split(" ").filter(Boolean)
 }
 
@@ -348,19 +354,54 @@ export function isCosmeticReword(
 
 // Connective words that carry no content — dropping or adding one is not a
 // meaningful change. EN + ES, so a bilingual bullet is judged the same way.
+/**
+ * Palabras vacías, la UNIÓN de las dos listas que había: ésta y `DUP_STOPWORDS`,
+ * que vivía en `resume-integrity` con 62 entradas contra las 38 de acá. Tener dos
+ * era la mitad del cruce; la otra mitad eran los acentos.
+ */
 const CONTENT_STOPWORDS = new Set([
+  // de la lista que vivía en resume-integrity
+  "using", "used", "have", "has", "had", "not", "but", "all", "new", "more",
+  "also", "when", "which", "each", "per", "via", "unos", "unas",
+  /**
+   * Y las españolas que faltaban al unir, medidas contra las dos listas
+   * originales. Sin ellas el español contaba como CONTENIDO diez palabras que el
+   * inglés ya descartaba —«desde», «hasta», «este», «muy», «sin»—, así que dos
+   * líneas en español parecían decir más de lo que dicen y las comparaciones
+   * salían sesgadas por idioma. Un producto bilingüe no puede tener una vara más
+   * floja de un lado.
+   */
+  "sobre", "desde", "hasta", "sin", "muy", "este", "esta", "estos", "estas",
+  "han", "fueron", "era", "eran", "hacia", "cada", "todo", "toda", "todos", "todas",
+
   // en
   "the", "and", "for", "with", "into", "while", "that", "this", "was", "were",
   "are", "been", "being", "its", "their", "our", "from", "than", "then", "your",
   // es
-  "los", "las", "una", "uno", "del", "por", "con", "para", "que", "como", "sus",
-  "sobre", "entre", "fue", "era", "son", "ser", "mas",
+  "los", "las", "una", "uno", "del", "por", "con", "para", "que", "como", "sus", "entre", "fue", "son", "ser", "mas",
 ])
 
-/** Content words (≥3 chars, not a stopword) with hyphens/slashes split out. */
-function contentWords(text: string): string[] {
+/**
+ * LAS PALABRAS CON CONTENIDO DE UN TEXTO — el dueño único de la pregunta.
+ *
+ * ── EL CRUCE QUE ESTO CIERRA (medido, 2026-08-28) ──────────────────────────
+ *
+ * «¿Qué palabra cuenta?» estaba contestada SEIS veces en el proyecto, y las
+ * respuestas no coincidían: una plegaba los acentos y otra no, una lista tenía
+ * 62 palabras vacías y otra 38. Consecuencia real: dos módulos podían opinar
+ * distinto sobre si dos líneas dicen lo mismo, porque partían «gestioné» de
+ * formas distintas. En un producto que escribe en español eso no es un detalle.
+ *
+ * Acá se pliegan los acentos —«gestioné» y «gestione» son la misma palabra— y la
+ * lista de vacías es la UNIÓN de las dos que había. El filtro de tres caracteres
+ * ya descartaba las funcionales cortas («de», «to»), así que la unión no cambia
+ * nada por ese lado.
+ */
+export function contentWords(text: string): string[] {
   return normalize(text)
-    .split(/[^a-z0-9áéíóúñ]+/i)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/i)
     .filter((w) => w.length >= 3 && !CONTENT_STOPWORDS.has(w))
 }
 

@@ -119,7 +119,7 @@ export function buildMetricGuidance(
  * versiones nuevas, no la reescritura de una línea. La calidad del resumen la
  * sigue midiendo `assessSummary`, que es su propia vara y no la de una viñeta.
  */
-const SUMMARY_RULES: readonly GateRule[] = ["nothing_burned", "figure_policy"]
+const SUMMARY_RULES: readonly GateRule[] = ["only_declared_facts", "figure_policy"]
 
 function pasaElMotor(text: string, source: string, language: string): boolean {
   return runWriteGate({ text, source, figurePolicy: "drop", language }, SUMMARY_RULES).ok

@@ -8,7 +8,7 @@
 import type { CvFixAction } from "@/lib/services/ai/shared/ai-types"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
-import { isPlausibleSkill } from "./skill-validation"
+import { isPlausibleSkill } from "@/lib/skills/skill-validation"
 
 /**
  * Verifies a model-proposed action against the REAL CV before the UI can render

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { findPersonalData } from "@/lib/ats/personal-data"
-import { findStuffedTerms, STUFFING_REPEATS } from "@/lib/ats/keyword-density"
-import { isPassiveVoice, findPassiveBullets } from "@/lib/ats/passive-voice"
+import { findPersonalData } from "@/lib/ats/report-checks"
+import { findStuffedTerms, STUFFING_REPEATS } from "@/lib/ats/report-checks"
+import { isPassiveVoice, findPassiveBullets } from "@/lib/ats/report-checks"
 
 /**
  * TRES CHEQUEOS NUEVOS, Y EL MÁS IMPORTANTE ES EL QUE NO HACE NADA.

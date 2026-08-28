@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { verdictContradictions } from "@/lib/ats/verdict-contradiction"
+import { verdictContradictions } from "@/lib/ats/report-checks"
 import { buildAtsReport, type BuildReportInput } from "@/lib/ats/build-report"
 import type { ReportTerm } from "@/lib/ats/report"
 

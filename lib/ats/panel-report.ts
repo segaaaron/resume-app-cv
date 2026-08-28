@@ -17,9 +17,9 @@
 import type { CategoryBreakdown } from "./score-breakdown"
 import type { WritingChecks } from "./writing-checks"
 import { refineMissingRequirements } from "./requirement-satisfied"
-import { findPersonalData } from "./personal-data"
-import { findStuffedTerms } from "./keyword-density"
-import { findPassiveBullets } from "./passive-voice"
+import { findPersonalData } from "./report-checks"
+import { findStuffedTerms } from "./report-checks"
+import { findPassiveBullets } from "./report-checks"
 import { DECORATIVE_OPENER, parseBullets } from "@/lib/services/ai/shared/bullets"
 import { hasAnyMetric } from "@/lib/services/ai/shared/ai-helpers"
 import { opensWeakly } from "@/lib/services/ai/shared/bullet-quality"
@@ -29,7 +29,7 @@ import { verifiedRecruiterFixes, verifyContextOf } from "./recruiter-verified"
 import { reportUxFailure } from "@/lib/client-error-reporter"
 import type { AtsReport } from "./report"
 import { cvExperienceYears } from "./experience-years"
-import { findStaleTerms } from "./stale-terms"
+import { findStaleTerms } from "./report-checks"
 
 /**
  * El CV como texto plano, sólo para contar apariciones por término.
@@ -141,7 +141,7 @@ export interface PanelResultLike {
   demonstratedSoftSkills?: string[]
   templateSafety?: "safe" | "caution"
   scoreBreakdown?: { categories: CategoryBreakdown[] } | null
-  extractedKeywords?: { jobTitle?: string; hardSkills?: string[]; softSkills?: string[]; mustHaves?: string[]; seniority?: string; yearsRequired?: number; hardWeights?: Record<string, number> } | null
+  extractedKeywords?: { jobTitle?: string; hardSkills?: string[]; softSkills?: string[]; mustHaves?: string[]; seniority?: string; yearsRequired?: number; hardWeights?: Record<string, number>; termVariants?: Record<string, string[]> } | null
   analysis?: { criticalFixes?: Array<RecruiterFix & { needsFromYou?: string }>; verdict?: string } | null
   typoWarnings?: { keyword: string; typed: string }[]
 }
@@ -419,6 +419,8 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
           // Los pesos del aviso viajan DENTRO del informe: el panel decide con
           // ellos qué línea sobra y no puede volver a leer el crudo.
           hardWeights: result.extractedKeywords.hardWeights,
+          // Y las variantes del oficio, por el mismo camino y el mismo motivo.
+          termVariants: result.extractedKeywords.termVariants,
           yearsRequired: result.extractedKeywords.yearsRequired,
         }
       : undefined,

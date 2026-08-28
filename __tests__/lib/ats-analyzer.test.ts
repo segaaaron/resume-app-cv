@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest"
 
 vi.mock("@/lib/db", () => ({ db: {} }))
 
-import { extractTopKeywords, normalize } from "@/lib/ats/analyzer"
+import { extractTopKeywords, normalize } from "@/lib/cover-letter/analyzer"
 import { partitionByPresence } from "@/lib/ats/core/matching"
 
 const RESUME = [

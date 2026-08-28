@@ -20,17 +20,6 @@ const PRONOUN_REGEX =
   /\b(i|i'm|i've|my|me|myself|yo|mi|mis|me|conmigo|soy|tengo|busco)\b/i
 
 /** Impact verbs the prompts already name, plus the forms a summary opens with. */
-const IMPACT_VERBS: readonly string[] = [
-  "led", "leads", "leading", "developed", "develops", "developing",
-  "transformed", "scaled", "optimized", "implemented", "drove", "drives",
-  "designed", "built", "builds", "rebuilt", "grew", "delivered", "delivers",
-  "shipped", "ships", "cut", "reduced", "increased", "launched", "mentored",
-  "architected", "automated", "migrated", "deployed", "refactored",
-  "lideró", "lidera", "desarrolló", "desarrolla", "transformó", "escaló",
-  "optimizó", "implementó", "impulsó", "diseñó", "construyó", "creó",
-  "redujo", "incrementó", "lanzó", "mentoró", "arquitectó", "automatizó",
-  "migró", "desplegó", "refactorizó",
-]
 
 export interface SummaryQuality {
   /** True when nothing here is worth an AI rewrite. */
@@ -42,7 +31,22 @@ export interface SummaryQuality {
 function startsWithImpact(text: string): boolean {
   const first = text.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^\p{L}]/gu, "") ?? ""
   if (!first) return false
-  if (IMPACT_VERBS.includes(first)) return true
+  /**
+   * ── ACÁ HABÍA UNA LISTA DE 52 VERBOS, Y SE FUE (CEO, medido 2026-08-28) ────
+   *
+   * `IMPACT_VERBS` enumeraba «led, scaled, shipped, mentored, refactored,
+   * arquitectó, desplegó…»: verbos de perfil corporativo y de software. Este
+   * producto le escribe a soldadores, enfermeras y cajeras, y ninguno «escala»
+   * ni «mentorea» — su verbo es soldar, administrar, conciliar.
+   *
+   * Medido: la lista NO APORTABA NADA. La regla de abajo —primera palabra
+   * capitalizada que no sea pronombre— ya acepta cualquier apertura fuerte de
+   * cualquier oficio, y con la lista desactivada los 3.740 tests siguen verdes.
+   * Su único efecto posible era bendecir el verbo corporativo por encima del
+   * verbo del oficio.
+   *
+   * La regla es la FORMA de la apertura, no un catálogo de verbos permitidos.
+   */
   // A role title is an equally strong opener ("Senior iOS engineer who…").
   // Capitalised and not a pronoun is the cheapest reliable signal.
   //

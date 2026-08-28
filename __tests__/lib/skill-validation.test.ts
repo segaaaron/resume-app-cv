@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { isPlausibleSkill, nonSkillTermsFrom } from "@/lib/ats/skill-validation"
+import { isPlausibleSkill, nonSkillTermsFrom } from "@/lib/skills/skill-validation"
 
 const CV = {
   personalDetails: { firstName: "Miguel", lastName: "Saravia", city: "Cochabamba", country: "Bolivia", jobTitle: "iOS Developer" },

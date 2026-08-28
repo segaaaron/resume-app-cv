@@ -3,9 +3,9 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
-import { spliceSummary } from "@/lib/ats/summary-splice"
+import { spliceSummary } from "@/lib/ats/panel-actions"
 import { resolveBulletIndex } from "@/lib/ats/bullet-locate"
-import { postingTermsLost } from "@/lib/ats/keyword-safety"
+import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { reportUxFailure } from "@/lib/client-error-reporter"
 import { roleBudget } from "@/lib/ats/role-budget"
 import { weakestBullet } from "@/lib/ats/bullet-impact"
@@ -15,18 +15,18 @@ import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/se
 import { useResumeStore } from "@/stores/resumeStore"
 import { textSignature, matchesApplied } from "@/lib/ats/action-plan"
 import { buildPanelReport } from "@/lib/ats/panel-report"
-import { planSkillAdd } from "@/lib/ats/skill-add"
-import { planRoleReorder } from "@/lib/ats/role-order"
+import { planSkillAdd } from "@/lib/ats/panel-actions"
+import { planRoleReorder } from "@/lib/ats/panel-actions"
 import { tailorResolutions } from "@/lib/ats/tailor-resolutions"
 import { allChecks } from "@/lib/ats/report"
-import { appliedIdsFrom, fingerprintOfCheck } from "@/lib/ats/applied-checks"
+import { appliedIdsFrom, fingerprintOfCheck } from "@/lib/ats/panel-actions"
 import ReportRail from "./ats-report/ReportRail"
 import { applyAllPlan, solvableChecks, tailorWorkload, TAILOR_WORKLOAD_MAX } from "@/lib/ats/report"
 import TailorModal, { type TailorFilter } from "./ats-report/TailorModal"
 import { postingTermsForPrompt } from "@/lib/ats/rewrite-keeps-match"
 import { hasCliche } from "@/lib/services/ai/shared/cliches"
 import { assessDescription } from "@/lib/services/ai/shared/bullet-quality"
-import { appliedSignatures, forgetOneApplied, rememberApplied } from "@/lib/ats/applied-memory"
+import { appliedSignatures, forgetOneApplied, rememberApplied } from "@/lib/ats/panel-actions"
 import { useShallow } from "zustand/react/shallow"
 // Same normalization the matcher used to decide "demonstrated", so an accented
 // Spanish skill matches the stored verdict instead of silently missing it.
@@ -43,7 +43,7 @@ import type { ResumeSections, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
 import { applySuggestion, previewSuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
-import { applySpellingFix } from "@/lib/ats/apply-spelling"
+import { applySpellingFix } from "@/lib/spellcheck/apply-spelling"
 import { markContentOptimized } from "./hooks/useOptimizedGuard"
 import { ATSErrorBlock } from "./ats-panel/presentational"
 import { normalizeDates } from "@/lib/ats/normalize-dates"
@@ -1544,7 +1544,7 @@ export default function ATSScorePanel() {
        * el cliente después rechazaba.
        */
       const claimed = (report?.terms ?? []).filter((x) => x.section !== "other" && x.cv > 0).map((x) => x.term)
-      const lost = postingTermsLost(resolution.before ?? "", resolution.text, claimed)
+      const lost = droppedPostingTerms(resolution.before ?? "", resolution.text, claimed)
       if (lost.length > 0) { toast.error(t("rewrite_loses_terms", { terms: lost.slice(0, 3).join(", ") })); return }
       /**
        * UNA CIFRA PROPUESTA NO SE APLICA SOLA. Ni por esta puerta.

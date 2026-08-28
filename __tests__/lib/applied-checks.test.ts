@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { appliedIdsFrom, fingerprintOfCheck } from "@/lib/ats/applied-checks"
+import { appliedIdsFrom, fingerprintOfCheck } from "@/lib/ats/panel-actions"
 import type { ReportCheck } from "@/lib/ats/report"
 
 /**

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { ShieldCheck, Lock, Loader2, CheckCircle2, AlertTriangle, XCircle } from "lucide-react"
-import { analyzeCoverLetterAts, type CoverLetterAtsResult, type CoverLetterAtsVerdict } from "@/lib/ats/cover-letter-ats"
+import { analyzeCoverLetterAts, type CoverLetterAtsResult, type CoverLetterAtsVerdict } from "@/lib/cover-letter/cover-letter-ats"
 
 /** Strip TipTap HTML to the plain text the ATS engine reads. Client-safe. */
 function htmlToPlain(html: string): string {

@@ -40,10 +40,9 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, figureDegraded, hardCodedFactKind } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
-import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
 import { floorNudge, type FloorMiss } from "@/lib/ats/output-floor"
 import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 import { resolveBulletIndex } from "@/lib/ats/bullet-locate"
@@ -126,15 +125,26 @@ const REASON_GUIDE: Record<TailorReason, { en: string; es: string }> = {
  * una función de doscientas líneas: un escritor nuevo que se olvide una regla se
  * ve acá.
  */
+/**
+ * El resumen es otro escritor, con su propia lista: nace del relato del
+ * candidato (postura A, la cifra viaja a confirmar) y no tiene ni línea que
+ * respetar ni términos de la vacante que conservar, así que declara cuatro.
+ */
+const SUMMARY_RULES: readonly GateRule[] = [
+  "only_declared_facts",
+  "figure_policy",
+  "figure_intact",
+  "adds_value",
+]
+
 const TAILOR_RULES: readonly GateRule[] = [
-  "nothing_burned",
+  "only_declared_facts",
   "figure_policy",
   "person",
   "belongs_to_line",
   "figure_intact",
   "adds_value",
   "keeps_terms",
-  "no_lateral_loss",
   "output_floor",
 ]
 
@@ -502,7 +512,7 @@ Reglas:
 
         if (!veredicto.ok) {
           switch (veredicto.rule) {
-            case "nothing_burned": droppedHardCoded++; break
+            case "only_declared_facts": droppedHardCoded++; break
             case "figure_intact": droppedFigure++; break
             case "keeps_terms": droppedTerm++; break
             case "output_floor": droppedWeak++; weakMisses.push(...(veredicto.misses ?? [])); break
@@ -549,14 +559,47 @@ Reglas:
         })
       }
 
-      // El resumen pasa por los mismos guards: no puede volver casi idéntico ni
-      // perder las cifras que lo hacían valer la pena.
+      /**
+       * EL RESUMEN PASA POR EL MOTOR, COMO LOS OTROS CINCO ESCRITORES.
+       *
+       * ── EL HUECO QUE ESTO CIERRA (medido, 2026-08-28) ─────────────────────
+       *
+       * Corría TRES chequeos escritos a mano —trivial, cosmético, cifra
+       * degradada— y `only_declared_facts` NO estaba entre ellos. La única pregunta
+       * que se le hacía sobre un dato falso era `hardCodedFactKind(...) ===
+       * "figure"`, más abajo: si la respuesta era `placeholder` o `brand`, el
+       * texto se escribía igual. Medido ejecutando los dos caminos sobre el
+       * mismo CV:
+       *
+       *   «… redujo los tiempos de espera un [X%] …»        a mano ESCRIBE · motor RECHAZA
+       *   «… operando Temenos T24 a diario»                  a mano ESCRIBE · motor RECHAZA
+       *   «… concilia entre 50 y 100 comprobantes por día»   los dos ESCRIBEN, pidiendo confirmar
+       *
+       * Un corchete de relleno en la PRIMERA LÍNEA del CV es exactamente lo que
+       * este producto se niega a enviarle a un reclutador, y la viñeta estaba
+       * protegida mientras el resumen no.
+       *
+       * ── Y POR QUÉ ERA INEVITABLE QUE PASARA ───────────────────────────────
+       *
+       * El motor existe para que la lista de reglas de cada escritor se DECLARE
+       * y no se escriba a mano; éste era el último sitio que la componía con
+       * `||`. Una regla nueva en el motor no llegaba hasta acá, y nadie se
+       * enteraba: no hay nada que falle cuando un chequeo simplemente no está.
+       *
+       * `adds_value` es el dueño de «¿aporta algo?» y suma `addsNoInformation`
+       * a los dos que ya corrían — el mismo criterio que juzga una viñeta.
+       */
       const origSummary = (typeof sectionData.summary === "string" ? sectionData.summary : "").trim()
-      const summary = summaryRaw && origSummary && (
-        isTrivialEdit(origSummary, summaryRaw)
-        || isCosmeticReword(origSummary, summaryRaw)
-        || figureDegraded(origSummary, summaryRaw)
-      ) ? null : summaryRaw
+      const summaryVeredicto = summaryRaw
+        ? runWriteGate({
+          text: summaryRaw,
+          ...(origSummary ? { original: origSummary } : {}),
+          source: groundingSource,
+          figurePolicy: "confirm",
+          language,
+        }, SUMMARY_RULES)
+        : null
+      const summary = summaryVeredicto?.ok ? summaryVeredicto.text : null
       /**
        * Y EL RESUMEN TAMBIÉN PUEDE TRAER UNA CIFRA QUE EL CV NO DICE.
        *
@@ -580,8 +623,9 @@ Reglas:
        * le pedíamos confirmar un número que es suyo desde el principio. Es la
        * misma fuente que juzga las viñetas, y por eso las dos no pueden discrepar.
        */
-      const summaryNeedsFigureConfirm = !!summary
-        && hardCodedFactKind(summary, groundingSource) === "figure"
+      // La decide el motor, en la misma pasada que lo aceptó. Preguntarlo otra
+      // vez acá sería el segundo juez para una pregunta que ya tiene dueño.
+      const summaryNeedsFigureConfirm = !!(summaryVeredicto?.ok && summaryVeredicto.needsFigureConfirm)
       return { summary, summaryNeedsFigureConfirm, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm, droppedWeak, weakMisses }
     }
 

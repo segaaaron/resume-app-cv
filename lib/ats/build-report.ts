@@ -38,7 +38,7 @@
 
 import type { CvFixAction } from "@/lib/services/ai/shared/ai-types"
 import type { ReportPosting } from "./report"
-import { verdictContradictions } from "./verdict-contradiction"
+import { verdictContradictions } from "./report-checks"
 import { isImprovableLine, rankRoleBullets, KEEP_PER_ROLE } from "./bullet-strength"
 import { compareImpact, impactOf, rankByImpact, type WeightOf } from "./bullet-impact"
 import { weightOf as postingWeightOf } from "./posting-priority"

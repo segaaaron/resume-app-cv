@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { categoryOfSkill, displaySkill, filterSkills, SKILL_CATALOG } from "@/lib/ats/skill-catalog"
+import { categoryOfSkill, displaySkill, filterSkills, SKILL_CATALOG } from "@/lib/skills/skill-catalog"
 
 describe("displaySkill — casing", () => {
   it("fixes acronyms/brands the title-case fallback gets wrong", () => {

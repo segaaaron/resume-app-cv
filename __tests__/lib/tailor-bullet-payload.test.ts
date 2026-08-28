@@ -73,10 +73,17 @@ describe("las alternativas no se parten en el origen", () => {
     expect(src).toContain("UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO")
   })
 
-  it("y aclara cuándo SÍ hay que separar", () => {
+  /**
+   * Afirmaba el EJEMPLO —«Excel AND SQL»— y el prompt pasó a decir el PRINCIPIO,
+   * porque el ejemplo universitario hacía que el modelo partiera las
+   * tecnicaturas en tres (medido contra la API, 2026-08-28). La garantía es que
+   * el prompt distinga los dos conectores; el ejemplo con el que lo diga es
+   * libre, y atarlo era pedirle al prompt que no mejore.
+   */
+  it("y aclara cuándo SÍ hay que separar: «o» agrupa, «y» separa", () => {
     const src = read("lib/services/ai/modules/AIReviewModule.ts")
-    expect(src).toContain('Excel AND SQL')
-    expect(src).toContain('Excel Y SQL')
+    expect(src).toContain('"and" means it demands all of them')
+    expect(src).toContain('"y" significa que las exige todas')
   })
 })
 

@@ -12,7 +12,7 @@ import { describe, it, expect, vi } from "vitest"
 
 vi.mock("@/lib/db", () => ({ db: {} }))
 
-import { simulateAtsEngines, type EngineId } from "@/lib/ats/engines"
+import { simulateAtsEngines, type EngineId } from "@/lib/ats-checker/engines"
 import { computeResumeSignals } from "@/lib/ats/signals"
 
 const CLEAN = [

@@ -58,7 +58,7 @@ function bulletMentionsSkill(skill: string, haystackLower: string): boolean {
  * responder, no porque se hayan olvidado.
  */
 const SKILL_RULES: readonly GateRule[] = [
-  "nothing_burned",
+  "only_declared_facts",
   "figure_policy",
   "output_floor",
 ]
@@ -360,7 +360,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       language,
     }, SKILL_RULES)
 
-    if (!veredicto.ok && (veredicto.rule === "nothing_burned" || veredicto.rule === "figure_policy")) {
+    if (!veredicto.ok && (veredicto.rule === "only_declared_facts" || veredicto.rule === "figure_policy")) {
       this.logger.warn("[AIService.weaveSkillBullet] dropped hard-coded bullet", {
         skill, rule: veredicto.rule, previewSample: text.slice(0, 120),
       })
@@ -388,7 +388,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
      * ganancia: quedan las tres condiciones que sí aplican —verbo de acción,
      * nada de frase vacía, y el mínimo de palabras de la doctrina—. Una línea
      * como «Trabajo en equipo en el puesto de Cajera» cumple todos los guards de
-     * arriba (nada quemado, menciona la habilidad, no duplica) y no dice NADA: es
+     * arriba (sólo datos declarados, menciona la habilidad, no duplica) y no dice NADA: es
      * exactamente la respuesta básica que el CEO reportó.
      *
      * No se reintenta acá: `no_fit` ya es una salida honesta con su aviso en

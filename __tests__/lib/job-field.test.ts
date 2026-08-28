@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { inferFieldCategories } from "@/lib/ats/job-field"
-import { filterSkills } from "@/lib/ats/skill-catalog"
+import { inferFieldCategories } from "@/lib/skills/job-field"
+import { filterSkills } from "@/lib/skills/skill-catalog"
 import { normalizeTerm } from "@/lib/ats/vocabulary"
 
 describe("inferFieldCategories — field from job title", () => {
@@ -87,7 +87,7 @@ describe("the two ways a keyword could never match", () => {
    * keyword that can never fire.
    */
   it("has no keyword that the title normalization could never match", () => {
-    const src = readFileSync(join(process.cwd(), "lib/ats/job-field.ts"), "utf8")
+    const src = readFileSync(join(process.cwd(), "lib/skills/job-field.ts"), "utf8")
     // Only the array literal: the prose around it quotes accented examples on
     // purpose, and reading those would fail the guard for explaining itself.
     const start = src.indexOf("const TITLE_TO_CATEGORY")

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildCoverLetterBrief } from "@/lib/ats/cover-letter-brief"
+import { buildCoverLetterBrief } from "@/lib/cover-letter/cover-letter-brief"
 
 // A vacancy that names tools the résumé HAS (Swift, SwiftUI, REST, Core Data,
 // unit testing, Agile) and one it does NOT (Kubernetes) — the anti-invention line.

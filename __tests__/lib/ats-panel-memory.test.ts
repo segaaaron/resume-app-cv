@@ -4,9 +4,9 @@ import { join } from "node:path"
 import { applyAllPlan, isReadyToSend, allChecks, type AtsReport } from "@/lib/ats/report"
 import { buildAtsReport, type BuildReportInput } from "@/lib/ats/build-report"
 import { buildPanelReport } from "@/lib/ats/panel-report"
-import { appliedSignatures, rememberApplied, forgetApplied } from "@/lib/ats/applied-memory"
+import { appliedSignatures, rememberApplied, forgetApplied } from "@/lib/ats/panel-actions"
 import { textSignature, matchesApplied } from "@/lib/ats/action-plan"
-import { postingTermsLost } from "@/lib/ats/keyword-safety"
+import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
 
 /**
@@ -218,7 +218,7 @@ describe("una reescritura no puede perder términos de la vacante", () => {
    * oficio, que es el valor que se paga.
    */
   it("avisa del término que la reescritura se llevó", () => {
-    const lost = postingTermsLost(
+    const lost = droppedPostingTerms(
       "Gestioné cuentas clave con Salesforce.",
       "Gestioné cuentas clave del segmento corporativo.",
       ["Salesforce"],
@@ -227,7 +227,7 @@ describe("una reescritura no puede perder términos de la vacante", () => {
   })
 
   it("y no se queja cuando el término sobrevive", () => {
-    expect(postingTermsLost(
+    expect(droppedPostingTerms(
       "Gestioné cuentas con Salesforce.",
       "Gestioné cuentas clave del corporativo usando Salesforce.",
       ["Salesforce"],

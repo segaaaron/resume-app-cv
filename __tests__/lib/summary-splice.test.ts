@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { spliceSummary } from "@/lib/ats/summary-splice"
+import { spliceSummary } from "@/lib/ats/panel-actions"
 
 const REAL = "iOS Developer with more than 7 years of experience building sophisticated user interfaces across UIKit and SwiftUI. Led the integration of RESTful APIs and architecture work with MVVM, VIPER, and TCA to deliver scalable iOS solutions. Improved software quality through unit and UI testing, helping reduce production bugs by 15% and supporting cleaner, more maintainable releases."
 

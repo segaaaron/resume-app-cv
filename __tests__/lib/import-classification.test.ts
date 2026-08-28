@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { classifyImportedTerms } from "@/lib/ats/import-classification"
+import { classifyImportedTerms } from "@/lib/skills/import-classification"
 
 /**
  * These call the REAL classifier. The previous tests re-implemented it by

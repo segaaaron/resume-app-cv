@@ -179,6 +179,16 @@ export interface ATSExtractedKeywords {
    * análisis viejo en caché, o un cliente que no lo devuelve, no rompe nada.
    */
   hardWeights?: Record<string, number>
+  /**
+   * Cómo puede estar escrito cada requisito en un CV de ese oficio, dicho por
+   * el modelo que leyó ESA vacante. Viaja por el mismo camino que
+   * `hardWeights`, y por el mismo motivo: el re-cálculo instantáneo no recibe
+   * el aviso y no podría volver a pedirlas.
+   *
+   * Opcional y falla abierto: sin variantes el matcher usa el diccionario
+   * compartido, que es exactamente el comportamiento anterior.
+   */
+  termVariants?: Record<string, string[]>
   /** Nivel y años que pide el aviso (F2). Informan; no entran al puntaje. */
   seniority?: string
   yearsRequired?: number
@@ -436,6 +446,45 @@ export const ATSExtractionShape = z.object({
    */
   seniority: z.string(),
   yearsRequired: z.number(),
+  /**
+   * CÓMO PUEDE ESTAR ESCRITO CADA REQUISITO EN UN CV DE ESE OFICIO.
+   *
+   * ── EL HUECO QUE ESTO CIERRA (CEO, 2026-08-28) ─────────────────────────
+   *
+   * El modelo decía QUÉ exige el aviso, y después NOSOTROS decidíamos si el CV
+   * lo dice, con un diccionario de 1.002 términos escrito a mano. Si el aviso
+   * pide «CI/CD» y el CV dice «integración continua», matchea porque alguien
+   * escribió ese alias. Si pide «soldadura MIG» y el CV dice «soldadura por
+   * arco con gas de protección», matchea sólo si alguien se acordó de ese
+   * oficio. El conocimiento del dominio no puede vivir en una lista nuestra:
+   * siempre le falta el oficio que nadie escribió.
+   *
+   * El modelo acaba de leer ESA vacante y conoce ESE dominio. Que devuelva las
+   * variantes cuesta unas decenas de tokens y se paga UNA VEZ POR AVISO — la
+   * extracción ya se cachea contra la vacante sola.
+   *
+   * ARRAY Y NO `Record`: el modo estricto de OpenAI exige
+   * `additionalProperties: false`, así que un objeto de claves libres no es un
+   * esquema válido. Se convierte a mapa al leerlo.
+   */
+  termVariants: z.array(z.object({
+    term: z.string(),
+    variants: z.array(z.string()),
+  })),
+  /**
+   * CUÁLES DE ESAS DURAS EL AVISO MARCA COMO DESEABLES.
+   *
+   * Antes lo decidía una lista de catorce encabezados —«deseable», «plus»,
+   * «nice to have»— buscados dentro del texto. Un aviso que diga «valorable»,
+   * «suma», «no imprescindible» o cualquier giro que nadie escribió quedaba con
+   * TODO como exigido, y el candidato perdía puntaje por requisitos que la
+   * empresa nunca exigió. Y ya se pagó un falso positivo caro por ahí:
+   * «plusvalía» contiene «plus» y descontaba una vacante entera de contador.
+   *
+   * El modelo lee el aviso: que lo diga él, en cualquier idioma y con cualquier
+   * giro. Vacío = todo exigido, que es el comportamiento seguro.
+   */
+  optionalTerms: z.array(z.string()),
   /** El centinela de «esto no es una vacante». Nulo cuando sí lo es. */
   label: z.string().nullable(),
 })
@@ -460,6 +509,19 @@ export const ATSExtractionSchema = z.object({
   /** Nivel y años que pide el aviso (F2). Peso cero: informan, no castigan. */
   seniority: z.string().catch(""),
   yearsRequired: z.number().catch(0),
+  /**
+   * Las variantes con que un CV de ese oficio puede escribir cada requisito.
+   *
+   * Acotadas y con `.catch([])`: una variante mal formada no puede tumbar la
+   * extracción entera, y sin variantes el matcher usa el diccionario, que es el
+   * comportamiento anterior. El tope existe porque esto entra por un borde HTTP.
+   */
+  termVariants: z.array(z.object({
+    term: z.string().max(120).catch(""),
+    variants: z.array(z.string().max(120)).max(8).catch([]),
+  })).max(60).catch([]),
+  /** Las duras que el aviso marca como deseables. Vacío = todo exigido. */
+  optionalTerms: z.array(z.string().max(120)).max(60).catch([]),
   /**
    * The extractor no longer writes suggestions.
    *

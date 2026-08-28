@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeProfileGaps, type ProfileGapKind } from "@/lib/ats/profile-gaps"
+import { computeProfileGaps, type ProfileGapKind } from "@/lib/skills/profile-gaps"
 
 /**
  * The whole interview, walked start to finish.

@@ -13,7 +13,7 @@
 // on the page.
 import { ATS_SKILLS } from "@/lib/ats/skills-dictionary"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
-import { displaySkill } from "@/lib/ats/skill-catalog"
+import { displaySkill } from "@/lib/skills/skill-catalog"
 
 /** Most suggestions to surface. Keeps the card scannable; the tail is noise. */
 export const MAX_PROVEN_SKILLS = 8

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, it, expect } from "vitest"
-import { appliedSignatures, forgetOneApplied, rememberApplied } from "@/lib/ats/applied-memory"
+import { appliedSignatures, forgetOneApplied, rememberApplied } from "@/lib/ats/panel-actions"
 
 /**
  * Y AL REVERTIR, LA MEMORIA TIENE QUE SOLTAR ESA FIRMA.

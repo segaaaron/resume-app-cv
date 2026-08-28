@@ -165,23 +165,31 @@ export function requirementHaystack(sectionData: Record<string, unknown>): strin
  * número, que es la que el usuario no puede auditar.
  */
 /**
- * Títulos que compiten entre sí, aunque lleguen en renglones distintos.
+ * LAS ALTERNATIVAS DE CREDENCIAL — por qué esta lista SE QUEDA, medido.
  *
- * EL SEGUNDO ACTO DEL MISMO BUG. Arreglado el requisito compuesto, el modelo
- * empezó a partir las alternativas él mismo: la vacante pedía "Ingeniería
- * Comercial, Administración de Empresas, Marketing o afines" y devolvía TRES
- * requisitos sueltos, uno por carrera. Al llegar separados se pierde que son
- * alternativas, y juzgados de a uno sólo puede cumplirse uno: los otros dos
- * figuran como incumplidos para cualquier candidato del planeta. Otra vez un
- * requisito imposible, ahora por el otro lado.
+ * ── LO QUE SE MIDIÓ CONTRA LA API (2026-08-28) ─────────────────────────────
  *
- * Nadie exige DOS licenciaturas distintas. Cuando varios requisitos piden el
- * mismo tipo de credencial, son opciones — y tener una alcanza.
+ * Se intentó borrarla, porque una lista enumerada siempre le falta el caso que
+ * nadie escribió. La medición mostró las dos mitades:
  *
- * Sólo agrupa credenciales (licenciatura, título, grado, ingeniería, carrera).
- * Dos requisitos que piden herramientas distintas NO son alternativas: ahí sí
- * hacen falta las dos, y agruparlas le diría al usuario que cumple algo que no
- * cumple.
+ *  · EL PROMPT ERA LA CAUSA REAL. Su ejemplo era universitario, y el modelo
+ *    generalizaba a títulos de universidad: con «Tecnicatura en Electromecánica,
+ *    Técnico Superior en Mantenimiento Industrial o Diplomado en Mecánica»
+ *    devolvía TRES requisitos, y el candidato quedaba incumpliendo dos
+ *    exigencias que nadie puede tener a la vez. El prompt dice ahora el
+ *    PRINCIPIO —«o» es alternativa, «y» son dos requisitos, valga para una
+ *    tecnicatura, un certificado de oficio o una licencia— y medido después:
+ *    3 entradas → 1, en español y en inglés. Ésa es la corrección de fondo.
+ *
+ *  · Y ESTA RED SE QUEDA IGUAL, porque la alternativa genérica es peor. Agrupar
+ *    por la primera palabra sin lista juntaría «Manejo de Excel» con «Manejo de
+ *    SAP», y como el grupo marca por cumplido a todos sus miembros, el usuario
+ *    leería que cumple un requisito que NO cumple. Un falso positivo que le
+ *    miente al candidato es peor que una red incompleta.
+ *
+ * Se queda acotada a credenciales y con su borde declarado: si el modelo parte
+ * una alternativa cuya palabra no está acá, esta red no la ve. La primera
+ * defensa es el prompt.
  */
 const CREDENTIAL_HEADS = [
   "licenciatura", "licenciado", "titulo", "grado", "carrera", "ingenieria", "ingeniero",

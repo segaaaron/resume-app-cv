@@ -89,19 +89,6 @@ export function resolveLanguage(raw?: string): { language: "es" | "en"; langInst
 
 // ─── Anti-hard-coded fact helpers (shared across all AI modules) ────────────────
 
-/**
- * Tech/framework buzzwords commonly hard-coded out of nowhere by LLMs.
- * If any of these appears in the AI output but NOT in the source context,
- * we treat the output as a hard-coded fact.
- */
-export const TECH_BUZZWORDS: readonly string[] = [
-  "graphql", "redux", "kubernetes", "docker", "terraform", "tca", "swiftui",
-  "kotlin", "rust", "ansible", "jenkins", "circleci", "grpc", "kafka",
-  "rabbitmq", "redis", "elasticsearch", "prometheus", "grafana", "next.js",
-  "nestjs", "fastapi", "django", "rails", "spring boot", "flutter",
-  "react", "node", "typescript", "javascript", "python", "aws", "gcp",
-  "azure", "postgresql", "mongodb", "tailwind", "vue", "angular",
-]
 
 /**
  * Unidades que, pegadas a un número, son inequívocamente una afirmación de
@@ -415,7 +402,7 @@ export const METRIC_PLACEHOLDER_REGEX =
  * Detection layers:
  *   1. Metric placeholders like [X%], [N users], [métrica].
  *   2. Metric tokens present in text but absent from source.
- *   3. Tech buzzwords from TECH_BUZZWORDS present in text but absent from source.
+ *   3. A system named like a product (internal caps or digits) absent from source.
  *
  * There is deliberately no opt-out for layer 1. Modules used to pass
  * `allowPlaceholders: true` and instruct the model to emit "[X%]" whenever a
@@ -429,8 +416,8 @@ export const METRIC_PLACEHOLDER_REGEX =
  *
  * ── EL HUECO QUE ESTO CIERRA ───────────────────────────────────────────────
  *
- * `TECH_BUZZWORDS` es una lista SÓLO TÉCNICA, y estaba declarado como hueco
- * conocido: «Temenos T24» en el CV de un cajero de banco no lo cazaba nadie más
+ * Hubo acá una lista de cuarenta marcas de tecnología, y su hueco estaba
+ * declarado: «Temenos T24» en el CV de un cajero de banco no lo cazaba nadie más
  * que el prompt. El producto no atiende sólo a perfiles de software —cajeros,
  * enfermeras, abogados, agricultores— y cada rubro tiene sus propios sistemas.
  * Mantener una lista por rubro es una carrera que se pierde: siempre falta el
@@ -458,6 +445,75 @@ export const METRIC_PLACEHOLDER_REGEX =
  * que tapa. Ese resto lo contiene el prompt, y se dice así en vez de fingir que
  * está cubierto.
  */
+
+/**
+ * ── POR QUÉ ACÁ NO HAY UNA LISTA DE MARCAS (orden del CEO, medido 2026-08-28) ──
+ *
+ * Vivía acá `TECH_BUZZWORDS`: cuarenta marcas de tecnología comparadas contra el
+ * texto. Tenía dos defectos y el segundo es el que la condenó.
+ *
+ *  1. Ocho de las cuarenta son palabras corrientes en inglés. Medido, SEIS DE SEIS
+ *     líneas buenas de oficios no técnicos quedaban descartadas: «Sanded rust off
+ *     the frames» (soldadura), «React to customer complaints» (atención), «Worked
+ *     as a docker on the night shift» (puerto), «an azure and cream palette»
+ *     (moda), «angular contact bearings» (mecánica), «node by node» (registro).
+ *
+ *  2. SÓLO SABÍA DE UN RUBRO. Un CV de desarrollo quedaba protegido y uno de banca
+ *     no: «Temenos» pasaba porque nadie lo puso en la lista. Enumerar las marcas de
+ *     cada oficio no se termina nunca, y este producto le escribe a soldadores,
+ *     cajeras y enfermeras.
+ *
+ * Se midió una versión intermedia —exigir que la marca venga escrita como nombre
+ * propio— que daba 0 falsos positivos. Aun así la lista se fue: quitarle el daño no
+ * le quita el sesgo.
+ *
+ * QUÉ CUBRE EL HUECO. Lo determinista pasa a ser sólo la FORMA (abajo), que no sabe
+ * de rubros. Una marca de una sola palabra sin mayúscula interna —«Kubernetes»,
+ * «Docker», «Temenos» a secas— la cubre la doctrina, en los dos idiomas y a coste
+ * cero: «Software o sistemas con nombre de MARCA QUE ÉL NO HAYA DECLARADO. Decí
+ * "sistema core bancario", nunca un proveedor que no mencionó».
+ *
+ * Eso vale para TODOS los oficios por igual, que es exactamente lo que la lista no
+ * podía dar. Si alguien vuelve con la idea de reponerla, la medición ya está hecha.
+ */
+/**
+ * LA FORMA DE UN NOMBRE DE PRODUCTO, que no sabe de rubros.
+ *
+ * Mayúscula INTERNA («SwiftUI», «PostgreSQL») o letras pegadas a dígitos («T24»,
+ * «S4HANA»). Basta una letra mayúscula adentro: los sistemas de banca y ERP se
+ * llaman así, y exigir dos los dejaba pasar.
+ *
+ * ── LO QUE NO SE MIRA, Y ES UNA DECISIÓN MEDIDA (2026-08-28) ───────────────
+ *
+ * Una palabra capitalizada normal —«Temenos» a secas, «Cochabamba», «Marzo»— NO
+ * se juzga. Se intentó lo contrario ESTE MISMO DÍA y la medición lo tumbó: la
+ * vara de «nombre propio a mitad de oración ausente del CV» descartó NUEVE DE
+ * DIEZ líneas buenas de oficios no técnicos, y las nueve eran exactamente lo que
+ * `cvValueBar` EXIGE escribir —la norma a la que responde el trabajo, el
+ * documento que maneja—:
+ *
+ *   «… siguiendo el protocolo de Control de Infecciones»      enfermería
+ *   «… en la Historia Clínica de cada paciente»               enfermería
+ *   «… conforme al Código Tributario vigente»                 contabilidad
+ *   «… aplicando Normas Internacionales de Información…»      contabilidad
+ *   «… en el Libro de Novedades con firma del supervisor»     seguridad
+ *   «… según normas de Seguridad Alimentaria»                 gastronomía
+ *   «… ajustados al Código Civil y comercial»                 legal
+ *   «… el criterio Primero en Entrar, Primero en Salir»       depósito
+ *   «… con el equipo de Terapia Intensiva»                    enfermería
+ *
+ * El prompt pide nombrar la norma del oficio y el guard descartaba la línea POR
+ * nombrarla. Cazar el nombre propio suelto exige marcar TODO nombre propio, y ahí
+ * caen las normas, los documentos, los empleadores, las ciudades y los meses.
+ * Vale la regla del CEO: un guard que tira trabajo bueno hace más daño que el
+ * hueco que tapa.
+ *
+ * El resto lo dice la doctrina, en los dos idiomas y a coste cero: «Software o
+ * sistemas con nombre de MARCA QUE ÉL NO HAYA DECLARADO. Decí "sistema core
+ * bancario", nunca un proveedor que no mencionó». Eso cubre a TODOS los oficios
+ * por igual — que era el defecto de la lista de cuarenta marcas de tecnología que
+ * vivía acá: sólo protegía a uno.
+ */
 const UNDECLARED_SYSTEM = /\b(?=\w*[A-Z])(?:[A-Za-z]+[A-Z][A-Za-z]*\d*|[A-Za-z]+\d+[A-Za-z\d]*)\b/g
 
 /** Siglas del oficio y del idioma que no son un producto de nadie. */
@@ -471,9 +527,8 @@ function namesUndeclaredSystem(text: string, sourceContext: string): boolean {
   const source = sourceContext.toLowerCase()
   for (const m of text.match(UNDECLARED_SYSTEM) ?? []) {
     if (NOT_A_SYSTEM.has(m) || NOT_A_SYSTEM.has(m.toUpperCase())) continue
-    // Todo en mayúsculas sin dígitos es una sigla, no un producto: la lista de
-    // arriba no puede enumerar las de cada oficio, y marcarlas descartaría
-    // líneas correctas de rubros que no conocemos.
+    // Todo en mayúsculas sin dígitos es una sigla del oficio, no un producto: no
+    // se pueden enumerar las de cada rubro y marcarlas descartaría líneas sanas.
     if (m === m.toUpperCase() && !/\d/.test(m)) continue
     if (!source.includes(m.toLowerCase())) return true
   }
@@ -499,10 +554,6 @@ export function hardCodedFactKind(
 ): "placeholder" | "brand" | "figure" | null {
   if (!text) return null
   if (METRIC_PLACEHOLDER_REGEX.test(text)) return "placeholder"
-  for (const tech of TECH_BUZZWORDS) {
-    const re = new RegExp(`\\b${tech.replace(/[.+]/g, "\\$&")}\\b`, "i")
-    if (re.test(text) && !re.test(sourceContext)) return "brand"
-  }
   if (namesUndeclaredSystem(text, sourceContext)) return "brand"
   /**
    * ¿QUÉ CIFRAS DE ESTE TEXTO NO ESTÁN RESPALDADAS? Una sola función lo contesta.
@@ -562,7 +613,7 @@ export function hardCodedFactKind(
  * Caza lo VERIFICABLE: una cifra, una marca, un placeholder. No caza un
  * complemento agregado —«Led the weekly count for a team of 11» → «… across store
  * stockrooms and sales floor areas»—, que apareció en la medición sobre CVs bien
- * escritos y el rubric marcó como invención.
+ * escritos y el rubric marcó como dato que el candidato no dio.
  *
  * La tentación es una vara de «palabras concretas que no están en el CV». SE
  * MIDIÓ, con los casos reales:

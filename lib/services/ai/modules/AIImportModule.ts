@@ -28,7 +28,7 @@ import { costOfChat } from "../shared/cost-tracker"
 import { ResumeSectionsSchema, type ResumeSections } from "@/types/resume"
 import { normalizeDescription } from "@/lib/utils"
 import { randomUUID } from "crypto"
-import { classifyImportedTerms } from "@/lib/ats/import-classification"
+import { classifyImportedTerms } from "@/lib/skills/import-classification"
 
 export interface ImportExtractInput {
   rawText: string

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { sameSoftRequirement } from "@/lib/ats/skill-dedup"
+import { sameSoftRequirement } from "@/lib/skills/skill-dedup"
 
 // The panel hides a soft requirement once the bullets demonstrate it. The posting
 // and the tailor pass word the same requirement differently, so an exact match let

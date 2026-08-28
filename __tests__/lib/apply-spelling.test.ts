@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { applySpellingFix, replaceWord } from "@/lib/ats/apply-spelling"
+import { applySpellingFix, replaceWord } from "@/lib/spellcheck/apply-spelling"
 
 describe("replaceWord — the 'Fix typo' engine", () => {
   it("corrects real-world resume typos", () => {

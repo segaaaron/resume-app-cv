@@ -293,6 +293,14 @@ export interface ReportPosting {
    * `report-is-the-only-door` existe para impedir.
    */
   hardWeights?: Record<string, number>
+  /**
+   * Cómo puede estar escrito cada requisito en un CV de ESE oficio, dicho por el
+   * modelo que leyó la vacante. Viaja DENTRO del informe por el mismo motivo que
+   * los pesos: el panel recalcula con cada tecla y no puede volver a leer el
+   * aviso. Sin ellas el matcher usa el diccionario compartido, que es el
+   * comportamiento anterior.
+   */
+  termVariants?: Record<string, string[]>
 }
 
 /**

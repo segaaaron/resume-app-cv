@@ -2,8 +2,8 @@
 
 import { useState, useRef, useMemo, useId, type ReactNode } from "react"
 import { useTranslations } from "next-intl"
-import { filterSkills, type SkillOption } from "@/lib/ats/skill-catalog"
-import { findDuplicateSkill, containsSkill } from "@/lib/ats/skill-dedup"
+import { filterSkills, type SkillOption } from "@/lib/skills/skill-catalog"
+import { findDuplicateSkill, containsSkill } from "@/lib/skills/skill-dedup"
 import { Z_DIALOG } from "@/lib/ui/z-layers"
 
 interface Props {

@@ -9,9 +9,9 @@ import { Plus, Trash2 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
 import { useMemo } from "react"
-import { findDuplicateSkill, containsSkill } from "@/lib/ats/skill-dedup"
-import { categoryOfSkill } from "@/lib/ats/skill-catalog"
-import { inferFieldCategories } from "@/lib/ats/job-field"
+import { findDuplicateSkill, containsSkill } from "@/lib/skills/skill-dedup"
+import { categoryOfSkill } from "@/lib/skills/skill-catalog"
+import { inferFieldCategories } from "@/lib/skills/job-field"
 import SkillAutocompleteInput from "./SkillAutocompleteInput"
 
 export default function SkillsSection() {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { findStaleTerms, STALE_AFTER_YEARS } from "@/lib/ats/stale-terms"
+import { findStaleTerms, STALE_AFTER_YEARS } from "@/lib/ats/report-checks"
 
 /**
  * EL GATE DE F3: NINGÚN CV BAJA DE PUNTAJE POR ESTO.

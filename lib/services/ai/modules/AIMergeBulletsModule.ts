@@ -77,7 +77,7 @@ interface WorkRow {
  * una cifra que cambia de verbo no es una palabra perdida.
  */
 const MERGE_RULES: readonly GateRule[] = [
-  "nothing_burned",
+  "only_declared_facts",
   "figure_policy",
   "figure_intact",
   "keeps_content",
@@ -285,7 +285,7 @@ BULLET B: ${b}`
       language,
     }, MERGE_RULES)
 
-    if (!veredicto.ok && veredicto.rule === "nothing_burned") {
+    if (!veredicto.ok && veredicto.rule === "only_declared_facts") {
       this.logger.warn("[AIService.mergeBullets] merged bullet introduced ungrounded content — discarded", { targetId })
       return { status: "not_mergeable" }
     }

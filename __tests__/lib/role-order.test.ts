@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { planRoleReorder } from "@/lib/ats/role-order"
+import { planRoleReorder } from "@/lib/ats/panel-actions"
 import type { WorkExperienceItem } from "@/types/resume"
 
 /**

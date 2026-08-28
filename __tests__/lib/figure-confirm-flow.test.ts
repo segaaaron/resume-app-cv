@@ -38,8 +38,18 @@ describe("por que se disparo el guard", () => {
    * regla del prompt, no el guard. No es lo que se toco hoy, pero conviene que
    * quede escrito: este test cubre lo que el guard SI puede ver.
    */
-  it("una marca tecnica que el candidato no declaro sigue siendo invento", () => {
-    expect(hardCodedFactKind("Gestione la cartera desplegando en Kubernetes", CV)).toBe("brand")
+  /**
+   * La garantía es «un sistema que el candidato no declaró no entra al CV», y la
+   * sostiene la FORMA del nombre —mayúscula interna o dígito pegado—, que no sabe
+   * de rubros: caza «SwiftUI» en un CV de software y «Temenos T24» en uno de banca.
+   *
+   * Una marca de UNA palabra sin mayúscula interna («Kubernetes») ya no se caza
+   * acá: la cubre la doctrina, en los dos idiomas. Se borró la lista de cuarenta
+   * marcas de tecnología que lo hacía, porque descartaba 6 de 6 líneas buenas de
+   * oficios no técnicos y sólo protegía a un rubro. Medición en `ai-helpers`.
+   */
+  it("un sistema que el candidato no declaro sigue siendo un dato que el no dio", () => {
+    expect(hardCodedFactKind("Gestione la cartera operando Temenos T24", CV)).toBe("brand")
   })
 
   it("una reescritura limpia no dispara nada", () => {
@@ -129,7 +139,7 @@ describe("el camino completo, de tailor a la tarjeta", () => {
     expect(read("lib/ats/write-gate.ts"))
       .toMatch(/kind === "placeholder" \|\| kind === "brand"/)
     expect(read("lib/services/ai/modules/AITailorModule.ts"), "el ejecutor dejó de pedir la regla")
-      .toContain("nothing_burned")
+      .toContain("only_declared_facts")
   })
 
   it("y el aviso existe en los dos idiomas", () => {

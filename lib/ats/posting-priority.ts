@@ -65,44 +65,28 @@ export const MAX_WEIGHT = 1.5
 const INSISTS_AT = 3
 
 /**
- * Encabezados con los que un aviso marca lo opcional.
+ * ── LO DESEABLE LO DICE EL AVISO, NO UNA LISTA NUESTRA (CEO, 2026-08-28) ────
  *
- * Sólo se busca la sección OPCIONAL, no la obligatoria: lo normal es que un
- * aviso liste requisitos sin encabezarlos y separe aparte lo que suma. Buscar
- * «requisitos» daría falsos negativos en todo aviso que no use la palabra;
- * buscar «deseable» sólo baja el peso cuando el aviso lo dijo con todas las
- * letras.
- */
-const OPTIONAL_HEADINGS = [
-  "deseable", "deseables", "nice to have", "nice-to-have", "se valorara",
-  "se valorará", "valoraremos", "plus", "bonus", "opcional", "preferred",
-  "preferible", "no excluyente", "suma puntos",
-]
-
-/**
- * Dónde arranca la parte «deseable» del aviso, o -1 si no la declara.
+ * Acá había `OPTIONAL_HEADINGS`: catorce encabezados —«deseable», «plus», «nice
+ * to have», «se valorará»— que se buscaban dentro del texto para saber dónde
+ * empezaba la parte opcional. Dos defectos, y los dos le costaban puntaje al
+ * candidato:
  *
- * El encabezado se busca como PALABRA, no como subcadena. Con `indexOf` a secas,
- * «plusvalía» en una vacante de contador contenía «plus» y abría la sección
- * opcional en la primera línea: todo el aviso quedaba descontado y ese CV perdía
- * puntaje por una palabra del rubro. Medido antes de arreglarlo: SAP y Excel
- * caían a 0.5 en un aviso que no declara ningún deseable.
+ *  · UN AVISO QUE LO DIGA DE OTRA FORMA no existía para la lista. «Valorable»,
+ *    «no imprescindible», «suma», cualquier giro que nadie escribió, y todo el
+ *    aviso quedaba como EXIGIDO: el candidato perdía puntos por requisitos que
+ *    la empresa nunca exigió.
+ *  · Y ya se pagó el falso positivo: «plusvalía» contiene «plus», así que una
+ *    vacante de contador abría su sección opcional en la primera línea y SAP y
+ *    Excel quedaban descontados a la mitad.
+ *
+ * Ahora lo dice el modelo que leyó ESE aviso, en `optionalTerms`, con cualquier
+ * palabra y en cualquier idioma. Sin lista, sin encabezados, sin posición.
+ *
+ * FALLA CERRADO Y SEGURO: sin `optionalTerms` nada se descuenta y todo pesa como
+ * exigido — que es el lado correcto del error, porque descontar de más le baja el
+ * puntaje a alguien por algo que el aviso sí pedía.
  */
-function optionalSectionStart(postingNorm: string): number {
-  let earliest = -1
-  for (const h of OPTIONAL_HEADINGS) {
-    const norm = normalizeTerm(h)
-    if (!norm) continue
-    const re = new RegExp(`(^|[^a-z0-9])${norm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`)
-    const m = re.exec(postingNorm)
-    if (!m) continue
-    // El índice del encabezado en sí, no el del carácter que lo precede.
-    const at = m.index + (m[1]?.length ?? 0)
-    if (earliest === -1 || at < earliest) earliest = at
-  }
-  return earliest
-}
-
 /**
  * Cuántas veces el aviso nombra el término.
  *
@@ -146,6 +130,11 @@ export interface PriorityInput {
   posting: string
   /** El título del puesto, si el aviso lo declara. */
   jobTitle?: string
+  /**
+   * Las duras que el propio aviso presenta como deseables, dichas por el modelo
+   * que lo leyó. Sin ellas nada se descuenta: todo pesa como exigido.
+   */
+  optionalTerms?: readonly string[]
 }
 
 /**
@@ -157,11 +146,11 @@ export interface PriorityInput {
  */
 export function measurePostingPriority(
   terms: readonly string[],
-  { posting, jobTitle = "" }: PriorityInput,
+  { posting, jobTitle = "", optionalTerms = [] }: PriorityInput,
 ): Record<string, number> {
   const postingNorm = normalizeTerm(posting)
   const titleNorm = normalizeTerm(jobTitle)
-  const optionalAt = optionalSectionStart(postingNorm)
+  const deseables = new Set(optionalTerms.map((t: string) => normalizeTerm(t)).filter(Boolean))
 
   const out: Record<string, number> = {}
   for (const term of terms) {
@@ -176,11 +165,9 @@ export function measurePostingPriority(
     const veces = countOccurrences(key, postingNorm)
     if (veces >= INSISTS_AT) peso += 0.25
 
-    // Sólo vive en la parte deseable: el propio aviso lo llamó opcional.
-    if (optionalAt !== -1 && veces > 0) {
-      const antes = postingNorm.slice(0, optionalAt)
-      if (!termPresent(key, antes)) peso -= 0.5
-    }
+    // El aviso lo presentó como un plus y no como requisito. Lo dice él, no
+    // nosotros: sin `optionalTerms` nadie pierde peso.
+    if (deseables.has(key)) peso -= 0.5
 
     out[key] = Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, peso))
   }

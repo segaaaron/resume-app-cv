@@ -14,10 +14,10 @@
 // Deterministic and local — the same Hunspell dictionaries the card uses. No
 // model, no network, no cost.
 
-import { checkSpelling } from "@/lib/ats/spellcheck"
+import { checkSpelling } from "@/lib/spellcheck/spellcheck"
 import { stripSectionLabel } from "@/lib/ats/strip-label"
-import { replaceWord } from "@/lib/ats/apply-spelling"
-import { collectProperNouns } from "@/lib/ats/spellcheck-collect"
+import { replaceWord } from "@/lib/spellcheck/apply-spelling"
+import { collectProperNouns } from "@/lib/spellcheck/spellcheck-collect"
 
 /**
  * @param texts       the generated strings, in order

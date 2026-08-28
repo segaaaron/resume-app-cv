@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { findDuplicateSkill } from "@/lib/ats/skill-dedup"
+import { findDuplicateSkill } from "@/lib/skills/skill-dedup"
 import { partitionByPresence } from "@/lib/ats/core/matching"
 import { normalizeTerm } from "@/lib/ats/vocabulary"
 

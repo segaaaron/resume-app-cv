@@ -35,10 +35,9 @@ import {
  * mejor, y una línea que el panel diagnosticó no cuenta como «ya fuerte».
  */
 const BULLET_RULES: readonly GateRule[] = [
-  "nothing_burned",
+  "only_declared_facts",
   "figure_policy",
   "adds_value",
-  "no_lateral_loss",
   "figure_intact",
   "keeps_terms",
   /**
@@ -479,7 +478,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
         if (!veredicto.ok) {
           switch (veredicto.rule) {
-            case "nothing_burned": droppedHardCoded++; break
+            case "only_declared_facts": droppedHardCoded++; break
             case "figure_intact": droppedFigure++; break
             case "keeps_terms": droppedTerm++; break
             default: droppedTrivial++

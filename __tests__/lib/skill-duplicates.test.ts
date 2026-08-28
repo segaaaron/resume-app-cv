@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { findDuplicateSkill, containsSkill } from "@/lib/ats/skill-dedup"
+import { findDuplicateSkill, containsSkill } from "@/lib/skills/skill-dedup"
 
 const LISTED = ["Swift", "React.js", "Teamwork and communication", "Unit testing", "Objective-C", "Gestión de proyectos"]
 

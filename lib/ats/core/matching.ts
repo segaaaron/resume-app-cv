@@ -50,11 +50,18 @@ export function partitionByPresence(
   keywords: string[],
   haystackNorm: string,
   semanticMatches?: Set<string>,
+  /**
+   * Cómo puede estar escrito cada requisito en un CV de ESE oficio, dicho por
+   * el modelo que leyó la vacante. Opcional: sin él se usa el diccionario
+   * compartido, que es el comportamiento de siempre — la herramienta pública
+   * gratuita no llama al modelo y sigue por ese camino.
+   */
+  termVariants?: Readonly<Record<string, string[]>>,
 ): { matched: string[]; missing: string[] } {
   const matched: string[] = []
   const missing: string[] = []
   for (const k of keywords) {
-    if (termPresent(k, haystackNorm) || semanticMatches?.has(normalizeTerm(k))) {
+    if (termPresent(k, haystackNorm, termVariants) || semanticMatches?.has(normalizeTerm(k))) {
       matched.push(k)
     } else {
       missing.push(k)

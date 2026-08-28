@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { findDuplicateSkill } from "@/lib/ats/skill-dedup"
+import { findDuplicateSkill } from "@/lib/skills/skill-dedup"
 
 describe("findDuplicateSkill", () => {
   const have = ["React", "Objective-C", "Node.js", "Project Management"]

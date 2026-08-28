@@ -213,6 +213,8 @@ function coverage(
    * puntaje es el de siempre — una pieza opcional no puede tumbar el número.
    */
   weights?: Record<string, number>,
+  /** Las variantes que dio la vacante. Ver `partitionByPresence`. */
+  termVariants?: Readonly<Record<string, string[]>>,
 ): Coverage {
   const unique = dedupe(keywords)
   if (unique.length === 0) {
@@ -220,7 +222,7 @@ function coverage(
   }
   // Presence (exact OR semantic) is the shared ATS-core primitive — the same
   // loop the free tool runs. See lib/ats/core/matching.ts.
-  const { matched, missing: notPresent } = partitionByPresence(unique, haystackNorm, semanticMatches)
+  const { matched, missing: notPresent } = partitionByPresence(unique, haystackNorm, semanticMatches, termVariants)
   const shown = demonstratedByEvidence?.size
     ? notPresent.filter((k) => demonstratedByEvidence.has(normalizeTerm(k)))
     : []
@@ -230,8 +232,8 @@ function coverage(
   for (const k of matched) {
     // Demonstrated still requires the keyword in the work experience text —
     // a semantic-only match is a claim (listed), not evidence of doing it.
-    const exact = keywordPresent(k, haystackNorm)
-    if (exact && keywordPresent(k, evidenceNorm)) demonstrated.push(k)
+    const exact = keywordPresent(k, haystackNorm, termVariants)
+    if (exact && keywordPresent(k, evidenceNorm, termVariants)) demonstrated.push(k)
     else listedOnly.push(k)
   }
   /**
@@ -427,12 +429,18 @@ export function computeATSMatch(
    * nuestra dentro de una medición.
    */
   hardWeights?: Record<string, number>,
+  /**
+   * Las variantes con que ESE oficio escribe cada requisito, dichas por el
+   * modelo que leyó la vacante. Viajan por el mismo camino que `hardWeights` y
+   * por el mismo motivo: el re-cálculo instantáneo no recibe el aviso.
+   */
+  termVariants?: Readonly<Record<string, string[]>>,
 ): ATSMatchResult {
   const hay = normalize(resumeText)
   const titlesNorm = normalize(cvTitles)
   const evidence = normalize(evidenceText)
 
-  const hard = coverage(keywords.hardSkills, hay, evidence, semanticMatches, undefined, hardWeights)
+  const hard = coverage(keywords.hardSkills, hay, evidence, semanticMatches, undefined, hardWeights, termVariants)
   const soft = coverage(keywords.softSkills, hay, evidence, semanticMatches, softDemonstrated)
   const must = coverage(keywords.mustHaves, hay, evidence, semanticMatches, mustHavesMet)
   const title = titleScore(keywords.jobTitle, titlesNorm, recentTitles ? normalize(recentTitles) : undefined)

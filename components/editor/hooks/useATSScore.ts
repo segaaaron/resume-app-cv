@@ -106,6 +106,12 @@ export interface ATSResult {
      * de un deseable al decidir qué línea sobra.
      */
     hardWeights?: Record<string, number>
+    /**
+     * Cómo puede estar escrito cada requisito en un CV de ese oficio, dicho por
+     * el modelo que leyó la vacante. Viaja con las keywords para que el
+     * re-cálculo por tecla mida con la misma vara que el análisis.
+     */
+    termVariants?: Record<string, string[]>
   }
   /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
   contentQuality?: {

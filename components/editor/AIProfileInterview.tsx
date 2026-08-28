@@ -29,7 +29,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { apiFetch } from "@/lib/apiFetch"
-import { computeProfileGaps, type ProfileGap, type ProfileGapKind } from "@/lib/ats/profile-gaps"
+import { computeProfileGaps, type ProfileGap, type ProfileGapKind } from "@/lib/skills/profile-gaps"
 import { parseBullets, serializeBullets } from "@/lib/services/ai/shared/bullets"
 import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"

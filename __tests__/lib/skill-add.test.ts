@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { planSkillAdd } from "@/lib/ats/skill-add"
+import { planSkillAdd } from "@/lib/ats/panel-actions"
 import type { SkillItem } from "@/types/resume"
 
 /**

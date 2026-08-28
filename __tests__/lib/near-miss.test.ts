@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { findNearMisses } from "@/lib/ats/near-miss"
+import { findNearMisses } from "@/lib/ats/report-checks"
 
 describe("findNearMisses", () => {
   it("catches real-world typos that break exact ATS matching", () => {

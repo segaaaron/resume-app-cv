@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { canonicalSkillName } from "@/lib/ats/skill-catalog"
+import { canonicalSkillName } from "@/lib/skills/skill-catalog"
 
 /**
  * Taxonomy alignment, and the two ways it goes wrong.

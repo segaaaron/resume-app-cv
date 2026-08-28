@@ -145,14 +145,46 @@ const EQUIVALENCE: Map<string, Set<string>> = (() => {
 })()
 
 /**
- * Every term equivalent to `keyword`, itself included. Unknown terms return
- * just themselves — an unknown skill is still matched literally.
+ * LAS VARIANTES LAS PONE LA VACANTE, NO NUESTRA LISTA.
+ *
+ * ── EL DEFECTO DE FONDO QUE ESTO CIERRA (CEO, 2026-08-28) ─────────────────
+ *
+ * El modelo lee el aviso y dice QUÉ se exige — eso ya era genérico. Pero
+ * después la pregunta «¿el CV lo dice?» la contestaba un diccionario de 1.002
+ * términos escrito a mano, y ahí el conocimiento del dominio dejaba de ser del
+ * puesto y pasaba a ser nuestro.
+ *
+ * Con «CI/CD» el CV que dice «integración continua» matchea, porque alguien
+ * escribió ese alias. Con «soldadura MIG», el CV que dice «soldadura por arco
+ * con gas de protección» matchea sólo si alguien se acordó de la soldadura. No
+ * es un hueco que se llene escribiendo más entradas: siempre falta el oficio
+ * que nadie escribió, y el usuario no ve un término sin alias — ve que su
+ * puntaje no sube por algo que sí puso en su CV.
+ *
+ * Ahora las variantes vienen del modelo que leyó ESA vacante, en
+ * `ATSExtractedKeywords.termVariants`, y viajan por el mismo camino que
+ * `hardWeights`.
+ *
+ * ORDEN Y FALLA ABIERTA. Lo del aviso primero, el diccionario después, y sin
+ * variantes el comportamiento es EXACTAMENTE el anterior: un análisis viejo en
+ * caché o un cliente que no las devuelve no rompe nada.
+ *
+ * UNA VARIANTE SÓLO PUEDE AGREGAR FORMAS DE MATCHEAR, NUNCA QUITARLAS. Por eso
+ * el peor caso es acreditar un término de más, nunca perder uno que el CV dice.
  */
-export function expandTerm(keyword: string): string[] {
+export function expandTerm(keyword: string, variants?: Readonly<Record<string, string[]>>): string[] {
   const norm = normalizeTerm(keyword)
   if (!norm) return []
+  const delAviso = variants?.[keyword] ?? variants?.[norm] ?? []
   const group = EQUIVALENCE.get(norm)
-  return group ? [...group] : [norm]
+  const base = group ? [...group] : [norm]
+  if (delAviso.length === 0) return base
+  const out = new Set(base)
+  for (const v of delAviso) {
+    const n = normalizeTerm(v)
+    if (n) out.add(n)
+  }
+  return [...out]
 }
 
 /**
@@ -183,8 +215,12 @@ export function escapeRegExp(s: string): string {
  * boundaries, so "c++" would match inside "c" and "c#" inside "c". Checking the
  * surrounding character instead keeps those intact.
  */
-export function termPresent(keyword: string, haystackNorm: string): boolean {
-  return expandTerm(keyword).some((v) => {
+export function termPresent(
+  keyword: string,
+  haystackNorm: string,
+  variants?: Readonly<Record<string, string[]>>,
+): boolean {
+  return expandTerm(keyword, variants).some((v) => {
     if (!v) return false
     const re = new RegExp(`(^|[^a-z0-9])${escapeRegExp(v)}([^a-z0-9+#]|$)`)
     return re.test(haystackNorm)

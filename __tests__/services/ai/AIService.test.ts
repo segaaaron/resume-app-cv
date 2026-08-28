@@ -1069,7 +1069,9 @@ describe("AIService", () => {
         workExperienceNew: [{
           jobTitle: "Analista de Riesgo",
           employer: "Banco Mercantil",
-          description: "• Desplegué microservicios en Kubernetes y Docker",
+          // Nombre con mayúscula interna: la vara genérica lo caza en cualquier
+          // rubro. La lista de marcas de tecnología ya no existe — ver ai-helpers.
+          description: "• Desplegué microservicios en OpenShift4 y KubeFlow",
         }],
       }))
       const service = new AIService(aiClient, logger)

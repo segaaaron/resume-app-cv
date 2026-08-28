@@ -50,7 +50,7 @@ import { findDemonstratedSoftSkills } from "../shared/soft-skill-evidence"
 import { answerHash, readAnswer, writeAnswer } from "../shared/answer-cache"
 import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
-import { findNearMisses } from "@/lib/ats/near-miss"
+import { findNearMisses } from "@/lib/ats/report-checks"
 import { normalizeTerm } from "@/lib/ats/vocabulary"
 import { dropSatisfiedYearRequirements } from "@/lib/ats/experience-years"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
@@ -58,7 +58,7 @@ import { groundFixAction } from "@/lib/ats/fix-actions"
 import { splitFixText } from "@/lib/ats/fix-text"
 import { untrustedDataRule } from "../shared/untrusted-input"
 import { refineMissingRequirements } from "@/lib/ats/requirement-satisfied"
-import { fixesRepetition } from "@/lib/ats/repeated-content"
+import { fixesRepetition } from "@/lib/ats/report-checks"
 import { readChat, truncatedNudge } from "../shared/chat-result"
 import { strictJsonFormat } from "../shared/strict-schema"
 import { measurePostingPriority, topHardSkills } from "@/lib/ats/posting-priority"
@@ -935,12 +935,18 @@ Return JSON with this exact shape:
   "mustHaves": ["<hard requirement: years of experience, degree, certification, license>", ...],
   "seniority": "<junior | mid | senior | lead | none if the posting does not say>",
   "yearsRequired": <number of years the posting asks for, or 0 if it does not say>,
+  "termVariants": [{"term": "<a hardSkill exactly as you wrote it above>", "variants": ["<how a resume IN THIS TRADE would word the same requirement>", ...]}, ...],
+  "optionalTerms": ["<a hardSkill the posting presents as nice-to-have rather than required>", ...],
 }
 
 Rules:
 - hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management").
 - ORDER hardSkills BY PRIORITY: the ones the posting insists on, names in the title, or repeats go first; the "nice to have" go last. Return at most ${TOPE_DURAS} — the ${TOPE_DURAS} that matter most.
-- mustHaves: an ALTERNATIVE LIST IS ONE REQUIREMENT. If the posting says "Degree in Business Engineering, Business Administration, Marketing or related", that is a SINGLE mustHaves entry written as one string — never three entries, one per career. Split apart, each is judged on its own and at most one can ever be met, so the others are reported as unmet for every candidate alive. Same for "Excel or Google Sheets". Only split when the posting truly demands BOTH ("Excel AND SQL").
+- mustHaves: an ALTERNATIVE LIST IS ONE REQUIREMENT, whatever it lists. The test is the word that joins them: "or" means the posting accepts ANY of them, so they are ONE entry written as one string. "and" means it demands all of them, so they are separate entries. Split apart, an "or" list is judged item by item and at most one can ever be met — the rest are reported as unmet for every candidate alive.
+  This holds for EVERY kind of credential and tool, not only university degrees: a trade certificate, a technical diploma, a licence, a software package. "Vocational diploma in Electromechanics, Technical degree in Industrial Maintenance or equivalent" is ONE entry, exactly like "Excel or Google Sheets" is one. If you find yourself writing two entries that a single person could not hold both of, they were alternatives.
+- termVariants: for each hardSkill, the wordings a resume IN THIS TRADE would use for the SAME requirement — the everyday name for it, the abbreviation, the tool or standard it is known by. Whether a candidate gets credit for something they ALREADY wrote depends on this, so it comes from the trade this posting is about, never from a general list. At most 4 per term, and omit a term with no real variant.
+  A variant is ANOTHER WAY TO SAY THE SAME REQUIREMENT — never a broader one, never a neighbouring skill, and never another item you already listed. If it would make a resume that does NOT meet the requirement look like it does, leave it out.
+- optionalTerms: the hardSkills this posting presents as a PLUS rather than a requirement — however it words it ("nice to have", "a plus", "valued", "not exclusionary", or simply listed under a desirable section). Only what the posting itself frames that way; if it demands everything equally, return an empty array.
 - Extract ONLY what the job description actually asks for. Do not hard-code requirements.
 - WRITE EVERY ITEM IN THE OUTPUT LANGUAGE STATED ABOVE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
 - If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
@@ -960,12 +966,18 @@ Devuelve JSON con esta forma exacta:
   "mustHaves": ["<requisito duro: años de experiencia, título, certificación, licencia>", ...],
   "seniority": "<junior | mid | senior | lead | none si el aviso no lo dice>",
   "yearsRequired": <cantidad de años que pide el aviso, o 0 si no lo dice>,
+  "termVariants": [{"term": "<una hardSkill tal como la escribiste arriba>", "variants": ["<cómo un CV DE ESE OFICIO podría escribir el mismo requisito>", ...]}, ...],
+  "optionalTerms": ["<una hardSkill que el aviso presenta como deseable y no como requisito>", ...],
 }
 
 Reglas:
 - hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos").
 - ORDENA hardSkills POR PRIORIDAD: primero las que el aviso exige, nombra en el título o repite; al final las deseables. Devolvé como máximo ${TOPE_DURAS} — las ${TOPE_DURAS} que más importan.
-- mustHaves: UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO. Si el aviso dice "Licenciatura en Ingeniería Comercial, Administración de Empresas, Marketing o carreras afines", eso es UNA sola entrada de mustHaves escrita como una sola cadena — nunca tres entradas, una por carrera. Separadas, cada una se juzga sola y como mucho puede cumplirse una: las demás figuran como incumplidas para cualquier candidato del planeta. Lo mismo con "Excel o Google Sheets". Separá sólo cuando el aviso exige AMBAS ("Excel Y SQL").
+- mustHaves: UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO, liste lo que liste. La prueba es la palabra que las une: "o" significa que el aviso acepta CUALQUIERA, así que es UNA entrada escrita como una sola cadena. "y" significa que las exige todas, y ahí van separadas. Separada, una lista con "o" se juzga ítem por ítem y como mucho puede cumplirse uno: los demás figuran como incumplidos para cualquier candidato del planeta.
+  Vale para TODO tipo de credencial y herramienta, no sólo para títulos universitarios: una tecnicatura, un diplomado, un certificado de oficio, una licencia, un programa. "Tecnicatura en Electromecánica, Técnico Superior en Mantenimiento Industrial o Diplomado en Mecánica" es UNA entrada, igual que "Excel o Google Sheets" es una. Si te ves escribiendo dos entradas que una misma persona no podría tener a la vez, eran alternativas.
+- termVariants: por cada hardSkill, las formas en que un CV DE ESE OFICIO diría el MISMO requisito — la manera cotidiana de nombrarlo, la sigla, la herramienta o la norma con que se lo conoce. De esto depende que a un candidato se le reconozca algo que YA escribió, así que sale del oficio del que habla ESTE aviso, nunca de una lista general. Como máximo 4 por término, y omite el término que no tenga variante real.
+  Una variante es OTRA MANERA DE DECIR EL MISMO REQUISITO — nunca una más amplia, nunca una habilidad vecina, y nunca otro ítem que ya listaste. Si haría que un CV que NO cumple el requisito parezca cumplirlo, no la pongas.
+- optionalTerms: las hardSkills que ESTE aviso presenta como un PLUS y no como requisito — con las palabras que use ("deseable", "se valorará", "suma", "no excluyente", o simplemente listadas bajo una sección de deseables). Sólo lo que el propio aviso encuadra así; si exige todo por igual, devuelve un array vacío.
 - Extrae SOLO lo que la descripción realmente pide. No agregues requisitos que no estén.
 - ESCRIBE CADA ÍTEM EN EL IDIOMA DE SALIDA INDICADO ARRIBA, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
 - Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"label":"off_topic"}
@@ -1047,6 +1059,19 @@ Reglas:
         // no cambian el puntaje de un análisis que reusa keywords.
         seniority: "",
         yearsRequired: 0,
+        /**
+         * Las variantes del cliente se conservan, acotadas por el esquema del
+         * borde igual que `hardWeights`. Sólo pueden AGREGAR formas de matchear,
+         * nunca quitar una, así que el peor caso de un cliente que las manipule
+         * es acreditarle un término a sí mismo — no puede bajarle el puntaje a
+         * nadie ni contaminar la respuesta compartida, que se guarda sólo cuando
+         * la produjo este servidor.
+         */
+        termVariants: Object.entries(cached.termVariants ?? {})
+          .map(([term, variants]) => ({ term, variants })),
+        // Los pesos ya vienen medidos con las keywords del cliente, así que acá
+        // no hace falta rehacer la distinción exigido/deseable.
+        optionalTerms: [],
         label: "ok",
       }
       extractionFromClient = true
@@ -1099,9 +1124,17 @@ Reglas:
       AI_MODEL,
       en ? "en" : "es",
       useRole ? "role" : "jd",
-      // v2: la clave cambió de forma al salir el CV. Un prefijo distinto evita que
-      // una fila vieja —extraída CON el currículum de alguien— siga contestando.
-      "v2-posting-only",
+      /**
+       * v2: la clave cambió de forma al salir el CV. Un prefijo distinto evita que
+       * una fila vieja —extraída CON el currículum de alguien— siga contestando.
+       *
+       * v3 (2026-08-28): la extracción devuelve ahora `termVariants` y
+       * `optionalTerms`. Sin bumpear, una vacante ya cacheada seguiría
+       * contestando SIN ellas, y el mismo aviso daría un puntaje distinto según
+       * si estaba en caché o no — el denominador móvil que este panel ya pagó
+       * una vez. El prefijo se mueve con la FORMA de lo que se pide.
+       */
+      "v3-posting-variants",
       useRole ? (roleTitle ?? "").trim() : jobDescriptionTruncated,
     )
     let keywordsFromStore = false
@@ -1118,10 +1151,25 @@ Reglas:
       model: AI_MODEL,
       // 700 truncated the JSON and surfaced as "Error analyzing ATS
       // compatibility" (parse_error 500, seen in production 2026-08-09): the
-      // body carries a title, up to 12 hard skills, soft skills, must-haves and
-      // a summary, in Spanish. Dropping the suggestions block shrank it further;
-      // the headroom stays so a long posting cannot cut the JSON again.
-      max_tokens: 1600,
+      // body carries a title, hard skills, soft skills, must-haves and a summary,
+      // in Spanish. Dropping the suggestions block shrank it further.
+      /**
+       * ── POR QUÉ SUBIÓ A 3600 (medido contra la API, 2026-08-28) ────────────
+       *
+       * La extracción ahora devuelve también `termVariants` —hasta cuatro formas
+       * por requisito— y eso multiplica el cuerpo. Medido con una vacante densa
+       * de administración: 22 duras, 21 con variantes, **5.925 caracteres**, que
+       * con 1.600 quedaba JUSTO en el filo. Terminó por poco.
+       *
+       * Un truncado acá no degrada: rompe la extracción entera y el usuario se
+       * queda sin análisis con el uso ya gastado. El techo de duras es 20 y el
+       * esquema admite hasta 60, así que el peor caso es bastante mayor que el
+       * que se midió — de ahí el margen.
+       *
+       * El costo se paga UNA VEZ POR AVISO: la extracción se cachea contra la
+       * vacante sola, no contra el par vacante+CV.
+       */
+      max_tokens: 3600,
       temperature: AI_TEMPERATURE_PRECISE,
       /**
        * F0.5 — LA FORMA SE EXIGE EN LA GENERACIÓN, no se descubre al parsear.
@@ -1195,7 +1243,9 @@ Reglas:
       })
       const retry = await this.aiClient.chat({
         model: AI_MODEL,
-        max_tokens: 1600,
+        // El mismo techo que el primer intento: si el reintento cabe en menos,
+        // volvería a truncar justo cuando corre porque el primero ya falló.
+        max_tokens: 3600,
         temperature: AI_TEMPERATURE_PRECISE,
         // El reintento de la extracción exige la MISMA forma que el primer intento:
         // pedir estricto una vez y laxo la otra es tener dos contratos para una
@@ -1397,8 +1447,27 @@ Reglas:
     const hardWeights = measurePostingPriority(keywords.hardSkills, {
       posting: jobContext,
       jobTitle: keywords.jobTitle,
+      // Lo deseable lo dice el aviso, no una lista de encabezados nuestra.
+      optionalTerms: extraction.optionalTerms ?? [],
     })
-    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated, mustMet, quantifiedPct, hardWeights)
+    /**
+     * LAS VARIANTES LAS PONE LA VACANTE, NO UNA LISTA NUESTRA.
+     *
+     * El modelo dice QUÉ exige el aviso y también CÓMO puede estar escrito en un
+     * CV de ese oficio. Sin esto, «¿el CV lo dice?» la contestaba un diccionario
+     * de 1.002 términos escrito a mano: con «CI/CD» el candidato que puso
+     * «integración continua» cobraba, y con «soldadura MIG» el que puso
+     * «soldadura por arco con gas» no, porque a nadie se le ocurrió esa entrada.
+     *
+     * Sólo puede AGREGAR formas de matchear, nunca quitar una: el diccionario
+     * sigue debajo. Vacío = comportamiento idéntico al anterior.
+     */
+    const termVariants: Record<string, string[]> = {}
+    for (const { term, variants } of extraction.termVariants ?? []) {
+      const t = term.trim()
+      if (t && variants.length > 0) termVariants[t] = variants
+    }
+    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated, mustMet, quantifiedPct, hardWeights, termVariants)
 
     // ── Semantic recall pass (embeddings) ──────────────────────────────────────
     // The exact matcher misses a required skill the CV phrases differently
@@ -1463,7 +1532,7 @@ Reglas:
         })
         if (semanticMatches.size > 0) {
           semanticMatched = semanticMatches
-          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated, mustMet, quantifiedPct, hardWeights)
+          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated, mustMet, quantifiedPct, hardWeights, termVariants)
         }
       }
     }
@@ -1559,6 +1628,9 @@ Reglas:
         // vara: son deterministas, así que devolverlos no es cachear una
         // opinión, es evitar medir dos veces lo mismo.
         hardWeights,
+        // Mismo motivo que hardWeights: el re-cálculo por tecla no recibe el
+        // aviso, así que no podría volver a pedirlas.
+        ...(Object.keys(termVariants).length > 0 ? { termVariants } : {}),
         // F2: informan al panel y al crítico; el puntaje no los mira.
         seniority: extraction.seniority || undefined,
         yearsRequired: extraction.yearsRequired || undefined,
@@ -1686,7 +1758,7 @@ Reglas:
      * y el número saltaría en la primera tecla, que es exactamente el defecto
      * que ese carry-over existe para evitar.
      */
-    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft, metMustHaves(keywords.mustHaves, data), assessResumeContent(data).quantificationPct, input.keywords.hardWeights)
+    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft, metMustHaves(keywords.mustHaves, data), assessResumeContent(data).quantificationPct, input.keywords.hardWeights, input.keywords.termVariants)
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)

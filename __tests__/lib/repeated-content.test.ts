@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { hasRepeatedContent, fixesRepetition } from "@/lib/ats/repeated-content"
+import { hasRepeatedContent, fixesRepetition } from "@/lib/ats/report-checks"
 
 /**
  * "Lo aplico, lo guarda, y en cada vuelta del ATS me lo muestra otra vez."

@@ -19,6 +19,8 @@
 // CV.
 
 
+import { contentWords } from "@/lib/services/ai/shared/text-similarity"
+
 interface Role {
   id?: string
   jobTitle?: string
@@ -245,24 +247,8 @@ const OPENING_WORDS = 3
 /** How much of the shorter line's vocabulary must already be in the longer one. */
 const NOTHING_NEW_RATIO = 0.8
 
-const DUP_STOPWORDS = new Set([
-  "the", "and", "for", "with", "that", "this", "from", "into", "using", "used",
-  "our", "their", "its", "was", "were", "have", "has", "had", "not", "but", "all",
-  "new", "more", "also", "than", "when", "while", "which", "each", "per", "via",
-  "to", "of", "in", "on", "by", "at", "as", "a", "an", "it",
-  "los", "las", "una", "unos", "unas", "del", "con", "que", "para", "por", "como",
-  "sus", "muy", "mas", "entre", "sobre", "desde", "hasta", "fue", "fueron", "han",
-  "sin", "este", "esta", "estos", "estas", "de", "la", "el", "un", "y", "o", "en",
-])
 
-function contentWords(text: string): string[] {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .split(/[^a-z0-9+#.]+/)
-    .filter((w) => w.length > 2 && !DUP_STOPWORDS.has(w))
-}
+
 
 /**
  * Do these two lines talk about the SAME WORK?

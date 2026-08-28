@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { analyzeCoverLetterAts } from "@/lib/ats/cover-letter-ats"
+import { analyzeCoverLetterAts } from "@/lib/cover-letter/cover-letter-ats"
 
 const JD = "We need an iOS developer strong in Swift and SwiftUI, REST APIs, and Core Data. Experience with unit testing and Agile is a plus."
 

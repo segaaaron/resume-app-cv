@@ -11,8 +11,8 @@ import { describe, it, expect, vi } from "vitest"
 
 vi.mock("@/lib/db", () => ({ db: {} }))
 
-import { toAtsSafeResumeText, normalizeDate } from "@/lib/ats/ats-safe"
-import { simulateAtsEngines } from "@/lib/ats/engines"
+import { toAtsSafeResumeText, normalizeDate } from "@/lib/ats-checker/ats-safe"
+import { simulateAtsEngines } from "@/lib/ats-checker/engines"
 import { computeResumeSignals, detectDateFormatFamilies } from "@/lib/ats/signals"
 import type { ResumeSections } from "@/types/resume"
 

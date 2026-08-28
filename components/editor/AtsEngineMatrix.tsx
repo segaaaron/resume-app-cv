@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, AlertTriangle, XCircle, ChevronDown } from "lucide-react"
-import type { EngineSimulation, ParseVerdict } from "@/lib/ats/engines"
+import type { EngineSimulation, ParseVerdict } from "@/lib/ats-checker/engines"
 
 // Verdict → visual token. Icon + text + colour together (never colour alone) so the
 // verdict is legible to colour-blind users and screen readers. Contrast of each text
