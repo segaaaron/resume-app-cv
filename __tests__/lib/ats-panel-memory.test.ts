@@ -155,13 +155,22 @@ describe("lo aceptado se filtra en la ENTRADA al informe", () => {
       isAlreadyAccepted,
     })
 
+  /**
+   * El aporte del reclutador vive en su propia tarjeta, o fusionado en la
+   * determinista cuando la línea ya tenía una — «una viñeta, una tarjeta» es hoy
+   * una propiedad del ensamblador, no algo que cada emisor recuerda. Lo que este
+   * caso mide es la MEMORIA: que lo ya aceptado no vuelva a entrar por ninguna
+   * puerta.
+   */
+  const aporteDelReclutador = (r: ReturnType<typeof build>) =>
+    allChecks(r).filter((c) => c.id.startsWith("tips.recruiter") || (!!c.fixHint && c.action?.kind === "rewrite_bullet"))
+
   it("sin memoria, el hallazgo entra", () => {
-    expect(allChecks(build()).filter((c) => c.id.startsWith("tips.recruiter"))).toHaveLength(1)
+    expect(aporteDelReclutador(build())).toHaveLength(1)
   })
 
   it("con el arreglo ya aceptado, no entra en ninguna parte del informe", () => {
-    const r = build((t) => t === FIX.fix)
-    expect(allChecks(r).filter((c) => c.id.startsWith("tips.recruiter"))).toHaveLength(0)
+    expect(aporteDelReclutador(build((t) => t === FIX.fix))).toHaveLength(0)
   })
 })
 

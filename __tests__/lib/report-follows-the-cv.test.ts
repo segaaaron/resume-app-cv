@@ -51,8 +51,25 @@ const build = (sectionData: Record<string, unknown>) =>
     jobDescription: "Ejecutivo de ventas",
   })
 
+/**
+ * LO QUE EL RECLUTADOR APORTA SOBRE UNA LÍNEA, viva donde viva.
+ *
+ * ── POR QUÉ YA NO ALCANZA CON MIRAR EL ID (2026-08-27) ─────────────────────
+ *
+ * «Una viñeta, una tarjeta» pasó a ser una propiedad del ensamblador: si la
+ * línea ya tiene tarjeta —determinista, que es reproducible y no depende de un
+ * índice que eligió un modelo—, el consejo del reclutador se FUSIONA en ella en
+ * vez de abrir una segunda. Antes salían las dos, pidiendo lo mismo sobre el
+ * mismo renglón, y eso es lo que el CEO reportó como «se pisan».
+ *
+ * Lo que estos casos miden no cambió: que el aporte del reclutador SIGA AL CV y
+ * se caiga solo cuando la línea deja de sostenerlo. Cambió dónde vive el dato,
+ * así que el helper lo busca en los dos sitios en vez de en un prefijo de id.
+ */
 const recruiterChecks = (sectionData: Record<string, unknown>) =>
-  allChecks(build(sectionData)).filter((c) => c.id.startsWith("tips.recruiter"))
+  allChecks(build(sectionData)).filter(
+    (c) => c.id.startsWith("tips.recruiter") || (!!c.fixHint && c.action?.kind === "rewrite_bullet"),
+  )
 
 describe("el informe sigue al CV, no a la última respuesta del modelo", () => {
   it("mientras la línea sigue como estaba, el hallazgo está", () => {
@@ -71,8 +88,9 @@ describe("el informe sigue al CV, no a la última respuesta del modelo", () => {
 
   /** Y no deja un pendiente fantasma contando en el botón. */
   it("y tampoco queda contado como trabajo abierto", () => {
-    const ids = openChecks(build(DESPUES)).map((c) => c.id)
-    expect(ids.filter((i) => i.startsWith("tips.recruiter"))).toEqual([])
+    const abiertos = openChecks(build(DESPUES))
+    expect(abiertos.filter((c) => c.id.startsWith("tips.recruiter"))).toEqual([])
+    expect(abiertos.filter((c) => !!c.fixHint && c.action?.kind === "rewrite_bullet")).toEqual([])
   })
 })
 

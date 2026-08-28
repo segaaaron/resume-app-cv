@@ -101,8 +101,14 @@ describe("aplicar una mejora actualiza TODAS las vistas", () => {
    * mitad que ya funcionaba, y se fija para que siga funcionando.
    */
   it("el hallazgo del reclutador sobre esa línea desaparece", () => {
-    expect(allChecks(ANTES).map((c) => c.id)).toContain("tips.recruiter.0")
-    expect(allChecks(DESPUES).map((c) => c.id)).not.toContain("tips.recruiter.0")
+    // Vive donde el ensamblador lo puso: si la línea ya tenía tarjeta —la
+    // determinista gana, es reproducible— su consejo se fusionó en ella en vez
+    // de abrir una segunda sobre el mismo renglón. Lo que se mide es que SIGA AL
+    // CV, no el prefijo del id que lo transporta.
+    const aporte = (r: ReturnType<typeof informe>) =>
+      allChecks(r).filter((c) => c.id.startsWith("tips.recruiter") || (!!c.fixHint && c.action?.kind === "rewrite_bullet"))
+    expect(aporte(ANTES).length).toBeGreaterThan(0)
+    expect(aporte(DESPUES)).toHaveLength(0)
   })
 
   /**

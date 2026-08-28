@@ -14,6 +14,7 @@ import {
   REPORT_SECTIONS,
 } from "@/lib/ats/report"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
+import { analyzeWriting } from "@/lib/ats/writing-checks"
 
 /**
  * EL ENSAMBLADOR. Los ocho productores entran sueltos y sale UN informe.
@@ -752,5 +753,62 @@ describe("el orden de las fusiones lo decide la vacante", () => {
     const cards = allChecks(r()).filter((c) => c.id.startsWith("tips.merge."))
     expect(cards[0].titleKey).toBe("check.merge_pair_offtarget")
     expect(cards[1].titleKey).toBe("check.merge_pair")
+  })
+})
+
+
+/**
+ * UNA VIÑETA, UNA TARJETA — la propiedad, no la costumbre.
+ *
+ * ── LA RAÍZ (investigada a pedido del CEO, 2026-08-27) ──────────────────────
+ *
+ * La regla se cumplía a mano: cada emisor armaba su conjunto de líneas ya
+ * tomadas y lo consultaba. Estaba escrita SEIS veces en `build-report`, con seis
+ * nombres distintos, y el que se olvidara duplicaba. Alguien se olvidó — los
+ * hallazgos del reclutador nunca entraron en esa cuenta, y una línea que abre con
+ * «Responsible for…» recibía DOS tarjetas pidiendo lo mismo.
+ *
+ * Arreglar sólo al reclutador habría sido el parche: el séptimo emisor volvería a
+ * olvidarse. La garantía vive ahora en el ensamblador, así que un emisor nuevo la
+ * cumple POR EXISTIR — y esto lo comprueba sobre el informe entero, sin nombrar
+ * ningún emisor, que es lo único que sigue valiendo cuando aparezca el próximo.
+ */
+describe("ninguna línea del CV recibe dos tarjetas", () => {
+  const LINEA_MALA = "Responsible for the migration of the payment module to a new provider"
+  const cv = {
+    workExperience: [{
+      id: "w1", jobTitle: "iOS Developer", startDate: "01/2022", currentlyWorking: true,
+      description: `• ${LINEA_MALA}\n• Reduced crash rate by 20% by rewriting the Core Data stack in Swift`,
+    }],
+  }
+
+  const r = buildAtsReport(input({
+    writing: analyzeWriting(cv),
+    // Apunta a la MISMA línea que ya tiene tarjeta determinista.
+    recruiterFixes: [{
+      issue: "Esa línea no dice qué lograste con la migración.",
+      fix: "Contá el resultado.",
+      severity: "high",
+      action: { kind: "rewrite_bullet", targetId: "w1", index: 0, originalText: LINEA_MALA },
+    }],
+  }))
+
+  it("una sola tarjeta por renglón, venga de donde venga", () => {
+    const porLinea = new Map<string, string[]>()
+    for (const c of allChecks(r)) {
+      const a = c.action
+      if (a?.kind !== "rewrite_bullet" || typeof a.index !== "number") continue
+      const k = `${a.targetId}::${a.index}`
+      porLinea.set(k, [...(porLinea.get(k) ?? []), c.id])
+    }
+    const pisadas = [...porLinea].filter(([, ids]) => ids.length > 1)
+    expect(pisadas, "dos tarjetas sobre el mismo renglón").toEqual([])
+  })
+
+  it("y el consejo del que llegó segundo NO se tira: se fusiona", () => {
+    const deLaLinea = allChecks(r).find(
+      (c) => c.action?.kind === "rewrite_bullet" && c.action.targetId === "w1" && c.action.index === 0,
+    )
+    expect(deLaLinea?.fixHint, "se perdió lo que el reclutador aportaba").toBe("Contá el resultado.")
   })
 })

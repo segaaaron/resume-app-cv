@@ -280,7 +280,60 @@ export function bareYearEvidence(roles: readonly BareYearRole[]): string[] {
 
 export function buildAtsReport(input: BuildReportInput): AtsReport {
   const checks: ReportCheck[] = []
-  const push = (c: ReportCheck) => checks.push(c)
+/**
+   * UNA VIÑETA, UNA TARJETA — GARANTIZADO ACÁ, no recordado por cada emisor.
+   *
+   * ── LA RAÍZ (investigada a pedido del CEO, 2026-08-27) ────────────────────
+   *
+   * La regla existía desde hace tiempo y se cumplía a mano: cada emisor armaba
+   * su propio conjunto de líneas ya tomadas y lo consultaba antes de empujar.
+   * Estaba escrito SEIS veces en este archivo, con seis nombres distintos
+   * —`reclamadasPorGemelas`, `cutIndexes`, `reclamadasAqui`, `reclamadas` (dos
+   * veces), `yaTienenTarjeta`—, y el que se olvidara duplicaba.
+   *
+   * Y alguien se olvidó: los hallazgos del RECLUTADOR nunca entraron en esa
+   * cuenta. Medido sobre una línea que abre con «Responsible for…»: salían dos
+   * tarjetas —una determinista y una del reclutador— pidiendo lo mismo sobre el
+   * mismo renglón. Eso es lo que el CEO reporta como «se pisan».
+   *
+   * Arreglar al reclutador y dejar los otros cinco filtros a mano sería el parche
+   * que él prohíbe: el séptimo emisor volvería a olvidarse. Así que la regla deja
+   * de ser una responsabilidad que se recuerda y pasa a ser una PROPIEDAD del
+   * ensamblador. Un emisor nuevo la cumple por existir.
+   *
+   * ── QUÉ PASA CON EL QUE LLEGA SEGUNDO ─────────────────────────────────────
+   *
+   * No se tira: su consejo se FUSIONA en la tarjeta que ya está. Descartarlo a
+   * secas silenciaba al reclutador entero sobre viñetas —el árbitro sólo deja
+   * pasar hallazgos sobre líneas con defecto real, y ésas casi siempre tienen ya
+   * su tarjeta—, o sea pagar la llamada y tirar la respuesta.
+   *
+   * Gana el PRIMERO en reclamar la línea, y el orden de este archivo es el orden
+   * de precedencia: cortar, gemela, cifra, apertura, y al final el reclutador.
+   * Lo determinista antes que lo del modelo, porque es reproducible y no depende
+   * de un índice que eligió un modelo.
+   */
+  const lineaDe = (c: ReportCheck): string | null => {
+    const a = c.action
+    return a?.kind === "rewrite_bullet" && a.targetId && typeof a.index === "number"
+      ? `${a.targetId}::${a.index}`
+      : null
+  }
+  const lineasTomadas = new Map<string, ReportCheck>()
+  const push = (c: ReportCheck) => {
+    const k = lineaDe(c)
+    if (k) {
+      const dueña = lineasTomadas.get(k)
+      if (dueña) {
+        // El consejo del segundo enriquece a la primera en vez de abrir otra
+        // tarjeta. Si la primera ya traía uno, el suyo no se pisa.
+        if (!dueña.fixHint && c.fixHint?.trim()) dueña.fixHint = c.fixHint.trim()
+        return
+      }
+      lineasTomadas.set(k, c)
+    }
+    checks.push(c)
+  }
 
   /**
    * LO QUE CADA LÍNEA LE APORTA A ESTA VACANTE, en un solo lugar.
