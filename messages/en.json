@@ -2568,6 +2568,8 @@
     "ai_generated_desc": "The AI applied the content to your letter. Review it in the preview and save when ready.",
     "ai_ats_matched": "Uses {n} of {total} vacancy terms",
     "ai_ats_missing": "Not covered ({n}): {list}",
+    "ai_weak_title": "{count, plural, one {One phrase claims a quality} other {# phrases claim a quality}}",
+    "ai_weak_hint": "A recruiter reads “{list}” as something anyone could write. Swap it for what you did: what, with whom, and to what effect.",
     "ai_regenerate_clear": "Clear and generate again",
     "body_complete_title": "Your letter body is already ready!",
     "body_complete_desc": "You already have content in the letter body. If you want to replace it with a new AI-generated version, clear the current content first.",

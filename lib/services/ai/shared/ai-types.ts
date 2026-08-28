@@ -541,6 +541,31 @@ export interface CoverLetterResult {
     matched: string[]
     missing: string[]
   }
+  /**
+   * LAS FRASES QUE AFIRMAN UNA CUALIDAD EN VEZ DE CONTAR UN TRABAJO.
+   *
+   * ── EL HUECO (decisión del CEO, 2026-08-27) ──────────────────────────────
+   *
+   * De las 49 frases prohibidas sólo 9 tienen un reemplazo determinista seguro
+   * —fórmulas de apertura, «estoy emocionado de» → «me gustaría»—. Las otras 40
+   * («team player», «detail-oriented», «passionate about») son cualidades
+   * AFIRMADAS: no se cambian por otra palabra, se cambian contando qué hiciste,
+   * y eso es reescribir la oración.
+   *
+   * Lo que sobrevivía a la sustitución se registraba en el log y el usuario NO SE
+   * ENTERABA: su carta salía con la frase puesta.
+   *
+   * Las tres salidas eran rechazar y reintentar (una llamada más por cada carta
+   * afectada, y sin garantía: el modelo puede devolver otro cliché distinto),
+   * dejarlo así, o DECIRLO. Se dice: cuesta cero tokens, usa detectores que ya
+   * existen y es la doctrina de la casa —el producto señala, la persona decide—,
+   * la misma con la que el informe trata una viñeta que abre mal.
+   *
+   * Y no es una lista más larga: `findCliches` ya incluye `isEmptyPhrasing`, que
+   * reconoce la FORMA —una cualidad sin trabajo detrás— en vez de enumerar
+   * frases. La lista siguiente siempre llega tarde; la forma no.
+   */
+  weakPhrases?: string[]
 }
 
 export interface SkillItem {

@@ -2568,6 +2568,8 @@
     "ai_generated_desc": "La IA aplicó el contenido a tu carta. Revísala en la vista previa y guarda cuando estés listo.",
     "ai_ats_matched": "Usa {n} de {total} términos de la vacante",
     "ai_ats_missing": "Sin cubrir ({n}): {list}",
+    "ai_weak_title": "{count, plural, one {Una frase afirma una cualidad} other {# frases afirman una cualidad}}",
+    "ai_weak_hint": "Un reclutador lee «{list}» como algo que cualquiera puede escribir. Cambiala por lo que hiciste: qué, con quién y con qué resultado.",
     "ai_regenerate_clear": "Limpiar y generar de nuevo",
     "body_complete_title": "¡El cuerpo de tu carta ya está listo!",
     "body_complete_desc": "Ya tienes contenido en el cuerpo de la carta. Si deseas reemplazarlo con una nueva versión generada por IA, limpia el contenido actual primero.",

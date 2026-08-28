@@ -71,3 +71,55 @@ describe("la nota ATS vuelve con la carta", () => {
     expect(chat.mock.calls.length).toBeLessThanOrEqual(2) // 1 + a lo sumo el reintento ATS que ya existía
   })
 })
+
+/**
+ * LO QUE EL SERVIDOR YA SABÍA Y NO DECÍA.
+ *
+ * ── LA DECISIÓN (CEO, 2026-08-27) ───────────────────────────────────────────
+ *
+ * De las 49 frases prohibidas sólo 9 tienen un reemplazo determinista seguro
+ * —fórmulas de apertura—. Las otras 40 («team player», «detail-oriented») son
+ * cualidades AFIRMADAS: no se cambian por otra palabra, se cambian contando qué
+ * hizo la persona, y eso es reescribir la oración.
+ *
+ * Lo que sobrevivía a la sustitución iba al log y el usuario NO SE ENTERABA: su
+ * carta salía con la frase puesta. Las salidas eran rechazar y reintentar —una
+ * llamada más por carta afectada, y sin garantía: el modelo puede devolver otro
+ * cliché distinto—, dejarlo así, o DECIRLO. Se dice: cuesta cero tokens y deja la
+ * decisión donde corresponde, igual que el informe hace con una viñeta que abre
+ * mal.
+ */
+describe("las frases que afirman una cualidad se le dicen al usuario", () => {
+  const conCliches = "I am excited to apply. I am a team player and detail-oriented, passionate about mobile.\n\nIn my last role I rewrote the Core Data stack and cut crash rates by 20%."
+  // La MISMA forma que el cliente de arriba: el mock que no la respeta prueba
+  // otra cosa que el producto.
+  const clienteCon = (texto: string) => ({
+    chat: vi.fn(async () => ({
+      choices: [{ message: { content: JSON.stringify({ body: texto }) } }],
+      usage: { prompt_tokens: 10, completion_tokens: 10 },
+    })),
+  })
+
+  it("las nombra, y son las que la sustitución NO puede arreglar sola", async () => {
+    const mod = new AICoverLetterModule(clienteCon(conCliches) as never, logger as never)
+    const res = await mod.generateCoverLetter("u1", { jobTitle: "iOS Developer", language: "en", tone: "balanced" }, "PRO")
+    // «I am excited to» tiene reemplazo determinista y NO debe aparecer acá: se
+    // arregló sola, sin gastar un token y sin molestar al usuario.
+    expect(res.weakPhrases ?? []).not.toContain("i am excited to")
+    // Las cualidades afirmadas sí: son las que sólo la persona puede cambiar.
+    expect(res.weakPhrases ?? []).toEqual(expect.arrayContaining(["team player"]))
+  })
+
+  it("y NUNCA impide entregar la carta: es un dato, no una puerta", async () => {
+    const mod = new AICoverLetterModule(clienteCon(conCliches) as never, logger as never)
+    const res = await mod.generateCoverLetter("u1", { jobTitle: "iOS Developer", language: "en", tone: "balanced" }, "PRO")
+    expect(res.body.length).toBeGreaterThan(0)
+  })
+
+  it("una carta que cuenta trabajo real no recibe ninguna marca", async () => {
+    const limpia = "I rewrote the Core Data stack and cut crash rates by 20% over two releases.\n\nI coordinated the release pipeline with the QA team each sprint."
+    const mod = new AICoverLetterModule(clienteCon(limpia) as never, logger as never)
+    const res = await mod.generateCoverLetter("u1", { jobTitle: "iOS Developer", language: "en", tone: "balanced" }, "PRO")
+    expect(res.weakPhrases ?? []).toEqual([])
+  })
+})

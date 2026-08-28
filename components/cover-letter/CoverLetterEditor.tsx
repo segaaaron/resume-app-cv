@@ -266,6 +266,15 @@ export default function CoverLetterEditor({
   /** Nota ATS de la carta recién generada. Dato, nunca puerta: si es baja, la carta
       se entrega igual y esto sólo dice qué términos de la vacante quedaron afuera. */
   const [aiAts, setAiAts] = useState<{ score: number; matched: string[]; missing: string[] } | null>(null)
+  /**
+   * Las frases que afirman una cualidad en vez de contar un trabajo.
+   *
+   * Viven APARTE de la nota ATS porque no dependen de que haya una oferta: una
+   * carta sin vacante puede estar igual de llena de «team player». Meterlas
+   * dentro del bloque de la nota las habría escondido justo en el caso más
+   * común, que es escribir la carta antes de tener el aviso a mano.
+   */
+  const [aiWeak, setAiWeak] = useState<string[]>([])
   const [aiGenerated, setAiGenerated] = useState(false)
   const [improvingAI, setImprovingAI] = useState(false)
   const [letterVersions, setLetterVersions] = useState<SummaryVersion[]>([])
@@ -435,6 +444,7 @@ export default function CoverLetterEditor({
       if (!res.ok) throw new Error(data.error)
       updateContent("body", data.body)
       setAiAts(data.ats ?? null)
+      setAiWeak(Array.isArray(data.weakPhrases) ? data.weakPhrases : [])
       setAiGenerated(true)
       toast.success(t("ai_success"))
       await aiOnSuccess()
@@ -1157,6 +1167,29 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                                 {t("ai_ats_missing", { n: aiAts.missing.length, list: aiAts.missing.slice(0, 5).join(", ") })}
                               </p>
                             )}
+                          </div>
+                        )}
+                        {/*
+                          LO QUE EL SERVIDOR YA SABÍA Y NO DECÍA.
+                          De las 49 frases prohibidas sólo 9 tienen reemplazo
+                          determinista; las otras 40 son cualidades AFIRMADAS y
+                          no se cambian por otra palabra, se cambian contando qué
+                          hizo la persona. Lo que sobrevivía a la sustitución se
+                          registraba en el log y el usuario no se enteraba: su
+                          carta salía con la frase puesta.
+                          Rechazarla y pedirla de nuevo cuesta una llamada por
+                          carta afectada y no garantiza nada —el modelo puede
+                          devolver otro cliché—. Decirlo cuesta cero y deja la
+                          decisión donde corresponde.
+                        */}
+                        {aiWeak.length > 0 && (
+                          <div className="rounded-lg border px-3 py-2" style={{ background: "rgba(245,158,11,0.10)", borderColor: "rgba(245,158,11,0.35)" }}>
+                            <p className="text-[10.5px] font-bold text-white/90">
+                              {t("ai_weak_title", { count: aiWeak.length })}
+                            </p>
+                            <p className="text-[10px] text-white/55 mt-1 leading-[1.45]">
+                              {t("ai_weak_hint", { list: aiWeak.slice(0, 3).join("», «") })}
+                            </p>
                           </div>
                         )}
                         <button

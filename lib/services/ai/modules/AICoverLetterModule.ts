@@ -418,6 +418,20 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
         cliches: clichesRestantes.slice(0, 5),
       })
     }
+    /**
+     * Y SE LE DICE AL USUARIO, no sólo al log.
+     *
+     * Lo que sobrevive a la sustitución son las cualidades AFIRMADAS —«team
+     * player», «detail-oriented»—, que no se arreglan cambiando una palabra sino
+     * contando qué hizo la persona. Rechazar la carta y pedirla de nuevo cuesta
+     * una llamada por cada carta afectada y no garantiza nada: el modelo puede
+     * devolver otro cliché distinto. Señalarlo cuesta cero y deja la decisión
+     * donde corresponde, que es la misma doctrina con la que el informe trata una
+     * viñeta que abre mal.
+     *
+     * Viaja en los DOS caminos de salida: no depende de que haya una oferta.
+     */
+    const weakPhrases = clichesRestantes.slice(0, 5)
 
     const html = plainToHtml(body)
 
@@ -442,9 +456,10 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
      * baja que sea, impide entregar la carta.
      */
     const graded = jobDescription?.trim() ? analyzeCoverLetterAts(htmlToPlain(html), jobDescription) : null
-    if (!graded) return { body: html }
+    if (!graded) return { body: html, ...(weakPhrases.length ? { weakPhrases } : {}) }
     return {
       body: html,
+      ...(weakPhrases.length ? { weakPhrases } : {}),
       ats: {
         score: graded.score,
         matched: graded.keywords.matched,
