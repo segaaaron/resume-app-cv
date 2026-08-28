@@ -172,14 +172,64 @@ const EQUIVALENCE: Map<string, Set<string>> = (() => {
  * UNA VARIANTE SÓLO PUEDE AGREGAR FORMAS DE MATCHEAR, NUNCA QUITARLAS. Por eso
  * el peor caso es acreditar un término de más, nunca perder uno que el CV dice.
  */
+/**
+ * EL MISMO OFICIO EN FEMENINO ES EL MISMO OFICIO.
+ *
+ * ── EL DEFECTO (medido de punta a punta, 2026-08-28) ───────────────────────
+ *
+ * La vacante dice «Cajero de banco» y el CV dice «Cajera». No matcheaba, y el
+ * título son QUINCE PUNTOS del puntaje: una mujer sacaba 0 en esa categoría por
+ * el mismo puesto que un hombre. Medido: «Cajero»/«Cajera», «Enfermero»/
+ * «Enfermera», «Soldador»/«Soldadora» — ninguno matcheaba.
+ *
+ * ── POR QUÉ ESTO NO ES UNA LISTA ──────────────────────────────────────────
+ *
+ * Es morfología del español y vale igual para todos los oficios: los nombres de
+ * agente terminan en -ero/-era, -or/-ora, -dor/-dora. Se deriva del SUFIJO, no
+ * de un catálogo de profesiones — no hay nada que mantener y no le falta el
+ * oficio que nadie escribió.
+ *
+ * Y es ANGOSTO a propósito: sólo esos sufijos. Un cambio de -o a -a a secas
+ * juntaría «banco» con «banca» y «puerto» con «puerta», que son palabras
+ * distintas. Exigir el sufijo de agente deja esas afuera.
+ */
+function generoAlterno(palabra: string): string | null {
+  const p = palabra.toLowerCase()
+  // -ero → -era («cajero», «enfermero», «panadero»)
+  if (/[a-zñ]{2}ero$/.test(p)) return `${p.slice(0, -1)}a`
+  if (/[a-zñ]{2}era$/.test(p)) return `${p.slice(0, -1)}o`
+  // -or → -ora. Acá el femenino AGREGA una letra, no la cambia: «soldador» no
+  // termina en «o», y reemplazarla era un no-op que dejaba fuera media lista de
+  // oficios («soldadora», «contadora», «operadora», «supervisora»).
+  if (/[a-zñ]{2}or$/.test(p)) return `${p}a`
+  if (/[a-zñ]{2}ora$/.test(p)) return p.slice(0, -1)
+  return null
+}
+
+/** El término con cada palabra en su otro género, cuando lo tiene. */
+function conGeneroAlterno(term: string): string | null {
+  const palabras = term.split(/\s+/)
+  let cambió = false
+  const out = palabras.map((w) => {
+    const alt = generoAlterno(w)
+    if (alt) { cambió = true; return alt }
+    return w
+  })
+  return cambió ? out.join(" ") : null
+}
+
 export function expandTerm(keyword: string, variants?: Readonly<Record<string, string[]>>): string[] {
   const norm = normalizeTerm(keyword)
   if (!norm) return []
   const delAviso = variants?.[keyword] ?? variants?.[norm] ?? []
   const group = EQUIVALENCE.get(norm)
   const base = group ? [...group] : [norm]
-  if (delAviso.length === 0) return base
   const out = new Set(base)
+  for (const b of base) {
+    const alt = conGeneroAlterno(b)
+    if (alt) out.add(alt)
+  }
+  if (delAviso.length === 0) return [...out]
   for (const v of delAviso) {
     const n = normalizeTerm(v)
     if (n) out.add(n)
@@ -215,6 +265,45 @@ export function escapeRegExp(s: string): string {
  * boundaries, so "c++" would match inside "c" and "c#" inside "c". Checking the
  * surrounding character instead keeps those intact.
  */
+/**
+ * Palabras que un CV mete ENTRE las de un requisito sin cambiar lo que dice.
+ *
+ * Cerrada y lingüística: artículos, preposiciones y conectores de los dos
+ * idiomas. No sabe de oficios ni de rubros — «el», «los», «de» y «the» son los
+ * mismos para un soldador y para un abogado.
+ */
+const RELLENO_ENTRE = new Set([
+  "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al",
+  "en", "y", "o", "a", "con", "para", "por", "su", "sus", "lo",
+  "the", "a", "an", "of", "in", "on", "and", "or", "to", "for", "with", "at", "its", "their",
+])
+
+/**
+ * True cuando `keyword`, o un equivalente, aparece en el texto ya normalizado.
+ *
+ * ── POR QUÉ NO ALCANZA CON BUSCAR LA FRASE LITERAL (medido, 2026-08-28) ────
+ *
+ * Un aviso nombra el requisito como sustantivo y un CV escribe lo que la
+ * persona HIZO. Con la frase contigua, un CV que dice exactamente lo mismo no
+ * cobraba nada. Medido de punta a punta sobre un CV de cajera contra su
+ * vacante, con la API real:
+ *
+ *   la vacante pide   «Atención al cliente en ventanilla»
+ *   el CV dice        «Atendí A LOS clientes en ventanilla»   → no matcheaba
+ *
+ * Dos palabras vacías en el medio y el candidato pierde el punto. No se arregla
+ * pidiendo más variantes: no se puede enumerar dónde va cada artículo.
+ *
+ * Así que un término de varias palabras matchea cuando sus palabras aparecen EN
+ * ORDEN y lo único que puede haber entre ellas es relleno. La lista de relleno
+ * es cerrada y gramatical; no sabe de oficios. Un término de UNA palabra sigue
+ * exigiendo la palabra entera, con los mismos límites de siempre.
+ *
+ * Sigue siendo estricto en lo que importa: las palabras del requisito tienen
+ * que estar TODAS y en su orden. «Atención al cliente» no matchea un CV que
+ * diga «atención» en un renglón y «cliente» tres líneas abajo, porque entre
+ * ellas hay palabras que no son relleno.
+ */
 export function termPresent(
   keyword: string,
   haystackNorm: string,
@@ -223,6 +312,14 @@ export function termPresent(
   return expandTerm(keyword, variants).some((v) => {
     if (!v) return false
     const re = new RegExp(`(^|[^a-z0-9])${escapeRegExp(v)}([^a-z0-9+#]|$)`)
-    return re.test(haystackNorm)
+    if (re.test(haystackNorm)) return true
+
+    const palabras = v.split(/\s+/).filter(Boolean)
+    if (palabras.length < 2) return false
+    // El patrón: cada palabra del término, y entre una y la siguiente sólo
+    // relleno. Se arma con las MISMAS reglas de límite que la búsqueda literal.
+    const hueco = `(?:\\s+(?:${[...RELLENO_ENTRE].join("|")}))*\\s+`
+    const cuerpo = palabras.map((w) => escapeRegExp(w)).join(hueco)
+    return new RegExp(`(^|[^a-z0-9])${cuerpo}([^a-z0-9+#]|$)`).test(haystackNorm)
   })
 }

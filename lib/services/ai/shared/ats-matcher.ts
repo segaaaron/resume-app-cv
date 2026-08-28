@@ -301,7 +301,22 @@ function titleScore(jdTitle: string, cvTitlesNorm: string, recentTitlesNorm?: st
   const norm = normalize(jdTitle)
   const tokens = norm.split(" ").filter((w) => w.length > 2 && !TITLE_CONNECTORS.has(w))
   if (tokens.length === 0) return null
-  const present = (tk: string, hay: string) => new RegExp(`(^|[^a-z0-9])${escapeRegExp(tk)}`).test(hay)
+  /**
+   * LA MISMA PRUEBA DE PRESENCIA QUE EL RESTO DEL PUNTAJE.
+   *
+   * ── EL DEFECTO (medido de punta a punta, 2026-08-28) ─────────────────────
+   *
+   * Acá vivía un regex propio, y era un SEGUNDO dueño de «¿está este término en
+   * el texto?». Consecuencia medida: la vacante decía «Cajero de banco», el CV
+   * decía «Cajera», y esta categoría —QUINCE PUNTOS del puntaje— daba 0. Una
+   * mujer sacaba cero en el título por el mismo puesto que un hombre, porque
+   * este cálculo no sabía nada de lo que el matcher sí sabe: alias, variantes
+   * que dio la vacante, relleno entre palabras, género gramatical.
+   *
+   * Ahora pregunta al dueño. Dos varas para «¿está?» es exactamente lo que este
+   * proyecto viene cerrando en todos lados.
+   */
+  const present = (tk: string, hay: string) => termPresent(tk, hay)
   let hits = 0
   for (const tk of tokens) {
     if (recentTitlesNorm && present(tk, recentTitlesNorm)) hits += 1
