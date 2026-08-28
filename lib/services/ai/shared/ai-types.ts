@@ -962,6 +962,30 @@ export interface TailorWorkItem {
   targetId: string
   index: number
   reason: TailorReason
+  /**
+   * LA LÍNEA QUE SE VA A REESCRIBIR, no su posición.
+   *
+   * ── DE DÓNDE SALE EL 8% DE «CHURN» (medido, 2026-08-27) ──────────────────
+   *
+   * La medición sobre CVs bien escritos devolvió 0% de daño y un 8% de cambios
+   * que no aportan — «Subí la recompra…» → «Incrementé la recompra…», una palabra
+   * de diecinueve. Ese caso lo descarta `isRedundantRewrite` sin dudar: probado,
+   * devuelve `true`. Y sin embargo llegaba al usuario.
+   *
+   * Porque el ejecutor resolvía el «antes» POR ÍNDICE —`bullets[item.index]`— y
+   * el guard de «¿aporta algo?» compara contra ESE texto. Con el índice corrido
+   * compara contra otra línea; con el índice fuera de rango compara contra `""`,
+   * y contra vacío NADA parece trivial: el guard corre, no encuentra nada que
+   * objetar y deja pasar la reescritura vacía de valor.
+   *
+   * Es la misma clase que los pares de fusión y los hallazgos del reclutador —el
+   * índice es pista, el texto es identidad— en el cuarto sitio. El panel tiene la
+   * línea en la mano cuando arma el trabajo; mandarla cuesta nada.
+   *
+   * Opcional para no romper un cliente viejo: sin ella el módulo cae al índice,
+   * que es exactamente como se comportaba antes.
+   */
+  text?: string
 }
 
 /** Los términos de la vacante, YA extraídos por ats-score. */

@@ -35,6 +35,13 @@ const schema = z.object({
     checkId: z.string().max(120),
     targetId: z.string().max(64),
     index: z.number().int().min(0).max(60),
+    /**
+     * La línea a reescribir. Declarada acá o Zod la borra en silencio y el
+     * ejecutor vuelve a resolver por índice — que es de donde salía el «churn».
+     * `.catch` degrada un texto imposible al comportamiento viejo en vez de
+     * tumbar la petición entera con un 422.
+     */
+    text: z.string().max(2000).optional().catch(undefined),
     reason: z.enum(["no_metric", "weak_verb", "duplicate", "dilutes", "cliche", "orphan", "critical", "tailored"]),
   })).max(TAILOR_WORKLOAD_MAX),
   rewriteSummary: z.boolean().optional(),

@@ -46,6 +46,7 @@ import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-emp
 import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
 import { floorNudge, type FloorMiss } from "@/lib/ats/output-floor"
 import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
+import { resolveBulletIndex } from "@/lib/ats/bullet-locate"
 import { computeCostUsd, type ChatUsageLike } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { reportGuardDrops } from "../shared/guard-metrics"
@@ -463,7 +464,18 @@ Reglas:
         if (!item || !text) continue
         offered++
 
-        const original = bulletsByJob.get(item.targetId)?.[item.index] ?? ""
+        /**
+         * El «antes» se busca por su TEXTO cuando el panel lo mandó. Resolverlo
+         * sólo por índice es lo que dejaba pasar el «churn»: contra una línea
+         * equivocada —o contra `""`— el guard de «¿aporta algo?» no tiene nada
+         * que comparar y aprueba una reescritura que no cambia nada. Ver
+         * `TailorWorkItem.text`.
+         */
+        const lineasDelPuesto = bulletsByJob.get(item.targetId) ?? []
+        const at = item.text?.trim()
+          ? resolveBulletIndex(lineasDelPuesto, item.index, item.text)
+          : item.index
+        const original = (at >= 0 ? lineasDelPuesto[at] : "") ?? ""
 
         /**
          * EL MOTOR — este escritor DECLARA su lista, no la escribe a mano.

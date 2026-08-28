@@ -1316,14 +1316,21 @@ export default function ATSScorePanel() {
     () => (report ? tailorWorkload(report) : []).flatMap((c) => {
       const a = c.action
       if (a?.kind !== "rewrite_bullet" || !a.targetId || typeof a.index !== "number") return []
-      return [{ checkId: c.id, targetId: a.targetId, index: a.index, reason: reasonOf(c.id) }]
+      // Y con la LÍNEA, no sólo su posición: el ejecutor compara contra ella
+      // para decidir si la reescritura aporta algo. Sin el texto resolvía por
+      // índice y, contra una línea equivocada o vacía, aprobaba cambios que no
+      // cambian nada. Ver `TailorWorkItem.text`.
+      const linea = ((sectionData.workExperience ?? []) as WorkExperienceItem[])
+        .find((j) => j.id === a.targetId)
+      const texto = parseBullets(linea?.description ?? "")[a.index]
+      return [{ checkId: c.id, targetId: a.targetId, index: a.index, reason: reasonOf(c.id), ...(texto ? { text: texto } : {}) }]
     })
       // Al MISMO tope que valida el esquema del ejecutor. Sin esto un CV grande
       // manda más de los que el borde acepta, el cuerpo se rechaza con 422 y el
       // botón principal del panel deja de responder. `tailorWorkload` ya viene
       // ordenado por peso, así que lo que se recorta es lo que menos mueve.
       .slice(0, TAILOR_WORKLOAD_MAX),
-    [report],
+    [report, sectionData.workExperience],
   )
   const wantsSummary = useMemo(
     () => (report ? tailorWorkload(report) : []).some((c) => c.action?.kind === "rewrite_summary"),
