@@ -63,23 +63,17 @@ describe("toda llamada de IA del editor declara cómo consulta al ATS", () => {
   })
 
   /**
-   * Y la declaración no puede ser una promesa: las que dicen mandar los términos
-   * tienen que mandarlos de verdad, en el mismo archivo donde hacen el `fetch`.
+   * ── SE BORRARON ACÁ 4 CASOS (2026-08-28) ─────────────────────────────────
+   *
+   * Comprobaban que cada endpoint «manda los términos de la vacante» buscando
+   * `postingTerms|posting\b|skill[,:]` dentro de los 1.400 caracteres que siguen
+   * al `fetch`. Demostrado que no servía: se quitaron los términos del cuerpo del
+   * pedido —los 4 se pusieron en rojo, bien— y bastó agregar UNA LÍNEA DE
+   * COMENTARIO que dijera «posting» para devolverlos a verde con cero términos
+   * enviados. El regex barre comentarios igual que código.
+   *
+   * Lo que sí sigue vivo es el caso de arriba, que enumera los endpoints y exige
+   * que cada uno declare CÓMO consulta al ATS: eso es una ausencia real —un
+   * endpoint nuevo sin declarar— y no hay comportamiento que ejecutar para verla.
    */
-  for (const [endpoint, { modo }] of Object.entries(COMO_CONSULTA_AL_ATS)) {
-    if (modo !== "termsInBody") continue
-    it(`${endpoint} manda los términos de la vacante`, () => {
-      const f = llamadas.get(endpoint)
-      if (!f) return // su llamador puede vivir fuera del editor; lo cubre el test de arriba
-      const src = readFileSync(f, "utf8")
-      const i = src.indexOf(`/api/ai/${endpoint}`)
-      const cuerpo = src.slice(i, i + 1400)
-      // `skill,` con coma además de `skill:`: el objeto se arma con la forma
-      // abreviada de JS (`{ skill, sectionData }`) y el primer patrón que escribí
-      // no la reconocía. El guard marcaba en rojo un código correcto — verificar
-      // que el candado mide lo que dice medir es parte de escribirlo.
-      const manda = /postingTerms|posting\b|\bskill[,:]/.test(cuerpo)
-      expect(manda, `${endpoint} llama sin decirle al modelo qué pide la vacante`).toBe(true)
-    })
-  }
 })

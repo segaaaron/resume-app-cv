@@ -7,7 +7,7 @@
 // Las mismas comprobaciones vivían sueltas dentro de seis módulos, y cada uno
 // corría un subconjunto distinto: la matriz medida daba huecos en todos —el
 // resumen sin cifra intacta, la carta sin términos, la fusión sin «aporta algo»,
-// el ejecutor sin «nada quemado»—. Ninguno era un bug de copia divergente: eran
+// el ejecutor sin el chequeo de datos declarados—. Ninguno era un bug de copia divergente: eran
 // huecos de composición, que es lo que pasa cuando la lista de reglas vive en el
 // cuerpo de cada función en vez de en su definición.
 //
@@ -40,8 +40,8 @@ export type GateRule =
   | "person"
   /** La reescritura habla de la línea que se le dio, no de otra del mismo puesto. */
   | "belongs_to_line"
-  /** Placeholder o marca no declarada: dato falso sobre la persona. */
-  | "nothing_burned"
+  /** Sólo hechos que el candidato declaró: fuera el placeholder y la marca que él nunca escribió. */
+  | "only_declared_facts"
   /** Y la cifra: descartar (postura B) o dejarla viajar a confirmar (postura A). */
   | "figure_policy"
   /** La cifra que el CV ya decía sigue ahí, y sigue siendo de su verbo. */
@@ -61,7 +61,7 @@ export type GateRule =
 export const CANONICAL_ORDER: readonly GateRule[] = [
   "person",
   "belongs_to_line",
-  "nothing_burned",
+  "only_declared_facts",
   "figure_policy",
   "figure_intact",
   "keeps_content",
@@ -148,7 +148,7 @@ export function runWriteGate(input: GateInput, rules: readonly GateRule[]): Gate
         }
         break
 
-      case "nothing_burned": {
+      case "only_declared_facts": {
         const kind = hardCodedFactKind(text, input.source ?? "")
         if (kind === "placeholder" || kind === "brand") return { ok: false, rule }
         break
@@ -209,6 +209,31 @@ export function runWriteGate(input: GateInput, rules: readonly GateRule[]): Gate
           ? {
             original: o,
             gainedTerm: terms.length > 0 && droppedPostingTerms(text, o, terms).length > 0,
+            /**
+             * ── EL RELLENO COLGADO PASA POR ACÁ, Y ES UN BORDE MEDIDO ────────
+             *
+             * `saysMore` es «tiene más palabras», así que colgar «… de manera
+             * exitosa y eficiente» satisface la exigencia de ganancia y la
+             * reescritura pasa el motor entero. Se midieron TRES formas de
+             * cerrarlo y las tres se cayeron:
+             *
+             *   contar sólo palabras con contenido  → el relleno sigue pasando
+             *                                         («manera», «eficiente» son
+             *                                         palabras de contenido)
+             *   quitar `saysMore` del todo          → RECHAZA 38 DE 40 mejoras
+             *                                         reales del banco de CVs
+             *   excluir las palabras evaluativas    → el relleno sigue pasando;
+             *                                         cerrarlo pedía agrandar una
+             *                                         lista enumerada, que es
+             *                                         justo lo que se está sacando
+             *
+             * El costo de dejarlo pasar es chico y acotado: la línea conserva su
+             * contenido, su cifra y sus términos —todos los demás guards siguen
+             * corriendo—, y lo peor que llega es una cola sin valor. El costo de
+             * cerrarlo es perder 38 de cada 40 mejoras buenas.
+             *
+             * Queda acá para que nadie lo reintente creyendo que es un descuido.
+             */
             saysMore: countWords(text) > countWords(o),
           }
           : {})

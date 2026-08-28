@@ -65,7 +65,7 @@ const ALLOWED = new Set<string>([
   // Reads a plain-text rendering of the CV, never the stored field.
   join("lib", "ats", "signals.ts"),
   join("lib", "ats", "analyzer.ts"),
-  join("lib", "ats", "ats-safe.ts"),
+  join("lib", "ats-checker", "ats-safe.ts"),
   // Scans joined text for figures. Never renders or writes a bullet, and a
   // leading marker cannot change whether a line contains a number.
   join("lib", "services", "ai", "shared", "summary-quality.ts"),

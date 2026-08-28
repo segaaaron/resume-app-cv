@@ -20,7 +20,7 @@ const reportInput = (over: Partial<BuildReportInput> = {}): BuildReportInput => 
 })
 
 /**
- * En el ATS no hay nada quemado: se muestra lo que la IA responde.
+ * En el ATS no hay texto fijo escrito por nosotros: se muestra lo que la IA responde.
  *
  * Las habilidades blandas de `missingSoftSkills` —una lista determinista de
  * palabras— se sumaban a la tarjeta con `suggestion: ""`, y la pantalla les ponía
@@ -35,7 +35,7 @@ const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8")
 const PANEL = "components/editor/ATSScorePanel.tsx"
 const code = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "")
 
-describe("nada quemado disfrazado de consejo", () => {
+describe("texto fijo nuestro disfrazado de consejo de la IA", () => {
   /**
    * La regla se mudó y se volvió estructural.
    *

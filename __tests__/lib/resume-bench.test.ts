@@ -26,8 +26,7 @@ import { groundFixAction } from "@/lib/ats/fix-actions"
 import { computeATSMatch } from "@/lib/services/ai/shared/ats-matcher"
 import { findProvenUnlistedSkills } from "@/lib/services/ai/shared/proven-skills"
 import { hasAnyMetric } from "@/lib/services/ai/shared/ai-helpers"
-import { spliceSummary } from "@/lib/ats/summary-splice"
-import { suggestFigureSlot } from "@/lib/ats/figure-slot"
+import { spliceSummary } from "@/lib/ats/panel-actions"
 
 type Bench = {
   trade: string
@@ -171,16 +170,6 @@ describe("stability bench — a clean résumé comes out clean, in every trade",
 })
 
 describe("stability bench — the rules that must converge", () => {
-  it("a figure hint never writes into the résumé, only shows where it goes", () => {
-    for (const b of BENCH) {
-      for (const line of b.work.flatMap((w) => w.description.split("\n"))) {
-        const slot = suggestFigureSlot(line.replace(/^- /, ""))
-        // Lines that already carry a figure are left alone entirely.
-        if (slot) expect(slot.example).toContain("___")
-      }
-    }
-  })
-
   it("a summary rewrite never shrinks a résumé's summary to a fragment", () => {
     for (const b of BENCH) {
       const fragment = b.summary.split(". ")[1] ?? b.summary

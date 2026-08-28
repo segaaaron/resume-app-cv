@@ -176,36 +176,15 @@ describe("la superficie oscura de la cita", () => {
   })
 })
 
-describe("ningún componente pinta texto semántico sobre su fondo suave sin la tinta", () => {
-  /**
-   * Comprueba una AUSENCIA: el par «fondo suave + color de relleno» no puede
-   * volver. De un par que no existe no hay comportamiento que ejecutar, y
-   * montar cada componente para leerle el color computado sería más frágil.
-   */
-  const files = [
-    "components/editor/ATSScorePanel.tsx",
-    "components/editor/ats-report/CheckRow.tsx",
-    "components/editor/ats-report/TermCard.tsx",
-    "components/editor/ats-report/TermTable.tsx",
-    "components/editor/ats-report/ReportRail.tsx",
-    "components/editor/ats-report/ReportSectionCard.tsx",
-    "components/editor/ats-report/BulletQualityPanel.tsx",
-  ]
-  for (const f of files) {
-    it(f.split("/").pop()!, () => {
-      const src = readFileSync(join(process.cwd(), f), "utf8")
-      for (const kind of ["ok", "warn", "bad"]) {
-        expect(src, `${f} · ${kind}`).not.toContain(
-          `background: "var(--a-${kind}-soft)", color: "var(--a-${kind})"`,
-        )
-      }
-      // Y los acentos: `--a-ai` / `--a-accent` sobre su fondo suave es texto por
-      // debajo del mínimo. Para texto van los `-ink`.
-      for (const kind of ["ai", "accent"]) {
-        expect(src, `${f} · ${kind}`).not.toContain(
-          `background: "var(--a-${kind}-soft)", color: "var(--a-${kind})"`,
-        )
-      }
-    })
-  }
-})
+/**
+ * ── SE BORRÓ ACÁ UN BLOQUE DE 7 CASOS (2026-08-28) ──────────────────────────
+ *
+ * Comprobaba una AUSENCIA leyendo el fuente: que no volviera el par «fondo suave
+ * + color de relleno». Demostrado que no servía — se repuso el par ilegible con
+ * las dos propiedades INVERTIDAS y los 7 siguieron en verde. El orden de las
+ * propiedades estaba quemado en el assert, así que cualquier formateador lo
+ * derrota.
+ *
+ * Los 34 casos de arriba se quedan: leen los tokens reales de `globals.css` y
+ * EJECUTAN la fórmula de contraste WCAG. Ésos sí prueban algo.
+ */
