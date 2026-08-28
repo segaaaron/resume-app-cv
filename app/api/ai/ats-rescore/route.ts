@@ -3,6 +3,7 @@
 // /api/ai/ats-score already extracted, so the score moves the instant the user
 // applies a fix, without spending another AI call or hitting the cooldown.
 import { NextResponse } from "next/server"
+import { PAIRS_CARRY_MAX } from "@/lib/services/ai/shared/semantic-match"
 import { z } from "zod"
 import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
@@ -48,7 +49,7 @@ const schema = z.object({
     // entero con un 422 — un par perdido es una tarjeta menos, un 422 es el panel.
     texts: z.tuple([z.string().max(2000), z.string().max(2000)]).optional().catch(undefined),
     score: z.number().min(0).max(1),
-  })).max(40).optional(),
+  })).max(PAIRS_CARRY_MAX).optional(),
   // Ídem las repeticiones: mismo embebido, mismo acarreo, mismos límites. Un
   // par vive entre DOS puestos, así que cada lado trae el suyo.
   repeatedPairs: z.array(z.object({
@@ -56,7 +57,7 @@ const schema = z.object({
     a: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200), text: z.string().max(2000).optional().catch(undefined) }),
     b: z.object({ targetId: z.string().max(64), index: z.number().int().min(0).max(200), text: z.string().max(2000).optional().catch(undefined) }),
     score: z.number().min(0).max(1),
-  })).max(40).optional(),
+  })).max(PAIRS_CARRY_MAX).optional(),
 })
 
 export async function POST(req: Request) {

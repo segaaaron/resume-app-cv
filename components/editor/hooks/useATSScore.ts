@@ -1,6 +1,7 @@
 "use client"
 
 import type { ScoreBreakdown } from "@/lib/ats/score-breakdown"
+import { PAIRS_CARRY_MAX } from "@/lib/services/ai/shared/semantic-match"
 import type { SemanticPair, RepeatedPair } from "@/lib/services/ai/shared/semantic-match"
 import { useState, useCallback, useRef, useEffect } from "react"
 import { toast } from "sonner"
@@ -554,8 +555,11 @@ export function useATSScore() {
           // Same carry, same reason: an embedding call cannot run per keystroke,
           // and without these the merge card disappears on the first character
           // typed and comes back only after another full analysis.
-          mergePairs: prev?.mergePairs ?? [],
-          repeatedPairs: prev?.repeatedPairs ?? [],
+          // Recortados al MISMO tope que valida el esquema. Sin esto, un CV con
+          // muchos puestos supera el límite del borde y el re-cálculo devuelve
+          // 422: el puntaje se congela mientras el usuario edita.
+          mergePairs: (prev?.mergePairs ?? []).slice(0, PAIRS_CARRY_MAX),
+          repeatedPairs: (prev?.repeatedPairs ?? []).slice(0, PAIRS_CARRY_MAX),
           // Soft-skill credit is decided by a model reading the bullets, and this
           // re-score is deterministic — it cannot re-run that pass on every
           // keystroke, so it carries the last verdict forward.

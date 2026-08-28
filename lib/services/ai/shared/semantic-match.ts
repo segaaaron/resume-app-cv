@@ -192,6 +192,24 @@ export async function findSemanticMatches(
 export const MERGE_PAIR_THRESHOLD = 0.5
 
 /** How many pairs one role may propose. The user picks among them. */
+/**
+ * CUÁNTOS PARES PUEDEN VIAJAR AL RE-CÁLCULO INSTANTÁNEO.
+ *
+ * ── EL RIESGO (auditoría del 2026-08-27) ────────────────────────────────────
+ *
+ * `MERGE_PAIRS_PER_ROLE` es POR PUESTO, así que un CV con catorce puestos
+ * produce cuarenta y dos pares. El esquema del borde acota en cuarenta, y un
+ * cuerpo rechazado devuelve 422: el re-cálculo deja de responder y el usuario ve
+ * SU PUNTAJE CONGELADO mientras edita, sin nada en pantalla que lo explique.
+ * Queda registrado como `ats_rescore_failed`, así que no es invisible para
+ * nosotros — pero para él el producto simplemente deja de reaccionar.
+ *
+ * El tope vive acá, con el productor, y lo citan los dos lados: el esquema que
+ * valida y el cliente que recorta. Escrito dos veces era cuestión de tiempo que
+ * uno se moviera y el otro no.
+ */
+export const PAIRS_CARRY_MAX = 40
+
 export const MERGE_PAIRS_PER_ROLE = 3
 
 /**
