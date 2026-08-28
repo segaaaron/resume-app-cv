@@ -812,3 +812,63 @@ describe("ninguna línea del CV recibe dos tarjetas", () => {
     expect(deLaLinea?.fixHint, "se perdió lo que el reclutador aportaba").toBe("Contá el resultado.")
   })
 })
+
+
+/**
+ * EL TOTAL DE LÍNEAS SIN CIFRA SE DICE, AUNQUE NO TODAS TENGAN TARJETA.
+ *
+ * ── LO QUE FALTABA (CEO, 2026-08-27) ────────────────────────────────────────
+ *
+ * Cuántas tarjetas de cifra aparecen depende de cuántas líneas estén ya
+ * reclamadas por otra —«una viñeta, un lugar»—, así que un puesto con líneas de
+ * sobra muestra POCAS: primero hay que decidir cuáles se quedan. Medido: diez
+ * líneas con cinco sin cifra dan UNA tarjeta; cortadas las cuatro que sobran, el
+ * mismo CV da TRES.
+ *
+ * El sistema es progresivo y eso está bien. Pero visto desde afuera es lo
+ * contrario: arreglás algo y el panel te muestra MÁS trabajo — el «bucle
+ * infinito» que este proyecto ya pagó, con otra cara. La diferencia entre las dos
+ * lecturas es UN NÚMERO: diciendo cuántas hay en total, el usuario ve 5 → 4, o
+ * sea que baja, y entiende que las nuevas tarjetas estaban esperando su turno.
+ */
+describe("la tarjeta de la cifra dice cuántas faltan en total", () => {
+  const conCifra = (i: number) => `• Reduje los crashes un ${i}0% reescribiendo el stack de Core Data`
+  const sinCifra = (i: number) => `• Mantuve la documentación interna del equipo durante el sprint ${i} del proyecto`
+  const cv = (n: number, cuantasConCifra: number) => ({
+    workExperience: [{
+      id: "w1", jobTitle: "iOS Developer", startDate: "01/2022", currentlyWorking: true,
+      description: Array.from({ length: n }, (_, i) => (i < cuantasConCifra ? conCifra(i + 1) : sinCifra(i))).join("\n"),
+    }],
+  })
+  const informe = (n: number, cuantasConCifra: number) => {
+    const sd = cv(n, cuantasConCifra)
+    const lineas = (sd.workExperience[0].description).split("\n")
+    return buildAtsReport(input({
+      writing: analyzeWriting(sd),
+      categories: [{ category: "impact", coveragePct: 50, weight: .2, share: .2, points: 10, recoverable: 9, basis: "chosen" }],
+      bullets: lineas.map((text, index) => ({
+        targetId: "w1", index, text: text.replace("• ", ""),
+        verb: true, metric: index < cuantasConCifra, keywords: [], words: 12,
+      })),
+    }))
+  }
+  const metricas = (r: ReturnType<typeof informe>) => allChecks(r).filter((c) => c.id.startsWith("tips.metric."))
+
+  it("nombra el total real, no sólo las que muestra", () => {
+    const r = informe(10, 5)
+    const cards = metricas(r)
+    expect(cards.length).toBeGreaterThan(0)
+    // Muestra menos tarjetas que líneas sin cifra —las demás ya tienen la suya—
+    // pero DICE cuántas hay: sin eso, resolver una parece agregar trabajo.
+    expect(cards.length).toBeLessThan(5)
+    expect(cards[0].params).toMatchObject({ sinCifra: 5, total: 10 })
+  })
+
+  it("y al quedar menos líneas, el total BAJA aunque aparezcan más tarjetas", () => {
+    const antes = metricas(informe(10, 5))[0]
+    const despues = metricas(informe(6, 2))[0]
+    const sinCifraAntes = (antes.params as { sinCifra: number }).sinCifra
+    const sinCifraDespues = (despues.params as { sinCifra: number }).sinCifra
+    expect(sinCifraDespues).toBeLessThan(sinCifraAntes)
+  })
+})

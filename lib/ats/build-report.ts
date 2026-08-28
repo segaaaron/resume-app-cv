@@ -1173,7 +1173,33 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
         weight: porTarjeta,
         titleKey: "check.add_metric",
         detailKey: "check.add_metric_detail",
-        params: { pct: pctCifra, min: QUANTIFICATION_BAND.min, max: QUANTIFICATION_BAND.max },
+        /**
+         * EL TOTAL SE DICE, AUNQUE NO TODAS TENGAN TARJETA HOY.
+         *
+         * ── LO QUE FALTABA PARA QUE ESTO SEA SÓLIDO (CEO, 2026-08-27) ──────
+         *
+         * Cuántas tarjetas de cifra aparecen depende de cuántas líneas estén ya
+         * reclamadas por otra —«una viñeta, un lugar»—, así que un puesto con
+         * líneas de sobra muestra POCAS: primero hay que decidir cuáles se
+         * quedan. Medido: diez líneas con cinco sin cifra → UNA tarjeta; cortadas
+         * las cuatro que sobran, el mismo CV → TRES.
+         *
+         * El sistema es progresivo y eso está bien, pero visto desde afuera es
+         * exactamente lo contrario: arreglás algo y el panel te muestra MÁS
+         * trabajo. Es el «bucle infinito» que este proyecto ya pagó, con otra
+         * cara — y la diferencia entre las dos lecturas es UN NÚMERO.
+         *
+         * Diciendo cuántas líneas sin cifra hay EN TOTAL, el usuario ve que el
+         * número no crece: baja. Y las tarjetas que aparecen después no son
+         * trabajo nuevo, son las que estaban esperando su turno.
+         */
+        params: {
+          pct: pctCifra,
+          min: QUANTIFICATION_BAND.min,
+          max: QUANTIFICATION_BAND.max,
+          sinCifra: todasLasVinetas.length - conCifra,
+          total: todasLasVinetas.length,
+        },
         /**
          * EL TAMAÑO LO PONE EL CANDIDATO. Y por eso acá no va un botón.
          *
