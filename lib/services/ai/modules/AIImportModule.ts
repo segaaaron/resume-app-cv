@@ -16,8 +16,10 @@
 // if this returns null (not a resume / empty / model error), import still works
 // exactly as before — zero regression.
 
+import { z } from "zod"
 import { AI_MODEL, AI_TEMPERATURE, logAIUsage } from "@/lib/ai-client"
 import { readChat } from "@/lib/services/ai/shared/chat-result"
+import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { parseAIJson, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
@@ -48,6 +50,68 @@ interface LlmResume {
   volunteer?: Record<string, unknown>[]
   hobbies?: string
 }
+
+/**
+ * LA FORMA, DECLARADA UNA VEZ Y EXIGIDA POR LA API.
+ *
+ * ── LA EXCEPCIÓN QUE NO ERA (medido contra la API, 2026-08-27) ──────────────
+ *
+ * Éste era el único de catorce que seguía en `json_object`, y su comentario lo
+ * justificaba así: el modo estricto exige `additionalProperties: false`, y
+ * cerrarlo «haría que la API DESCARTE en silencio todo campo no enumerado —
+ * perder datos del CV del usuario».
+ *
+ * La premisa era falsa, y se veía leyendo el mapeo: lee CAMPO POR CAMPO, por
+ * nombre (`s(pd.firstName)`, `s(w.employer)`). Un campo que el modelo agregue
+ * fuera de la forma YA se descarta hoy, sólo que un paso después.
+ *
+ * Medido con un CV que trae justo lo que la forma no contempla —certificación
+ * con vencimiento, proyecto con stack, credencial—:
+ *
+ *   abierto  : «App Development with Swift Associate | Apple | 2024»
+ *   estricto : «App Development with Swift Associate | Apple | 2024 — vence en 2027»
+ *   abierto  : «Vault | app de finanzas personales (2023) — Stack: SwiftUI, Core Dat»
+ *   estricto : «Vault | Stack: SwiftUI, Core Data, CloudKit»
+ *
+ * El estricto NO pierde: conserva MÁS. Al no poder agregar un campo `expiry` o
+ * `stack`, el modelo mete el dato DENTRO de los campos que sí existen, que son
+ * exactamente los que el mapeo lee. Nombre, email, puestos y viñetas salieron
+ * idénticos en los dos.
+ *
+ * Todos los campos son requeridos —el modo estricto lo exige— y la instrucción de
+ * dejar vacío lo ausente sigue en el prompt: un campo vacío es una respuesta, un
+ * campo que falta es una forma rota.
+ */
+const SOCIAL_SHAPE = z.object({ network: z.string(), url: z.string() })
+const IMPORT_SHAPE = z.object({
+  isResume: z.boolean(),
+  personalDetails: z.object({
+    firstName: z.string(), lastName: z.string(), jobTitle: z.string(),
+    email: z.string(), phone: z.string(), address: z.string(), city: z.string(),
+    country: z.string(), postalCode: z.string(), website: z.string(),
+    linkedin: z.string(), github: z.string(), socials: z.array(SOCIAL_SHAPE),
+  }),
+  summary: z.string(),
+  workExperience: z.array(z.object({
+    employer: z.string(), jobTitle: z.string(), city: z.string(),
+    startDate: z.string(), endDate: z.string(), currentlyWorking: z.boolean(), description: z.string(),
+  })),
+  education: z.array(z.object({
+    institution: z.string(), degree: z.string(), fieldOfStudy: z.string(), city: z.string(),
+    startDate: z.string(), endDate: z.string(), currentlyStudying: z.boolean(), description: z.string(),
+  })),
+  skills: z.array(z.object({ name: z.string(), level: z.string() })),
+  languages: z.array(z.object({ name: z.string(), level: z.string() })),
+  certifications: z.array(z.object({ name: z.string(), issuer: z.string(), date: z.string(), url: z.string() })),
+  projects: z.array(z.object({
+    name: z.string(), role: z.string(), startDate: z.string(), endDate: z.string(),
+    description: z.string(), url: z.string(),
+  })),
+  volunteer: z.array(z.object({
+    organization: z.string(), role: z.string(), startDate: z.string(), endDate: z.string(), description: z.string(),
+  })),
+  hobbies: z.string(),
+})
 
 // Hard cap on the text sent to the model — a very long PDF is truncated rather
 // than blowing the context/cost. ~18k chars ≈ a dense 3-4 page CV.
@@ -84,20 +148,8 @@ export class AIImportModule {
         model: AI_MODEL,
         max_tokens: 4000, // worst case: a dense multi-section CV as JSON
         temperature: AI_TEMPERATURE,
-        // EL ÚNICO QUE SIGUE EN `json_object`, Y NO ES UN OLVIDO.
-        //
-        // Los otros trece sitios pasaron a esquema estricto. Éste no puede: el
-        // modo estricto exige `additionalProperties: false` con todas las
-        // propiedades enumeradas, y la forma de acá es deliberadamente abierta
-        // (`Record<string, unknown>[]` por sección) porque un CV importado trae
-        // campos que no sabemos de antemano y el mapeo posterior los acomoda.
-        // Cerrarla haría que la API DESCARTE en silencio todo campo no
-        // enumerado — perder datos del CV del usuario en la importación es
-        // exactamente el defecto que este proyecto ya pagó una vez.
-        //
-        // Lo que sí tiene: truncado y negativa como casos propios (arriba), y
-        // el parser determinista como red si nada de esto sirve.
-        response_format: { type: "json_object" },
+        // La forma la exige la API, no sólo el prompt. Ver `IMPORT_SHAPE`.
+        response_format: strictJsonFormat("resume_import", IMPORT_SHAPE),
         messages: [
           { role: "system", content: system },
           { role: "user", content: userPrompt },
