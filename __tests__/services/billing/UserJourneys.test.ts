@@ -20,7 +20,7 @@
  * "cancelled and came back", "charged back". If one fails, a real person is either
  * paying for access they do not have or holding access nobody paid for.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import type Stripe from "stripe"
 import { isActive, effectivePlan, PLAN_LIMITS, type Plan } from "@/lib/plans"
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
@@ -190,12 +190,45 @@ function access() {
   }
 }
 
+/**
+ * EL RELOJ SE CONGELA, Y NO ES UN CAPRICHO.
+ *
+ * ── EL FALSO ROJO (cazado el 2026-08-27) ───────────────────────────────────
+ *
+ * `inDays` llama a `Date.now()` CADA VEZ, y la aserción lo compara contra una
+ * fecha que el código de producción calculó con SU propio `Date.now()`, un
+ * instante antes. Con el `Math.floor(… / 1000)` de por medio, basta que los dos
+ * momentos caigan en segundos distintos para que difieran en uno y el caso falle.
+ *
+ * Es un test que se pone rojo por su reloj y no por el producto, y eso es peor
+ * que no tenerlo: la suite entera pierde autoridad, porque un rojo que a veces
+ * no significa nada entrena a mirar para otro lado.
+ *
+ * Se congela SÓLO `Date` (`toFake: ["Date"]`). Los temporizadores siguen siendo
+ * reales: con `setTimeout` falso, cualquier espera de este archivo no avanzaría
+ * nunca y el arreglo cambiaría un flake por un cuelgue.
+ *
+ * ── LO QUE NO ESTÁ PROBADO, Y SE DICE ──────────────────────────────────────
+ *
+ * El fallo se vio UNA vez en tres corridas, y NO se pudo reproducir a voluntad:
+ * forzar un desfase de un segundo en `inDays` no lo dispara, probablemente
+ * porque el mock del usuario y la aserción se mueven juntos. Así que esto no es
+ * «el arreglo del flake demostrado»: es congelar el reloj porque un test de
+ * fechas no debería depender de cuándo se ejecuta, y eso vale por sí solo.
+ * Si el rojo vuelve a aparecer, la causa está en otro lado y hay que buscarla
+ * con el fallo en la mano, no con esta teoría.
+ */
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] })
   vi.clearAllMocks()
   state.row = freshUser()
   state.seenEvents = new Set()
   state.audits = []
   eventSeq = 0
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
