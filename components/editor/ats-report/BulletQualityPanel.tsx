@@ -142,9 +142,23 @@ export default function BulletQualityPanel({ report, onSolve }: Props) {
               {/* V · # · K — las tres señales, encendidas o no. Es lo que convierte
                   «mejorá tus viñetas» en «a ésta le falta el número». */}
               <span className="mt-0.5 flex shrink-0 gap-0.5" title={t("bq_anatomy_hint")}>
-                {([["V", b.verb], ["#", b.metric], ["K", b.keywords.length > 0]] as const).map(([g, on]) => (
+                {/*
+                  CADA CHIP DICE QUÉ ES, y no sólo al pasar el mouse.
+                  ── EL DEFECTO (auditoría de UI, 2026-08-27) ──────────────────
+                  «V», «#» y «K» son tres letras crípticas de 15px, y su nombre
+                  vivía SÓLO en el `title` del grupo: invisible en táctil —donde
+                  no hay hover— y sin nombre propio para un lector de pantalla,
+                  que leía tres letras sueltas. Es el mismo defecto que el «+» de
+                  la tabla de términos ya pagó con captura: «¿qué es ese +?».
+                  El texto no cabe en 15px, así que lo que se agrega es el nombre
+                  ACCESIBLE de cada uno, con su estado — que es la información
+                  que el color por sí solo no puede dar.
+                */}
+                {([["V", b.verb, "bq_verb"], ["#", b.metric, "bq_metric"], ["K", b.keywords.length > 0, "bq_keyword"]] as const).map(([g, on, clave]) => (
                   <i
                     key={g}
+                    title={t(on ? "bq_axis_on" : "bq_axis_off", { axis: t(clave) })}
+                    aria-label={t(on ? "bq_axis_on" : "bq_axis_off", { axis: t(clave) })}
                     className="flex h-[15px] w-[15px] items-center justify-center rounded-[3px] text-[8.5px] font-bold not-italic"
                     style={
                       on

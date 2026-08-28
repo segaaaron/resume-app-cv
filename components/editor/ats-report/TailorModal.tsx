@@ -278,12 +278,33 @@ export default function TailorModal({
               el mismo hueco que el botón del riel, un nivel más abajo. Los
               términos entran acá porque son la palanca más grande del puntaje. */}
           {applyAllTotal > 0 && (
-            <button type="button" onClick={onApplyAll} disabled={busy}
-              className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-60"
-              style={{ background: "var(--a-ai)" }}>
-              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              {t("tailor_apply_all", { count: applyAllTotal })}
-            </button>
+            <span className="ml-auto flex items-center gap-2">
+              {/*
+                LA DIFERENCIA SE DICE, NO SE DEJA ADIVINAR.
+                ── EL DEFECTO (auditoría de UI, 2026-08-27) ──────────────────
+                Arriba se lee «12 correcciones listas» y este botón ofrecía
+                «Aplicar las 8». Los dos números son CIERTOS —el masivo no toca
+                las propuestas de corte, porque borrar líneas del CV de alguien
+                no se hace en un clic sin ver cuáles— pero puestos uno al lado
+                del otro y sin explicación se leen como que el botón falla. Y
+                «listas» empuja a esa lectura.
+                Es el mismo defecto que el riel ya tenía con «13 abiertos» junto
+                a «Resolver 15», y la regla de la casa es la misma: dos números
+                que cuentan cosas distintas, o se explican, o uno de los dos
+                sobra. Acá ninguno sobra, así que se explica.
+              */}
+              {pendingTotal > applyAllTotal && (
+                <span className="text-[10.5px] leading-tight" style={{ color: "var(--a-muted-2)" }}>
+                  {t("tailor_apply_all_rest", { count: pendingTotal - applyAllTotal })}
+                </span>
+              )}
+              <button type="button" onClick={onApplyAll} disabled={busy}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-60"
+                style={{ background: "var(--a-ai)" }}>
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {t("tailor_apply_all", { count: applyAllTotal })}
+              </button>
+            </span>
           )}
         </div>
 
