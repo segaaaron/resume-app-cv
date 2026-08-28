@@ -1,4 +1,4 @@
-// lib/ats/job-field.ts
+// lib/skills/job-field.ts
 // Infer the user's field from the job title they already entered, so skill
 // suggestions can be RANKED by relevance (a nurse sees nursing skills first, a
 // designer sees design tools first) — a soft boost, never a filter, so nothing is

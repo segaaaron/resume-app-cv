@@ -15,8 +15,8 @@
  *
  * Deterministic: same signals in → same verdicts out. No LLM, no randomness, no dates.
  */
-import type { Locale, ResumeSignals } from "./signals";
-import { computeResumeSignals } from "./signals";
+import type { Locale, ResumeSignals } from "@/lib/ats/signals";
+import { computeResumeSignals } from "@/lib/ats/signals";
 
 export type EngineId = "workday" | "taleo" | "icims" | "greenhouse" | "lever";
 

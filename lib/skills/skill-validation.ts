@@ -1,4 +1,4 @@
-// lib/ats/skill-validation.ts
+// lib/skills/skill-validation.ts
 //
 // Is this string something that belongs in a Skills section?
 //
@@ -12,7 +12,7 @@
 // skill and not like something already in the CV. The checks below are about
 // SHAPE and about the user's own data, never about a list of banned words.
 
-import { isKnownSkill } from "./skills-dictionary"
+import { isKnownSkill } from "@/lib/ats/skills-dictionary"
 
 /**
  * Words that never appear in a skill, wherever they sit: pronouns, hedges and

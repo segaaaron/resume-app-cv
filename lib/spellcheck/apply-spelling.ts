@@ -1,4 +1,4 @@
-// lib/ats/apply-spelling.ts
+// lib/spellcheck/apply-spelling.ts
 // Deterministic spelling correction for the "Fix typo" button. Replaces a whole,
 // boundary-delimited occurrence of the misspelled term with the correct one —
 // case-insensitive, but never mid-word, so "Objetive-C" → "Objective-C" while

@@ -1,4 +1,4 @@
-// lib/ats/cover-letter-ats.ts
+// lib/cover-letter/cover-letter-ats.ts
 //
 // Deterministic ATS-friendliness check for a COVER LETTER. No LLM, no quota —
 // pure text analysis, so it runs client-side for free and always gives the same
@@ -14,8 +14,9 @@
 // ATS uses (extractTopKeywords + partitionByPresence over the shared vocabulary),
 // so a letter is checked against the very keywords a CV would be.
 
+import { wordsOf } from "@/lib/services/ai/shared/text-similarity"
 import { extractTopKeywords, normalize } from "./analyzer"
-import { partitionByPresence } from "./core/matching"
+import { partitionByPresence } from "@/lib/ats/core/matching"
 
 export type CoverLetterAtsVerdict = "pass" | "caution" | "risk"
 
@@ -58,9 +59,6 @@ function scoreToVerdict(score: number): CoverLetterAtsVerdict {
   return "risk"
 }
 
-function wordsOf(text: string): string[] {
-  return text.trim().split(/\s+/).filter(Boolean)
-}
 
 /**
  * Analyze a cover letter's ATS-friendliness. `letterText` is PLAIN text (the

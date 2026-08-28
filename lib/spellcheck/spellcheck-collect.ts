@@ -1,4 +1,4 @@
-// lib/ats/spellcheck-collect.ts
+// lib/spellcheck/spellcheck-collect.ts
 //
 // The prose a spell-checker is allowed to look at, and nothing else.
 //

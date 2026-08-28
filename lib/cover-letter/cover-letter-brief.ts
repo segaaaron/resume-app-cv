@@ -1,4 +1,4 @@
-// lib/ats/cover-letter-brief.ts
+// lib/cover-letter/cover-letter-brief.ts
 //
 // Deterministic PLANNING layer for cover-letter generation — the "algorithm
 // detects, the AI writes" pattern the project already uses for the résumé ATS.
@@ -20,8 +20,8 @@
 // and costs nothing to run.
 
 import { extractTopKeywords, normalize } from "./analyzer"
-import { partitionByPresence, dedupe } from "./core/matching"
-import { isKnownSkill } from "./skills-dictionary"
+import { partitionByPresence, dedupe } from "@/lib/ats/core/matching"
+import { isKnownSkill } from "@/lib/ats/skills-dictionary"
 
 /** How many supported JD keywords to hand the model. Enough to tailor, capped so
  *  the prompt can't be stuffed into keyword soup. */

@@ -1,4 +1,4 @@
-// lib/ats/import-classification.ts
+// lib/skills/import-classification.ts
 //
 // Which list does an imported entry belong in: skills or certifications?
 //

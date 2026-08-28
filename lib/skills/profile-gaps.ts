@@ -1,4 +1,4 @@
-// lib/ats/profile-gaps.ts
+// lib/skills/profile-gaps.ts
 //
 // What this CV is still missing, as an ordered list of things to ASK the user.
 //

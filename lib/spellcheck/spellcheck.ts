@@ -1,4 +1,4 @@
-// lib/ats/spellcheck.ts
+// lib/spellcheck/spellcheck.ts
 //
 // Real spelling check for résumé prose — full Hunspell dictionaries (es + en),
 // deterministic, no LLM, no quota, no cost per run.

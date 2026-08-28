@@ -1,4 +1,4 @@
-// lib/ats/skill-catalog.ts
+// lib/skills/skill-catalog.ts
 // The skill autocomplete's data + search core (pure, testable). Turns the ATS
 // dictionary into display-cased, categorised options and filters them for a
 // query: prefix matches first, then substring, then a fuzzy "did you mean" for

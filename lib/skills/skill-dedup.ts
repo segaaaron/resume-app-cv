@@ -1,4 +1,4 @@
-// lib/ats/skill-dedup.ts
+// lib/skills/skill-dedup.ts
 // "You already have this skill" detection for the Skills editor. Catches a new
 // entry that duplicates an existing one four ways, from strictest to fuzziest:
 //   1. exact (after normalization)

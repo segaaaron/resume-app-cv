@@ -24,8 +24,8 @@
  * compartiendo la función, no copiándola.
  */
 
-import { allSkillForms, findSkill } from "./skills-dictionary";
-import { expandTerm, normalizeTerm } from "./vocabulary";
+import { allSkillForms, findSkill } from "@/lib/ats/skills-dictionary";
+import { expandTerm, normalizeTerm } from "@/lib/ats/vocabulary";
 import { foldAccentsLower } from "@/lib/text/normalize";
 
 export type Locale = "en" | "es";
@@ -51,6 +51,18 @@ const STOPWORDS = new Set<string>([...STOPWORDS_EN, ...STOPWORDS_ES]);
 // resume tool does — same folding, so keyword presence agrees across both.
 export const normalize = (text: string): string => foldAccentsLower(text, "NFKD");
 
+/**
+ * PARTE EN KEYWORDS, NO EN PALABRAS — y por eso no usa la `contentWords` común.
+ *
+ * Conserva `+`, `#` y `.` dentro del token a propósito: sin eso «c++», «c#» y
+ * «node.js» se parten en pedazos y dejan de ser la keyword que el usuario
+ * escribió. La compartida separa por todo lo que no sea alfanumérico, que es lo
+ * correcto para comparar prosa y lo incorrecto para extraer términos.
+ *
+ * Se revisó al unificar los tokenizadores (2026-08-28): son dos preguntas
+ * distintas —«¿qué palabra cuenta en una frase?» contra «¿qué es un término?»— y
+ * mezclarlas rompería los términos con símbolo.
+ */
 function tokenize(text: string): string[] {
   return text
     .split(/[^a-z0-9+#.]+/i)
