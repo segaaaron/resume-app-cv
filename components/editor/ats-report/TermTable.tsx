@@ -134,8 +134,14 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                           esas palabras exactas en el aviso. Decir «0» ahí sería
                           justamente la clase de dato que esta tabla promete que
                           se puede auditar leyendo. */}
+                      {/* SE ENVUELVE, NO SE CORTA (reportado con captura, 2026-08-28).
+                          Con `truncate` sobre un `flex-1`, «asked 1× · you say it
+                          0×» llegaba a pantalla como «asked1× you say it…»: los dos
+                          números que explican la fila, cortados justo antes del
+                          dato. Una frase de tres palabras no se abrevia — se deja
+                          bajar de línea, que es lo que el contenedor ya permite. */}
                       <span
-                        className="min-w-0 flex-1 truncate text-[10.5px] tabular-nums"
+                        className="min-w-0 flex-1 text-[10.5px] leading-snug tabular-nums [overflow-wrap:anywhere]"
                         style={{ color: "var(--a-muted)" }}
                         title={row.jd > 0 ? t("term_counts_hint") : t("term_jd_uncounted")}
                       >
@@ -174,7 +180,14 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                           <button
                             type="button"
                             onClick={() => onAdd?.(row.term)}
+                            /* El nombre completo, VISIBLE. Vivía sólo en el
+                               `title` —invisible en táctil y en lector de
+                               pantalla— y el botón decía «Add» a secas: el
+                               usuario no sabía si agregaba a Habilidades o
+                               escribía una viñeta. Es el mismo defecto del «+»
+                               que este panel ya pagó una vez. */
                             title={t("term_add")}
+                            aria-label={t("term_add")}
                             className="flex h-8 shrink-0 items-center gap-1 rounded-lg border px-2 text-[10px] font-bold transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                             style={{
                               borderColor: "var(--a-border-2)",
@@ -187,7 +200,7 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                             }}
                           >
                             <Plus className="h-3 w-3 shrink-0" />
-                            {t("term_add_short")}
+                            {t("term_add")}
                           </button>
                         )}
                         {canWeave && (
@@ -196,6 +209,7 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                             onClick={() => onWeave?.(row.term)}
                             disabled={busyTerm === row.term}
                             title={t("term_weave")}
+                            aria-label={t("term_weave")}
                             className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-[10px] font-bold transition-transform hover:scale-[1.04] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                             style={{
                               background: "var(--a-ai-soft)",
@@ -205,7 +219,7 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                             }}
                           >
                             <Sparkles className="h-3 w-3 shrink-0" />
-                            {t("term_weave_short")}
+                            {t("term_weave")}
                           </button>
                         )}
                       </span>

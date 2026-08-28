@@ -76,7 +76,22 @@ export default function TermCard({ term, order, onWeave, onAdd, added, busy }: P
           </h3>
           <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: "var(--a-muted)" }}>
             <b style={{ color: "var(--a-ink-2)" }}>{t("why_matters")}</b>{" "}
-            {t(unbacked ? "term_card_why_unbacked" : "term_card_why", { jd: term.jd })}
+            {/* EL MISMO DATO NO PUEDE DECIRSE DE DOS FORMAS QUE SE CONTRADICEN.
+                (reportado con captura, 2026-08-28)
+
+                Con `jd === 0` esta tarjeta decía «el aviso lo pide 0 veces… es
+                la palanca más grande del puntaje»: las dos mitades de la misma
+                frase peleándose. Y `jd === 0` NO significa que el aviso no lo
+                pida — significa que el contador no pudo contarlo, porque la
+                extracción devuelve la forma canónica («Asynchronous
+                programming») y el aviso lo escribe con otras palabras.
+
+                La tabla de términos ya lo decía bien, con su propia frase. Eran
+                dos componentes contestando lo mismo distinto. Se usa la que ya
+                existe: un dato, una redacción. */}
+            {term.jd > 0
+              ? t(unbacked ? "term_card_why_unbacked" : "term_card_why", { jd: term.jd })
+              : t(unbacked ? "term_card_why_unbacked_uncounted" : "term_card_why_uncounted")}
           </p>
         </div>
       </header>

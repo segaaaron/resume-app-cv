@@ -1846,9 +1846,7 @@
       "term_list_only": "sólo en la lista",
       "term_added": "agregado",
       "term_add": "Agregar a Habilidades",
-      "term_add_short": "Agregar",
       "term_weave": "Escribirlo dentro de una viñeta",
-      "term_weave_short": "Demostrar",
       "term_evidence_note": "Un término dentro de una viñeta con fecha es una prueba; el mismo solo en la lista es una afirmación. Para el filtro suman igual; para quien lee, no.",
       "check": {
         "dates_mixed": "Tus fechas mezclan formatos ({formats})",
@@ -1992,7 +1990,10 @@
       "term_meta_jd_unknown": "no lo pude contar",
       "term_meta_cv": "lo decís {cv}",
       "check_blocks_anyway": "no suma puntos — te frena igual",
-      "fix_replace_with": "Escribir una sobre {term}"
+      "fix_replace_with": "Escribir una sobre {term}",
+      "section_open_no_score": "{count} abiertos · no mueven el puntaje",
+      "term_card_why_uncounted": "El aviso lo escribe con otras palabras, así que no se puede contar literalmente — pero lo pide, y tu CV no lo dice en ningún lado. Es la palanca más grande del puntaje.",
+      "term_card_why_unbacked_uncounted": "Está en tus Habilidades y el aviso lo escribe con otras palabras, así que no se puede contar literalmente. El filtro ya lo cuenta; quien te entrevista busca dónde lo hiciste, y una lista no lo dice."
     },
     "cv_review": {
       "title": "Revisión IA del CV",

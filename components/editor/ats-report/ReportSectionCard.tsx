@@ -31,17 +31,54 @@ interface Props {
   /** Abierta de entrada. Las que puntúan lo están; las de consejos, no. */
   defaultOpen?: boolean
   renderCheck: (check: ReportCheck) => React.ReactNode
+  /** Qué chequeo ya se aplicó. Lo sabe el panel; la sección sólo ordena con él. */
+  isApplied?: (checkId: string) => boolean
   /** Lo que va debajo de los chequeos: la tabla de términos, el panel de viñetas. */
   children?: React.ReactNode
 }
 
-export default function ReportSectionCard({ section, defaultOpen = false, renderCheck, children }: Props) {
+export default function ReportSectionCard({ section, defaultOpen = false, renderCheck, isApplied, children }: Props) {
+  /**
+   * LO APLICADO BAJA, NO SE MEZCLA (reportado con captura, 2026-08-28).
+   *
+   *   «Cuando aplico un improve bullet o lo borro, ¿cómo lo veo como aplicado?
+   *    Sería mejor que las cosas que se aplican vayan a aplicados.»
+   *
+   * La tarjeta aplicada ya se pinta en gris y con su tilde, pero seguía en el
+   * mismo renglón donde estaba: entre las pendientes. Con doce tarjetas abiertas
+   * eso obliga a recorrer la lista entera para saber qué queda por hacer, y el
+   * trabajo terminado compite por la atención con el que falta.
+   *
+   * No se ocultan —ver que algo se aplicó es la mitad de la confianza— y no se
+   * mueven de sección: bajan al final de la suya, con el orden relativo intacto.
+   * `sort` de Array es estable, así que dos aplicadas conservan su orden.
+   */
+  const ordenadas = isApplied
+    ? [...section.checks].sort((a, b) => Number(isApplied(a.id)) - Number(isApplied(b.id)))
+    : section.checks
   const t = useTranslations("editor.ats")
   const [open, setOpen] = useState(defaultOpen)
   const Icon = SECTION_ICON[section.id]
 
   const openCount = section.checks.filter((c) => c.state !== "pass").length
   const total = section.checks.length
+  /**
+   * DOS NÚMEROS CIERTOS QUE JUNTOS SE LEEN COMO UNA MENTIRA.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-28) ────────────────────────
+   *
+   *   «Esta al 100 pero aún muestra cosas por hacer.»
+   *
+   * Y los dos números son correctos: el porcentaje mide COBERTURA DE PUNTAJE y
+   * la insignia cuenta HALLAZGOS. Una sección puede tener el puntaje entero y
+   * seguir teniendo avisos que no pesan — cada tarjeta ya lo dice, una por una,
+   * con su «no mueve el puntaje». Lo que faltaba era decirlo ARRIBA, donde
+   * están los dos números juntos.
+   *
+   * Es la regla que este panel ya aplicó en la cabecera: dos cifras que cuentan
+   * cosas distintas, o se explican, o una sobra.
+   */
+  const openWeightless = openCount > 0 && section.checks.every((c) => c.state === "pass" || !c.weight)
   const scored = section.scoreCategory !== null
   const pct = section.coveragePct
   /** Rojo, amarillo o verde — decidido por el único dueño de la regla. */
@@ -155,7 +192,11 @@ export default function ReportSectionCard({ section, defaultOpen = false, render
                     : { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
                 }
               >
-                {openCount > 0 ? t("section_open", { count: openCount }) : t("section_clean", { count: total })}
+                {openCount > 0
+                  ? openWeightless
+                    ? t("section_open_no_score", { count: openCount })
+                    : t("section_open", { count: openCount })
+                  : t("section_clean", { count: total })}
               </span>
             )}
           </span>
@@ -167,7 +208,7 @@ export default function ReportSectionCard({ section, defaultOpen = false, render
           <p className="text-[11.5px] leading-relaxed" style={{ color: "var(--a-muted)" }}>
             {t(`section_${section.id}_blurb`)}
           </p>
-          {section.checks.map((c) => (
+          {ordenadas.map((c) => (
             <div key={c.id}>{renderCheck(c)}</div>
           ))}
           {children}

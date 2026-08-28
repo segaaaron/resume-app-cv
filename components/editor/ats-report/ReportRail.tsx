@@ -128,6 +128,9 @@ export default function ReportRail({
         score={report.score}
         criticalCount={crits.length}
         criticalSolvable={crits.filter((c) => !!c.action && c.action.kind !== "manual").length}
+        // El texto sale del hallazgo mismo (`evidence`), no de una lista aparte:
+        // dos sitios diciendo qué es lo crítico volverían a discrepar.
+        criticalDetail={crits.flatMap((c) => c.evidence ?? [])}
         recoverable={recoverable}
       />
 
@@ -237,6 +240,7 @@ export default function ReportRail({
             // Las que puntúan, abiertas: son las que mueven el número.
             defaultOpen={section.scoreCategory !== null && section.checks.length > 0}
             renderCheck={renderCheck}
+            isApplied={(id: string) => appliedIds?.has(id) ?? false}
           >
             {termsOf(section.id).length > 0 && (
               <TermTable

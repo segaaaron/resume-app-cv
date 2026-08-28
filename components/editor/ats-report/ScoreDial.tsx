@@ -121,11 +121,28 @@ interface Props {
    * existir. Ahora la cifra se parte y se dice cuál es cuál.
    */
   criticalSolvable: number
+  /**
+   * QUÉ es lo crítico, no cuántos hay.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-28) ────────────────────────
+   *
+   *   «Aquí me dice algo crítico pero no sé cuál es lo crítico, dónde lo veo.»
+   *
+   * La cabecera decía «1 arreglo crítico» y «ninguna reescritura lo cambia: es
+   * un requisito que se cumple o no» — las dos frases ciertas, y ninguna dice
+   * CUÁL requisito. El texto estaba a mano: `hard.requirements` viaja con el
+   * requisito incumplido en su `evidence` desde que se emite. Se contaba y no
+   * se mostraba.
+   *
+   * Un número sin su objeto no es información: es una alarma que el usuario
+   * aprende a ignorar porque no puede actuar sobre ella.
+   */
+  criticalDetail?: readonly string[]
   /** Puntos que quedan sobre la mesa, ya sumados por el informe. */
   recoverable: number
 }
 
-export default function ScoreDial({ score, criticalCount, criticalSolvable, recoverable }: Props) {
+export default function ScoreDial({ score, criticalCount, criticalSolvable, recoverable, criticalDetail = [] }: Props) {
   const t = useTranslations("editor.ats")
   const tone = toneOf(score)
   const shown = useCountUp(score)
@@ -213,6 +230,24 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
                   ? t("verdict_blocked_hint")
                   : t("verdict_blocked_split", { fix: criticalSolvable, yours: criticalCount - criticalSolvable })}
           </p>
+
+          {/* Y CUÁL es. Se envuelve, nunca se corta: un requisito a medias no se
+              puede juzgar, y truncarlo devuelve al usuario al mismo lugar —
+              sabe que algo falla y no sabe qué. */}
+          {criticalDetail.length > 0 && (
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {criticalDetail.map((req) => (
+                <li
+                  key={req}
+                  className="flex gap-1.5 text-[11px] font-semibold leading-snug [overflow-wrap:anywhere]"
+                  style={{ color: "var(--a-bad)" }}
+                >
+                  <span aria-hidden="true">·</span>
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* La barra con el umbral marcado: dónde está y adónde llega si cierra
               lo que falta. Sin esto, «te faltan 18 puntos» no tiene referencia. */}

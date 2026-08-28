@@ -1846,9 +1846,7 @@
       "term_list_only": "list only",
       "term_added": "added",
       "term_add": "Add to Skills",
-      "term_add_short": "Add",
       "term_weave": "Write it inside a bullet",
-      "term_weave_short": "Prove it",
       "term_evidence_note": "A term inside a dated bullet is proof; the same term alone in a list is a claim. They count the same for the filter — not for the person reading.",
       "check": {
         "dates_mixed": "Your dates mix formats ({formats})",
@@ -1992,7 +1990,10 @@
       "term_meta_jd_unknown": "could not count it",
       "term_meta_cv": "you say it {cv}×",
       "check_blocks_anyway": "no points — blocks you anyway",
-      "fix_replace_with": "Write one about {term}"
+      "fix_replace_with": "Write one about {term}",
+      "section_open_no_score": "{count} open · no score change",
+      "term_card_why_uncounted": "The posting words it differently, so it cannot be counted literally — but it asks for this and your CV never says it. This is the biggest score lever.",
+      "term_card_why_unbacked_uncounted": "It is in your Skills and the posting words it differently, so it cannot be counted literally. The filter already counts it; the person interviewing you looks for where you did it, and a list does not say."
     },
     "cv_review": {
       "title": "AI Resume Review",

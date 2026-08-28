@@ -25,6 +25,7 @@ import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
+import { sharesSubject, addsNothingNew } from "@/lib/ats/resume-integrity"
 import { AI_INPUT_LIMITS, type SkillBulletInput, type SkillBulletResult } from "../shared/ai-types"
 import { noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
@@ -375,11 +376,36 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return { status: "no_fit" }
     }
 
-    // Don't re-state a bullet the job already has. In hard mode, also skip when the
-    // job already showcases the named skill (nothing to add).
+    /**
+     * NO ESCRIBIR UNA LÍNEA QUE EL INFORME VA A LLAMAR DUPLICADA.
+     *
+     * ── EL DEFECTO (reportado con captura, 2026-08-28) ────────────────────
+     *
+     * El panel tejió «AI-assisted coding tools» en un puesto que ya decía
+     * «Applied AI/ML tools (mobile) to accelerate refactoring of legacy Swift
+     * code…», y el resultado fue una línea casi calcada. Acto seguido el
+     * informe la marcó como duplicada y ofreció borrarla o fusionarla: el
+     * producto escribió el defecto y después cobró por arreglarlo.
+     *
+     * La causa es la clase que este proyecto viene cerrando: DOS VARAS PARA UNA
+     * PREGUNTA. Medido sobre esas dos líneas exactas —
+     *
+     *   similitud                       0.876
+     *   isTrivialEdit  (este escritor)  false  → la escribía
+     *   el detector del informe         true   → la reportaba
+     *
+     * — el escritor exigía 0.9 y el informe usa el detector de casi-duplicados,
+     * que es más fino porque compara vocabulario y no caracteres. Entre 0.876 y
+     * 0.9 vive exactamente el hueco por donde salió esta línea.
+     *
+     * Ahora el escritor pregunta al MISMO dueño que el informe. `isTrivialEdit`
+     * se queda porque caza el calco exacto, que el otro también caza; lo que se
+     * agrega es el caso que sólo el detector del informe ve.
+     */
     const existing = parseBullets(job.description ?? "")
     if (!soft && bulletMentionsSkill(skill, (job.description ?? "").toLowerCase())) return { status: "no_fit" }
     if (existing.some((b) => isTrivialEdit(b, text))) return { status: "no_fit" }
+    if (existing.some((b) => sharesSubject(b, text) && addsNothingNew(b, text))) return { status: "no_fit" }
 
     /**
      * EL PISO DE SALIDA — el mismo que el ejecutor, del mismo dueño.
