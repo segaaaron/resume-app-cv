@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { TAILOR_WORKLOAD_MAX } from "@/lib/ats/report"
 import { z } from "zod"
 import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
@@ -35,7 +36,7 @@ const schema = z.object({
     targetId: z.string().max(64),
     index: z.number().int().min(0).max(60),
     reason: z.enum(["no_metric", "weak_verb", "duplicate", "dilutes", "cliche", "orphan", "critical", "tailored"]),
-  })).max(20),
+  })).max(TAILOR_WORKLOAD_MAX),
   rewriteSummary: z.boolean().optional(),
 })
 

@@ -441,7 +441,18 @@ export const ATSExtractionShape = z.object({
 })
 
 export const ATSExtractionSchema = z.object({
-  hardSkills: cappedStringArray(30),
+  /**
+   * ── QUIÉN DECIDE CUÁLES ENTRAN, Y CUÁL ES EL PAPEL DE ESTE TOPE ───────────
+   *
+   * El que decide es `TOPE_DURAS`, que ordena por el peso MEDIDO sobre el texto
+   * del aviso y se queda con las de arriba. Este número es sólo un freno contra
+   * una respuesta absurda, y por eso tiene que estar HOLGADO: recortaba en 30
+   * antes de que nadie midiera nada, así que si el modelo devolvía treinta y
+   * cinco, cinco se perdían por el orden en que las escribió —y entre ellas podía
+   * ir una que el aviso exige en el título—. El recorte que decide no puede
+   * correr después de un recorte que no sabe nada.
+   */
+  hardSkills: cappedStringArray(60),
   softSkills: cappedStringArray(20),
   jobTitle: z.string().catch(""),
   mustHaves: cappedStringArray(20),

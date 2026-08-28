@@ -401,12 +401,37 @@ export function criticalChecks(report: AtsReport): ReportCheck[] {
  * Es el reemplazo del array de keywords que hoy es todo lo que recibe. Con esto
  * deja de leer la oferta cruda: se le dice qué cerrar, no que averigüe qué falta.
  */
+/**
+ * CUÁNTAS LÍNEAS PUEDE RECIBIR EL EJECUTOR DE UNA VEZ.
+ *
+ * ── EL RIESGO (auditoría del 2026-08-27) ────────────────────────────────────
+ *
+ * El esquema de `/api/ai/tailor-cv` acota el trabajo en veinte ítems y el panel
+ * no recortaba: en un CV grande —varios puestos, cortes, cifras, aperturas,
+ * gemelas— el informe pasa de veinte sin esfuerzo. El cuerpo se rechaza con 422
+ * y EL EJECUTOR NO RESPONDE, que es el botón principal del panel.
+ *
+ * El tope vive acá, con el productor, y lo citan los dos lados: el esquema que
+ * valida y el panel que recorta. Es el mismo defecto que los pares acarreados al
+ * re-cálculo, en otro sitio — un número escrito dos veces siempre termina
+ * moviéndose en uno solo.
+ *
+ * Y el recorte NO es arbitrario: se ordena por peso, así que los veinte que
+ * viajan son los que más mueven el puntaje. Recortar por orden de emisión
+ * habría dejado afuera el trabajo más valioso por dónde cayó en el informe.
+ */
+export const TAILOR_WORKLOAD_MAX = 20
+
 export function tailorWorkload(report: AtsReport): ReportCheck[] {
   // `action` obligatoria: esto arma el PEDIDO AL MODELO, y un ítem sin objetivo
   // apuntado no le dice qué línea reescribir. Es el caso de los términos «sólo
   // en la lista» — son de tailor, pero viajan como término, con su propia
   // llamada, no como un hallazgo del que colgarle un `targetId` que no tiene.
-  return openChecks(report).filter((c) => c.owner === "tailor" && !!c.action)
+  return openChecks(report)
+    .filter((c) => c.owner === "tailor" && !!c.action)
+    // Por peso, para que el recorte del llamador se quede con lo que más mueve
+    // el número. Empate: el orden del informe, que es estable.
+    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
 }
 
 /**

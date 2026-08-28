@@ -21,7 +21,7 @@ import { tailorResolutions } from "@/lib/ats/tailor-resolutions"
 import { allChecks } from "@/lib/ats/report"
 import { appliedIdsFrom, fingerprintOfCheck } from "@/lib/ats/applied-checks"
 import ReportRail from "./ats-report/ReportRail"
-import { applyAllPlan, solvableChecks, tailorWorkload } from "@/lib/ats/report"
+import { applyAllPlan, solvableChecks, tailorWorkload, TAILOR_WORKLOAD_MAX } from "@/lib/ats/report"
 import TailorModal, { type TailorFilter } from "./ats-report/TailorModal"
 import { postingTermsForPrompt } from "@/lib/ats/rewrite-keeps-match"
 import { hasCliche } from "@/lib/services/ai/shared/cliches"
@@ -1317,7 +1317,12 @@ export default function ATSScorePanel() {
       const a = c.action
       if (a?.kind !== "rewrite_bullet" || !a.targetId || typeof a.index !== "number") return []
       return [{ checkId: c.id, targetId: a.targetId, index: a.index, reason: reasonOf(c.id) }]
-    }),
+    })
+      // Al MISMO tope que valida el esquema del ejecutor. Sin esto un CV grande
+      // manda más de los que el borde acepta, el cuerpo se rechaza con 422 y el
+      // botón principal del panel deja de responder. `tailorWorkload` ya viene
+      // ordenado por peso, así que lo que se recorta es lo que menos mueve.
+      .slice(0, TAILOR_WORKLOAD_MAX),
     [report],
   )
   const wantsSummary = useMemo(

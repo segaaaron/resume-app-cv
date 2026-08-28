@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { POSTING_TERMS_IN_PROMPT } from "@/lib/ats/rewrite-keeps-match"
 import { z } from "zod"
 import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
@@ -14,7 +15,10 @@ const schema = z.object({
   // Los términos que la vacante pide: fusionar es la única acción que BORRA
   // texto, y sin esto el modelo unía sin saber qué no puede soltar. Mismo tope
   // que `postingTermsForPrompt` produce.
-  postingTerms: z.array(z.string().max(120)).max(30).optional(),
+  // El MISMO tope que el productor (`postingTermsForPrompt`) y que el resto de
+  // los bordes que reciben términos: escrito a mano acá, era el único que podía
+  // moverse solo.
+  postingTerms: z.array(z.string().max(120)).max(POSTING_TERMS_IN_PROMPT).optional(),
 })
 
 export async function POST(req: Request) {
