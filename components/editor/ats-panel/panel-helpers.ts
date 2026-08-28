@@ -81,3 +81,32 @@ export function canAskAI(jobId: string, description: string, bullet: string): bo
   if (repairableDefects(bullet).length === 0) return false
   return !isContentOptimized(`opt_bullet_${jobId}`, description)
 }
+
+/**
+ * CÓMO RESPONDE UN BOTÓN DEL PANEL AL TOCARLO. Un lenguaje, no quince decisiones.
+ *
+ * ── EL DEFECTO (auditoría de diseño, 2026-08-27) ────────────────────────────
+ *
+ * Quince de los dieciocho botones del informe no tenían NINGÚN estado de hover:
+ * fondo fijo, sin cambio al pasar por encima y sin acuse al pulsar. La regla de
+ * la casa lo prohíbe con todas las letras —«botones sin estado hover elaborado»—
+ * y el efecto es el que el CEO describe como básico: la pantalla no contesta.
+ *
+ * Dos componentes SÍ lo tenían (`hover:brightness`), así que lo que faltaba no
+ * era inventar un tratamiento sino aplicar el que ya existía a todos. Repetir la
+ * clase en cada botón habría sido quince decisiones que se separan con el
+ * tiempo; acá hay una.
+ *
+ * `brightness` funciona sobre CUALQUIER fondo —los del panel son tokens, no
+ * clases de Tailwind—, así que un solo tratamiento sirve para el botón sólido,
+ * el de borde y el fantasma sin escribir tres variantes.
+ *
+ * El acuse de pulsación es un `scale` mínimo: suficiente para que se sienta el
+ * click, corto para que no distraiga, y sin mover el layout —`transform` no
+ * reflows—. Y se anula con `prefers-reduced-motion`, que es una preferencia del
+ * sistema y no una opinión nuestra.
+ */
+export const PRESSABLE =
+  "transition-[filter,transform] duration-150 hover:brightness-95 active:scale-[0.97] " +
+  "motion-reduce:transition-none motion-reduce:active:scale-100 " +
+  "disabled:pointer-events-none disabled:opacity-60"

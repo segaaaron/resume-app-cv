@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { PRESSABLE } from "../ats-panel/panel-helpers"
 import { AlertTriangle, Sparkles } from "lucide-react"
 import {
   criticalChecks,
@@ -210,7 +211,7 @@ export default function ReportRail({
           type="button"
           onClick={() => onSolve()}
           disabled={busy}
-          className="flex items-center gap-2 rounded-xl px-3.5 py-3 text-left text-[12.5px] font-bold transition-opacity disabled:opacity-60"
+          className={`${PRESSABLE} flex items-center gap-2 rounded-xl px-3.5 py-3 text-left text-[12.5px] font-bold`}
           style={{ background: "var(--a-ai)", color: "#fff", boxShadow: "var(--a-sh-md)" }}
         >
           <Sparkles className="h-4 w-4 shrink-0" />

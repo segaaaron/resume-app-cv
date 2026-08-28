@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { PRESSABLE } from "../ats-panel/panel-helpers"
 import { Sparkles } from "lucide-react"
 import type { AtsReport, ReportBullet } from "@/lib/ats/report"
 import { solvableChecks } from "@/lib/ats/report"
@@ -209,7 +210,7 @@ export default function BulletQualityPanel({ report, onSolve }: Props) {
                     onClick={() => onSolve(checkId)}
                     title={t("solve_with_tailor")}
                     aria-label={t("solve_with_tailor")}
-                    className="flex h-6 w-6 items-center justify-center rounded-md"
+                    className={`${PRESSABLE} flex h-6 w-6 items-center justify-center rounded-md`}
                     style={{ background: "var(--a-ai-soft)", color: "var(--a-ai-ink)" }}
                   >
                     <Sparkles className="h-3 w-3" />

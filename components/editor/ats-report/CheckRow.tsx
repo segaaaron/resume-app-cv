@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { PRESSABLE } from "../ats-panel/panel-helpers"
 import { useTranslations } from "next-intl"
 import { AlertCircle, AlertTriangle, Check, ChevronDown, Sparkles, Trash2, Wrench } from "lucide-react"
 import { isActionable, type ReportCheck } from "@/lib/ats/report"
@@ -110,7 +111,7 @@ export default function CheckRow({ check, onSolve, onFix, busy }: Props) {
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left"
+        className={`${PRESSABLE} flex w-full items-start gap-2.5 px-3 py-2.5 text-left`}
       >
         <span
           className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
@@ -209,7 +210,7 @@ export default function CheckRow({ check, onSolve, onFix, busy }: Props) {
           type="button"
           onClick={() => onFix?.(check.id)}
           disabled={busy}
-          className="flex w-full items-center gap-1.5 border-t px-3 py-2 text-[11.5px] font-semibold transition-colors disabled:opacity-60"
+          className={`${PRESSABLE} flex w-full items-center gap-1.5 border-t px-3 py-2 text-[11.5px] font-semibold`}
           style={{ borderColor: "var(--a-border)", color: "var(--a-accent-ink)", background: "var(--a-accent-soft)" }}
         >
           {/* EL BOTÓN DICE LO QUE HACE. «Arreglar» sobre una propuesta de corte
@@ -225,7 +226,7 @@ export default function CheckRow({ check, onSolve, onFix, busy }: Props) {
           type="button"
           onClick={() => onSolve?.(check.id)}
           disabled={busy}
-          className="flex w-full items-center gap-1.5 border-t px-3 py-2 text-[11.5px] font-semibold transition-colors disabled:opacity-60"
+          className={`${PRESSABLE} flex w-full items-center gap-1.5 border-t px-3 py-2 text-[11.5px] font-semibold`}
           style={{ borderColor: "var(--a-border)", color: "var(--a-ai-ink)", background: "var(--a-ai-soft)" }}
         >
           <Sparkles className="h-3 w-3 shrink-0" />

@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { PRESSABLE } from "../ats-panel/panel-helpers"
 import { Loader2, Plus, Sparkles } from "lucide-react"
 import type { ReportTerm } from "@/lib/ats/report"
 
@@ -82,14 +83,14 @@ export default function TermCard({ term, order, onWeave, onAdd, added, busy }: P
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 py-3">
         <button type="button" onClick={() => onWeave(term.term)} disabled={busy || added}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-60"
+          className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white`}
           style={{ background: "var(--a-ai)" }}>
           {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
           {t("term_card_weave")}
         </button>
         {!unbacked && (
           <button type="button" onClick={() => onAdd(term.term)} disabled={busy || added}
-            className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold disabled:opacity-60"
+            className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold`}
             style={{ borderColor: "var(--a-border)", color: "var(--a-ink-2)" }}>
             <Plus className="h-3 w-3" /> {t("term_card_add")}
           </button>

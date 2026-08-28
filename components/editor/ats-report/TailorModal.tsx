@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { PRESSABLE } from "../ats-panel/panel-helpers"
 import { createPortal } from "react-dom"
 import { Z_MODAL } from "@/lib/ui/z-layers"
 import { useTranslations } from "next-intl"
@@ -253,7 +254,7 @@ export default function TailorModal({
             </span>
           </div>
           <button type="button" onClick={onClose} aria-label={t("close")}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border"
+            className={`${PRESSABLE} flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border`}
             style={{ borderColor: "var(--a-border)", color: "var(--a-muted)" }}>
             <X className="h-3.5 w-3.5" />
           </button>
@@ -264,7 +265,7 @@ export default function TailorModal({
           <div className="flex flex-wrap gap-1.5">
             {filters.map(([id, label]) => (
               <button key={id} type="button" onClick={() => setFilter(id)}
-                className="rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                className={`${PRESSABLE} rounded-full px-2.5 py-1 text-[11px] font-semibold`}
                 style={
                   filter === id
                     ? { background: "var(--a-ink)", color: "var(--a-bg)" }
@@ -299,7 +300,7 @@ export default function TailorModal({
                 </span>
               )}
               <button type="button" onClick={onApplyAll} disabled={busy}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-60"
+                className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white`}
                 style={{ background: "var(--a-ai)" }}>
                 {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 {t("tailor_apply_all", { count: applyAllTotal })}

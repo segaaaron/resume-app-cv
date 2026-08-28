@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { PRESSABLE } from "../ats-panel/panel-helpers"
 import { ArrowRight, Check, Loader2, Sparkles, Trash2 } from "lucide-react"
 import type { ReportCheck, ReportResolution } from "@/lib/ats/report"
 import BulletAnatomy from "./BulletAnatomy"
@@ -315,7 +316,7 @@ export default function FixCard({
               <>
                 {onRemove && (
                   <button type="button" onClick={() => onRemove(check.id)} disabled={busy}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white transition-opacity disabled:opacity-60"
+                    className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white`}
                     style={{ background: "var(--a-bad)" }}>
                     <Trash2 className="h-3 w-3" /> {t("fix_remove")}
                   </button>
@@ -325,7 +326,7 @@ export default function FixCard({
                     informe manda el índice de la gemela que sobrevive. */}
                 {isNearDup && onMerge && typeof check.params?.otherIndex === "number" && (
                   <button type="button" onClick={() => onMerge(check.id)} disabled={busy}
-                    className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
+                    className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold`}
                     style={{ borderColor: "var(--a-ai)", color: "var(--a-ai-ink)", background: "var(--a-ai-soft)" }}>
                     <Sparkles className="h-3 w-3" /> {t("fix_merge_pair")}
                   </button>
@@ -336,7 +337,7 @@ export default function FixCard({
                     dice, escrito por el ejecutor con la línea a la vista. */}
                 {replacement && onReplace && (
                   <button type="button" onClick={() => onReplace(replacement)} disabled={busy}
-                    className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
+                    className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold`}
                     style={{ borderColor: "var(--a-ai)", color: "var(--a-ai-ink)", background: "var(--a-ai-soft)" }}>
                     <Sparkles className="h-3 w-3" /> {t("fix_replace_with", { term: replacement })}
                   </button>
@@ -344,7 +345,7 @@ export default function FixCard({
               </>
             ) : (
             <button type="button" onClick={() => onApply(check.id)} disabled={busy || !actionable}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white transition-opacity disabled:opacity-60"
+              className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-bold text-white`}
               style={{ background: "var(--a-ai)" }}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
               {busy
@@ -364,7 +365,7 @@ export default function FixCard({
                 resta más de lo que suma, y reescribirla no la salva. */}
             {!isCut && !isNearDup && isBullet && onRemove && (
               <button type="button" onClick={() => onRemove(check.id)}
-                className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold"
+                className={`${PRESSABLE} flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold`}
                 style={{ borderColor: "var(--a-border)", color: "var(--a-bad)" }}>
                 <Trash2 className="h-3 w-3" /> {t("fix_remove")}
               </button>
