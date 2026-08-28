@@ -208,15 +208,24 @@ function access() {
  * reales: con `setTimeout` falso, cualquier espera de este archivo no avanzaría
  * nunca y el arreglo cambiaría un flake por un cuelgue.
  *
- * ── LO QUE NO ESTÁ PROBADO, Y SE DICE ──────────────────────────────────────
+ * ── EL MECANISMO, MEDIDO (2026-08-27) ──────────────────────────────────────
  *
- * El fallo se vio UNA vez en tres corridas, y NO se pudo reproducir a voluntad:
- * forzar un desfase de un segundo en `inDays` no lo dispara, probablemente
- * porque el mock del usuario y la aserción se mueven juntos. Así que esto no es
- * «el arreglo del flake demostrado»: es congelar el reloj porque un test de
- * fechas no debería depender de cuándo se ejecuta, y eso vale por sí solo.
- * Si el rojo vuelve a aparecer, la causa está en otro lado y hay que buscarla
- * con el fallo en la mano, no con esta teoría.
+ * No es que las dos llamadas a `Date.now()` caigan en segundos distintos por
+ * azar: aisladas, 0 de 200.000 comparaciones difieren. Lo que las separa es el
+ * `await` que hay EN MEDIO — producción calcula la fecha al procesar el webhook,
+ * el test la compara después de esperarlo. Medido con esperas crecientes:
+ *
+ *     await de   1 ms  →   0 de 40 fallan
+ *     await de  20 ms  →   1 de 40   (3%)
+ *     await de 120 ms  →   5 de 40  (13%)
+ *     await de 600 ms  →  24 de 40  (60%)
+ *
+ * Con 3.741 casos corriendo, ese await se estira y cruza el límite del segundo
+ * cada tanto. Por eso el rojo aparecía una vez de cada tres corridas y no se
+ * podía reproducir a mano: sin `await` de por medio no se dispara nunca.
+ *
+ * Congelar `Date` lo elimina por construcción: no hay tiempo que transcurra
+ * entre los dos puntos.
  */
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] })

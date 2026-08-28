@@ -556,6 +556,32 @@ export function hardCodedFactKind(
  * y falla cuando aparece uno sin declararla.
  */
 
+/**
+ * ── LO QUE ESTE GUARD NO PUEDE CAZAR, Y POR QUÉ NO SE INTENTA (medido 2026-08-27)
+ *
+ * Caza lo VERIFICABLE: una cifra, una marca, un placeholder. No caza un
+ * complemento agregado —«Led the weekly count for a team of 11» → «… across store
+ * stockrooms and sales floor areas»—, que apareció en la medición sobre CVs bien
+ * escritos y el rubric marcó como invención.
+ *
+ * La tentación es una vara de «palabras concretas que no están en el CV». SE
+ * MIDIÓ, con los casos reales:
+ *
+ *   caso gris                     6 palabras nuevas  → rechazado
+ *   «concilié efectivo, comprobantes y movimientos»  7 nuevas → rechazado
+ *   «recibí consultas sobre operaciones de caja»     9 nuevas → rechazado
+ *
+ * Los dos últimos son EL VALOR QUE EL PRODUCTO COBRA: medidos, llevan la línea de
+ * -2 a 2 y de 0 a 2. Una vara así rechaza los tres por igual, porque enriquecer
+ * con el vocabulario del oficio y afirmar un hecho nuevo se ven idénticos contando
+ * palabras. Cerrarlo por ahí no arregla el 3%: rompe el 97%.
+ *
+ * La distinción es SEMÁNTICA —«en qué consiste el trabajo» vs «qué hizo ESTA
+ * persona»— y su lugar es donde ya está: la doctrina en el prompt. Este guard
+ * cubre lo que se puede verificar sin juicio; lo demás no es un hueco de código,
+ * es el borde del método. Si mañana alguien vuelve con la idea, esta medición ya
+ * está hecha.
+ */
 export function hasHardCodedFact(text: string, sourceContext: string): boolean {
   // UN SOLO JUEZ para «¿trae un dato fabricado?». Antes esta función tenía lógica
   // propia y NO coincidía con hardCodedFactKind (le faltaba namesUndeclaredSystem):
