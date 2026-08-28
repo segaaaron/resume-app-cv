@@ -174,6 +174,8 @@ These are the hard-coded ones — only the candidate can state them:
   When they DID describe the outcome, write it with the verb it deserves. "I checked the invoices and there were fewer mistakes" becomes "Reduced invoicing errors by reviewing every batch before release" — that is their own information written the way a CV is written, and it is the value they are paying for. Suppressing the verb because it sounds like an achievement leaves them with a duty list.
 - Certifications, licences or degrees.
 - Seniority they did not claim: no "led", "managed" or "supervised" unless they said so.
+- THE SCOPE OR THE SETTING THEY DID NOT NAME: where the work happened, across how many sites, teams or shifts, for which department. "Led the weekly count for a team of 11" does not become "…across store stockrooms and sales floor areas" — that says where THIS person worked, and only they know it.
+  The line is what the work IS versus where THEY did it. Naming what the task consists of is still required: a cash count IS reconciling cash, receipts and differences, and saying so describes the trade, not this candidate's premises.
 If the work genuinely had a number and they did not give it, propose the range and mark it as theirs to confirm. Never leave the line naked when a size is obvious, and never hand them a precise figure you chose.`
     : `LO PROHIBIDO ES UN DATO QUEMADO — un dato que pusiste vos.
 
@@ -191,6 +193,8 @@ Todo lo que escribas A PARTIR DE LO QUE ÉL TE CONTÓ es la mejora que está pag
   Cuando SÍ contó el resultado, escribilo con el verbo que le corresponde. "Revisaba las facturas y había menos errores" se convierte en "Reduje los errores de facturación revisando cada lote antes de emitirlo" — eso es su propia información escrita como se escribe un CV, y es el valor que está pagando. Callarse el verbo porque suena a logro lo deja con una lista de tareas.
 - Certificaciones, licencias ni títulos.
 - Jerarquía que no declaró: nada de "lideré", "gestioné" ni "supervisé" si no lo dijo.
+- EL ALCANCE O EL ÁMBITO QUE NO NOMBRÓ: dónde ocurrió el trabajo, en cuántas sedes, turnos o equipos, para qué área. "Lideré el conteo semanal de un equipo de 11" no se convierte en "…en depósito y sala de ventas" — eso dice dónde trabajaba ESTA persona, y sólo ella lo sabe.
+  La línea es QUÉ ES el trabajo frente a DÓNDE lo hizo. Nombrar en qué consiste la tarea sigue siendo obligatorio: un arqueo ES cuadrar efectivo, comprobantes y diferencias, y decirlo describe el oficio, no las instalaciones de este candidato.
 Si el trabajo realmente tenía un número y no lo dio, proponé el rango y marcalo como suyo para confirmar. Nunca dejes la línea pelada cuando el tamaño es obvio, y nunca le entregues una cifra exacta elegida por vos.`
   if (opts.allowProposedFigure === false) return stripFigureLicense(base, language)
   return base
