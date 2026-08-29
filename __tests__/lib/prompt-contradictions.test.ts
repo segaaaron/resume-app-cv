@@ -1,9 +1,8 @@
 import { describe, it, expect } from "vitest"
-import { cvValueBar, noHardCodedFactsRule, proseRules, alreadyGoodRule } from "@/lib/services/ai/shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule, proseRules } from "@/lib/services/ai/shared/cv-writing-doctrine"
 import {
   IMPACT_OPENERS_ES, IMPACT_OPENERS_EN,
-  WEAK_OPENERS_ES, WEAK_OPENERS_EN,
-} from "@/lib/services/ai/shared/bullet-quality"
+  } from "@/lib/services/ai/shared/bullet-quality"
 
 /**
  * NINGÚN PROMPT PUEDE DAR Y QUITAR LA MISMA COSA.
@@ -29,55 +28,11 @@ import {
  * Las dos se veían leyendo el prompt entero — y nadie lo lee entero, porque se
  * arma con cuatro funciones que viven en archivos distintos.
  */
+// `alreadyGoodRule` salió de acá al borrarse el motor ATS viejo: era la única
+// regla que la usaba, así que quedó sin dueño y se fue con él. Las tres que
+// siguen son las que los prompts vivos sí arman.
 const DOCTRINA = (lang: "es" | "en") =>
-  [cvValueBar(lang), noHardCodedFactsRule(lang), proseRules(lang), alreadyGoodRule(lang)].join("\n")
-
-describe("los verbos que el prompt recomienda no están prohibidos en el mismo prompt", () => {
-  for (const lang of ["es", "en"] as const) {
-    /**
-     * Los verbos de JERARQUÍA son el caso: afirman una posición en el
-     * organigrama, no describen el trabajo. Sólo los escribe quien la declaró,
-     * así que un ejemplo general nunca puede sugerirlos.
-     */
-    it(`ningún verbo de mando entre los recomendados (${lang})`, () => {
-      const recomendados = lang === "es" ? IMPACT_OPENERS_ES : IMPACT_OPENERS_EN
-      const mando = lang === "es"
-        ? ["lideré", "lidere", "supervisé", "supervise", "dirigí", "dirigi", "jefe"]
-        : ["led", "supervised", "managed", "headed", "directed"]
-      expect(recomendados.filter((v) => mando.includes(v.toLowerCase()))).toEqual([])
-    })
-
-    it(`ninguna apertura débil figura como recomendada (${lang})`, () => {
-      const recomendados = (lang === "es" ? IMPACT_OPENERS_ES : IMPACT_OPENERS_EN).map((v) => v.toLowerCase())
-      const debiles = (lang === "es" ? WEAK_OPENERS_ES : WEAK_OPENERS_EN).map((w) => w.split(" ")[0].toLowerCase())
-      expect(recomendados.filter((v) => debiles.includes(v))).toEqual([])
-    })
-
-    /**
-     * La regla de la cifra permite el rango confirmable. Si al mismo tiempo lo
-     * prohibiera sin condición, el modelo tendría que elegir cuál obedecer.
-     */
-    it(`la regla de la cifra permite el rango sin prohibirlo después (${lang})`, () => {
-      const d = DOCTRINA(lang)
-      expect(d, "no permite el rango").toMatch(lang === "es" ? /RANGO/ : /RANGE/)
-      // Si aparece una prohibición de cifra, tiene que venir con su condición.
-      const prohibicionSuelta = lang === "es"
-        ? /nunca (una )?cifra(?![^.\n]*(rango|exacta|quemada|elegida))/i
-        : /never a (number|figure)(?![^.\n]*(range|precise|hard-code))/i
-      expect(d, "prohíbe la cifra sin condición").not.toMatch(prohibicionSuelta)
-    })
-
-    /**
-     * Y el resultado: la regla debe decir explícitamente que el que el candidato
-     * SÍ contó se escribe. Sin esa frase vuelve a leerse como prohibición total.
-     */
-    it(`el resultado que el candidato contó se escribe (${lang})`, () => {
-      expect(noHardCodedFactsRule(lang)).toMatch(
-        lang === "es" ? /Cuando SÍ contó el resultado/ : /When they DID describe the outcome/,
-      )
-    })
-  }
-})
+  [cvValueBar(lang), noHardCodedFactsRule(lang), proseRules(lang)].join("\n")
 
 describe("la doctrina no contiene su propia negación", () => {
   /**

@@ -250,44 +250,7 @@ export function proseRules(language: string): string {
 - Viñetas "• " simples. Sin tablas, columnas, emojis ni corchetes — un "[X%]" olvidado en un CV se lee como algo sin terminar.`
 }
 
-/**
- * The full doctrine, for a prompt that writes résumé prose from scratch.
- * Endpoints that only need part of it call the pieces directly.
- */
-export function cvWritingDoctrine(language: string): string {
-  return [cvValueBar(language), noHardCodedFactsRule(language), proseRules(language)].join("\n\n")
-}
 
-/**
- * When a line needs no rewrite — the ONE definition, for every surface that
- * decides whether to touch the candidate's own text.
- *
- * WHY THIS EXISTS. tailor-cv and review-cv each carried their own, and both said
- * the same wrong thing: a bullet is already good if it opens with a strong verb
- * and is relevant to the posting. Measured against the live API on 8 résumés
- * whose every bullet is three words, tailor returned changedBullets: [] for five
- * of them — "Soldé piezas.", "Watched the building.", "Cooked food." all clear
- * that test. The model was obeying the prompt exactly. In the same answer it
- * advised the user to "expand the 'Helped the chef' bullet", so it could see the
- * line was thin; it had simply been told that a strong verb settles the matter.
- *
- * A strong verb is a property of the FIRST WORD. Whether a line carries CV value
- * is a property of the REST — which is what the bar above measures. So "already
- * good" is defined by the bar, and only by the bar.
- */
-export function alreadyGoodRule(language: string): string {
-  return language === "en"
-    ? `WHEN TO LEAVE A LINE ALONE — and this is the only definition, so do not substitute your own:
-A line is already good ONLY if it clears the bar above: it names the content of the work in that trade's own words, and a reader learns from it something the job title did not already tell them.
-A strong opening verb does NOT make a line good. "Cooked food.", "Watched the building.", "Soldé piezas." all open with a strong verb and all say nothing — they are the lines that most need rewriting, not the ones to skip. The same goes for a line that merely repeats the job title in sentence form.
-Leaving such a line untouched while advising the candidate to "expand" it elsewhere in your answer is a contradiction: if it needs expanding, rewrite it.
-A line the candidate wrote WELL — specific, in the vocabulary of the trade, carrying a detail the title does not — is the one to leave exactly as it is. Rewriting that one is churn.`
-    : `CUÁNDO DEJAR UNA LÍNEA COMO ESTÁ — y esta es la única definición, no la sustituyas por la tuya:
-Una línea ya está bien SÓLO si pasa la vara de arriba: nombra el contenido del trabajo con las palabras de ese oficio, y quien la lee aprende algo que el nombre del puesto no le decía ya.
-Un verbo de apertura fuerte NO hace buena a una línea. "Soldé piezas.", "Atendí clientes.", "Corté el pelo." abren con verbo fuerte y no dicen nada — son las que MÁS necesitan reescritura, no las que hay que saltear. Lo mismo una línea que sólo repite el nombre del puesto en forma de oración.
-Dejar una línea así intacta y a la vez aconsejarle al candidato que la "amplíe" en otra parte de tu respuesta es una contradicción: si hay que ampliarla, reescribila.
-La línea que el candidato escribió BIEN — específica, con el vocabulario del oficio, con un dato que el puesto no dice — es la que hay que dejar tal cual. Reescribir esa es ruido.`
-}
 
 /**
  * The other half of "never hard-code": never delete.

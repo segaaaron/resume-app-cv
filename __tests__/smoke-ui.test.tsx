@@ -4,7 +4,6 @@
 // never touches a component, so the sparse-suggestion UI (a bullet's real index
 // vs its row position) and the chained tailor panel had no coverage at all.
 import { describe, it, expect, vi } from "vitest"
-import { renderToString } from "react-dom/server"
 import { createRoot } from "react-dom/client"
 // Namespace import, not `{ act }`: react is CJS and the named binding stops
 // resolving once the panel graph is in play.
@@ -46,30 +45,10 @@ vi.mock("@/stores/resumeStore", () => ({
 vi.mock("zustand/react/shallow", () => ({ useShallow: (f: unknown) => f }))
 vi.mock("@/components/editor/EditorContext", () => ({ useEditorPro: () => ({ isPro: true, openUpgrade: () => {} }) }))
 
-import ATSScorePanel from "@/components/editor/ATSScorePanel"
 import WorkExperienceSection from "@/components/resume/sections/WorkExperience"
 import SummarySection from "@/components/resume/sections/Summary"
 
 describe("UI smoke", () => {
-  // ATSScorePanel is the whole chained flow: one job-description textarea and the
-  // score. Every other test here mounts a leaf in isolation; this is the only one
-  // that proves the composition itself renders — which is exactly where the
-  // duplicated apply logic hid.
-  it("ATSScorePanel mounts the whole chained flow", () => {
-    const html = mount(<ATSScorePanel />)
-    expect(html).toContain("placeholder")          // the single JD textarea
-    expect((html.match(/<textarea/g) ?? []).length).toBe(1)
-    expect(html).toContain("pro_badge")
-  })
-
-  it("ATSScorePanel shows no tailor section before there is a score", () => {
-    // Tailor's output is part of the report, not a step the user drives: with no
-    // result there is nothing of it to show, and there is no §③ header any more.
-    const html = mount(<ATSScorePanel />)
-    expect(html).not.toContain("cta")
-    expect(html).not.toContain("section_rewrites")
-  })
-
   // The bullet AI was removed from this tab: the ATS panel already rewrites
   // bullets and the assistant writes them, so a third entry point was three
   // places to keep in step. What the section still owes is the form itself.

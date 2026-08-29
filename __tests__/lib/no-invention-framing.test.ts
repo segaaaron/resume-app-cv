@@ -29,8 +29,6 @@ import { join } from "node:path"
  */
 const PROSA = [
   "AIBulletModule",
-  "AITailorModule",
-  "AIReviewModule",
   "AISummaryModule",
   "AICoverLetterModule",
   "AISkillBulletModule",

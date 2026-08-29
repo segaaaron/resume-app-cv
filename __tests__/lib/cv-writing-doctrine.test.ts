@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { IMPACT_OPENERS_ES, opensInThirdPersonEs } from "@/lib/services/ai/shared/bullet-quality"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { cvValueBar, noHardCodedFactsRule, proseRules, alreadyGoodRule, cvWritingDoctrine } from "@/lib/services/ai/shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule, proseRules } from "@/lib/services/ai/shared/cv-writing-doctrine"
 
 /**
  * One bar for every AI surface, and it must not drift.
@@ -22,7 +22,7 @@ const LANGS = ["es", "en"] as const
 
 describe("the CV-writing bar", () => {
   it("exists in both languages, and they are different texts", () => {
-    for (const part of [cvValueBar, noHardCodedFactsRule, proseRules, alreadyGoodRule]) {
+    for (const part of [cvValueBar, noHardCodedFactsRule, proseRules]) {
       const es = part("es")
       const en = part("en")
       expect(es.length).toBeGreaterThan(300)
@@ -90,14 +90,6 @@ describe("the CV-writing bar", () => {
     }
   })
 
-  it("composes into one doctrine that carries all three parts", () => {
-    for (const lang of LANGS) {
-      const all = cvWritingDoctrine(lang)
-      expect(all).toContain(cvValueBar(lang))
-      expect(all).toContain(noHardCodedFactsRule(lang))
-      expect(all).toContain(proseRules(lang))
-    }
-  })
 
   /**
    * A shared bar that nobody imports is a document, not a rule. This reads the
@@ -110,8 +102,6 @@ describe("the CV-writing bar", () => {
       // The four the bar reached on 2026-08-19, each measured against the live API
       // before and after. Listed by name so cutting one is a red test, not a quiet
       // regression back to every endpoint having its own idea of "good".
-      "lib/services/ai/modules/AITailorModule.ts",
-      "lib/services/ai/modules/AIReviewModule.ts",
       "lib/services/ai/modules/AICoverLetterModule.ts",
     ]
     for (const path of users) {
@@ -131,23 +121,7 @@ describe("the CV-writing bar", () => {
    * good", it is the bar, and the two surfaces that decide whether to touch the
    * candidate's text must not carry their own.
    */
-  it("defines 'already good' by the bar, and says a strong verb is not enough", () => {
-    expect(alreadyGoodRule("es")).toMatch(/verbo de apertura fuerte NO hace buena/i)
-    expect(alreadyGoodRule("en")).toMatch(/strong opening verb does NOT make a line good/i)
-  })
 
-  it("keeps the deciding surfaces from re-inventing 'already good'", () => {
-    for (const path of ["lib/services/ai/modules/AITailorModule.ts", "lib/services/ai/modules/AIReviewModule.ts"]) {
-      const src = readFileSync(join(process.cwd(), path), "utf8")
-      // As a CALL in BOTH branches, not as a mention: checked the import only,
-      // this passed with the rule deleted from the Spanish prompt — the import
-      // line kept the name alive. Verified by breaking it on purpose.
-      expect(src, `${path} es`).toMatch(/alreadyGoodRule\("es"\)|alreadyGoodRule\(language\)/)
-      expect(src, `${path} en`).toMatch(/alreadyGoodRule\("en"\)|alreadyGoodRule\(language\)/)
-      // The exact wording that made the model decline to rewrite a worthless line.
-      expect(src, `${path} must not redefine it`).not.toMatch(/already good if it has|ya tiene verbo de acción fuerte y es relevante/)
-    }
-  })
 
   /**
    * The letter is prose, not a bullet list. `proseRules` describes how a CV line

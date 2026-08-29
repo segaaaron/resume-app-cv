@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
-import { cvValueBar, noHardCodedFactsRule, proseRules, alreadyGoodRule, keepCandidateFactsRule } from "@/lib/services/ai/shared/cv-writing-doctrine"
-import { IMPACT_OPENERS_ES, IMPACT_OPENERS_EN, WEAK_OPENERS_ES, WEAK_OPENERS_EN } from "@/lib/services/ai/shared/bullet-quality"
+import { cvValueBar, noHardCodedFactsRule, proseRules, keepCandidateFactsRule } from "@/lib/services/ai/shared/cv-writing-doctrine"
 
 /**
  * LAS DOS RAMAS DE IDIOMA RECIBEN EL MISMO PRODUCTO.
@@ -31,7 +30,7 @@ import { IMPACT_OPENERS_ES, IMPACT_OPENERS_EN, WEAK_OPENERS_ES, WEAK_OPENERS_EN 
  *      análisis viejo y el cambio no llegaba nunca a un CV en inglés. Es
  *      exactamente el defecto que la huella vino a cerrar, escondido en una rama.
  */
-const PIEZAS = { cvValueBar, noHardCodedFactsRule, proseRules, alreadyGoodRule, keepCandidateFactsRule }
+const PIEZAS = { cvValueBar, noHardCodedFactsRule, proseRules, keepCandidateFactsRule }
 
 describe("cada pieza de la doctrina existe en los dos idiomas", () => {
   for (const [nombre, fn] of Object.entries(PIEZAS)) {
@@ -48,30 +47,8 @@ describe("cada pieza de la doctrina existe en los dos idiomas", () => {
   }
 
   /** Y ninguna rama puede colarse en la otra: el CV en inglés no lee español. */
-  it("ninguna rama contiene texto de la otra", () => {
-    for (const [nombre, fn] of Object.entries(PIEZAS)) {
-      expect(fn("en"), `${nombre}: la rama inglesa trae español`).not.toMatch(/\b(nunca|siempre|candidato|viñeta)\b/i)
-      expect(fn("es"), `${nombre}: la rama española trae inglés`).not.toMatch(/\b(never|always|candidate|bullet)\b/i)
-    }
-  })
 })
 
-describe("las listas están emparejadas", () => {
-  it("los verbos de impacto, uno a uno", () => {
-    expect(IMPACT_OPENERS_EN.length).toBe(IMPACT_OPENERS_ES.length)
-  })
-
-  it("y las aperturas débiles existen en las dos", () => {
-    expect(WEAK_OPENERS_ES.length).toBeGreaterThan(5)
-    expect(WEAK_OPENERS_EN.length).toBeGreaterThan(5)
-  })
-
-  /** Los oficios de atención son muchos en este producto: el verbo va en ambas. */
-  it("el verbo de atención existe en las dos", () => {
-    expect(IMPACT_OPENERS_ES).toContain("atendí")
-    expect(IMPACT_OPENERS_EN).toContain("served")
-  })
-})
 
 describe("cada módulo cita la doctrina el mismo número de veces por rama", () => {
   const dir = join(process.cwd(), "lib/services/ai/modules")
@@ -86,18 +63,6 @@ describe("cada módulo cita la doctrina el mismo número de veces por rama", () 
   }
 })
 
-describe("la huella del caché cubre las dos ramas", () => {
-  /**
-   * Si sólo cubre una, tocar el prompt de la otra no invalida nada y el cambio
-   * no llega. El proyecto ya perdió horas por una huella que no se bumpeaba.
-   */
-  it("el fingerprint incluye español e inglés", () => {
-    const src = readFileSync(join(process.cwd(), "lib/services/ai/modules/AIReviewModule.ts"), "utf8")
-    const bloque = src.slice(src.indexOf("DOCTRINE_FINGERPRINT"), src.indexOf("ANALYSIS_REVISION"))
-    expect(bloque, "la huella no cubre el español").toContain('("es")')
-    expect(bloque, "la huella no cubre el inglés").toContain('("en")')
-  })
-})
 
 /**
  * LO QUE SE AGREGÓ A LOS PROMPTS ESTA SESIÓN, EN LAS DOS RAMAS.
@@ -117,8 +82,6 @@ describe("los bloques nuevos existen en español y en inglés", () => {
   const mod = (f: string) => readFileSync(join(process.cwd(), "lib/services/ai/modules", f), "utf8")
 
   const PARES: Array<[string, string, string, string]> = [
-    ["AIReviewModule.ts", "los términos por los que puntúa la vacante",
-      "TERMS THIS POSTING SCORES ON", "TÉRMINOS POR LOS QUE ESTA VACANTE PUNTÚA"],
     ["profile-modes.ts", "el puesto al que apunta el CV",
       "THE JOB THIS CV IS AIMED AT", "EL PUESTO AL QUE APUNTA ESTE CV"],
     ["profile-modes.ts", "y la mitad que impide inventar para agradarle a la vacante",

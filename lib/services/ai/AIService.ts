@@ -10,10 +10,8 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 
 import { AIBulletModule } from "./modules/AIBulletModule"
 import { AISummaryModule } from "./modules/AISummaryModule"
-import { AIReviewModule } from "./modules/AIReviewModule"
 import { AICoverLetterModule } from "./modules/AICoverLetterModule"
 import { AIProfileModule } from "./modules/AIProfileModule"
-import { AITailorModule } from "./modules/AITailorModule"
 import { AIMergeBulletsModule, type MergeBulletsInput, type MergeBulletsResult } from "./modules/AIMergeBulletsModule"
 import { AISkillBulletModule } from "./modules/AISkillBulletModule"
 import { AITranslateModule } from "./modules/AITranslateModule"
@@ -21,9 +19,6 @@ import { AIImportModule, type ImportExtractInput } from "./modules/AIImportModul
 import type { ResumeSections } from "@/types/resume"
 
 import type {
-  ATSScoreInput,
-  ATSScoreResult,
-  ATSRescoreInput,
   BulletResult,
   CoverLetterResult,
   FillProfileInput,
@@ -32,10 +27,6 @@ import type {
   GenerateSummaryInput,
   ImproveBulletInput,
   ImproveCoverLetterInput,
-  ReviewCVInput,
-  ReviewCVResult,
-  TailorCVInput,
-  TailorCVResultV2,
   SkillBulletInput,
   SkillBulletResult,
   TranslateCVInput,
@@ -47,22 +38,15 @@ import type {
 export type {
   VersionsResult,
   BulletResult,
-  ATSScoreResult,
   CoverLetterResult,
   SkillItem,
-  ReviewCVResult,
   FillProfileResult,
   ImproveBulletInput,
   GenerateSummaryInput,
   ImproveSummaryInput,
-  ATSScoreInput,
-  ATSRescoreInput,
   GenerateCoverLetterInput,
   ImproveCoverLetterInput,
-  ReviewCVInput,
   FillProfileInput,
-  TailorCVInput,
-  TailorCVResultV2,
   TranslateCVInput,
   TranslateCVResult,
 } from "./shared/ai-types"
@@ -70,10 +54,8 @@ export type {
 export class AIService {
   private readonly bulletModule: AIBulletModule
   private readonly summaryModule: AISummaryModule
-  private readonly reviewModule: AIReviewModule
   private readonly coverLetterModule: AICoverLetterModule
   private readonly profileModule: AIProfileModule
-  private readonly tailorModule: AITailorModule
   private readonly skillBulletModule: AISkillBulletModule
   private readonly mergeBulletsModule: AIMergeBulletsModule
   private readonly translateModule: AITranslateModule
@@ -82,10 +64,8 @@ export class AIService {
   constructor(aiClient: IAIClient, logger: ILogger) {
     this.bulletModule = new AIBulletModule(aiClient, logger)
     this.summaryModule = new AISummaryModule(aiClient, logger)
-    this.reviewModule = new AIReviewModule(aiClient, logger)
     this.coverLetterModule = new AICoverLetterModule(aiClient, logger)
     this.profileModule = new AIProfileModule(aiClient, logger)
-    this.tailorModule = new AITailorModule(aiClient, logger)
     this.skillBulletModule = new AISkillBulletModule(aiClient, logger)
     this.mergeBulletsModule = new AIMergeBulletsModule(aiClient, logger)
     this.translateModule = new AITranslateModule(aiClient, logger)
@@ -107,21 +87,6 @@ export class AIService {
     return this.summaryModule.generateSummary(userId, input, plan)
   }
 
-  atsScore(
-    userId: string,
-    input: ATSScoreInput,
-    plan: string,
-    /** Ver `AIReviewModule.atsScore`: el informe sin el veredicto, apenas está. */
-    onFirstAct?: (parcial: ATSScoreResult) => void,
-  ): Promise<ATSScoreResult> {
-    return this.reviewModule.atsScore(userId, input, plan, onFirstAct)
-  }
-
-  /** Deterministic re-score (no LLM, no quota) — reuses keywords from a prior atsScore. */
-  atsRescore(input: ATSRescoreInput): ATSScoreResult {
-    return this.reviewModule.atsRescore(input)
-  }
-
   generateCoverLetter(userId: string, input: GenerateCoverLetterInput, plan: string): Promise<CoverLetterResult> {
     return this.coverLetterModule.generateCoverLetter(userId, input, plan)
   }
@@ -130,18 +95,10 @@ export class AIService {
     return this.coverLetterModule.improveCoverLetter(userId, input, plan)
   }
 
-  reviewCV(userId: string, input: ReviewCVInput, plan: string): Promise<ReviewCVResult> {
-    return this.reviewModule.reviewCV(userId, input, plan)
-  }
-
   fillProfile(userId: string, input: FillProfileInput, plan: string): Promise<FillProfileResult> {
     return this.profileModule.fillProfile(userId, input, plan)
   }
 
-
-  tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResultV2> {
-    return this.tailorModule.tailorCV(userId, input, plan)
-  }
 
   /** Weave a skill the candidate already has into one bullet of the best-fit job. */
   weaveSkillBullet(userId: string, input: SkillBulletInput, plan: string): Promise<SkillBulletResult> {

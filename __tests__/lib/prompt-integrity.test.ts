@@ -15,7 +15,6 @@ describe("los mensajes system existen en los dos idiomas", () => {
     "AICoverLetterModule.ts",
     "AIProfileModule.ts",
     "AISummaryModule.ts",
-    "AIReviewModule.ts",
   ]
 
   it.each(CON_SYSTEM_BILINGUE)("%s no deja ningún system solo en español", (file) => {
@@ -62,7 +61,7 @@ describe("improve-bullet no se contradice en el reintento", () => {
 // La oferta la escribe un desconocido y el usuario la pega. Un delimitador dice dónde
 // empieza el texto, no que no haya que obedecerlo.
 describe("todo prompt que lee la oferta se defiende de la inyección", () => {
-  it.each(["AITailorModule.ts", "AIReviewModule.ts", "AICoverLetterModule.ts"])(
+  it.each(["AICoverLetterModule.ts"])(
     "%s trae el guard en las DOS ramas",
     (file) => {
       const src = read(file)

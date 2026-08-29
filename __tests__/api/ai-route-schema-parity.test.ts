@@ -21,16 +21,12 @@ import { join } from "node:path"
  */
 
 const ROUTE_TO_INPUT: Record<string, string> = {
-  "ats-rescore": "ATSRescoreInput",
-  "ats-score": "ATSScoreInput",
   "fill-profile": "FillProfileInput",
   "generate-cover-letter": "GenerateCoverLetterInput",
   "generate-summary": "GenerateSummaryInput",
   "improve-bullet": "ImproveBulletInput",
   "improve-cover-letter": "ImproveCoverLetterInput",
-  "review-cv": "ReviewCVInput",
   "skill-bullet": "SkillBulletInput",
-  "tailor-cv": "TailorCVInput",
 }
 
 /**
@@ -98,10 +94,16 @@ describe("AI route schemas accept every field their module reads", () => {
     // A new route added without a mapping here would silently escape the guard.
     const mapped = Object.keys(ROUTE_TO_INPUT)
     expect(mapped).toContain("generate-cover-letter")
-    // 10 desde que se borró `improve-summary` (2026-08-22): ninguna pantalla lo
-    // llamaba y el resumen lo reescribe el ejecutor, que además sabe qué pide la
-    // vacante. El número está clavado a propósito — que baje tiene que ser una
-    // decisión, no un descuido.
-    expect(mapped.length).toBeGreaterThanOrEqual(10)
+    // 6 desde que el CEO ordenó borrar el motor ATS viejo (2026-08-28): se
+    // fueron `ats-score`, `ats-rescore`, `review-cv` y `tailor-cv` con el panel
+    // que los llamaba. Ninguna pantalla los usaba ya.
+    //
+    // El motor v3 (`/api/ai/ats3`) NO entra en esta tabla a propósito: su
+    // entrada la declara un esquema Zod en la propia ruta, no un tipo de módulo,
+    // así que no hay dos declaraciones que puedan discrepar — que es justo lo
+    // que este guard existe para cazar.
+    //
+    // El número sigue clavado: que baje tiene que ser una decisión, no un descuido.
+    expect(mapped.length).toBeGreaterThanOrEqual(6)
   })
 })

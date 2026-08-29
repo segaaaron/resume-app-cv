@@ -35,8 +35,7 @@ import { readFileSync } from "node:fs"
  * que sí es estable: que no exista el campo. Muerde por construcción: reponer
  * `private spent = false` en cualquiera de los módulos pone esto en rojo.
  */
-const MODULOS = [
-  "AIReviewModule", "AITailorModule", "AIBulletModule", "AISummaryModule",
+const MODULOS = [ "AIBulletModule", "AISummaryModule",
   "AICoverLetterModule", "AIProfileModule", "AISkillBulletModule",
   "AIMergeBulletsModule", "AIImportModule", "AITranslateModule",
 ]

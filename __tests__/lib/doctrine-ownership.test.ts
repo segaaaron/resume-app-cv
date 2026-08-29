@@ -30,8 +30,6 @@ import { cvValueBar, noHardCodedFactsRule, proseRules } from "@/lib/services/ai/
  */
 const MODULES = [
   "lib/services/ai/modules/AIBulletModule.ts",
-  "lib/services/ai/modules/AITailorModule.ts",
-  "lib/services/ai/modules/AIReviewModule.ts",
 ]
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8")
@@ -114,8 +112,6 @@ describe("la doctrina misma es genérica", () => {
  */
 const TODOS_LOS_QUE_ESCRIBEN = [
   "lib/services/ai/modules/AIBulletModule.ts",
-  "lib/services/ai/modules/AITailorModule.ts",
-  "lib/services/ai/modules/AIReviewModule.ts",
   "lib/services/ai/modules/AISummaryModule.ts",
   "lib/services/ai/modules/AIMergeBulletsModule.ts",
   "lib/services/ai/modules/AISkillBulletModule.ts",

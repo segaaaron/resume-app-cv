@@ -1,8 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { losesStatedFigure } from "@/lib/services/ai/shared/ai-helpers"
-import { AIService } from "@/lib/services/ai/AIService"
-import type { IAIClient, ChatCompletion } from "@/lib/interfaces/IAIClient"
-import type { ILogger } from "@/lib/interfaces/ILogger"
 
 /**
  * A rewrite must never delete the number the candidate earned.
@@ -40,13 +37,6 @@ vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({
   refundDailyQuota: vi.fn().mockResolvedValue(undefined),
 }))
 
-function completion(content: string): ChatCompletion {
-  return {
-    id: "t", object: "chat.completion", created: 0, model: "gpt-4o-mini",
-    choices: [{ index: 0, message: { role: "assistant", content, refusal: null }, finish_reason: "stop", logprobs: null }],
-    usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
-  } as ChatCompletion
-}
 
 describe("losesStatedFigure", () => {
   it("catches the measured case: a richer line with the numbers rubbed out", () => {
@@ -124,56 +114,6 @@ describe("losesStatedFigure", () => {
   })
 })
 
-describe("tailor-cv drops a rewrite that deletes the candidate's figure", () => {
-  let logger: ILogger
-  beforeEach(() => { logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }; vi.clearAllMocks() })
-
-  const SECTIONS = {
-    summary: "Registered nurse with 9 years in emergency care.",
-    workExperience: [{
-      id: "n1", jobTitle: "Charge Nurse", employer: "Hospital Viedma",
-      description: "• Cut medication errors from 12 to 3 per month across two wards\n• Coordinated triage for up to 30 patients per shift",
-    }],
-    skills: [{ name: "Triage" }],
-  }
-
-  const POSTING = { jobTitle: "Charge Nurse", hardSkills: ["triage"], softSkills: [], mustHaves: [] }
-  const WORK = [
-    { checkId: "b0", targetId: "n1", index: 0, reason: "no_metric" as const },
-    { checkId: "b1", targetId: "n1", index: 1, reason: "no_metric" as const },
-  ]
-
-  function serviceReturning(rewrites: { checkId: string; text: string }[]) {
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({ summary: null, rewrites })))
-    return { service: new AIService({ chat, embed: vi.fn() } as IAIClient, logger), chat }
-  }
-
-  it("drops the figure-losing rewrite and keeps the one that preserved it", async () => {
-    const { service } = serviceReturning([
-      // Loses 12 and 3 — exactly the measured failure.
-      { checkId: "b0", text: "• Reduced medication errors by reconciling prescriptions and administered doses across two wards." },
-      // Keeps 30 and adds the trade's content.
-      { checkId: "b1", text: "• Coordinated triage for up to 30 patients per shift, routing by acuity under the department's escalation protocol." },
-    ])
-    const r = await service.tailorCV("u1", { sectionData: SECTIONS, language: "en", posting: POSTING, workload: WORK }, "PRO")
-
-    const kept = r.rewrites.map((b) => b.text)
-    expect(kept).toHaveLength(1)
-    expect(kept[0]).toContain("30 patients per shift")
-  })
-
-  it("drops a tailored summary that deletes a figure the summary stated", async () => {
-    const withFigures = { ...SECTIONS, summary: "Registered nurse with 9 years in emergency care. Triaged up to 30 patients per shift and trained 6 new hires." }
-    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
-      summary: "Registered nurse with emergency experience coordinating triage, handover and medication safety across busy wards.",
-      rewrites: [],
-    })))
-    const r = await new AIService({ chat, embed: vi.fn() } as IAIClient, logger)
-      .tailorCV("u1", { sectionData: withFigures, language: "en", posting: POSTING, workload: WORK, rewriteSummary: true }, "PRO")
-
-    expect(r.summary).toBeNull()
-  })
-})
 
 /**
  * EL ID PREFIJADO YA NO PUEDE PASAR.

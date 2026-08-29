@@ -14,7 +14,6 @@ vi.mock("@/lib/ai-client", () => ({
 vi.mock("@/lib/ai-safety", () => ({ validateAIInput: () => ({ valid: true }) }))
 
 import { AIBulletModule } from "@/lib/services/ai/modules/AIBulletModule"
-import { AITailorModule } from "@/lib/services/ai/modules/AITailorModule"
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
@@ -52,28 +51,3 @@ describe("cosmetic-reword guard — improve-bullet", () => {
   })
 })
 
-describe("cosmetic-reword guard — tailor-cv", () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it("drops a cosmetic summary and a cosmetic bullet reword", async () => {
-    const sectionData = {
-      summary: "Enhanced app performance and user experience across releases.",
-      workExperience: [{ id: "w1", jobTitle: "iOS Dev", employer: "Acme", description: "• Integrated RESTful APIs to enhance iOS app functionality." }],
-      skills: [],
-    }
-    const chat = chatReturning({
-      summary: "Improved app performance and user experience across releases.",
-      rewrites: [{ checkId: "c1", text: "• Integrated RESTful APIs to improve iOS app functionality." }],
-    })
-    const mod = new AITailorModule({ chat } as never, logger as never)
-    const res = await mod.tailorCV("u1", {
-      sectionData,
-      language: "en",
-      posting: { jobTitle: "iOS Developer", hardSkills: ["Swift", "REST APIs"], softSkills: [], mustHaves: [] },
-      workload: [{ checkId: "c1", targetId: "w1", index: 0, reason: "weak_verb" }],
-      rewriteSummary: true,
-    }, "PRO")
-    expect(res.summary).toBeNull()
-    expect(res.rewrites).toHaveLength(0)
-  })
-})
