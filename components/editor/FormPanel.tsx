@@ -6,7 +6,7 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import SectionBlock, { SectionDropdownProvider } from "./SectionBlock"
 import DesignPanel from "./DesignPanel"
-import ATSScorePanel from "./ATSScorePanel"
+import Ats3Panel from "./ats3/Ats3Panel"
 import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
 import CVCompletenessWidget from "./CVCompletenessWidget"
@@ -210,7 +210,7 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
 
         <div style={{ ...otherPadStyle, display: activeTab === "ats" ? undefined : "none" }}>
           <AIProGate feature="ATS Checker" endpoint="ats-score">
-            <ATSScorePanel />
+            <Ats3Panel />
           </AIProGate>
         </div>
 

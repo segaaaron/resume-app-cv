@@ -22,6 +22,7 @@ export type AiEndpointName =
   | "generate-cover-letter"
   | "improve-cover-letter"
   | "ats-score"
+  | "ats3"
   | "review-cv"
   | "translate-cv"
 
@@ -35,6 +36,10 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "generate-cover-letter",
   "improve-cover-letter",
   "ats-score",
+  // El motor v3. Hereda EXACTAMENTE lo de "ats-score" en los cinco planes: una
+  // petición, una cuota, el mismo tope diario y las mismas puertas. Ningún plan
+  // gana ni pierde nada por esto — lo que cambia es qué motor contesta.
+  "ats3",
   "review-cv",
   "translate-cv",
 ] as const
@@ -74,6 +79,10 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   // role) and the same PRO/LIMITED-only grant, so no plan gains or loses.
   "merge-bullets": 50,
   "ats-score": 20,
+  // Igual que ats-score, y por la misma razón: una corrida es UNA petición y
+  // una cuota. Con el reembolso por respuesta servida del caché, reanalizar un
+  // CV que no cambió no gasta ranura, porque no gasta una llamada.
+  "ats3": 20,
   "review-cv": 10,
   // 3/day: translation is idempotent (a CV is translated once and the copy is
   // reused); this cap only bites the re-do case (user deleted the copy).
@@ -292,6 +301,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": -1,
+      "ats3": -1,
       "review-cv": -1,
       "translate-cv": -1,
     },
@@ -314,6 +324,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "generate-cover-letter": 0,
       "improve-cover-letter": 0,
       "ats-score": 0,
+      "ats3": 0,
       "review-cv": 0,
       "translate-cv": 0,
     },
@@ -334,6 +345,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "generate-cover-letter": 0,
       "improve-cover-letter": 0,
       "ats-score": 0,
+      "ats3": 0,
       "review-cv": 0,
       "translate-cv": 0,
     },
@@ -352,6 +364,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": 0,
+      "ats3": 0,
       "review-cv": 0,
       "translate-cv": 0,
     },
@@ -369,6 +382,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": -1,
+      "ats3": -1,
       "review-cv": -1,
       "translate-cv": -1,
     },

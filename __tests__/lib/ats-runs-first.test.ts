@@ -26,6 +26,7 @@ import { join } from "node:path"
 
 /** Cómo consulta al ATS cada llamada. Una entrada por endpoint, con su razón. */
 const COMO_CONSULTA_AL_ATS: Record<string, { modo: "termsInBody" | "esElATS" | "noEscribeEnElCV" | "previoAlAnalisis"; razon: string }> = {
+  "ats3": { modo: "esElATS", razon: "ES el motor: analiza y reescribe por el mismo borde" },
   "ats-score": { modo: "esElATS", razon: "es el análisis" },
   "ats-rescore": { modo: "esElATS", razon: "rehace el puntaje sin modelo" },
   "review-cv": { modo: "esElATS", razon: "la lectura del reclutador, parte del análisis" },
@@ -33,7 +34,6 @@ const COMO_CONSULTA_AL_ATS: Record<string, { modo: "termsInBody" | "esElATS" | "
   "improve-bullet": { modo: "termsInBody", razon: "reescribe una viñeta contra los términos del informe" },
   "merge-bullets": { modo: "termsInBody", razon: "fusiona dos líneas sin soltar un término de la vacante" },
   "skill-bullet": { modo: "termsInBody", razon: "la habilidad que escribe VIENE de la vacante: el término es el pedido" },
-  "ats-safe-export": { modo: "noEscribeEnElCV", razon: "exporta el archivo, no toca el contenido" },
   "fill-profile": { modo: "previoAlAnalisis", razon: "el asistente llena el CV antes de que exista una vacante; cuando existe, la recibe" },
   "generate-summary": { modo: "previoAlAnalisis", razon: "mismo caso que fill-profile" },
 }
@@ -54,7 +54,10 @@ for (const f of [...archivos("components/editor"), ...archivos("components/resum
 
 describe("toda llamada de IA del editor declara cómo consulta al ATS", () => {
   it("hay llamadas que revisar", () => {
-    expect(llamadas.size).toBeGreaterThan(6)
+    // No se ata un número: el número se movió al borrar el panel viejo y el
+    // test se quejaría del número correcto. Lo que importa es que HAYA llamadas
+    // que revisar — si no hubiera ninguna, el guard no estaría guardando nada.
+    expect(llamadas.size).toBeGreaterThan(0)
   })
 
   it("ninguna llamada queda sin declarar", () => {
