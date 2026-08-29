@@ -45,7 +45,7 @@ import {
 } from "@/lib/ats3/contracts"
 import { afterAccept, ledgerSignature, openLedger, releaseOpener, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
 import { checkSuggestion, findNode, isStale, loyalty, retryNudge, type GuardVerdict } from "@/lib/ats3/guards"
-import { deltaOf, gainOf, scoreResume, statesQuantity, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
+import { deltaOf, gainOf, postingWeights, scoreResume, statesQuantity, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUERTOS
@@ -437,10 +437,37 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
   const enLista = new Set<string>()
   for (const s of tree.declaredSkills) for (const t of termsIn(index, s)) enLista.add(normalize(t))
   for (const c of audit.coverage) {
-    if (c.status !== "FOUND" || !c.evidenceNodeId) continue
+    /**
+     * FOUND e IMPLIED, las dos.
+     *
+     * FOUND es "lo dice con palabras que un lector literal reconoce"; IMPLIED es
+     * "el trabajo lo demuestra pero el CV no lo NOMBRA". El segundo es el caso
+     * que más pierde: la persona lo hace, el filtro no lo ve, y escribir el
+     * término en Habilidades es exactamente lo que lo arregla. Lo que NO se
+     * ofrece es un requisito NOT_FOUND: agregar una habilidad que no tiene es
+     * mentir en su CV.
+     */
+    if ((c.status !== "FOUND" && c.status !== "IMPLIED") || !c.evidenceNodeId) continue
     if (enLista.has(normalize(c.skill))) continue
     // Lo cierra AGREGARLO A LA LISTA, no reescribir la viñeta que ya lo prueba.
     push("skill_not_listed", "must", c.evidenceNodeId, textOf(tree, c.evidenceNodeId), 0, c.skill, "add_skill", c.skill)
+  }
+
+  /**
+   * LA BLANDA QUE SE DECLARA Y NADA RESPALDA.
+   *
+   * La auditoría ya la juzga: DECLARED_ONLY es "aparece como adjetivo o en una
+   * lista, sin ningún logro detrás" — la lista de adjetivos que todo reclutador
+   * saltea. Hasta ahora se veía en la tabla y no tenía salida.
+   *
+   * Su remedio no es tocar la lista: es DEMOSTRARLA en una línea, y el motor ya
+   * sabe elegir cuál encaja mejor. No suma puntos porque las blandas no entran
+   * al puntaje, y la tarjeta lo dice.
+   */
+  for (const s of audit.softCoverage) {
+    if (s.status !== "DECLARED_ONLY") continue
+    const donde = bestHomeFor(tree, s.signal, index)
+    push("soft_not_shown", "xyz", donde, textOf(tree, donde), 0, s.signal, "weave", s.signal)
   }
 
   const summaryGaps = [
@@ -534,7 +561,7 @@ export type Act =
    * cero lógica de puntaje en la interfaz, y ningún número que el código no
    * pueda probar.
    */
-  | { act: "score"; score: Score; tree: ResumeTree; audit: AuditFacts; checks: ParseChecks }
+  | { act: "score"; score: Score; tree: ResumeTree; audit: AuditFacts; checks: ParseChecks; weights: Record<string, number> }
   | { act: "job"; spec: JobSpec }
   /** Lo que la vacante pide y el CV ya demuestra: guía dónde gastar términos. */
   | { act: "covered"; terms: string[] }
@@ -592,8 +619,15 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   // documento renderizado. El cliente gana: si midió el PDF de verdad, esa
   // medición vale más que una derivada de los datos.
   const checks = { ...readableChecks(tree), ...input.checks }
-  const score = scoreResume(tree, spec, audit, checks)
-  yield { act: "score", score, tree, audit, checks }
+  /**
+   * Los pesos salen del TEXTO del aviso, no del modelo: la misma vacante da
+   * siempre el mismo peso. Viajan con el puntaje porque la pantalla vuelve a
+   * medir al aplicar y no recibe el aviso — un puntaje que cambia según quién
+   * lo calcula es peor que uno más grueso.
+   */
+  const weights = postingWeights(spec, input.jdText)
+  const score = scoreResume(tree, spec, audit, checks, weights)
+  yield { act: "score", score, tree, audit, checks, weights }
   yield { act: "job", spec }
   yield {
     act: "covered",

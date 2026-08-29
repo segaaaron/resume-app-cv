@@ -500,6 +500,7 @@ export const FINDING_TYPES = [
   "parse_risk", // algo que un lector automático no va a extraer bien
   "buried_term", // lo demuestra, pero en un puesto viejo: el lector no llega
   "skill_not_listed", // lo demuestra en una línea y no está en Habilidades
+  "soft_not_shown", // la vacante la pide, el CV la declara y nada la respalda
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
 

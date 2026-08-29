@@ -808,4 +808,52 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     // Ids distintos: dos tarjetas con el mismo id se aplican sobre la equivocada.
     expect(new Set(sinListar.map((f) => f.id)).size).toBe(2)
   })
+
+  it("la blanda que se declara y nada respalda tiene salida: demostrarla", () => {
+    // Es la lista de adjetivos que todo reclutador saltea. Su remedio no es
+    // tocar la lista: es demostrarla en una línea, y el motor elige cuál.
+    const t = arbol()
+    const spec = { ...SPEC, mustHave: [], softSignals: ["Trabajo en equipo"] }
+    const index = buildTermIndex(termsOf(spec, t))
+    const audit = {
+      ...facts(t, "x", t.roles[0].bullets[0].id),
+      coverage: [],
+      softCoverage: [{ signal: "Trabajo en equipo", status: "DECLARED_ONLY" as const, evidenceNodeId: null }],
+    }
+    const score = scoreResume(t, spec, audit, {})
+    const blanda = findingsOf(t, spec, audit, score, index).find((f) => f.merged.includes("soft_not_shown"))
+    expect(blanda?.detail).toBe("Trabajo en equipo")
+    expect(blanda?.remedy).toBe("weave")
+    // Las blandas no puntúan: la tarjeta no puede prometer puntos.
+    expect(blanda?.gain).toBe(0)
+  })
+
+  it("lo que el CV demuestra SIN NOMBRARLO también se ofrece para Habilidades", () => {
+    // Es el caso que más pierde: la persona lo hace, el filtro no lo ve.
+    const t = arbol()
+    const actual = t.roles[0].bullets[0].id
+    const spec = { ...SPEC, mustHave: [{ skill: "Medios de pago", raw: "medios de pago", years: null, category: null }] }
+    const index = buildTermIndex(termsOf(spec, t))
+    const audit = {
+      ...facts(t, "Medios de pago", actual),
+      coverage: [{ skill: "Medios de pago", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: actual }],
+    }
+    const score = scoreResume(t, spec, audit, {})
+    const hallazgos = findingsOf(t, spec, audit, score, index)
+    expect(hallazgos.find((f) => f.merged.includes("skill_not_listed"))?.remedy).toBe("add_skill")
+  })
+
+  it("un requisito que el CV NO tiene nunca se ofrece para Habilidades", () => {
+    // Agregar una habilidad que la persona no tiene es mentir en su CV.
+    const t = arbol()
+    const spec = { ...SPEC, mustHave: [{ skill: "SAP", raw: "SAP", years: null, category: null }] }
+    const index = buildTermIndex(termsOf(spec, t))
+    const audit = {
+      ...facts(t, "SAP", t.roles[0].bullets[0].id),
+      coverage: [{ skill: "SAP", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null }],
+    }
+    const score = scoreResume(t, spec, audit, {})
+    const hallazgos = findingsOf(t, spec, audit, score, index)
+    expect(hallazgos.some((f) => f.remedy === "add_skill")).toBe(false)
+  })
 })

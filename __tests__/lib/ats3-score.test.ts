@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
+  postingWeights,
   scoreResume,
   gainOf,
   deltaOf,
@@ -290,4 +291,57 @@ it("una viñeta que la auditoría inventó no entra al puntaje", () => {
   const xyz = (s: ReturnType<typeof scoreResume>) => s.components.find((c) => c.key === "xyz")!
   expect(xyz(scoreResume(tree, spec, conFantasma, CHECKS)).denominator).toBe(2)
   expect(scoreResume(tree, spec, conFantasma, CHECKS).total).toBe(scoreResume(tree, spec, real, CHECKS).total)
+})
+
+describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => {
+  const spec = makeSpec(3, 0)
+  const jd = `Buscamos alguien para ${spec.mustHave[0].raw}.
+    ${spec.mustHave[0].raw} es la tarea central. Se valora ${spec.mustHave[1].raw}.
+    También ${spec.mustHave[2].raw}. Repetimos: ${spec.mustHave[0].raw} todos los días.`
+  const tree = makeTree(3)
+  /**
+   * El fixture compartido usa `titleAlignment: rnd()`, así que dos llamadas
+   * NO son comparables: la primera versión de este caso medía ese ruido y daba
+   * rojo con el código correcto. Acá se fija.
+   */
+  const cubre = (skills: string[]) => ({
+    ...makeAudit(tree, spec, 0, 0),
+    titleAlignment: 1,
+    coverage: spec.mustHave.map((m) => ({
+      skill: m.skill,
+      requirement: "MUST" as const,
+      status: (skills.includes(m.skill) ? "FOUND" : "NOT_FOUND") as "FOUND" | "NOT_FOUND",
+      evidenceNodeId: null,
+    })),
+  })
+
+  it("cubrir lo que el aviso REPITE vale más que cubrir lo que menciona al pasar", () => {
+    // La regla es del CEO: «lo que se repite y lo que abre la descripción pesa
+    // más que lo listado al final». Contarlos por cabeza le dice al candidato
+    // que las dos coberturas valen lo mismo, y no valen lo mismo.
+    const w = postingWeights(spec, jd)
+    const conM0 = scoreResume(tree, spec, cubre([spec.mustHave[0].skill]), CHECKS, w)
+    const conM2 = scoreResume(tree, spec, cubre([spec.mustHave[2].skill]), CHECKS, w)
+    const must = (s: typeof conM0) => s.components.find((c) => c.key === "must")!
+    expect(must(conM0).numerator).toBeGreaterThan(must(conM2).numerator)
+    expect(conM0.total).toBeGreaterThan(conM2.total)
+  })
+
+  it("sin pesos, el puntaje es EXACTAMENTE el de antes", () => {
+    // El re-cálculo instantáneo de la pantalla no recibe el aviso. Un puntaje
+    // que cambia según quién lo calcula es peor que uno más grueso.
+    const cobertura = cubre([spec.mustHave[0].skill])
+    expect(scoreResume(tree, spec, cobertura, CHECKS, {}).total).toBe(
+      scoreResume(tree, spec, cobertura, CHECKS).total,
+    )
+  })
+
+  it("el peso sale del TEXTO, así que la misma vacante da siempre lo mismo", () => {
+    // El orden que devuelve un modelo cambia entre dos lecturas del mismo
+    // aviso: este proyecto ya midió 19 puntos de diferencia por esa vía.
+    expect(postingWeights(spec, jd)).toEqual(postingWeights(spec, jd))
+    expect(postingWeights(spec, jd)[spec.mustHave[0].skill]).toBeGreaterThan(
+      postingWeights(spec, jd)[spec.mustHave[2].skill],
+    )
+  })
 })

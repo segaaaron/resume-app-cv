@@ -257,13 +257,69 @@ function effectiveWeights(raws: RawComponent[]): Map<ComponentKey, number> {
   return out
 }
 
-export function scoreResume(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, checks: ParseChecks): Score {
+/**
+ * CUÁNTO PESA CADA REQUISITO, MEDIDO SOBRE EL PROPIO AVISO.
+ *
+ * ── LA REGLA, DEL CEO ──────────────────────────────────────────────────────
+ * «Lo que se repite y lo que abre la descripción pesa más que lo listado al
+ * final». No todos los requisitos valen igual, y contarlos por cabeza le dice
+ * al candidato que cubrir el que el aviso menciona al pasar vale tanto como
+ * cubrir el que repite cuatro veces.
+ *
+ * ── POR QUÉ SE MIDE ACÁ Y NO SE LE PREGUNTA AL MODELO ──────────────────────
+ * El orden que devuelve un modelo puede cambiar entre dos lecturas del MISMO
+ * aviso, y este proyecto ya midió lo que eso hace: 19 puntos de diferencia en
+ * el mismo CV. Esto se cuenta sobre el texto: la misma vacante da siempre el
+ * mismo peso.
+ *
+ * ── LA ESCALA, Y POR QUÉ ES CORTA ──────────────────────────────────────────
+ * Base 1. Nombrado en el cargo que la vacante busca, +0,5 — es lo que el aviso
+ * pone en el título. Dicho tres veces o más, +0,25. Techo 1,75: una escala
+ * larga convierte el puntaje en una opinión sobre cuánto vale repetir, y lo que
+ * se puede probar es sólo que repetir importa, no cuánto.
+ */
+export function postingWeights(spec: JobSpec, jdText: string): Record<string, number> {
+  const aviso = normalize(jdText)
+  const titulo = normalize(`${spec.roleTitleRaw ?? ""} ${spec.roleTitleCanonical ?? ""}`)
+  const pesos: Record<string, number> = {}
+  for (const r of [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])]) {
+    const aguja = normalize(r.raw || r.skill)
+    if (!aguja) continue
+    let veces = 0
+    for (let i = aviso.indexOf(aguja); i !== -1; i = aviso.indexOf(aguja, i + 1)) veces++
+    let peso = 1
+    if (titulo.includes(aguja)) peso += 0.5
+    if (veces >= 3) peso += 0.25
+    pesos[r.skill] = peso
+  }
+  return pesos
+}
+
+export function scoreResume(
+  tree: ResumeTree,
+  spec: JobSpec,
+  audit: AuditFacts,
+  checks: ParseChecks,
+  /**
+   * El peso de cada requisito. Sin él, todos valen 1 y el puntaje es el de
+   * antes: el re-cálculo instantáneo de la pantalla no recibe el aviso, y un
+   * puntaje que cambia según quién lo calcula es peor que uno más grueso.
+   */
+  termWeights: Record<string, number> = {},
+): Score {
   const checkValues = Object.values(checks).filter((v): v is boolean => v !== null)
 
-  const mustTotal = spec.mustHave.length
-  const niceTotal = spec.niceToHave.length
-  const mustFound = audit.coverage.filter((c) => c.requirement === "MUST" && c.status === "FOUND").length
-  const niceFound = audit.coverage.filter((c) => c.requirement === "NICE" && c.status === "FOUND").length
+  // Cubrir el requisito que el aviso repite vale más que cubrir el que menciona
+  // al pasar. Sin pesos, cada uno vale 1 y esto es la cuenta de siempre.
+  const peso = (skill: string) => termWeights[skill] ?? 1
+  const mustTotal = (spec.mustHave ?? []).reduce((n, r) => n + peso(r.skill), 0)
+  const niceTotal = (spec.niceToHave ?? []).reduce((n, r) => n + peso(r.skill), 0)
+  const mustFound = audit.coverage
+    .filter((c) => c.requirement === "MUST" && c.status === "FOUND")
+    .reduce((n, c) => n + peso(c.skill), 0)
+  const niceFound = audit.coverage
+    .filter((c) => c.requirement === "NICE" && c.status === "FOUND")
+    .reduce((n, c) => n + peso(c.skill), 0)
 
   const bulletTexts = tree.roles.flatMap((r) => r.bullets.map((b) => b.text))
   /**

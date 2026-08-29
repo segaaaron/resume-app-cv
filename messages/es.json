@@ -1762,6 +1762,7 @@
       "type_parse_risk": "difícil de leer",
       "type_buried_term": "Está, pero enterrado en un puesto viejo",
       "type_skill_not_listed": "Lo demostrás y no está en Habilidades",
+      "type_soft_not_shown": "La declarás y ninguna línea la demuestra",
       "type_summary_gap": "resumen incompleto"
     },
     "cv_review": {

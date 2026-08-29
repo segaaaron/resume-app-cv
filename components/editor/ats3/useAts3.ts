@@ -47,6 +47,8 @@ export interface Ats3State {
    */
   audit: AuditFacts | null
   checks: ParseChecks
+  /** El peso de cada requisito, medido sobre el aviso. Sin él, todos valen 1. */
+  weights: Record<string, number>
 }
 
 const EMPTY: Ats3State = {
@@ -61,6 +63,7 @@ const EMPTY: Ats3State = {
   calls: null,
   audit: null,
   checks: {},
+  weights: {},
 }
 
 import type { ResumeSections, WorkExperienceItem } from "@/types/resume"
@@ -191,6 +194,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             score: act.score as Score,
             audit: act.audit as AuditFacts,
             checks: act.checks as ParseChecks,
+            // La pantalla mide con los MISMOS pesos que el motor: si no, el
+            // número cambiaría según quién lo calculó.
+            weights: (act.weights as Record<string, number>) ?? {},
           }))
           break
         case "job": {
@@ -421,7 +427,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * mismo en la misma pantalla.
        */
       if (medido && state.spec && state.audit) {
-        const nuevo = scoreResume(medido.tree, state.spec, state.audit, state.checks)
+        const nuevo = scoreResume(medido.tree, state.spec, state.audit, state.checks, state.weights)
         setState((st) => ({ ...st, score: nuevo }))
       }
       // La línea se retira de las TRES listas que hablan de ella.
@@ -433,7 +439,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       // pedir», que es el bucle que este motor existe para no tener.
       setState((st) => olvidar(st, s.bulletId))
     },
-    [payloadResume, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, updateSectionData],
+    [payloadResume, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, state.weights, updateSectionData],
   )
 
   /**

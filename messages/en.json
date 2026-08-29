@@ -1762,6 +1762,7 @@
       "type_parse_risk": "hard to read",
       "type_buried_term": "It is there, buried in an old role",
       "type_skill_not_listed": "You demonstrate it and it is missing from Skills",
+      "type_soft_not_shown": "You declare it and no line demonstrates it",
       "type_summary_gap": "incomplete summary"
     },
     "cv_review": {
