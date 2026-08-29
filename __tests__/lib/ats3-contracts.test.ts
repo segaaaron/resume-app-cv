@@ -1,15 +1,20 @@
 import { describe, it, expect } from "vitest"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import {
   normalize,
   termKey,
   buildTermIndex,
-  canonicalOf,
   termsIn,
   termPresent,
   roleIdFor,
   bulletIdFor,
   nodeHash,
   findingId,
+  FINDING_TYPES,
+  JobSpecSchema,
+  SuggestionSchema,
+  TriageDecisionSchema,
   type TermVariants,
 } from "@/lib/ats3/contracts"
 
@@ -56,9 +61,12 @@ describe("alias derivados, no curados", () => {
    * funciona igual para "k8s" que para "arqueo de caja" o "soldadura MIG".
    */
   it("reconoce un término por como lo escribió la vacante", () => {
+    // Se prueba con `termsIn`, que es la función que el motor USA de verdad.
+    // `canonicalOf` hacía lo mismo, no lo llamaba nadie en producción y sólo
+    // vivía acá: un test sobre una función que nadie usa no prueba el producto.
     const i = idx([{ canonical: "Kubernetes", variants: ["k8s"] }])
-    expect(canonicalOf(i, "K8S")).toBe("Kubernetes")
-    expect(canonicalOf(i, "kubernetes")).toBe("Kubernetes")
+    expect(termsIn(i, "Migré los servicios a K8S")).toEqual(new Set(["Kubernetes"]))
+    expect(termsIn(i, "Administré kubernetes en producción")).toEqual(new Set(["Kubernetes"]))
   })
 
   it("funciona en un oficio sin una sola palabra técnica", () => {
@@ -66,7 +74,6 @@ describe("alias derivados, no curados", () => {
       { canonical: "Arqueo de caja", variants: ["cuadre de caja", "arqueos"] },
       { canonical: "Soldadura MIG", variants: ["MIG"] },
     ])
-    expect(canonicalOf(i, "Cuadre de Caja")).toBe("Arqueo de caja")
     expect(termsIn(i, "Realicé el cuadre de caja al cierre de cada turno")).toEqual(
       new Set(["Arqueo de caja"]),
     )
@@ -143,5 +150,108 @@ describe("identidad de los nodos", () => {
     const two = findingId("b_abc123", "no_metric")
     expect(one).toBe(two)
     expect(findingId("b_abc123", "no_result")).not.toBe(one)
+  })
+})
+
+/**
+ * EL CONTRATO NO PUEDE CONTRADECIR AL PROMPT.
+ *
+ * Los tres casos de abajo salieron de un 500 en producción (2026-08-29): el
+ * prompt ordena "un campo sin dato va en null, NUNCA se omite", el modelo
+ * obedeció con el cargo del aviso y el esquema tiró la vacante entera.
+ */
+describe("los esquemas del modelo aceptan lo que el prompt pide", () => {
+  const spec = {
+    roleTitleRaw: null,
+    roleTitleCanonical: null,
+  metricThatMatters: "",
+    seniority: null,
+    yearsRequired: null,
+    domain: null,
+    workMode: null,
+    language: "es",
+    mustHave: [{ skill: "Excel", raw: "Excel avanzado", years: null, category: null }],
+    niceToHave: null,
+    responsibilities: null,
+    softSignals: null,
+  }
+
+  it("una vacante sin cargo nombrado NO tira la respuesta entera", () => {
+    const r = JobSpecSchema.safeParse(spec)
+    expect(r.success).toBe(true)
+    expect(r.data?.roleTitleRaw).toBe("")
+    expect(r.data?.mustHave).toHaveLength(1)
+  })
+
+  it("un requisito ilegible se cae solo; los buenos se entregan", () => {
+    const r = JobSpecSchema.safeParse({
+      ...spec,
+      mustHave: [{ skill: null, raw: null, years: null, category: null }, spec.mustHave[0]],
+    })
+    expect(r.success).toBe(true)
+    expect(r.data?.mustHave.map((m) => m.skill)).toEqual(["Excel"])
+  })
+
+  it("un hueco ilegible no borra la reescritura", () => {
+    const r = SuggestionSchema.safeParse({
+      bulletId: "b_1",
+      changed: true,
+      text: "Concilié la caja diaria",
+      actionVerb: "Concilié",
+      keywordsUsed: null,
+      claim: null,
+      metricType: null,
+      placeholders: [{ token: null }, { token: "[n]", type: "SCALE", label: "cantidad", hint: "", evidenceNeeded: "" }],
+    })
+    expect(r.success).toBe(true)
+    expect(r.data?.placeholders.map((p) => p.token)).toEqual(["[n]"])
+  })
+})
+
+/**
+ * EL CANDADO DE LA CLASE, NO DE LOS CASOS.
+ *
+ * Cinco veces en un día un esquema de este motor tiró una respuesta ENTERA —con
+ * la llamada pagada y la pantalla vacía— porque un campo llegó en `null`, que es
+ * exactamente lo que el prompt le ordena al modelo hacer con un dato que no
+ * tiene. Arreglar los cinco campos no cierra nada: el sexto lo repite.
+ *
+ * Esto ejecuta cada esquema que valida una respuesta del modelo contra el peor
+ * caso posible —TODOS sus campos en null— y exige que no muera. Que el
+ * resultado sea útil lo deciden los guards; lo que acá se fija es que una
+ * respuesta imperfecta no pueda costarle al usuario la corrida completa.
+ */
+describe("ningún esquema del motor muere por un null", () => {
+  const casos: [string, { safeParse: (v: unknown) => { success: boolean } }, Record<string, unknown>][] = [
+    ["la vacante (P1)", JobSpecSchema, {
+      roleTitleRaw: null, roleTitleCanonical: null, seniority: null, yearsRequired: null,
+      domain: null, workMode: null, language: "es",
+      mustHave: null, niceToHave: null, responsibilities: null, softSignals: null,
+    }],
+    ["la reescritura (P4/P5)", SuggestionSchema, {
+      bulletId: null, changed: null, text: null, actionVerb: null, keywordsUsed: null,
+      claim: null, metricType: null, placeholders: null, variantWithoutMetric: null,
+      measurableAspect: null, declineBasis: null,
+    }],
+    ["el triage (P3)", TriageDecisionSchema, {
+      bulletId: null, verdict: "KEEP", reason: null, relevance: null,
+      proposedTopic: null, needsUserConfirm: null,
+    }],
+  ]
+  for (const [nombre, esquema, todoNulo] of casos) {
+    it(nombre, () => {
+      expect(esquema.safeParse(todoNulo).success, nombre).toBe(true)
+    })
+  }
+})
+
+describe("el vocabulario del motor no tiene piezas muertas", () => {
+  it("no hay tipo de hallazgo que nadie emita", () => {
+    // Un tipo declarado y sin emisor es vocabulario muerto: tiene clave i18n y
+    // sección asignada, y promete una tarjeta que no puede existir. Se lee el
+    // motor, porque el defecto es una AUSENCIA y no hay nada que ejecutar.
+    const motor = readFileSync(join(process.cwd(), "lib/ats3/engine.ts"), "utf8")
+    const huerfanos = FINDING_TYPES.filter((t) => !motor.includes(`"${t}"`))
+    expect(huerfanos, `sin emisor: ${huerfanos.join(", ")}`).toEqual([])
   })
 })

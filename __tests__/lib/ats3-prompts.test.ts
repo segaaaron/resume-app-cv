@@ -13,7 +13,8 @@ import {
   figureRule,
 } from "@/lib/services/ai/modules/AIAts3Module"
 import type { IAIClient, ChatParams, ChatCompletion } from "@/lib/interfaces/IAIClient"
-import type { JobSpec, ResumeTree } from "@/lib/ats3/contracts"
+import { PROMPT_VERSION, type JobSpec, type ResumeTree } from "@/lib/ats3/contracts"
+import { createHash } from "node:crypto"
 
 /**
  * Los seis prompts.
@@ -138,6 +139,7 @@ const mod = (client: IAIClient) => new AIAts3Module({ client, model: "m", langua
 const SPEC_JSON = JSON.stringify({
   roleTitleRaw: "Cajera",
   roleTitleCanonical: "Cajera",
+  metricThatMatters: "",
   seniority: null,
   yearsRequired: null,
   domain: null,
@@ -253,6 +255,7 @@ describe("lo que NO viaja al modelo", () => {
         bullets: [],
         summary: { identity: true, proof: true, fit: true, extra: false },
         coverage: [],
+        softCoverage: [],
         titleAlignment: 0.5,
       }),
     )
@@ -278,5 +281,181 @@ describe("lo que NO viaja al modelo", () => {
     for (const field of ["email", "phone", "photo", "birth", "nationality", "gender"]) {
       expect(body.toLowerCase()).not.toContain(field)
     }
+  })
+})
+
+/**
+ * UN PROMPT QUE CAMBIA SIN SUBIR SU VERSIÓN NO LLEGA NUNCA AL USUARIO.
+ *
+ * Cada respuesta se guarda bajo una clave que incluye `PROMPT_VERSION`. Si el
+ * texto del prompt cambia y la versión no, el caché sigue sirviendo lo que
+ * contestó la pregunta VIEJA: se toca el prompt, se despliega, y la pantalla no
+ * cambia. Este proyecto ya pagó ese día completo.
+ *
+ * Esto no adivina qué versión corresponde: ata el texto de hoy a la versión de
+ * hoy. Cambiar el prompt pone el caso en rojo, y la única forma de volver a
+ * verde es subir la versión —que es exactamente lo que hay que hacer.
+ */
+describe("cada prompt viaja con su versión", () => {
+  const huella = (texto: string) => createHash("sha256").update(texto).digest("hex").slice(0, 12)
+  const HOY: Record<string, { version: string; huella: string }> = {
+    P1: { version: PROMPT_VERSION.P1, huella: huella(jobPrompt("es") + jobPrompt("en")) },
+    P2: { version: PROMPT_VERSION.P2, huella: huella(auditPrompt("es") + auditPrompt("en")) },
+    P3: { version: PROMPT_VERSION.P3, huella: huella(triagePrompt("es") + triagePrompt("en")) },
+    P4: { version: PROMPT_VERSION.P4, huella: huella(bulletPrompt("es") + bulletPrompt("en")) },
+    P5: { version: PROMPT_VERSION.P5, huella: huella(summaryPrompt("es") + summaryPrompt("en")) },
+    P6: { version: PROMPT_VERSION.P6, huella: huella(verifyPrompt("es") + verifyPrompt("en")) },
+  }
+  /**
+   * La foto: qué versión corresponde a qué texto, al 2026-08-29. Se actualiza a
+   * mano y a propósito — es la anotación que obliga a decidir.
+   */
+  const ESPERADO: Record<string, { version: string; huella: string }> = {
+    P1: { version: "p1-7", huella: "f0325343abae" },
+    P2: { version: "p2-3", huella: "f9ac12d64c64" },
+    P3: { version: "p3-2", huella: "803c27a27688" },
+    P4: { version: "p4-7", huella: "ca8d87a558c6" },
+    P5: { version: "p5-2", huella: "16c8d141794d" },
+    P6: { version: "p6-1", huella: "bc421672bcc5" },
+  }
+
+  for (const id of Object.keys(HOY)) {
+    it(`${id}: si el texto cambió, la versión tiene que subir`, () => {
+      const actual = HOY[id]
+      const anotado = ESPERADO[id]
+      if (actual.huella !== anotado.huella) {
+        expect(
+          actual.version,
+          `El texto de ${id} cambió. Subí PROMPT_VERSION.${id} y anotá la huella nueva (${actual.huella}) acá.`,
+        ).not.toBe(anotado.version)
+      } else {
+        expect(actual.version).toBe(anotado.version)
+      }
+    })
+  }
+})
+
+describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas", () => {
+  it("la reescritura usa la redacción del aviso, no un sinónimo — en los dos idiomas", () => {
+    // El filtro tradicional compara CADENAS: «project management» y «led
+    // projects» no son lo mismo para él. Medido por la práctica documentada de
+    // los parsers, no por opinión nuestra.
+    expect(bulletPrompt("es")).toMatch(/redacción EXACTA del aviso/)
+    expect(bulletPrompt("en")).toMatch(/EXACT wording/)
+    // Y la sigla con su forma completa la primera vez.
+    expect(bulletPrompt("es")).toMatch(/sigla/)
+    expect(bulletPrompt("en")).toMatch(/acronym/)
+  })
+
+  it("una línea intercambiable con la de cualquiera no aporta, y no se arregla inventando", () => {
+    for (const p of [bulletPrompt("es"), bulletPrompt("en")]) {
+      expect(p).toMatch(/ESPECIFICIDAD|SPECIFICITY/)
+      // La salvedad es lo que impide que esta regla se lea como licencia.
+      expect(p).toMatch(/poco del original|too little of the original/)
+    }
+  })
+
+  it("el hueco dice que un aproximado alcanza, y que lo pone el candidato", () => {
+    expect(figureRule("es")).toMatch(/aproximado o un rango alcanza/)
+    expect(figureRule("en")).toMatch(/approximate figure or a range is enough/)
+    expect(figureRule("es")).toMatch(/vos no escribís uno/)
+    expect(figureRule("en")).toMatch(/you never write one/)
+  })
+
+  it("la vacante NO parte una sigla en dos requisitos", () => {
+    // «CI/CD» y «integración continua» en el mismo aviso son UNA exigencia. En
+    // dos, el denominador del puntaje crece con una fila fantasma y el candidato
+    // aparece cubriendo la mitad de algo que cubre entero.
+    expect(jobPrompt("es")).toMatch(/UN solo requisito, no dos/)
+    expect(jobPrompt("en")).toMatch(/ONE requirement, not two/)
+    expect(jobPrompt("es")).toMatch(/NUNCA deduzcas la expansión/)
+    expect(jobPrompt("en")).toMatch(/NEVER derive the expansion/)
+  })
+
+  it("FOUND es lo que el filtro puede ver, no lo que el modelo entiende", () => {
+    // Marcar cubierto por comprensión propia es el peor error que puede cometer
+    // la auditoría: le dice a alguien que pasa un filtro que lo va a descartar.
+    expect(auditPrompt("es")).toMatch(/lo que el filtro puede ver|lo que el filtro puede ver/i)
+    expect(auditPrompt("en")).toMatch(/what the filter can see/i)
+  })
+
+  it("una línea genérica no puede quedarse quieta: es REWRITE, no KEEP", () => {
+    expect(triagePrompt("es")).toMatch(/cualquier otro postulante/)
+    expect(triagePrompt("en")).toMatch(/any other applicant/)
+  })
+
+  it("el resumen prueba con un resultado, no con cualidades declaradas", () => {
+    expect(summaryPrompt("es")).toMatch(/declara cualidades en vez de mostrar un resultado/)
+    expect(summaryPrompt("en")).toMatch(/declares qualities instead of showing a result/)
+  })
+})
+
+it("el verificador puede no citar el fragmento y su respuesta NO se tira", async () => {
+  // Medido contra la API (2026-08-29): P6 devolvió `evidence: null` —el prompt
+  // le dice que un campo sin dato va en null— y el esquema descartaba la
+  // respuesta entera, perdiendo la reescritura con la llamada ya pagada.
+  const cliente: IAIClient = {
+    async chat() {
+      return {
+        choices: [{ message: { content: JSON.stringify({ verdict: "FAIL", violations: [{ type: "UNDECLARED_TOOL", evidence: null }] }) }, finish_reason: "stop" }],
+      } as unknown as ChatCompletion
+    },
+    async embed() { return [] },
+  }
+  const mod = new AIAts3Module({ client: cliente, model: "m", language: "es" })
+  const r = await mod.verify("original", "reescritura", [])
+  expect(r.pass).toBe(false)
+  expect(r.reason).toContain("UNDECLARED_TOOL")
+})
+
+/**
+ * Los tres esquemas que viven en el módulo de prompts, contra el mismo peor
+ * caso: TODOS los campos en null. La auditoría es el que más importa — corre en
+ * cada análisis, así que si muere, muere la corrida entera.
+ */
+describe("tampoco mueren los esquemas del módulo", () => {
+  const responde = (payload: unknown): IAIClient => ({
+    async chat() {
+      return { choices: [{ message: { content: JSON.stringify(payload) }, finish_reason: "stop" }] } as unknown as ChatCompletion
+    },
+    async embed() { return [] },
+  })
+  const mod = (c: IAIClient) => new AIAts3Module({ client: c, model: "m", language: "es" })
+
+  it("la auditoría (P2) sobrevive a una respuesta con todo en null", async () => {
+    const c = responde({ bullets: null, summary: null, coverage: null, titleAlignment: null })
+    const r = await mod(c).audit({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec)
+    expect(r.bullets).toEqual([])
+    // Lo que el auditor no pudo afirmar NO cuenta como cumplido.
+    expect(r.summary.identity).toBe(false)
+    expect(r.titleAlignment).toBe(0)
+  })
+
+  it("el triage (P3) descarta el veredicto ilegible y entrega los demás", async () => {
+    const c = responde({ decisions: [{ bulletId: null, verdict: "NO_EXISTE" }, { bulletId: "b1", verdict: "KEEP", reason: null, relevance: null }] })
+    const r = await mod(c).triage({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec, { bullets: [], summary: { identity: false, proof: false, fit: false, extra: false }, coverage: [], softCoverage: [], titleAlignment: 0 }, {})
+    expect(r.map((d) => d.bulletId)).toEqual(["b1"])
+  })
+
+  it("el verificador (P6) con un veredicto desconocido NO rechaza por las dudas", async () => {
+    // Sólo puede RECHAZAR: ante un veredicto que no reconocemos, la decisión
+    // vuelve al código, que ya juzgó con sus doce guards.
+    const c = responde({ verdict: "MAYBE", violations: null })
+    expect((await mod(c).verify("a", "b", [])).pass).toBe(true)
+  })
+
+  it("la vacante se pide ORDENADA por peso, y dice qué número le importa al puesto", () => {
+    for (const p of [jobPrompt("es"), jobPrompt("en")]) {
+      expect(p).toMatch(/PESO REAL|REAL WEIGHT/)
+      expect(p).toMatch(/metricThatMatters/)
+    }
+  })
+
+  it("las blandas se juzgan con su logro, en los dos idiomas", () => {
+    expect(auditPrompt("es")).toMatch(/DEMONSTRATED \(hay un logro que la evidencia/)
+    expect(auditPrompt("en")).toMatch(/DEMONSTRATED \(an achievement evidences it/)
+    // Sin id de línea nunca es demostrada: la misma vara que rige a las duras.
+    expect(auditPrompt("es")).toMatch(/Sin id de línea, nunca es DEMONSTRATED/)
+    expect(auditPrompt("en")).toMatch(/With no line id, it is never DEMONSTRATED/)
   })
 })
