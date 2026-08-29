@@ -18,18 +18,24 @@ import { useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
-import type { Finding, Placeholder, AnchoredSuggestion, TriageDecision } from "@/lib/ats3/contracts"
+import type { Placeholder, AnchoredSuggestion, TriageDecision } from "@/lib/ats3/contracts"
+import type { ResumeSections } from "@/types/resume"
+// LA PANTALLA DE SIEMPRE. El motor cambió debajo; el informe que el usuario
+// aprendió a leer —dial, secciones, filas de chequeo, tabla de términos— no.
+import { ScoreDial, ReportSectionCard, CheckRow, TermTable, PRESSABLE } from "./report-ui"
+import { sectionsOf, termsOfSpec, headlineOf } from "./view-model"
 
-/** <55 rojo · 55-79 ámbar · ≥80 verde. Un solo dueño del color. */
-function band(total: number): { key: "low" | "mid" | "high"; ring: string; text: string } {
-  if (total >= 80) return { key: "high", ring: "#10b981", text: "text-emerald-500" }
-  if (total >= 55) return { key: "mid", ring: "#f59e0b", text: "text-amber-500" }
-  return { key: "low", ring: "#ef4444", text: "text-red-500" }
+
+/** El texto del CV donde un término puede estar demostrado. */
+function cvText(data: ResumeSections): string {
+  return [
+    data.summary ?? "",
+    ...(data.workExperience ?? []).map((r) => `${r.jobTitle ?? ""} ${r.employer ?? ""} ${r.description ?? ""}`),
+    ...(data.skills ?? []).map((s) => s.name ?? ""),
+  ].join(" \n ")
 }
 
-/** Un lenguaje de pulsación, no quince decisiones sueltas. */
-const PRESSABLE =
-  "transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:brightness-100 disabled:active:scale-100"
+
 
 export default function Ats3Panel() {
   const t = useTranslations("editor.ats3")
@@ -38,10 +44,42 @@ export default function Ats3Panel() {
   // caminos termina discrepando en uno.
   const resumeId = useResumeStore((s: { resumeId: string | null }) => s.resumeId)
   const language = useResumeStore((s: { config?: { language?: string } }) => s.config?.language)
+  // El CV, para CONTAR los términos de la tabla. Se cuenta sobre el documento
+  // vivo, no sobre una estimación: "lo pide 4 veces, tu CV lo dice 0" es una
+  // afirmación que el usuario puede comprobar leyendo.
+  const sectionData = useResumeStore((s: { sectionData: ResumeSections }) => s.sectionData)
   const a = useAts3(resumeId ?? "", language === "en" ? "en" : "es")
 
+  /** Los hallazgos, dichos en la forma que la pantalla ya sabía pintar. */
+  const todos = useMemo(() => [...a.regressed, ...a.findings], [a.findings, a.regressed])
+  const secciones = useMemo(() => sectionsOf(a.score, todos), [a.score, todos])
+  const regresados = useMemo(() => new Set(a.regressed.map((f) => f.id)), [a.regressed])
+  /** Las cuatro cifras de la cabecera salen juntas: no pueden discrepar. */
+  const cabecera = useMemo(() => headlineOf(a.score, secciones), [a.score, secciones])
+  const términos = useMemo(
+    () => termsOfSpec(a.spec, a.covered, a.jd, cvText(sectionData), a.audit?.softCoverage ?? []),
+    [a.spec, a.covered, a.jd, sectionData, a.audit],
+  )
+
+  /**
+   * "Ya está bien" NO es un fallo: el modelo leyó la línea y dice que no hay
+   * nada que mejorar. Pintarlo como rechazo enseña a desconfiar de una
+   * respuesta honesta.
+   */
+  const rechazo = a.rejected ? (
+    <p
+      className={`rounded-lg px-3 py-2 text-xs ${
+        a.rejected.reason === "already_good" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
+      }`}
+    >
+      {a.rejected.reason === "already_good"
+        ? t("already_good")
+        : `${t("rewrite_rejected")}${a.rejected.detail ? ` · ${a.rejected.detail}` : ""}`}
+    </p>
+  ) : null
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="ats-panel flex flex-col gap-5">
       <JobBox
         value={a.jd}
         onChange={a.setJd}
@@ -60,27 +98,95 @@ export default function Ats3Panel() {
 
       {a.score && (
         <>
-          <ScoreHeader total={a.score.total} pillars={a.score.pillars} labels={{
-            parse: t("pillar_parse"), relevance: t("pillar_relevance"), impact: t("pillar_impact"),
-            caption: t("score_caption"),
-          }} />
+          {/* EL DIAL, con lo que se puede recuperar y qué es lo crítico —no
+              sólo cuántos hay: un número sin su objeto es una alarma que el
+              usuario aprende a ignorar. */}
+          <ScoreDial
+            score={cabecera.score}
+            criticalCount={cabecera.criticalCount}
+            criticalSolvable={cabecera.criticalSolvable}
+            criticalDetail={cabecera.detail}
+            recoverable={cabecera.recoverable}
+          />
 
           {a.calls === 0 && (
             // Servir del caché no es un detalle técnico: es la promesa de que
             // volver a analizar no cuesta nada y no devuelve otra cosa.
-            <p className="text-xs text-[var(--muted-foreground)]">{t("served_from_cache")}</p>
+            <p className="text-xs" style={{ color: "var(--a-muted)" }}>{t("served_from_cache")}</p>
           )}
 
-          <FindingList
-            findings={a.findings}
-            regressed={a.regressed}
-            suppressed={a.suppressed}
-            busyNode={a.busyNode}
-            rejected={a.rejected}
-            onFix={a.requestRewrite}
-            onDismiss={a.dismiss}
-            t={t}
-          />
+          {a.suppressed > 0 && (
+            // Lo resuelto se cuenta, no desaparece: es lo que impide que
+            // arreglar algo se sienta como que el panel siempre pide más.
+            <p className="text-xs" style={{ color: "var(--a-muted)" }}>{t("already_solved", { n: a.suppressed })}</p>
+          )}
+
+          {secciones.map((sección) => (
+            <ReportSectionCard
+              key={sección.id}
+              section={sección}
+              defaultOpen={sección.scored && sección.checks.length > 0}
+              renderCheck={(check) => (
+                <div key={check.id} className="flex flex-col gap-1">
+                  {/* VOLVIÓ A APARECER. Un hallazgo que reaparece sobre una línea
+                      que el usuario ya tocó no es lo mismo que uno nuevo, y
+                      callarlo es lo que hace sentir el panel un bucle. */}
+                  {regresados.has(check.id) && (
+                    <span
+                      className="self-start rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      style={{ background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }}
+                    >
+                      {t("badge_regressed")}
+                    </span>
+                  )}
+                  <CheckRow
+                    check={check}
+                    // El botón pide la reescritura de ESA línea. Un requisito que
+                    // la vacante exige no lo tiene: `owner: "user"`, y ninguna
+                    // reescritura de una línea que no habla de eso lo cierra.
+                    onSolve={(id) => {
+                      const f = todos.find((x) => x.id === id)
+                      if (f) a.requestRewrite(f.nodeId)
+                    }}
+                    /**
+                     * El arreglo determinista: agregar el término a Habilidades.
+                     * No llama al modelo y no gasta cuota, así que no comparte
+                     * el botón con la reescritura — la fila los distingue.
+                     */
+                    onFix={(id) => {
+                      const f = todos.find((x) => x.id === id)
+                      if (f) a.addSkill(f.nodeId, f.detail)
+                    }}
+                    busy={a.busyNode !== null}
+                  />
+                  {/* «No me interesa» es del motor v3: cierra el hallazgo sin
+                      escribir nada y sin gastar una consulta. Sin él, lo único
+                      que saca una tarjeta de la pantalla es pagar por ella. */}
+                  {check.owner === "tailor" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const f = todos.find((x) => x.id === check.id)
+                        if (f) a.dismiss(f.nodeId)
+                      }}
+                      className={`${PRESSABLE} self-end rounded-md px-2 py-1 text-[11px] font-medium`}
+                      style={{ color: "var(--a-muted-2)" }}
+                    >
+                      {t("dismiss")}
+                    </button>
+                  )}
+                </div>
+              )}
+            >
+              {/* La tabla de términos vive bajo la sección que la produce, con
+                  las cuentas MEDIDAS sobre el aviso y el CV. */}
+              {términos.some((x) => x.section === sección.id) && (
+                <TermTable terms={términos.filter((x) => x.section === sección.id)} />
+              )}
+            </ReportSectionCard>
+          ))}
+
+          {rechazo}
 
           <TriageBoard
             decisions={a.triage}
@@ -142,162 +248,6 @@ function JobBox(props: {
   )
 }
 
-function ScoreHeader({
-  total,
-  pillars,
-  labels,
-}: {
-  total: number
-  pillars: Record<"parse" | "relevance" | "impact", { points: number; max: number; ratio: number }>
-  labels: { parse: string; relevance: string; impact: string; caption: string }
-}) {
-  const b = band(total)
-  const shown = Math.round(total)
-  const r = 42
-  const circumference = 2 * Math.PI * r
-  return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm">
-      <div className="flex items-center gap-5">
-        <svg width="104" height="104" viewBox="0 0 104 104" role="img" aria-label={`${shown} / 100`}>
-          <circle cx="52" cy="52" r={r} fill="none" stroke="var(--border)" strokeWidth="9" />
-          <circle
-            cx="52" cy="52" r={r} fill="none" stroke={b.ring} strokeWidth="9" strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - Math.min(1, Math.max(0, total / 100)))}
-            transform="rotate(-90 52 52)"
-            style={{ filter: `drop-shadow(0 0 6px ${b.ring}55)`, transition: "stroke-dashoffset .5s ease" }}
-          />
-          <text x="52" y="50" textAnchor="middle" className={`fill-current ${b.text}`} style={{ fontSize: 26, fontWeight: 700 }}>
-            {shown}
-          </text>
-          <text x="52" y="68" textAnchor="middle" fill="var(--muted-foreground)" style={{ fontSize: 11 }}>
-            / 100
-          </text>
-        </svg>
-        <div className="flex-1">
-          {/* "Preparación para ESTA vacante", nunca "tu score ATS": ningún ATS
-              le pone una nota a un CV, y prometerlo es prometer lo que no hay. */}
-          <p className="mb-3 text-sm text-[var(--muted-foreground)]">{labels.caption}</p>
-          <div className="flex flex-col gap-2">
-            {(["parse", "relevance", "impact"] as const).map((k) => (
-              <div key={k} className="flex items-center gap-2 text-xs">
-                <span className="w-28 shrink-0 text-[var(--muted-foreground)]">{labels[k]}</span>
-                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border)]">
-                  <span
-                    className="block h-full rounded-full bg-[var(--primary)]"
-                    style={{ width: `${Math.round(pillars[k].ratio * 100)}%` }}
-                  />
-                </span>
-                <span className="w-16 shrink-0 text-right tabular-nums">
-                  {pillars[k].points.toFixed(1)} / {pillars[k].max.toFixed(0)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function FindingList({
-  findings,
-  regressed,
-  suppressed,
-  busyNode,
-  rejected,
-  onFix,
-  onDismiss,
-  t,
-}: {
-  findings: Finding[]
-  regressed: Finding[]
-  suppressed: number
-  busyNode: string | null
-  rejected: { nodeId: string; reason: string; detail: string } | null
-  onFix: (nodeId: string) => void
-  onDismiss: (nodeId: string) => void
-  t: (k: string, v?: Record<string, string | number>) => string
-}) {
-  const all = useMemo(() => [...regressed, ...findings], [findings, regressed])
-  const regressedIds = useMemo(() => new Set(regressed.map((f) => f.id)), [regressed])
-
-  if (all.length === 0) {
-    return <p className="rounded-xl border border-[var(--border)] px-4 py-3 text-sm">{t("nothing_open")}</p>
-  }
-
-  return (
-    <section className="flex flex-col gap-3">
-      <header className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold">{t("findings_title", { n: all.length })}</h3>
-        {suppressed > 0 && (
-          // Decirlo es lo que impide que arreglar algo se sienta como que el
-          // panel siempre pide más: lo resuelto se cuenta, no desaparece.
-          <span className="text-xs text-[var(--muted-foreground)]">{t("already_solved", { n: suppressed })}</span>
-        )}
-      </header>
-
-      {all.map((f) => (
-        <article key={f.id} className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm">
-          <div className="mb-2 flex items-center gap-2">
-            {regressedIds.has(f.id) && (
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-500">
-                {t("badge_regressed")}
-              </span>
-            )}
-            <span className="rounded-full bg-[var(--primary)]/10 px-2 py-0.5 text-[11px] font-semibold text-[var(--primary)]">
-              +{f.gain.toFixed(1)} {t("points")}
-            </span>
-            {f.merged.map((m) => (
-              <span key={m} className="text-[11px] text-[var(--muted-foreground)]">
-                {t(`type_${m}`)}
-              </span>
-            ))}
-          </div>
-
-          <p className="mb-1 text-sm leading-relaxed">{f.nodeText || t("empty_line")}</p>
-          <p className="mb-3 text-xs text-[var(--muted-foreground)]">{f.detail}</p>
-
-          {rejected?.nodeId === f.nodeId && (
-            /* "Ya está bien" NO es un fallo: el modelo leyó la línea y dice que
-               no hay nada que mejorar. Pintarlo como rechazo enseña a desconfiar
-               de una respuesta honesta. */
-            <p
-              className={`mb-2 rounded-lg px-3 py-2 text-xs ${
-                rejected.reason === "already_good"
-                  ? "bg-emerald-500/10 text-emerald-600"
-                  : "bg-amber-500/10 text-amber-500"
-              }`}
-            >
-              {rejected.reason === "already_good"
-                ? t("already_good")
-                : `${t("rewrite_rejected")}${rejected.detail ? ` · ${rejected.detail}` : ""}`}
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onFix(f.nodeId)}
-              disabled={busyNode !== null}
-              className={`rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-[var(--primary-foreground)] ${PRESSABLE}`}
-            >
-              {busyNode === f.nodeId ? t("writing") : t("fix_it")}
-            </button>
-            <button
-              type="button"
-              onClick={() => onDismiss(f.nodeId)}
-              className={`rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium ${PRESSABLE}`}
-            >
-              {t("dismiss")}
-            </button>
-          </div>
-        </article>
-      ))}
-    </section>
-  )
-}
-
 const VERDICT_STYLE: Record<string, string> = {
   KEEP: "bg-emerald-500/10 text-emerald-500",
   REWRITE: "bg-[var(--primary)]/10 text-[var(--primary)]",
@@ -315,14 +265,14 @@ function TriageBoard({
   t,
 }: {
   decisions: TriageDecision[]
-  onDrop: (nodeId: string) => { roleIndex: number; text: string } | null
-  onUndo: (roleIndex: number, text: string) => void
+  onDrop: (nodeId: string) => { roleIndex: number; bulletIndex: number; text: string } | null
+  onUndo: (roleIndex: number, bulletIndex: number, text: string) => void
   onRewrite: (nodeId: string) => void
   busyNode: string | null
   t: (k: string, v?: Record<string, string | number>) => string
 }) {
   /** Lo último que se sacó, para poder devolverlo. Un borrado sin vuelta atrás no se ofrece. */
-  const [ultimo, setUltimo] = useState<{ roleIndex: number; text: string } | null>(null)
+  const [ultimo, setUltimo] = useState<{ roleIndex: number; bulletIndex: number; text: string } | null>(null)
   /** DROP borra contenido: se muestra la línea exacta antes de tocarla. */
   const [confirmando, setConfirmando] = useState<TriageDecision | null>(null)
 
@@ -335,7 +285,12 @@ function TriageBoard({
       {decisions.length > 0 && (
         <>
           <h3 className="mb-1 text-sm font-semibold">{t("triage_title")}</h3>
-          <p className="mb-3 text-xs text-[var(--muted-foreground)]">{t("triage_caption")}</p>
+          <p className="mb-1 text-xs text-[var(--muted-foreground)]">{t("triage_caption")}</p>
+          {/* DOS COSAS CIERTAS QUE JUNTAS SE LEEN COMO UNA MENTIRA si no se
+              explican: el panel pide sacar una línea y el número no se mueve.
+              Es correcto —cortar lo irrelevante no te hace más apto— pero desde
+              afuera parece trabajo que no cuenta. Se dice. */}
+          <p className="mb-3 text-[11px] text-[var(--muted-foreground)]">{t("triage_space_note")}</p>
         </>
       )}
 
@@ -345,7 +300,7 @@ function TriageBoard({
           <button
             type="button"
             onClick={() => {
-              onUndo(ultimo.roleIndex, ultimo.text)
+              onUndo(ultimo.roleIndex, ultimo.bulletIndex, ultimo.text)
               setUltimo(null)
             }}
             className={`rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 font-semibold ${PRESSABLE}`}

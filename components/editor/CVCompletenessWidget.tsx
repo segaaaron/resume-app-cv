@@ -3,7 +3,6 @@
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { useTranslations } from "next-intl"
-import { scoreBand } from "@/lib/ats/report"
 
 interface SectionScore {
   labelKey: string
@@ -50,16 +49,16 @@ function computeSections(sectionData: Record<string, unknown>): SectionScore[] {
 }
 
 /**
- * El semáforo lo decide `scoreBand`, el único dueño de la regla del CEO.
- *
- * Acá vivía una tercera copia de los umbrales, y encima con hex crudos en vez de
- * los tokens del panel: el mismo 60% se pintaba con un amarillo distinto según
- * qué pantalla lo mostrara.
+ * El semáforo de ESTE widget: <55 rojo · 55-79 amarillo · ≥80 verde (regla del
+ * CEO). Se decide acá y no importando el del ATS: este contador de completitud
+ * no es el panel del ATS y colgarlo de su motor haría que borrar o cambiar el
+ * ATS moviera el color de una pantalla que no tiene nada que ver.
  */
 const BAND_COLOR = { ok: "#10B981", warn: "#F59E0B", bad: "#EF4444" } as const
 
 function getColor(pct: number): string {
-  return BAND_COLOR[scoreBand(pct)]
+  if (pct >= 80) return BAND_COLOR.ok
+  return pct >= 55 ? BAND_COLOR.warn : BAND_COLOR.bad
 }
 
 export default function CVCompletenessWidget() {

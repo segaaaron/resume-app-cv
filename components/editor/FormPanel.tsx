@@ -209,7 +209,11 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
         </div>
 
         <div style={{ ...otherPadStyle, display: activeTab === "ats" ? undefined : "none" }}>
-          <AIProGate feature="ATS Checker" endpoint="ats-score">
+          {/* EL GATE PREGUNTA POR EL MOTOR QUE ESTA PESTAÑA USA. Preguntaba por
+              `ats-score`, el endpoint del motor viejo —borrado el 2026-08-28—:
+              el permiso del panel v3 se decidía con la cuota de algo que ya no
+              existe, y el día que los dos números difieran el gate miente. */}
+          <AIProGate feature="ATS Checker" endpoint="ats3">
             <Ats3Panel />
           </AIProGate>
         </div>

@@ -16,10 +16,13 @@
 import { useCallback, useRef, useState } from "react"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
-import { writeInto, buildTree, writeBack, type RawResume } from "@/lib/ats3/engine"
+import { useAtsPostingStore } from "@/stores/atsPostingStore"
+import { applySuggestion, buildTree, writeBack, writeInto, readBullets, type RawResume } from "@/lib/ats3/engine"
+import { openLedger } from "@/lib/ats3/ledger"
 import { findNode } from "@/lib/ats3/guards"
+import { nodeHash, normalize } from "@/lib/ats3/contracts"
 import type { AnchoredSuggestion, Finding, JobSpec, TriageDecision } from "@/lib/ats3/contracts"
-import type { Score } from "@/lib/ats3/score"
+import { scoreResume, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 export type FailureReason = string
 
@@ -35,6 +38,15 @@ export interface Ats3State {
   covered: string[]
   /** Llamadas que la última corrida gastó de verdad. Cero = todo del caché. */
   calls: number | null
+  /**
+   * LOS DOS INSUMOS CON LOS QUE SE MIDIÓ, para poder volver a medir.
+   *
+   * El puntaje se recalcula al aplicar con la MISMA función del motor. Guardar
+   * la auditoría y las verificaciones es lo que lo hace posible sin gastar una
+   * llamada; sin ellos, arreglar diez cosas dejaba el dial clavado.
+   */
+  audit: AuditFacts | null
+  checks: ParseChecks
 }
 
 const EMPTY: Ats3State = {
@@ -47,15 +59,35 @@ const EMPTY: Ats3State = {
   budget: {},
   covered: [],
   calls: null,
+  audit: null,
+  checks: {},
 }
 
 import type { ResumeSections, WorkExperienceItem } from "@/types/resume"
+
+/**
+ * Una línea resuelta desaparece de TODO lo que habla de ella.
+ *
+ * Vive fuera del hook y no repetida en cada acción: cuando esto se hacía a mano,
+ * cada camino se acordaba de una lista distinta.
+ */
+function olvidar(st: Ats3State, nodeId: string): Ats3State {
+  return {
+    ...st,
+    findings: st.findings.filter((f) => f.nodeId !== nodeId),
+    regressed: st.regressed.filter((f) => f.nodeId !== nodeId),
+    triage: st.triage.filter((d) => d.bulletId !== nodeId),
+  }
+}
 
 export function useAts3(resumeId: string, language: "es" | "en") {
   const sectionData = useResumeStore((s: { sectionData: ResumeSections }) => s.sectionData)
   const updateSectionData = useResumeStore(
     (s: { updateSectionData: <K extends keyof ResumeSections>(k: K, v: ResumeSections[K]) => void }) => s.updateSectionData,
   )
+
+  /** Se lee fuera del render: escribir la vacante no puede re-renderizar nada. */
+  const setPosting = useAtsPostingStore((s) => s.setPosting)
 
   const [jd, setJd] = useState("")
   const [state, setState] = useState<Ats3State>(EMPTY)
@@ -111,6 +143,13 @@ export function useAts3(resumeId: string, language: "es" | "en") {
           checks: {},
         }),
       })
+      // UN FALLO DEL SERVIDOR NO ES UN ACTO. Sin esto, un 500 se leía como
+      // NDJSON, ningún `act` coincidía y la pantalla quedaba igual que antes de
+      // apretar: el usuario veía un aviso genérico arriba y ninguna razón.
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null)
+        throw new Error(typeof detail?.error === "string" ? detail.error : `http_${res.status}`)
+      }
       const body = res.body
       if (!body) throw new Error("empty_response")
 
@@ -147,11 +186,38 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     function apply(act: Record<string, unknown>) {
       switch (act.act) {
         case "score":
-          setState((s) => ({ ...s, score: act.score as Score }))
+          setState((s) => ({
+            ...s,
+            score: act.score as Score,
+            audit: act.audit as AuditFacts,
+            checks: act.checks as ParseChecks,
+          }))
           break
-        case "job":
-          setState((s) => ({ ...s, spec: act.spec as JobSpec }))
+        case "job": {
+          const spec = act.spec as JobSpec
+          setState((s) => ({ ...s, spec }))
+          /**
+           * LA VACANTE QUEDA DISPONIBLE PARA TODO EL EDITOR.
+           *
+           * ── EL CABLE QUE ESTABA CORTADO (hallado el 2026-08-29) ───────────
+           * `atsPostingStore` existe por una orden del CEO —«el ATS manda: todo
+           * lo que tenga el ATS debe consultar al ATS»— y su único escritor era
+           * el panel viejo, borrado ayer. Quedó con lector y sin escritor: el
+           * asistente de IA, que escribe viñetas y el resumen EN EL MISMO CV,
+           * volvió a hacerlo sin saber contra qué puesto se postula la persona.
+           * No rompía nada; degradaba en silencio, que es peor.
+           *
+           * Viaja el término COMO LO ESCRIBE LA VACANTE: es la forma que el
+           * filtro reconoce, y la misma que este motor usa para el índice.
+           */
+          setPosting({
+            terms: [...spec.mustHave, ...spec.niceToHave].map((r) => r.raw || r.skill).filter(Boolean),
+            jobTitle: spec.roleTitleCanonical || spec.roleTitleRaw,
+            // El alcance: un CV distinto NO hereda la vacante del anterior.
+            resumeId,
+          })
           break
+        }
         case "covered":
           setState((s) => ({ ...s, covered: act.terms as string[] }))
           break
@@ -178,7 +244,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
           break
       }
     }
-  }, [jd, language, payloadResume, resumeId])
+  }, [jd, language, payloadResume, resumeId, setPosting])
 
   /**
    * Pide la reescritura de UNA línea.
@@ -214,6 +280,12 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             covered: state.covered,
           }),
         })
+        // Mismo motivo que en el análisis: un 500 devuelve `{error}` y sin este
+        // corte se pintaba como un rechazo del motor con el motivo en blanco.
+        if (!res.ok) {
+          const detail = await res.json().catch(() => null)
+          throw new Error(typeof detail?.error === "string" ? detail.error : `http_${res.status}`)
+        }
         const data = (await res.json()) as
           | { ok: true; suggestion: AnchoredSuggestion; served: boolean }
           | { ok: false; reason: string; detail: string }
@@ -226,6 +298,53 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       }
     },
     [jd, language, payloadResume, resumeId, state.spec],
+  )
+
+  /**
+   * REGISTRA QUE UN HALLAZGO QUEDÓ RESUELTO.
+   *
+   * Sin esto, la memoria del motor leía siempre un registro vacío y volvía a
+   * señalar lo que el usuario ya había arreglado en cuanto reanalizaba — el
+   * bucle que este producto ya pagó una vez, con la defensa escrita, probada y
+   * desconectada.
+   *
+   * No gasta cuota ni llama al modelo. Va sin `await` a propósito: el CV ya
+   * está escrito y el usuario no tiene que esperar a que la base confirme nada.
+   * Si falla, se pierde una anotación, nunca el arreglo.
+   */
+  const registrarResuelto = useCallback(
+    (nodeId: string, texto: string, resolvedBy: "AI_SUGGESTION" | "DISMISSED") => {
+      const hallazgos = [...state.findings, ...state.regressed].filter((f) => f.nodeId === nodeId)
+      if (hallazgos.length === 0 || jd.trim().length < 20) return
+      // Envuelto: una anotación que falla —o una petición que ni sale— NO puede
+      // tumbar el aplicado. El CV ya está escrito; esto es memoria, no el acto.
+      void (async () => {
+        try {
+          await apiFetch("/api/ai/ats3", {
+            method: "POST",
+            silent: true,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "resolve",
+              resumeId,
+              jobDescription: jd,
+              entries: hallazgos.map((f) => ({
+                findingId: f.id,
+                nodeId: f.nodeId,
+                // El hash de lo que QUEDÓ escrito: es lo que después distingue
+                // una re-detección falsa (el texto sigue igual) de una regresión
+                // real (el usuario lo tocó y lo volvió a romper).
+                nodeHashAtResolution: nodeHash(texto),
+                resolvedBy,
+              })),
+            }),
+          })
+        } catch {
+          /* se pierde una anotación, nunca el arreglo */
+        }
+      })()
+    },
+    [jd, resumeId, state.findings, state.regressed],
   )
 
   /**
@@ -254,7 +373,33 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         return
       }
 
-      const written = writeBack(writeInto(tree, s.bulletId, finalText), raw)
+      /**
+       * SE APLICA MIDIENDO, y con la función del motor.
+       *
+       * `applySuggestion` escribe sobre una COPIA, vuelve a puntuar y resta: el
+       * número que sube el dial es el que el puntaje da de verdad, no una
+       * promesa. Antes la pantalla escribía a ciegas y el dial quedaba clavado
+       * hasta reanalizar —una llamada más—, así que el usuario arreglaba cinco
+       * cosas y no veía moverse nada.
+       *
+       * Lo que el código NO puede probar sin volver a preguntar —si la línea
+       * ahora tiene resultado y método, si el requisito quedó cubierto— NO se
+       * suma acá: eso sería creerle al modelo sobre su propio trabajo. Se
+       * confirma al reanalizar.
+       */
+      const medido =
+        state.spec && state.audit
+          ? applySuggestion(tree, { ...s, text: finalText }, state.spec, state.audit, state.checks,
+              openLedger(tree, state.spec, new Set(state.covered)))
+          : null
+      if (medido && !medido.ok) {
+        setError(medido.reason && !medido.reason.ok ? medido.reason.reason : "stale_node")
+        return
+      }
+
+      // Sin los insumos de la medición se escribe igual: el CV del usuario nunca
+      // depende de que hayamos podido recalcular su puntaje.
+      const written = writeBack(medido ? medido.tree : writeInto(tree, s.bulletId, finalText), raw)
       if (s.bulletId === "summary") updateSectionData("summary", written.summary ?? "")
       else {
         // Sólo los puestos: escribir el CV entero pisaría lo que el usuario
@@ -266,11 +411,29 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         updateSectionData("workExperience", roles)
       }
       setPending(null)
-      // El hallazgo se retira de la lista en el acto: dejarlo ahí después de
-      // aplicarlo es lo que se lee como "lo arreglé y me lo vuelve a pedir".
-      setState((st) => ({ ...st, findings: st.findings.filter((f) => f.nodeId !== s.bulletId) }))
+      registrarResuelto(s.bulletId, finalText, "AI_SUGGESTION")
+      /**
+       * EL DIAL SE MUEVE ACÁ, con la medición del motor sobre el CV nuevo.
+       *
+       * Se recalcula el Score COMPLETO y no sólo el total: el dial, los pilares
+       * y el porcentaje de cada sección salen todos de este objeto, y subir el
+       * total dejando lo demás quieto sería el panel contradiciéndose consigo
+       * mismo en la misma pantalla.
+       */
+      if (medido && state.spec && state.audit) {
+        const nuevo = scoreResume(medido.tree, state.spec, state.audit, state.checks)
+        setState((st) => ({ ...st, score: nuevo }))
+      }
+      // La línea se retira de las TRES listas que hablan de ella.
+      //
+      // Sacarla sólo de `findings` dejaba en pantalla el hallazgo REGRESADO
+      // sobre la misma línea —el panel pinta las dos listas juntas— y el
+      // veredicto del triage ofreciendo reescribir lo que se acaba de
+      // reescribir. Las dos cosas se leen igual: «lo arreglé y me lo vuelve a
+      // pedir», que es el bucle que este motor existe para no tener.
+      setState((st) => olvidar(st, s.bulletId))
     },
-    [payloadResume, sectionData.workExperience, updateSectionData],
+    [payloadResume, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, updateSectionData],
   )
 
   /**
@@ -282,7 +445,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * se puede revertir no se ofrece.
    */
   const dropBullet = useCallback(
-    (nodeId: string): { roleIndex: number; text: string } | null => {
+    (nodeId: string): { roleIndex: number; bulletIndex: number; text: string } | null => {
       const raw = payloadResume()
       const tree = buildTree(raw)
       const roleIndex = tree.roles.findIndex((r) => r.bullets.some((b) => b.id === nodeId))
@@ -290,7 +453,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         setError("stale_node")
         return null
       }
-      const quitada = tree.roles[roleIndex].bullets.find((b) => b.id === nodeId)!
+      const bulletIndex = tree.roles[roleIndex].bullets.findIndex((b) => b.id === nodeId)
+      const quitada = tree.roles[roleIndex].bullets[bulletIndex]
       const roles: WorkExperienceItem[] = (sectionData.workExperience ?? []).map((role, i) =>
         i !== roleIndex
           ? role
@@ -303,30 +467,67 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             },
       )
       updateSectionData("workExperience", roles)
-      setState((st) => ({
-        ...st,
-        findings: st.findings.filter((f) => f.nodeId !== nodeId),
-        triage: st.triage.filter((d) => d.bulletId !== nodeId),
-      }))
-      return { roleIndex, text: quitada.text }
+      setState((st) => olvidar(st, nodeId))
+      return { roleIndex, bulletIndex, text: quitada.text }
     },
     [payloadResume, sectionData.workExperience, updateSectionData],
   )
 
-  /** Vuelve a poner la línea que se sacó. Sin esto, DROP no se puede ofrecer. */
+  /**
+   * Vuelve a poner la línea que se sacó, EN SU LUGAR.
+   *
+   * Pegarla al final era medio deshacer: el CV quedaba distinto del que el
+   * usuario tenía antes de apretar, con la línea al pie de un puesto que la
+   * traía tercera. Un "deshacer" que no devuelve el estado anterior no es un
+   * deshacer, y en un documento el orden es contenido.
+   */
   const undoDrop = useCallback(
-    (roleIndex: number, text: string) => {
-      const roles: WorkExperienceItem[] = (sectionData.workExperience ?? []).map((role, i) =>
-        i !== roleIndex ? role : { ...role, description: `${role.description ?? ""}\n• ${text}`.trim() },
-      )
+    (roleIndex: number, bulletIndex: number, text: string) => {
+      const roles: WorkExperienceItem[] = (sectionData.workExperience ?? []).map((role, i) => {
+        if (i !== roleIndex) return role
+        const lineas = readBullets(role.description ?? "")
+        lineas.splice(Math.min(Math.max(bulletIndex, 0), lineas.length), 0, text)
+        return { ...role, description: lineas.map((t) => `• ${t}`).join("\n") }
+      })
       updateSectionData("workExperience", roles)
     },
     [sectionData.workExperience, updateSectionData],
   )
 
-  const dismiss = useCallback((nodeId: string) => {
-    setState((st) => ({ ...st, findings: st.findings.filter((f) => f.nodeId !== nodeId) }))
-  }, [])
+  /**
+   * AGREGA UN TÉRMINO A HABILIDADES. Determinista: ni una llamada al modelo.
+   *
+   * Es el remedio de `skill_not_listed`: el CV ya demuestra ese término en una
+   * viñeta y no figura en la lista, que es lo que el filtro lee literalmente y
+   * de lo primero que mira. Reescribir la viñeta —lo único que la pantalla sabía
+   * ofrecer— no arreglaba nada de eso.
+   *
+   * No pisa la lista: agrega al final, y no duplica si ya está escrito con otras
+   * mayúsculas o acentos.
+   */
+  const addSkill = useCallback(
+    (nodeId: string, term: string) => {
+      const limpio = term.trim()
+      if (!limpio) return
+      const actuales = sectionData.skills ?? []
+      if (actuales.some((s) => normalize(s.name ?? "") === normalize(limpio))) return
+      updateSectionData("skills", [...actuales, { id: `sk_${nodeHash(limpio)}`, name: limpio, level: "advanced" }] as ResumeSections["skills"])
+      registrarResuelto(nodeId, limpio, "AI_SUGGESTION")
+      setState((st) => olvidar(st, nodeId))
+    },
+    [registrarResuelto, sectionData.skills, updateSectionData],
+  )
+
+  const dismiss = useCallback(
+    (nodeId: string) => {
+      // Descartar también es resolver: el usuario dijo que no le interesa, y
+      // volver a mostrárselo en la próxima corrida es no haberlo escuchado.
+      const nodo = findNode(buildTree(payloadResume()), nodeId)
+      registrarResuelto(nodeId, nodo?.text ?? "", "DISMISSED")
+      setState((st) => olvidar(st, nodeId))
+    },
+    [payloadResume, registrarResuelto],
+  )
 
   return {
     jd,
@@ -342,6 +543,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     requestRewrite,
     dropBullet,
     undoDrop,
+    addSkill,
     accept,
     dismiss,
   }
