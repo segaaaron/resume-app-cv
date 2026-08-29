@@ -42,7 +42,11 @@ function filesWithModelCalls(): { file: string; path: string; calls: number; rep
 
 describe("ningún gasto de IA queda sin contar", () => {
   it("encuentra los módulos de IA (un guard sobre cero archivos no prueba nada)", () => {
-    expect(filesWithModelCalls().length).toBeGreaterThanOrEqual(10)
+    // Eran diez hasta que tres módulos se fueron con el motor ATS viejo
+    // (2026-08-28). Lo que este caso cuida es lo que dice su propio nombre —que
+    // el guard no corra sobre cero archivos—, no un número que hay que venir a
+    // corregir cada vez que un módulo nace o muere.
+    expect(filesWithModelCalls().length).toBeGreaterThan(0)
   })
 
   it("cada archivo que llama al modelo registra o reporta su uso", () => {

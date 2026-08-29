@@ -30,7 +30,8 @@ import { OpenAIClientAdapter } from "@/lib/services/ai/OpenAIClientAdapter"
 // termina moviéndose en uno solo, y el modelo entra en TODAS las claves de
 // caché — un desacuerdo serviría respuestas de otro oráculo como si fueran de
 // éste. Es el de prosa porque estos prompts ESCRIBEN el CV.
-import { AI_MODEL_PROSE } from "@/lib/ai-client"
+import { AI_MODEL_PROSE, logAIUsage } from "@/lib/ai-client"
+import { computeCostUsd } from "@/lib/services/ai/shared/cost-tracker"
 import { AIAts3Module } from "@/lib/services/ai/modules/AIAts3Module"
 import {
   buildTree,
@@ -45,6 +46,7 @@ import {
 } from "@/lib/ats3/engine"
 import { buildTermIndex, JobSpecSchema } from "@/lib/ats3/contracts"
 import type { ParseChecks } from "@/lib/ats3/score"
+import { ResolutionLogSchema, type Resolution } from "@/lib/ats3/contracts"
 
 export const maxDuration = 120
 
@@ -98,6 +100,33 @@ const rewriteSchema = z.object({
   covered: z.array(z.string().max(80)).max(80).default([]),
 })
 
+/**
+ * EL TERCER CAMINO: decir que un hallazgo quedó resuelto.
+ *
+ * Sin esto, `loyalty` leía siempre un registro vacío y el motor volvía a
+ * señalar lo que el usuario ya había arreglado en cuanto reanalizaba: el
+ * "bucle infinito" que este motor existe para no tener, con la defensa escrita,
+ * probada y desconectada.
+ *
+ * No llama al modelo y por eso NO gasta cuota: es una escritura y nada más.
+ */
+const resolveSchema = z.object({
+  action: z.literal("resolve"),
+  resumeId: z.string().max(64),
+  jobDescription: z.string().min(20).max(LIMITS.jd),
+  entries: z
+    .array(
+      z.object({
+        findingId: z.string().max(64),
+        nodeId: z.string().max(64),
+        nodeHashAtResolution: z.string().max(64),
+        resolvedBy: z.enum(["AI_SUGGESTION", "USER_EDIT", "DISMISSED"]),
+      }),
+    )
+    .min(1)
+    .max(40),
+})
+
 const analyzeSchema = z.object({
   action: z.literal("analyze").optional(),
   resumeId: z.string().max(64),
@@ -113,7 +142,7 @@ const analyzeSchema = z.object({
   checks: z.record(z.string().max(40), z.boolean().nullable()).default({}),
 })
 
-const schema = z.union([rewriteSchema, analyzeSchema])
+const schema = z.union([rewriteSchema, resolveSchema, analyzeSchema])
 
 /**
  * El almacenamiento del motor, sobre la tabla que ya existe.
@@ -141,20 +170,31 @@ function makeStore(resumeId: string, model: string): AtsStore {
       }
     },
     async write(kind: CacheKind, hash: string, payload: unknown) {
+      const data = {
+        payload: payload as Prisma.InputJsonValue,
+        model,
+        // La vacante no depende de ningún CV: dos candidatos que pegan el mismo
+        // aviso comparten la respuesta, y por eso no cuelga de uno.
+        resumeId: kind === "ats3-jd" ? null : resumeId,
+      }
       try {
-        await db.aiAnswerCache.create({
-          data: {
-            kind,
-            inputHash: hash,
-            payload: payload as Prisma.InputJsonValue,
-            model,
-            // La vacante no depende de ningún CV: dos candidatos que pegan el
-            // mismo aviso comparten la respuesta, y por eso no cuelga de uno.
-            resumeId: kind === "ats3-jd" ? null : resumeId,
-          },
+        /**
+         * UPSERT, no create.
+         *
+         * Las cuatro capas de caché se direccionan por CONTENIDO: su payload no
+         * cambia para la misma clave, así que reescribirlo es inocuo. El
+         * registro de lo resuelto NO: crece con cada arreglo que el usuario
+         * acepta, y con `create` la segunda escritura chocaba con la clave y se
+         * perdía en silencio — la memoria que impide volver a señalar lo ya
+         * arreglado no habría guardado nunca más de un hallazgo.
+         */
+        await db.aiAnswerCache.upsert({
+          where: { kind_inputHash: { kind, inputHash: hash } },
+          create: { kind, inputHash: hash, ...data },
+          update: data,
         })
       } catch {
-        // Clave repetida = otra petición contestó primero. Nada que hacer.
+        // La base falló. Un caché roto cuesta una llamada, nunca una petición.
       }
     },
   }
@@ -168,12 +208,72 @@ export async function POST(req: Request) {
   if (!parsed.success) return apiError(422, "invalid_data", { req })
 
   try {
+    /**
+     * REGISTRAR LO RESUELTO NO GASTA CUOTA, y se contesta antes de pedirla.
+     *
+     * No hay llamada al modelo: es una escritura. Cobrarle una ranura al
+     * usuario por decir "esto ya lo arreglé" sería cobrarle por no volver a
+     * pedirnos trabajo.
+     */
+    if (parsed.data.action === "resolve") {
+      const d = parsed.data
+      const store = makeStore(d.resumeId, AI_MODEL_PROSE)
+      const key = cacheKey.log(d.resumeId, cacheKey.jd(d.jobDescription, AI_MODEL_PROSE))
+      /**
+       * Lo que vuelve de la base se VALIDA, no se supone.
+       *
+       * `ResolutionLogSchema` estaba declarado para esto y no lo usaba nadie: la
+       * fila se leía con un cast, así que un payload viejo, de otra versión o a
+       * medio escribir entraba como si fuera bueno y volvía a guardarse. Un
+       * registro ilegible se descarta entero y el usuario pierde memoria, nunca
+       * el arreglo.
+       */
+      const crudo = await store.read("ats3-log", key)
+      const previo: Resolution[] = ResolutionLogSchema.safeParse(crudo).data ?? []
+      // Gana la resolución más nueva sobre el mismo hallazgo: el usuario puede
+      // arreglar, romper y volver a arreglar la misma línea.
+      const porId = new Map(previo.map((r) => [`${r.findingId}:${r.nodeId}`, r]))
+      for (const e of d.entries) {
+        porId.set(`${e.findingId}:${e.nodeId}`, { ...e, resolvedAt: new Date().toISOString() })
+      }
+      // El registro es memoria, no historial: se queda con lo último y no crece
+      // sin techo dentro de una fila de la base.
+      const todas = [...porId.values()].slice(-200)
+      await store.write("ats3-log", key, todas)
+      return NextResponse.json({ ok: true, stored: todas.length })
+    }
+
     // Antes de gastar nada: si el plan no llega o la cuota se acabó, esto
     // responde con su código y el stream nunca se abre.
     await enforceAIQuota(authResult.userId, "ats3", authResult.user.plan)
 
     const model = AI_MODEL_PROSE
-    const ai = new AIAts3Module({ client: new OpenAIClientAdapter(), model, language: parsed.data.language })
+
+    /**
+     * EL GASTO, SUMADO A LO LARGO DE LA PETICIÓN Y ESCRITO UNA SOLA VEZ.
+     *
+     * Una corrida usa hasta seis prompts. El panel de admin agrupa con
+     * `_count: { id: true }`, así que una fila por prompt figuraría como seis
+     * llamadas: la regla de la casa es UNA fila por petición.
+     *
+     * Sin esto el motor v3 gastaba tokens que no aparecían en ningún lado —
+     * exactamente el defecto que este proyecto ya pagó con tres llamadas sin
+     * contar. Se escribe al cerrar, incluso si el trabajo falló a mitad: lo
+     * gastado se gastó igual.
+     */
+    const spend = { promptTokens: 0, completionTokens: 0, costUsd: 0 }
+    const onUsage = (u: { promptTokens: number; completionTokens: number; cachedTokens: number }) => {
+      spend.promptTokens += u.promptTokens
+      spend.completionTokens += u.completionTokens
+      spend.costUsd += computeCostUsd(model, u.promptTokens, u.completionTokens, u.cachedTokens)
+    }
+    const bill = () => {
+      if (spend.promptTokens || spend.completionTokens) {
+        logAIUsage(authResult.userId, "ats3", { model, plan: authResult.user.plan, ...spend })
+      }
+    }
+
+    const ai = new AIAts3Module({ client: new OpenAIClientAdapter(), model, language: parsed.data.language, onUsage })
     const store = makeStore(parsed.data.resumeId, model)
 
     // ── REESCRIBIR UNA LÍNEA ────────────────────────────────────────────────
@@ -194,6 +294,7 @@ export async function POST(req: Request) {
         ai,
         store,
       })
+      bill()
       if (result.ok) {
         if (result.calls === 0) await refundDailyQuota(authResult.userId, "ats3", authResult.user.plan)
         return NextResponse.json({ ok: true, suggestion: result.suggestion, served: result.served })
@@ -227,8 +328,17 @@ export async function POST(req: Request) {
     // auditoría antes de poder puntuar. Se espera A ESE acto y recién ahí se
     // abre el stream: hasta acá, cualquier fallo todavía puede responder con su
     // propio código HTTP.
-    const first = await gen.next()
-    if (first.done) return apiError(502, "ai_error", { req })
+    let first
+    try {
+      first = await gen.next()
+    } catch (e) {
+      bill()
+      throw e
+    }
+    if (first.done) {
+      bill()
+      return apiError(502, "ai_error", { req })
+    }
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -255,6 +365,7 @@ export async function POST(req: Request) {
           // va a llegar en vez de quedarse en blanco para siempre.
           write({ act: "error", error: e instanceof Error ? e.message : "ai_error" })
         }
+        bill()
         controller.close()
       },
     })
