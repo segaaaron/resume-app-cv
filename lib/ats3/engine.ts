@@ -45,7 +45,7 @@ import {
 } from "@/lib/ats3/contracts"
 import { afterAccept, ledgerSignature, openLedger, releaseOpener, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
 import { checkSuggestion, findNode, isStale, loyalty, retryNudge, type GuardVerdict } from "@/lib/ats3/guards"
-import { deltaOf, gainOf, scoreResume, statesQuantity, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
+import { deltaOf, gainOf, scoreResume, statesQuantity, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUERTOS
@@ -113,6 +113,20 @@ export interface RawResume {
   otherText?: string
 }
 
+/**
+ * EL LECTOR DE VIÑETAS DE ESTE MOTOR, Y ES SUYO.
+ *
+ * Una descripción se guarda con su marca —«• », un guion o nada— y este motor la
+ * parte acá, sin pedirle nada al motor viejo ni a sus módulos compartidos: la
+ * regla del CEO es que el ATS v3 no se cuelgue de nada de aquello. Se aceptan
+ * los tres separadores que un usuario produce escribiendo, y el texto se
+ * conserva tal cual.
+ *
+ * LO QUE NO HACE, dicho para que nadie lo descubra tarde: no colapsa líneas
+ * repetidas al escribir de vuelta. El motor las trata antes —`duplicate_claim`
+ * es uno de los doce guards— así que una repetición se caza donde se decide, no
+ * al guardar.
+ */
 export function readBullets(description: string): string[] {
   return description
     .split(/\r?\n/)
@@ -203,7 +217,51 @@ export function readableChecks(tree: ResumeTree): ParseChecks {
     sin_simbolos_raros: bullets.length === 0 ? null : bullets.every((b) => !/^[^\p{L}\p{N}"'(¿¡]/u.test(b.text.trim())),
     // Una línea de más de 400 caracteres es un párrafo disfrazado de viñeta.
     lineas_en_rango: bullets.length === 0 ? null : bullets.every((b) => b.text.trim().length <= 400),
+    /**
+     * TRAYECTORIA SIN HUECOS SIN EXPLICAR NI FECHAS SUPERPUESTAS.
+     *
+     * Las dos son de las primeras cosas que mira quien lee, y las dos se
+     * calculan con las fechas que el CV ya tiene: cero tokens. Un hueco corto
+     * no cuenta —cambiar de trabajo lleva tiempo—; el umbral son seis meses,
+     * que es donde una pausa deja de leerse como transición.
+     *
+     * Se miden juntas porque son la misma pregunta —¿la línea de tiempo se
+     * entiende?— y dos avisos sobre lo mismo se leen como que el panel insiste.
+     */
+    trayectoria_continua: continuidad(roles),
   }
+}
+
+/**
+ * ¿La línea de tiempo se lee sin tropezar?
+ *
+ * `null` cuando no hay con qué medir: un CV de un solo puesto no tiene huecos
+ * entre puestos, y castigarlo por eso sería inventar un defecto.
+ */
+function continuidad(roles: ResumeTree["roles"]): boolean | null {
+  const periodos = roles
+    .map((r) => ({ desde: mes(r.startDate), hasta: r.endDate.trim() && !/presente|current|actual/i.test(r.endDate) ? mes(r.endDate) : Infinity }))
+    .filter((p) => p.desde !== null) as { desde: number; hasta: number }[]
+  if (periodos.length < 2) return null
+  const orden = [...periodos].sort((a, b) => a.desde - b.desde)
+  for (let i = 1; i < orden.length; i++) {
+    const previo = orden[i - 1]
+    // Superpuestas: el puesto nuevo empieza antes de que el anterior termine.
+    // Un mes de solape es un cambio de trabajo, no una contradicción.
+    if (previo.hasta !== Infinity && orden[i].desde < previo.hasta - 1) return false
+    // Hueco: más de seis meses entre que uno termina y el siguiente empieza.
+    if (previo.hasta !== Infinity && orden[i].desde - previo.hasta > 6) return false
+  }
+  return true
+}
+
+/** La fecha como cantidad de meses. Acepta las mismas formas que `MES_ANIO`. */
+function mes(fecha: string): number | null {
+  const m = fecha.match(/(\d{4})[-/](\d{1,2})|(\d{1,2})[-/](\d{4})|(\d{4})/)
+  if (!m) return null
+  const anio = Number(m[1] ?? m[4] ?? m[5])
+  const numeroMes = Number(m[2] ?? m[3] ?? 1)
+  return anio * 12 + Math.min(12, Math.max(1, numeroMes))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -259,7 +317,37 @@ export const cacheKey = {
 
 export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, score: Score, index: TermIndex): Finding[] {
   const out: Finding[] = []
-  const push = (type: FindingType, nodeId: NodeId, text: string, gain: number, detail: string) => {
+  /**
+   * `component` no es un dato extra: es DE DÓNDE sale `gain`, dicho en la misma
+   * llamada donde se lo pide. Así la pantalla puede agrupar por la medición en
+   * vez de inventarse un mapa paralelo que se separa de ella.
+   */
+  const push = (
+    type: FindingType,
+    component: ComponentKey,
+    nodeId: NodeId,
+    text: string,
+    gain: number,
+    detail: string,
+    /** Cómo se cierra. El que llega primero también decide esto. */
+    remedy: Finding["remedy"] = "rewrite",
+    /**
+     * DE QUÉ HABLA ESTE HALLAZGO, cuando no habla de la línea.
+     *
+     * "Una línea, una tarjeta" vale para lo que se dice DE LA LÍNEA: verbo,
+     * resultado, cifra, apertura. Dos hallazgos así sobre la misma viñeta son
+     * el panel contradiciéndose, y por eso se fusionan.
+     *
+     * Pero "este término no está en Habilidades" no habla de la línea: habla
+     * del TÉRMINO, y su remedio es agregarlo. Fusionarlo con la tarjeta de la
+     * línea se comía el remedio —el botón volvía a ser "reescribir"— y con dos
+     * términos sobre la misma viñeta habría agregado a Habilidades la
+     * concatenación de los dos, que no es una habilidad de nadie.
+     *
+     * Con sujeto propio, cada término tiene su tarjeta y su botón.
+     */
+    subject?: string,
+  ) => {
     // UNA LÍNEA, UNA TARJETA. La garantía vive acá y no en la memoria de quien
     // escriba el emisor siguiente: cuando se cumplía a mano, se olvidaba.
     //
@@ -268,14 +356,17 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
     // YA tienen tarjeta, así que tirarlos borraría el hallazgo más valioso del
     // panel. Su consejo se FUSIONA en la tarjeta que ya existe, y la ganancia se
     // suma porque cerrar las dos cosas mueve las dos componentes.
-    const existing = out.find((f) => f.nodeId === nodeId)
+    const clave = subject ? `${nodeId}:${subject}` : nodeId
+    const existing = out.find((f) => (f.subject ? `${f.nodeId}:${f.subject}` : f.nodeId) === clave)
     if (existing) {
       existing.detail = existing.detail ? `${existing.detail} · ${detail}` : detail
       existing.gain += gain
       if (!existing.merged.includes(type)) existing.merged.push(type)
       return
     }
-    out.push({ id: findingId(nodeId, type), type, merged: [type], nodeId, nodeText: text, nodeHash: nodeHash(text), gain, detail })
+    // El que llega primero da el título Y el componente: es el que la tarjeta
+    // nombra, así que es el que tiene que decidir bajo qué número se lee.
+    out.push({ id: findingId(clave, type), type, component, remedy, subject, merged: [type], nodeId, nodeText: text, nodeHash: nodeHash(text), gain, detail })
   }
 
   const byId = new Map(audit.bullets.map((b) => [b.id, b]))
@@ -284,11 +375,11 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
       const facts = byId.get(b.id)
       if (!facts) continue
       if (!facts.hasResult || !facts.hasMethod || !facts.hasActionVerb) {
-        push("no_result", b.id, b.text, gainOf(score, "xyz"), missingParts(facts))
+        push("no_result", "xyz", b.id, b.text, gainOf(score, "xyz"), missingParts(facts))
         continue
       }
       if (!statesQuantity(b.text)) {
-        push("no_metric", b.id, b.text, gainOf(score, "metric"), "el logro admite un tamaño y no lo declara")
+        push("no_metric", "metric", b.id, b.text, gainOf(score, "metric"), "el logro admite un tamaño y no lo declara")
       }
     }
   }
@@ -299,7 +390,57 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
     if (c.status === "FOUND") continue
     const key = c.requirement === "MUST" ? "must" : "nice"
     const target = bestHomeFor(tree, c.skill, index)
-    push("missing_requirement", target, textOf(tree, target), gainOf(score, key), c.skill)
+    push("missing_requirement", key, target, textOf(tree, target), gainOf(score, key), c.skill)
+  }
+
+  /**
+   * LO QUE ESTÁ, PERO DONDE NO SE VE.
+   *
+   * Un requisito demostrado en el puesto más viejo del CV cuenta para el
+   * puntaje —lo demuestra— y sin embargo el lector, humano o no, puede no
+   * llegar nunca hasta ahí. No es una brecha: es una ubicación. Por eso NO
+   * suma puntos (`gain` 0) y la tarjeta lo dice: mover, no escribir de nuevo.
+   *
+   * Se calcula sin gastar un token: la auditoría ya dice en qué nodo vive el
+   * término, y el árbol sabe a qué puesto pertenece ese nodo.
+   */
+  const puestoDe = new Map<NodeId, number>()
+  tree.roles.forEach((r, i) => r.bullets.forEach((b) => puestoDe.set(b.id, i)))
+  const ultimoPuesto = Math.max(0, tree.roles.length - 1)
+  for (const c of audit.coverage) {
+    if (c.status !== "FOUND" || !c.evidenceNodeId) continue
+    const dondeVive = puestoDe.get(c.evidenceNodeId)
+    // Sólo el puesto MÁS VIEJO, y sólo si hay tres o más: en un CV de dos
+    // puestos, "el de abajo" sigue estando en la primera pantalla.
+    if (dondeVive === undefined || tree.roles.length < 3 || dondeVive !== ultimoPuesto) continue
+    /**
+     * Se ancla en el PUESTO ACTUAL, no en el viejo.
+     *
+     * El problema no es cómo está escrita la línea de 2015: es que el término
+     * sólo vive ahí. Lo que lo cierra es mencionarlo arriba, donde el lector
+     * llega. Anclarlo a la línea vieja daba un botón que reescribía justamente
+     * lo que no había que tocar.
+     */
+    const arriba = bestHomeFor({ ...tree, roles: [tree.roles[0]] }, c.skill, index)
+    push("buried_term", "must", arriba, textOf(tree, arriba), 0, c.skill, "weave", c.skill)
+  }
+
+  /**
+   * LO QUE EL CV DEMUESTRA Y NO DICE EN HABILIDADES.
+   *
+   * El filtro lee esa sección literalmente y es de lo primero que mira. Un
+   * término que la persona prueba en una viñeta y no figura en su lista existe
+   * para el lector humano y no para el automático. Determinista y sin tokens:
+   * el índice de términos ya sabe reconocerlo, y las habilidades declaradas
+   * están en el árbol.
+   */
+  const enLista = new Set<string>()
+  for (const s of tree.declaredSkills) for (const t of termsIn(index, s)) enLista.add(normalize(t))
+  for (const c of audit.coverage) {
+    if (c.status !== "FOUND" || !c.evidenceNodeId) continue
+    if (enLista.has(normalize(c.skill))) continue
+    // Lo cierra AGREGARLO A LA LISTA, no reescribir la viñeta que ya lo prueba.
+    push("skill_not_listed", "must", c.evidenceNodeId, textOf(tree, c.evidenceNodeId), 0, c.skill, "add_skill", c.skill)
   }
 
   const summaryGaps = [
@@ -310,6 +451,7 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
   if (summaryGaps.some(([, ok]) => !ok)) {
     push(
       "summary_gap",
+      "summary",
       tree.summary.id,
       tree.summary.text,
       gainOf(score, "summary"),
@@ -382,7 +524,17 @@ function textOf(tree: ResumeTree, id: NodeId): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Act =
-  | { act: "score"; score: Score; tree: ResumeTree }
+  /**
+   * El puntaje viaja con los DOS insumos con los que se calculó.
+   *
+   * Sin ellos la pantalla no puede volver a medir cuando el usuario arregla algo
+   * —y hasta hoy no lo hacía: el dial quedaba clavado hasta reanalizar, que
+   * cuesta una llamada—. Con la auditoría y las verificaciones en la mano, el
+   * re-cálculo es la MISMA función del motor sobre el CV nuevo: cero llamadas,
+   * cero lógica de puntaje en la interfaz, y ningún número que el código no
+   * pueda probar.
+   */
+  | { act: "score"; score: Score; tree: ResumeTree; audit: AuditFacts; checks: ParseChecks }
   | { act: "job"; spec: JobSpec }
   /** Lo que la vacante pide y el CV ya demuestra: guía dónde gastar términos. */
   | { act: "covered"; terms: string[] }
@@ -441,7 +593,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   // medición vale más que una derivada de los datos.
   const checks = { ...readableChecks(tree), ...input.checks }
   const score = scoreResume(tree, spec, audit, checks)
-  yield { act: "score", score, tree }
+  yield { act: "score", score, tree, audit, checks }
   yield { act: "job", spec }
   yield {
     act: "covered",
@@ -477,6 +629,10 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
       all.push({
         id: findingId(tree.summary.id, "parse_risk"),
         type: "parse_risk",
+        component: "checks",
+        // Lo que un lector automático no extrae bien se arregla en el documento,
+        // no reescribiendo una línea: la tarjeta lo dice y no ofrece botón.
+        remedy: "rewrite",
         merged: ["parse_risk"],
         nodeId: tree.summary.id,
         nodeText: nombre,
@@ -602,10 +758,37 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   let first = await ask()
   calls++
 
-  // "Ya está bien" se contesta antes de cualquier guard: no hay texto que
-  // juzgar, y pedirle una segunda opinión al validador sería pagar una llamada
-  // por preguntar si la nada tiene una cifra inventada.
-  if (!first.changed) return { ok: false, alreadyGood: true, calls }
+  /**
+   * "Ya está bien" se contesta antes de cualquier guard: no hay texto que juzgar,
+   * y pedirle una segunda opinión al validador sería pagar una llamada por
+   * preguntar si la nada tiene una cifra inventada.
+   *
+   * PERO SE COMPRUEBA LA COHERENCIA, igual que con la cifra. Declinar es válido
+   * sólo si la línea original ya tiene los tres ejes; el modelo los DECLARA en
+   * `declineBasis`, así que decir "está bien" mientras se declara que le falta
+   * el método es una contradicción que el código puede ver. Se pide una vez más
+   * nombrando lo que falta; si vuelve a declinar, se le cree y no se cobra.
+   *
+   * Medido contra la API: declinó sobre "Participé en las reuniones con los
+   * padres" —apertura que el propio prompt prohíbe— y sobre "Di la medicación",
+   * tres palabras sin resultado ni método.
+   */
+  if (!first.changed) {
+    const ejes = first.declineBasis
+    // Sin declaración tampoco se le cree: el prompt la pide justamente cuando
+    // declina, y omitirla es la forma más barata de saltarse la vara.
+    const falta = ejes
+      ? [!ejes.hasActionVerb && "verbo", !ejes.hasResult && "resultado", !ejes.hasMethod && "método"].filter(Boolean)
+      : ["la declaración de los tres ejes"]
+    if (falta.length === 0) return { ok: false, alreadyGood: true, calls }
+    first = await ask(
+      req.language === "en"
+        ? `You declined, yet you declared this line lacks: ${falta.join(", ")}. A line missing any of the three has something to fix — rewrite it, keeping strictly to what the original says.`
+        : `Declinaste, pero declaraste que a esta línea le falta: ${falta.join(", ")}. Una línea a la que le falta cualquiera de los tres TIENE algo que arreglar — reescribila, ciñéndote a lo que el original dice.`,
+    )
+    calls++
+    if (!first.changed) return { ok: false, alreadyGood: true, calls }
+  }
 
   let verdict = checkSuggestion(first, ctx)
 

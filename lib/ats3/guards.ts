@@ -22,6 +22,7 @@
 // no rechaza una reescritura buena.
 
 import {
+  METRIC_TYPES,
   normalize,
   termsIn,
   buildTermIndex,
@@ -100,6 +101,74 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
     if (inventadaEnVariante) return fail("invented_figure", inventadaEnVariante)
     const inventadosEnVariante = inventedTerms(variante, ctx)
     if (inventadosEnVariante.length) return fail("invented_term", inventadosEnVariante.join(", "))
+    // «Igual que el texto principal» era una promesa a medias: se le miraban los
+    // huecos, la cifra y las herramientas, y NO la persona ni el contenido. Una
+    // variante en tercera persona —o que se come el dato que la línea traía—
+    // entra al CV por la puerta que existe para no poner un número inventado.
+    const personaEnVariante = wrongPerson(variante)
+    if (personaEnVariante) return fail("wrong_person", personaEnVariante)
+    const perdidoEnVariante = droppedTerms(ctx.original, variante, ctx.index)
+    if (perdidoEnVariante.length) return fail("drops_content", perdidoEnVariante.join(", "))
+  }
+
+  /**
+   * EL HUECO ES UN HUECO, NO LA FICHA DEL HUECO.
+   *
+   * ── MEDIDO CONTRA LA API (2026-08-29) ──────────────────────────────────────
+   * El motor entregó esta línea, y es lo que se habría escrito en el CV:
+   *
+   *   "…brindando atención al público durante el cobro y pago en caja
+   *    [n personas; escala de flujo de caja; evidencia: cantidad aproximada de
+   *    clientes atendidos por turno o por día]."
+   *
+   * El modelo volcó DENTRO del texto la etiqueta, la pista y la evidencia, que
+   * son campos del hueco y viven en la pantalla de confirmación. El candidato
+   * habría visto ese bloque en su currículum. El texto lleva el token y nada
+   * más; lo demás se muestra al lado.
+   *
+   * Se rechaza en vez de recortarse porque recortar un corchete a la mitad
+   * escribe una frase partida en el CV de alguien, y el reintento le dice al
+   * modelo exactamente qué hizo mal.
+   */
+  /**
+   * La vara: el punto y coma —que es como el modelo encadena los campos— o un
+   * corchete larguísimo. NO un tope corto: medido, con 25 caracteres rechazaba
+   * "[n camiones descargados por semana]", que es un hueco perfectamente bueno.
+   * El derrame real que se midió tenía ciento diez caracteres y dos puntos y
+   * coma; un hueco honesto no llega a sesenta.
+   */
+  const huecoSucio = text.match(/\[[^\]]{60,}\]|\[[^\]]*;[^\]]*\]/)
+  if (huecoSucio) {
+    return fail("too_many_placeholders", `el hueco lleva su ficha adentro del texto: ${huecoSucio[0].slice(0, 60)}`)
+  }
+  /**
+   * NI LA FICHA AL LADO DEL HUECO.
+   *
+   * Medido en la corrida siguiente: el modelo sacó los campos del corchete y los
+   * pegó afuera —"[n] (SCALE; label: pallet volume; hint: …)"—, así que el
+   * chequeo de arriba, que mira DENTRO del corchete, ya no los veía.
+   *
+   * Lo que se busca son NUESTROS propios nombres de campo y de tipo: no es una
+   * lista de vocabulario del oficio, es el contrato de este motor apareciendo
+   * donde no va. Si el texto lo nombra, el modelo volcó la ficha en el CV.
+   */
+  /**
+   * ── Y POR QUÉ ESTA VARA ES EXACTA, MEDIDO ──────────────────────────────────
+   * La primera versión buscaba los tipos SIN distinguir mayúsculas, y con eso
+   * rechazaba trabajo legítimo: "Weighed products on the floor scale",
+   * "deployment frequency", "handled money transfers" — tres oficios distintos,
+   * tres líneas buenas tiradas. Un guard demasiado estricto no es seguro: borra
+   * el producto.
+   *
+   * El derrame se reconoce por la FORMA de nuestro contrato, no por la palabra:
+   * los tipos viajan en MAYÚSCULAS (son el enum) y los campos siempre con sus
+   * dos puntos. Una persona que escribe "scale" en su currículum no escribe
+   * "SCALE".
+   */
+  const fichaAfuera = new RegExp(`\\b(${METRIC_TYPES.join("|")})\\b|\\b(label|hint|evidenceNeeded)\\s*:`)
+  const derrame = text.match(fichaAfuera)
+  if (derrame) {
+    return fail("too_many_placeholders", `la ficha del hueco se derramó al texto: ${derrame[0]}`)
   }
 
   if (s.placeholders.length > 2) return fail("too_many_placeholders", `${s.placeholders.length} huecos`)
@@ -166,6 +235,24 @@ export function wrongPerson(text: string): string | null {
   // Un token en mayúsculas es una sigla, no un verbo conjugado.
   if (limpia === limpia.toUpperCase()) return null
   if (/ó$/.test(limpia)) return `"${primera}" habla de la persona en tercera`
+  /**
+   * LOS PASADOS IRREGULARES, QUE NO LLEVAN TILDE Y SE COLABAN.
+   *
+   * ── MEDIDO CONTRA LA API (2026-08-29) ──────────────────────────────────────
+   * El motor ENTREGÓ "Mantuvo las máquinas en funcionamiento…" para el CV de un
+   * soldador. La vara anterior era la tilde —Controló, Aplicó— y en español los
+   * irregulares de tercera persona no la llevan: mantuvo, tuvo, hizo, puso,
+   * dijo, estuvo, supo, quiso, vino, trajo, condujo.
+   *
+   * No hace falta una lista, y por eso no la hay: en español el pasado en
+   * PRIMERA persona nunca termina en -o. Una apertura que termina en -o es un
+   * pasado de otro (Mantuvo), un presente (Superviso) o un sustantivo (Manejo
+   * de caja) — y las tres están mal en una viñeta por el mismo motivo: no dicen
+   * lo que ESTA persona hizo.
+   */
+  if (/[^aeiouáéíóú]o$/.test(limpia)) {
+    return `"${primera}" no es un pasado en primera persona: habla de otro, está en presente, o es un sustantivo`
+  }
   if (/(ar|er|ir)$/i.test(limpia)) return `"${primera}" es un infinitivo, no lo que la persona hizo`
   return null
 }

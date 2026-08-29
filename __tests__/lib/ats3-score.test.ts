@@ -56,6 +56,7 @@ function makeSpec(must: number, nice: number): JobSpec {
   return {
     roleTitleRaw: "Puesto",
     roleTitleCanonical: "Puesto",
+  metricThatMatters: "",
     seniority: null,
     yearsRequired: null,
     domain: null,
@@ -74,11 +75,13 @@ function makeAudit(tree: ResumeTree, spec: JobSpec, mustFound: number, niceFound
       skill: m.skill,
       requirement: "MUST" as const,
       status: (i < mustFound ? "FOUND" : "NOT_FOUND") as "FOUND" | "NOT_FOUND",
+      evidenceNodeId: null,
     })),
     ...spec.niceToHave.map((n, i) => ({
       skill: n.skill,
       requirement: "NICE" as const,
       status: (i < niceFound ? "FOUND" : "NOT_FOUND") as "FOUND" | "NOT_FOUND",
+      evidenceNodeId: null,
     })),
   ]
   const bullets = tree.roles[0].bullets.map((b, i) => ({
@@ -91,6 +94,7 @@ function makeAudit(tree: ResumeTree, spec: JobSpec, mustFound: number, niceFound
     bullets,
     summary: { identity: true, proof: false, fit: true, extra: false },
     coverage: cov,
+    softCoverage: [],
     titleAlignment: rnd(),
   }
 }
@@ -131,7 +135,8 @@ describe("el total cae en [0,100] por construcción", () => {
     const audit: AuditFacts = {
       bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true })),
       summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: spec.mustHave.map((m) => ({ skill: m.skill, requirement: "MUST" as const, status: "FOUND" as const })),
+      coverage: spec.mustHave.map((m) => ({ skill: m.skill, requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: null })),
+      softCoverage: [],
       titleAlignment: 1,
     }
     const tree2: ResumeTree = {
@@ -269,4 +274,20 @@ describe("diversidad de aperturas", () => {
   it("ignora mayúsculas y acentos: es la misma apertura", () => {
     expect(distinctOpeners(["Gestioné la agenda", "gestione los turnos"])).toBe(1)
   })
+})
+
+it("una viñeta que la auditoría inventó no entra al puntaje", () => {
+  // El juicio por línea lo devuelve un modelo, y un id que el CV no tiene sube
+  // el numerador Y el denominador de un pilar entero con una línea que nadie
+  // escribió — mientras el motor la ignora al emitir hallazgos.
+  const tree = makeTree(2)
+  const spec = makeSpec(2, 1)
+  const real = makeAudit(tree, spec, 1, 0)
+  const conFantasma = {
+    ...real,
+    bullets: [...real.bullets, { id: "b_no_existe", hasActionVerb: true, hasResult: true, hasMethod: true }],
+  }
+  const xyz = (s: ReturnType<typeof scoreResume>) => s.components.find((c) => c.key === "xyz")!
+  expect(xyz(scoreResume(tree, spec, conFantasma, CHECKS)).denominator).toBe(2)
+  expect(scoreResume(tree, spec, conFantasma, CHECKS).total).toBe(scoreResume(tree, spec, real, CHECKS).total)
 })

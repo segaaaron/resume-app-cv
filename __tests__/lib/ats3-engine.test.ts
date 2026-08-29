@@ -47,6 +47,7 @@ class MemoryStore implements AtsStore {
 const SPEC: JobSpec = {
   roleTitleRaw: "Cajera de sucursal",
   roleTitleCanonical: "Cajera",
+  metricThatMatters: "",
   seniority: null,
   yearsRequired: null,
   domain: null,
@@ -86,10 +87,11 @@ function fakeAudit(): AuditFacts {
     })),
     summary: { identity: true, proof: false, fit: false, extra: false },
     coverage: [
-      { skill: "Arqueo de caja", requirement: "MUST", status: "FOUND" },
-      { skill: "Atención al cliente", requirement: "MUST", status: "FOUND" },
-      { skill: "Inventario", requirement: "NICE", status: "NOT_FOUND" },
+      { skill: "Arqueo de caja", requirement: "MUST", status: "FOUND", evidenceNodeId: null },
+      { skill: "Atención al cliente", requirement: "MUST", status: "FOUND", evidenceNodeId: null },
+      { skill: "Inventario", requirement: "NICE", status: "NOT_FOUND", evidenceNodeId: null },
     ],
+    softCoverage: [],
     titleAlignment: 0.9,
   }
 }
@@ -132,7 +134,7 @@ class CountingAi implements AtsAi {
         metricType: null,
         placeholders: [],
         variantWithoutMetric: null,
-        measurableAspect: null,
+        measurableAspect: null, declineBasis: null,
       }
     )
   }
@@ -148,7 +150,7 @@ class CountingAi implements AtsAi {
       metricType: null,
       placeholders: [],
       variantWithoutMetric: null,
-      measurableAspect: null,
+      measurableAspect: null, declineBasis: null,
     }
   }
   async verify() {
@@ -431,9 +433,10 @@ describe("el análisis se entrega en actos", () => {
       bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true })),
       summary: { identity: true, proof: true, fit: true, extra: true },
       coverage: [
-        { skill: "Control de inventario", requirement: "MUST" as const, status: "NOT_FOUND" as const },
-        { skill: "Medios de pago", requirement: "MUST" as const, status: "NOT_FOUND" as const },
+        { skill: "Control de inventario", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null },
+        { skill: "Medios de pago", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null },
       ],
+      softCoverage: [],
       titleAlignment: 1,
     }
     const score = scoreResume(tree, spec2, audit, CHECKS)
@@ -538,7 +541,7 @@ describe("la reescritura y su reintento", () => {
       metricType: null,
       placeholders: [],
       variantWithoutMetric: null,
-      measurableAspect: null,
+      measurableAspect: null, declineBasis: null,
     }
 
     const r = await runRewrite({
@@ -550,6 +553,34 @@ describe("la reescritura y su reintento", () => {
     if (!r.ok && !r.alreadyGood) expect(r.verdict.ok).toBe(false)
   })
 
+  it("declinar diciendo que falta un eje es una contradicción: se pide una vez más", async () => {
+    // Medido contra la API: el modelo devolvió "ya está bien" sobre una línea de
+    // tres palabras sin resultado ni método. Reforzar la regla en prosa no lo
+    // movió; declararlo sí, porque una contradicción declarada la ve el código.
+    const { tree, index, ledger } = setup()
+    const target = tree.roles[0].bullets[0]
+    const nudges: string[] = []
+    const ai = new CountingAi()
+    const base = {
+      bulletId: target.id, actionVerb: "Administré", keywordsUsed: [], claim: "", metricType: null,
+      placeholders: [], variantWithoutMetric: null, measurableAspect: null,
+    }
+    ai.rewriteBullet = async (input: { nudge?: string }) => {
+      nudges.push(input.nudge ?? "")
+      ai.rewrites++
+      return nudges.length === 1
+        ? { ...base, changed: false, text: "", declineBasis: { hasActionVerb: true, hasResult: false, hasMethod: false } }
+        : { ...base, changed: true, text: "Administré la medicación indicada según el horario y el registro del turno", declineBasis: null }
+    }
+  
+    const r = await runRewrite({
+      tree, nodeId: target.id, spec: SPEC, ledger, index, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore(),
+    })
+    expect(nudges).toHaveLength(2)
+    expect(nudges[1]).toMatch(/resultado|método/)
+    expect(r.ok).toBe(true)
+  })
+
   it("nunca reintenta dos veces: eso escondería un prompt que dejó de funcionar", async () => {
     const { tree, index, ledger } = setup()
     const ai = new CountingAi()
@@ -557,7 +588,7 @@ describe("la reescritura y su reintento", () => {
     ai.nextSuggestion = {
       bulletId: target.id, changed: true,
       text: "Atendí a 300 clientes por turno en la línea de cajas resolviendo consultas",
-      actionVerb: "Atendí", keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null,
+      actionVerb: "Atendí", keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
     }
     await runRewrite({ tree, nodeId: target.id, spec: SPEC, ledger, index, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
     expect(ai.rewrites).toBe(2)
@@ -569,7 +600,7 @@ describe("la reescritura y su reintento", () => {
 describe("aplicar mide, no promete", () => {
   const anchored = (over: Partial<AnchoredSuggestion>): AnchoredSuggestion => ({
     bulletId: "x", changed: true, text: "t", actionVerb: "Hice", keywordsUsed: [], claim: "",
-    metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null,
+    metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
     basedOnHash: "h", originalText: "o", delta: 0, ...over,
   })
 
@@ -643,5 +674,138 @@ describe("escribir de vuelta el CV", () => {
   it("un puesto que el motor no tocó vuelve intacto", () => {
     const out = writeBack(buildTree(RAW), RAW)
     expect(readBullets(out.workExperience![0].description!)).toEqual(readBullets(RAW.workExperience![0].description!))
+  })
+})
+
+describe("la trayectoria se lee sin tropezar, y lo mide el código", () => {
+  const conFechas = (rangos: [string, string][]) =>
+    readableChecks(
+      buildTree({
+        workExperience: rangos.map(([startDate, endDate], i) => ({
+          jobTitle: `Puesto ${i}`, employer: `Empresa ${i}`, startDate, endDate,
+          description: "• Hice el trabajo del puesto con detalle suficiente",
+        })),
+      }),
+    ).trayectoria_continua
+
+  it("un hueco de más de seis meses se marca", () => {
+    // Es de las primeras cosas que mira quien lee, y sale de las fechas que el
+    // CV ya tiene: cero tokens.
+    expect(conFechas([["2019-01", "2020-01"], ["2021-06", "2023-01"]])).toBe(false)
+  })
+
+  it("un hueco corto NO se marca: cambiar de trabajo lleva tiempo", () => {
+    expect(conFechas([["2019-01", "2020-01"], ["2020-04", "2023-01"]])).toBe(true)
+  })
+
+  it("fechas superpuestas se marcan", () => {
+    expect(conFechas([["2019-01", "2021-06"], ["2020-01", "2023-01"]])).toBe(false)
+  })
+
+  it("con un solo puesto no se puede medir, y NO se castiga", () => {
+    // Castigar por algo que no se pudo mirar es fabricar un defecto.
+    expect(conFechas([["2019-01", "2023-01"]])).toBeNull()
+  })
+
+  it("el puesto actual sin fecha de fin no cuenta como hueco", () => {
+    expect(conFechas([["2019-01", "2021-01"], ["2021-03", "Presente"]])).toBe(true)
+  })
+})
+
+describe("lo que está pero donde no se ve, y lo que no está en Habilidades", () => {
+  const arbol = () =>
+    buildTree({
+      summary: "Cajera con experiencia",
+      skills: [{ name: "Atención al cliente" }],
+      workExperience: [
+        { jobTitle: "Cajera", employer: "Súper", startDate: "2023-01", endDate: "Presente", description: "• Atendí a los clientes en la línea de cajas" },
+        { jobTitle: "Repositora", employer: "Súper", startDate: "2021-01", endDate: "2022-12", description: "• Ordené la góndola por fecha de vencimiento" },
+        { jobTitle: "Ayudante", employer: "Kiosco", startDate: "2019-01", endDate: "2020-12", description: "• Realicé el arqueo de caja al cierre" },
+      ],
+    })
+
+  const facts = (arbolCV: ReturnType<typeof buildTree>, skill: string, nodo: string) => ({
+    bullets: arbolCV.roles.flatMap((r) => r.bullets).map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true })),
+    summary: { identity: true, proof: true, fit: true, extra: true },
+    coverage: [{ skill, requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: nodo }],
+    softCoverage: [],
+    titleAlignment: 1,
+  })
+
+  it("un requisito demostrado SÓLO en el puesto más viejo se señala como enterrado", () => {
+    // No es una brecha: es una ubicación. Por eso no suma puntos — mover, no
+    // escribir de nuevo.
+    const t = arbol()
+    const viejo = t.roles[2].bullets[0].id
+    const spec = { ...SPEC, mustHave: [{ skill: "Arqueo de caja", raw: "arqueo de caja", years: null, category: null }] }
+    const index = buildTermIndex(termsOf(spec, t))
+    const audit = facts(t, "Arqueo de caja", viejo)
+    const score = scoreResume(t, spec, audit, {})
+    const hallazgos = findingsOf(t, spec, audit, score, index)
+    const enterrado = hallazgos.find((f) => f.merged.includes("buried_term"))
+    // SE ANCLA EN EL PUESTO ACTUAL, no en el viejo: el problema no es cómo está
+    // escrita la línea de 2015, es que el término sólo vive ahí. Anclarlo abajo
+    // daba un botón que reescribía justo lo que no había que tocar.
+    const arriba = t.roles[0].bullets.map((b) => b.id)
+    expect(arriba).toContain(enterrado?.nodeId)
+    expect(enterrado?.nodeId).not.toBe(viejo)
+    // Y el remedio lo dice el motor: mencionarlo arriba, no reescribir.
+    expect(enterrado?.remedy).toBe("weave")
+  })
+
+  it("lo demostrado en una viñeta y ausente de Habilidades se señala", () => {
+    // El filtro lee esa sección literalmente y es de lo primero que mira.
+    const t = arbol()
+    const actual = t.roles[0].bullets[0].id
+    const spec = { ...SPEC, mustHave: [{ skill: "Medios de pago", raw: "medios de pago", years: null, category: null }] }
+    const index = buildTermIndex(termsOf(spec, t))
+    const audit = facts(t, "Medios de pago", actual)
+    const score = scoreResume(t, spec, audit, {})
+    const hallazgos = findingsOf(t, spec, audit, score, index)
+    const sinListar = hallazgos.find((f) => f.merged.includes("skill_not_listed"))
+    expect(sinListar).toBeTruthy()
+    // Lo cierra AGREGARLO A LA LISTA. Reescribir la viñeta que ya lo demuestra
+    // no toca la sección que el filtro lee literalmente.
+    expect(sinListar?.remedy).toBe("add_skill")
+    expect(sinListar?.detail).toBe("Medios de pago")
+  })
+
+  it("lo que YA está en Habilidades no se señala", () => {
+    const t = arbol()
+    const actual = t.roles[0].bullets[0].id
+    const spec = { ...SPEC, mustHave: [{ skill: "Atención al cliente", raw: "atención al cliente", years: null, category: null }] }
+    const index = buildTermIndex(termsOf(spec, t))
+    const audit = facts(t, "Atención al cliente", actual)
+    const score = scoreResume(t, spec, audit, {})
+    const hallazgos = findingsOf(t, spec, audit, score, index)
+    expect(hallazgos.some((f) => f.merged.includes("skill_not_listed"))).toBe(false)
+  })
+
+  it("dos términos sobre la misma línea son DOS tarjetas, no una concatenada", () => {
+    // "Una línea, una tarjeta" vale para lo que se dice DE LA LÍNEA. Un término
+    // que falta en Habilidades habla del TÉRMINO: fusionarlos habría agregado a
+    // Habilidades la concatenación de los dos, que no es habilidad de nadie.
+    const t = arbol()
+    const actual = t.roles[0].bullets[0].id
+    const spec = {
+      ...SPEC,
+      mustHave: [
+        { skill: "Medios de pago", raw: "medios de pago", years: null, category: null },
+        { skill: "Facturación", raw: "facturación", years: null, category: null },
+      ],
+    }
+    const index = buildTermIndex(termsOf(spec, t))
+    const audit = {
+      ...facts(t, "Medios de pago", actual),
+      coverage: [
+        { skill: "Medios de pago", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: actual },
+        { skill: "Facturación", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: actual },
+      ],
+    }
+    const score = scoreResume(t, spec, audit, {})
+    const sinListar = findingsOf(t, spec, audit, score, index).filter((f) => f.merged.includes("skill_not_listed"))
+    expect(sinListar.map((f) => f.detail).sort()).toEqual(["Facturación", "Medios de pago"])
+    // Ids distintos: dos tarjetas con el mismo id se aplican sobre la equivocada.
+    expect(new Set(sinListar.map((f) => f.id)).size).toBe(2)
   })
 })

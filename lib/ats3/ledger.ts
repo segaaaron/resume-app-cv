@@ -71,6 +71,16 @@ export function openLedger(
 ): Ledger {
   const texts = tree.roles.flatMap((r) => r.bullets.map((b) => b.text))
   const keywordBudget: Ledger["keywordBudget"] = {}
+  /**
+   * EL ORDEN DE LA VACANTE ES UNA DECISIÓN, Y SE RESPETA.
+   *
+   * P1 devuelve las listas ordenadas por peso real —lo que el aviso repite y lo
+   * que enuncia al abrir pesa más—. Acá eso se conserva: `priority` marca lo que
+   * la vacante exige y el CV todavía no demuestra, y el presupuesto se recorre
+   * en ese orden, así que el primer término que se teje es el que más pesa. Un
+   * `Record` conserva el orden de inserción para claves de texto, que es lo que
+   * hace que esto no necesite un campo aparte.
+   */
   for (const req of [...spec.mustHave, ...spec.niceToHave]) {
     keywordBudget[req.skill] = {
       max: KEYWORD_MAX,
@@ -122,7 +132,18 @@ export function ledgerSignature(l: Ledger): string {
     .map(([k, v]) => `${k}:${v.used}`)
     .sort()
     .join(",")
-  return sha256([...l.verbsUsed].sort().join(","), kw, l.metricTypesUsed.join(","), String(l.bulletsRemaining)).slice(0, 16)
+  /**
+   * LOS LOGROS YA ATRIBUIDOS ENTRAN EN LA FIRMA, y faltaban.
+   *
+   * Una reescritura servida del caché NO vuelve a pasar por los guards: se
+   * guardó ya aprobada. Con los `claimsMade` fuera de la clave, dos estados que
+   * sólo se diferencian en qué logros están tomados compartían entrada, así que
+   * al aceptar una línea que se atribuye un resultado, la siguiente podía
+   * servirse desde el caché atribuyéndose EL MISMO — que es exactamente lo que
+   * `duplicate_claim` existe para impedir, esquivado por la puerta de atrás.
+   */
+  const claims = [...l.claimsMade].map(normalize).sort().join(",")
+  return sha256([...l.verbsUsed].sort().join(","), kw, l.metricTypesUsed.join(","), claims, String(l.bulletsRemaining)).slice(0, 16)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

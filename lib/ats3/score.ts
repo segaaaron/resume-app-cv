@@ -92,7 +92,32 @@ export interface AuditFacts {
   /** Cobertura por requisito. `IMPLIED` no cuenta como cubierto: se infiere del
    *  contexto y no hay una línea que lo demuestre. Cuenta a medias sería decidir
    *  por el reclutador. */
-  coverage: { skill: string; requirement: "MUST" | "NICE"; status: "FOUND" | "IMPLIED" | "NOT_FOUND" }[]
+  coverage: {
+    skill: string
+    requirement: "MUST" | "NICE"
+    status: "FOUND" | "IMPLIED" | "NOT_FOUND"
+    /** DÓNDE lo demuestra. Sin esto no se distingue lo cubierto de lo enterrado. */
+    evidenceNodeId: string | null
+  }[]
+  /**
+   * LAS BLANDAS QUE EL AVISO PIDE, JUZGADAS.
+   *
+   * Se extraían de la vacante, se pintaban en una tabla y NADIE las miraba: el
+   * panel le mostraba al candidato una lista contando apariciones literales,
+   * que es justo como NO se demuestra una habilidad blanda. Una blanda no se
+   * cumple porque la palabra esté escrita —así se cumple sólo en la lista de
+   * adjetivos que todo reclutador saltea—: se cumple si hay un logro que la
+   * evidencia, y por eso el estado trae el id de esa línea.
+   *
+   * NO entra al puntaje, y es decisión de producto: sumarlas movería el número
+   * de todos los CVs sin una medición que lo respalde. Informa, no puntúa.
+   */
+  softCoverage: {
+    signal: string
+    status: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT"
+    /** La línea que la demuestra. Sin ella, no está demostrada. */
+    evidenceNodeId: string | null
+  }[]
   /** Alineación del cargo con el que busca la vacante, de 0 a 1. */
   titleAlignment: number
 }
@@ -241,7 +266,17 @@ export function scoreResume(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, 
   const niceFound = audit.coverage.filter((c) => c.requirement === "NICE" && c.status === "FOUND").length
 
   const bulletTexts = tree.roles.flatMap((r) => r.bullets.map((b) => b.text))
-  const bullets = audit.bullets
+  /**
+   * SÓLO LAS LÍNEAS QUE EL CV TIENE DE VERDAD.
+   *
+   * El juicio por viñeta lo devuelve un modelo, y un modelo puede contestar por
+   * una línea que no existe —un id mal copiado, una que ya se borró—. Contarla
+   * sube el numerador Y el denominador de un pilar entero con una línea que
+   * nadie escribió, y encima el motor la ignora al emitir hallazgos: el puntaje
+   * y la lista de arreglos hablarían de CVs distintos.
+   */
+  const idsReales = new Set(tree.roles.flatMap((r) => r.bullets.map((b) => b.id)))
+  const bullets = audit.bullets.filter((b) => idsReales.has(b.id))
   const complete = bullets.filter((b) => b.hasActionVerb && b.hasResult && b.hasMethod).length
   const withQuantity = bulletTexts.filter(statesQuantity).length
   const summaryDone = [audit.summary.identity, audit.summary.proof, audit.summary.fit, audit.summary.extra].filter(
@@ -319,4 +354,42 @@ export function gainOf(score: Score, key: ComponentKey): number {
  */
 export function deltaOf(before: Score, after: Score): number {
   return after.total - before.total
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL SEMÁFORO
+//
+// Vive con el puntaje porque es una LECTURA del puntaje, y así ninguna pantalla
+// necesita un módulo propio para preguntar de qué color va un número.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ¿Puede mandarlo?
+ *
+ * Nota por encima del umbral Y cero críticos abiertos. Las dos condiciones, no
+ * una: con 100 de coincidencia y el resumen repetido tres veces, la respuesta
+ * honesta es que todavía no.
+ */
+export const READY_SCORE = 80
+
+/**
+ * Debajo de esto el CV no compite: no es «podría mejorar», es que el filtro lo
+ * deja afuera. Entre este número y `READY_SCORE`, amarillo — hay con qué trabajar.
+ */
+export const WARN_SCORE = 55
+
+/** Rojo, amarillo o verde. La regla del CEO, en un solo lugar. */
+export type ScoreBand = "bad" | "warn" | "ok"
+
+/**
+ * EL SEMÁFORO DEL PANEL, CON UN DUEÑO Y ACÁ.
+ *
+ * Vive con el puntaje porque es una LECTURA del puntaje: preguntar de qué color
+ * va un número no puede obligar a nadie a cargar otro módulo. La regla es del
+ * CEO —<55 rojo · 55-79 amarillo · ≥80 verde— y sólo la usa la pantalla de este
+ * motor.
+ */
+export function scoreBand(pct: number): ScoreBand {
+  if (pct >= READY_SCORE) return "ok"
+  return pct >= WARN_SCORE ? "warn" : "bad"
 }

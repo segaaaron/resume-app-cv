@@ -44,6 +44,7 @@ const tree = (bullets: string[], roles = 1): ResumeTree => ({
 const spec = (must: string[], nice: string[] = []): JobSpec => ({
   roleTitleRaw: "Puesto",
   roleTitleCanonical: "Puesto",
+  metricThatMatters: "",
   seniority: null,
   yearsRequired: null,
   domain: null,
@@ -56,6 +57,7 @@ const spec = (must: string[], nice: string[] = []): JobSpec => ({
 })
 
 const suggestion = (over: Partial<Suggestion> = {}): Suggestion => ({
+  declineBasis: null,
   bulletId: "b0_0",
   changed: true,
   text: "texto",
@@ -172,4 +174,12 @@ describe("el presupuesto de espacio", () => {
   it("con un solo puesto, se lleva todo el presupuesto", () => {
     expect(spaceBudget(tree(["a"], 1), 15).perRole["r0"]).toBe(15)
   })
+})
+
+it("la firma cambia cuando cambian los logros ya atribuidos", () => {
+  // Una reescritura servida del caché no vuelve a pasar por los guards. Si la
+  // firma ignora los claims, la segunda línea puede servirse atribuyéndose el
+  // mismo resultado que la primera ya se llevó.
+  const base: Ledger = { verbsUsed: [], keywordBudget: {}, metricTypesUsed: [], claimsMade: [], bulletsRemaining: 6 }
+  expect(ledgerSignature({ ...base, claimsMade: ["bajó las mermas"] })).not.toBe(ledgerSignature(base))
 })
