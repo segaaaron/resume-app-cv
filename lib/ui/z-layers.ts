@@ -8,7 +8,9 @@
  *
  * Al apretar «Escribirlo en una viñeta» dentro del modal del ejecutor, cuando el
  * modelo no encuentra dónde colocar la habilidad, la app PREGUNTA a qué puesto
- * pertenece (`JobPickerModal`). Esa pregunta se abría en `z-130`; el modal que
+ * pertenece (`JobPickerModal`, que se fue con el motor viejo el 2026-08-29 —
+ * queda el caso porque la regla que dejó sigue valiendo). Esa pregunta se abría
+ * en `z-130`; el modal que
  * la disparó vive en `z-9999`. La pregunta quedaba debajo, invisible.
  *
  * Y como el fondo que la cierra también quedaba debajo, no se podía ni contestar

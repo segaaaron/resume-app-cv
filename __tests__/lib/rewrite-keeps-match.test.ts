@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { droppedPostingTerms, losesPostingTerm } from "@/lib/ats/rewrite-keeps-match"
-import { keywordPresent, normalize } from "@/lib/services/ai/shared/ats-matcher"
+// El matcher viejo se fue con su motor: estas dos preguntas las contesta
+// `vocabulary`, que es de donde el guard las toma de verdad.
+import { termPresent as keywordPresent, normalizeTerm as normalize } from "@/lib/ats/vocabulary"
 
 /**
  * UNA REESCRITURA NO PUEDE BAJARTE EL PUNTAJE.
