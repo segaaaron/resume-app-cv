@@ -385,13 +385,31 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
     }
   }
 
+  /** El sujeto que agrupa a los requisitos entre sí. Ver el bloque de abajo. */
+  const REQUIREMENTS = "requisitos"
+
   // Lo que la vacante exige y el CV no demuestra. Es la palanca más grande del
   // puntaje, y en el motor viejo vivía fuera del ejecutor, como filas de tabla.
   for (const c of audit.coverage) {
     if (c.status === "FOUND") continue
     const key = c.requirement === "MUST" ? "must" : "nice"
     const target = bestHomeFor(tree, c.skill, index)
-    push("missing_requirement", key, target, textOf(tree, target), gainOf(score, key), c.skill)
+    /**
+     * SU PROPIA TARJETA, Y NO LA DE LA VIÑETA DONDE ATERRIZA.
+     *
+     * Sin sujeto, la clave de fusión es la LÍNEA: el requisito caía dentro de la
+     * tarjeta que esa viñeta ya tenía por su verbo o su cifra, y con ella se
+     * perdían las dos cosas que lo hacen accionable — su título («faltan N
+     * requisitos») y su sección, porque el que llega primero fija el componente.
+     * Reportado con captura: el panel decía «faltan 8 habilidades duras» y en
+     * Tailor no había NI UNA tarjeta de habilidades; el término aparecía
+     * escondido como detalle de otra cosa, «verbo · TestFlight».
+     *
+     * El sujeto es COMPARTIDO por todos los requisitos de la misma línea, no el
+     * término: así se agrupan entre ellos —una sola reescritura los aterriza a
+     * todos— y no se mezclan con lo que se dice DE la línea.
+     */
+    push("missing_requirement", key, target, textOf(tree, target), gainOf(score, key), c.skill, "rewrite", REQUIREMENTS)
   }
 
   /**

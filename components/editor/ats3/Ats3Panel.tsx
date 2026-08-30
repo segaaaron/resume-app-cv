@@ -97,6 +97,8 @@ export default function Ats3Panel() {
       (sectionData.workExperience ?? []).flatMap((r) => readBullets(r.description ?? "")),
     [sectionData.workExperience],
   )
+  /** El término con el que se entró, para aterrizar en SU tarjeta y no arriba de todo. */
+  const [foco, setFoco] = useState<string | null>(null)
   /** Lo resuelto en esta sesión: sobrevive a cerrar y volver a abrir Tailor. */
   const [hechas, setHechas] = useState<DoneEntry[]>([])
 
@@ -185,7 +187,15 @@ export default function Ats3Panel() {
               {/* La tabla de términos vive bajo la sección que la produce, con
                   las cuentas MEDIDAS sobre el aviso y el CV. */}
               {términos.some((x) => x.section === sección.id) && (
-                <TermTable terms={términos.filter((x) => x.section === sección.id)} />
+                <TermTable
+                  terms={términos.filter((x) => x.section === sección.id)}
+                  /* La fila LLEVA a Tailor con su término: el informe abre la
+                     puerta, y quien escribe sigue siendo el de siempre. */
+                  onSolve={(term) => {
+                    setFoco(term)
+                    setTailorAbierto(true)
+                  }}
+                />
               )}
             </ReportSectionCard>
           ))}
@@ -220,9 +230,13 @@ export default function Ats3Panel() {
           sections={secciones}
           findings={todos}
           regressed={regresados}
+          focusTerm={foco}
           done={hechas}
           onDone={(e) => setHechas((h) => (h.some((x) => x.id === e.id) ? h : [...h, e]))}
-          onClose={() => setTailorAbierto(false)}
+          onClose={() => {
+            setTailorAbierto(false)
+            setFoco(null)
+          }}
         />
       )}
     </div>

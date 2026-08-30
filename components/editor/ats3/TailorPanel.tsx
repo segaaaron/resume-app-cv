@@ -102,6 +102,7 @@ export default function TailorPanel({
   sections,
   findings,
   regressed,
+  focusTerm,
   done,
   onDone,
   onClose,
@@ -111,6 +112,15 @@ export default function TailorPanel({
   /** Los hallazgos del motor: la tarjeta sólo tiene su id, el acto necesita el nodo. */
   findings: readonly Finding[]
   regressed: ReadonlySet<string>
+  /**
+   * EL TÉRMINO CON EL QUE SE ENTRÓ desde el informe.
+   *
+   * Sin esto, apretar «Resolver con Tailor» en la fila de «Xcode» abría la
+   * ventana arriba de todo y el usuario tenía que buscar entre veinticuatro
+   * tarjetas la que acababa de pedir. El ejecutor viejo ya lo hacía y se perdió
+   * con él.
+   */
+  focusTerm?: string | null
   /**
    * LO RESUELTO EN ESTA SESIÓN, y vive FUERA de esta ventana.
    *
@@ -185,7 +195,7 @@ export default function TailorPanel({
     if (!f) return
     // Se marca DESPUÉS y sólo si escribió: dar por resuelto lo que no se escribió
     // deja la tarjeta en pendientes y en hechas al mismo tiempo.
-    if (a.addSkill(f.nodeId, f.detail)) marcar(check, { after: f.detail })
+    if (a.addSkill(f.nodeId, f.detail, check.id)) marcar(check, { after: f.detail })
   }
 
   /**
@@ -222,6 +232,14 @@ export default function TailorPanel({
    * tests, y un panel que se cae al aparecer una confirmación sería peor que el
    * defecto que esto cierra.
    */
+  /** Lleva la vista hasta la tarjeta del término con el que se entró. */
+  useEffect(() => {
+    if (!focusTerm) return
+    document
+      .querySelector(`[data-term="${CSS.escape(focusTerm)}"]`)
+      ?.scrollIntoView?.({ behavior: "smooth", block: "center" })
+  }, [focusTerm, filter])
+
   const respuestaRef = useRef<HTMLDivElement>(null)
   const hayRespuesta = Boolean(a.pending) || Boolean(a.rejected)
   useEffect(() => {
@@ -417,12 +435,21 @@ export default function TailorPanel({
               check={check}
               order={i + 1}
               regressed={regressed.has(check.id)}
+              /* DOS PREGUNTAS DISTINTAS, y estaban contestadas con una sola.
+                 `busy` es «hay una reescritura en vuelo» —y por eso se apagan
+                 TODOS los botones, para no disparar dos consultas a la vez—.
+                 `writing` es «la que está escribiendo es ÉSTA». Con una sola
+                 respuesta, apretabas un botón y las veinticuatro tarjetas
+                 decían «Escribiendo…»: reportado con captura. */
               busy={a.busyNode !== null}
+              writing={a.busyNode === nodoDe(check.id)?.nodeId}
               onSolve={() => {
                 // No se marca acá: pedir una reescritura no es haberla
                 // aplicado, y los guards pueden rechazarla.
+                // Con QUÉ tarjeta se pidió: una línea puede tener dos, y al
+                // aplicar sólo se cierra la que se resolvió.
                 const f = nodoDe(check.id)
-                if (f) a.requestRewrite(f.nodeId)
+                if (f) a.requestRewrite(f.nodeId, check.id)
               }}
               onFix={() => aplicarSolo(check)}
               onDismiss={() => {
@@ -432,7 +459,7 @@ export default function TailorPanel({
                 // con el tilde de «Aplicado» sería decirle que hizo algo que no
                 // hizo.
                 const f = nodoDe(check.id)
-                if (f) a.dismiss(f.nodeId)
+                if (f) a.dismiss(f.nodeId, check.id)
               }}
               t={t}
               ta={ta}
@@ -813,6 +840,7 @@ function FixCard({
   order,
   regressed,
   busy,
+  writing,
   onSolve,
   onFix,
   onDismiss,
@@ -822,7 +850,10 @@ function FixCard({
   check: PanelCheck
   order: number
   regressed: boolean
+  /** Hay una reescritura en vuelo: ningún botón acepta otra. */
   busy: boolean
+  /** Y ES ÉSTA la que está escribiendo. */
+  writing: boolean
   onSolve: () => void
   onFix: () => void
   onDismiss: () => void
@@ -878,7 +909,9 @@ function FixCard({
       {check.evidence && check.evidence.length > 0 && (
         <ul className="mx-3.5 mt-2.5 flex flex-col gap-1.5">
           {check.evidence.slice(0, 4).map((e, i) => (
-            <li key={`${check.id}-ev-${i}`}>
+            /* Marcada con su término: es lo que el informe usa para aterrizar
+               en esta tarjeta cuando se entra desde la fila de ese término. */
+            <li key={`${check.id}-ev-${i}`} data-term={e}>
               <Note>{e}</Note>
             </li>
           ))}
@@ -889,7 +922,7 @@ function FixCard({
         {puedeReescribir && (
           <Btn tone="ai" disabled={busy} onClick={onSolve}>
             <Sparkles className="h-3 w-3" />
-            {busy ? t("writing") : t("fix_it")}
+            {writing ? t("writing") : t("fix_it")}
           </Btn>
         )}
         {/* El arreglo determinista: no llama al modelo y no gasta cuota, así que

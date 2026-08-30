@@ -74,12 +74,34 @@ import type { ResumeSections, WorkExperienceItem } from "@/types/resume"
  * Vive fuera del hook y no repetida en cada acción: cuando esto se hacía a mano,
  * cada camino se acordaba de una lista distinta.
  */
-function olvidar(st: Ats3State, nodeId: string): Ats3State {
+function olvidar(st: Ats3State, quien: { nodeId: string } | { findingId: string }): Ats3State {
+  /**
+   * DOS COSAS DISTINTAS QUE ANTES SE PEDÍAN IGUAL.
+   *
+   * `nodeId` es «esta línea ya no está» —la sacaste del CV—, y entonces se va
+   * TODO lo que hablaba de ella. `findingId` es «cerré este hallazgo», y ahí
+   * sólo se va ése.
+   *
+   * Mientras una línea tenía una sola tarjeta daba lo mismo. Desde que un
+   * requisito que falta abre la suya, una viñeta puede tener DOS —lo que le
+   * falta a la línea y los términos que tiene que aterrizar—, y borrar por
+   * línea hacía desaparecer la segunda al resolver la primera: trabajo que el
+   * usuario no hizo, esfumado sin que nadie se lo dijera. La que queda se sigue
+   * leyendo bien porque su evidencia sale del CV vivo, no de la foto vieja.
+   */
+  const fuera = (f: { id: string; nodeId: string }) =>
+    "nodeId" in quien ? f.nodeId === quien.nodeId : f.id === quien.findingId
   return {
     ...st,
-    findings: st.findings.filter((f) => f.nodeId !== nodeId),
-    regressed: st.regressed.filter((f) => f.nodeId !== nodeId),
-    triage: st.triage.filter((d) => d.bulletId !== nodeId),
+    findings: st.findings.filter((f) => !fuera(f)),
+    regressed: st.regressed.filter((f) => !fuera(f)),
+    // El veredicto habla de la LÍNEA entera: se retira cuando se retira ella, o
+    // cuando el hallazgo que se cerró era el de esa misma línea.
+    triage: st.triage.filter((d) =>
+      "nodeId" in quien
+        ? d.bulletId !== quien.nodeId
+        : d.bulletId !== st.findings.find((f) => f.id === quien.findingId)?.nodeId,
+    ),
   }
 }
 
@@ -100,6 +122,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   const [busyNode, setBusyNode] = useState<string | null>(null)
   const [rejected, setRejected] = useState<{ nodeId: string; reason: FailureReason; detail: string } | null>(null)
   const [pending, setPending] = useState<AnchoredSuggestion | null>(null)
+  /** Cuál de las tarjetas de esa línea pidió la reescritura. Ver `olvidar`. */
+  const [pendingFinding, setPendingFinding] = useState<string | null>(null)
   const inFlight = useRef<AbortController | null>(null)
 
   const payloadResume = useCallback(
@@ -259,9 +283,10 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * CV cuando el usuario lo acepta, y con los huecos ya completados por él.
    */
   const requestRewrite = useCallback(
-    async (nodeId: string) => {
+    async (nodeId: string, findingId?: string) => {
       if (!state.spec) return
       setBusyNode(nodeId)
+      setPendingFinding(findingId ?? null)
       setRejected(null)
       try {
         const res = await apiFetch("/api/ai/ats3", {
@@ -437,9 +462,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       // veredicto del triage ofreciendo reescribir lo que se acaba de
       // reescribir. Las dos cosas se leen igual: «lo arreglé y me lo vuelve a
       // pedir», que es el bucle que este motor existe para no tener.
-      setState((st) => olvidar(st, s.bulletId))
+      setState((st) => olvidar(st, pendingFinding ? { findingId: pendingFinding } : { nodeId: s.bulletId }))
     },
-    [payloadResume, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, state.weights, updateSectionData],
+    [payloadResume, pendingFinding, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, state.weights, updateSectionData],
   )
 
   /**
@@ -473,7 +498,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             },
       )
       updateSectionData("workExperience", roles)
-      setState((st) => olvidar(st, nodeId))
+      setState((st) => olvidar(st, { nodeId }))
       return { roleIndex, bulletIndex, text: quitada.text }
     },
     [payloadResume, sectionData.workExperience, updateSectionData],
@@ -522,7 +547,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      * «listo» justo cuando no hizo nada es el defecto que este proyecto ya pagó
      * con captura.
      */
-    (nodeId: string, term: string): boolean => {
+    (nodeId: string, term: string, findingId?: string): boolean => {
       const limpio = term.trim()
       if (!limpio) return false
       /**
@@ -546,7 +571,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        */
       updateSectionData("skills", [...actuales, { id: `sk_${nodeHash(limpio)}`, name: limpio, level: "intermediate" }] as ResumeSections["skills"])
       registrarResuelto(nodeId, limpio, "AI_SUGGESTION")
-      setState((st) => olvidar(st, nodeId))
+      setState((st) => olvidar(st, findingId ? { findingId } : { nodeId }))
       return true
     },
     [registrarResuelto, updateSectionData],
@@ -609,12 +634,12 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   }, [payloadResume])
 
   const dismiss = useCallback(
-    (nodeId: string) => {
+    (nodeId: string, findingId?: string) => {
       // Descartar también es resolver: el usuario dijo que no le interesa, y
       // volver a mostrárselo en la próxima corrida es no haberlo escuchado.
       const nodo = findNode(buildTree(payloadResume()), nodeId)
       registrarResuelto(nodeId, nodo?.text ?? "", "DISMISSED")
-      setState((st) => olvidar(st, nodeId))
+      setState((st) => olvidar(st, findingId ? { findingId } : { nodeId }))
     },
     [payloadResume, registrarResuelto],
   )

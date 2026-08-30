@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 // El lenguaje de pulsación vive con el resto del vocabulario visual: definirlo
 // acá otra vez era la misma frase en dos archivos.
-import { Chip, Note, PRESSABLE, toneOf, type Tone } from "./ui"
+import { Btn, Chip, Note, PRESSABLE, toneOf, type Tone } from "./ui"
 import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Search, Sparkles, Tag,  User } from "lucide-react"
 import { READY_SCORE, scoreBand } from "@/lib/ats3/score"
 import type { PanelCheck, PanelSection, PanelSectionId, PanelTerm } from "./view-model"
@@ -745,9 +745,17 @@ const GROUP_ORDER: readonly Group[] = ["missing", "listed", "proven"]
 
 interface TableProps {
   terms: PanelTerm[]
+  /**
+   * LLEVA a Tailor con ese término, no lo resuelve acá.
+   *
+   * Es la diferencia entre las dos pantallas dicha en una firma: esto recibe un
+   * término y no una función que escriba, así que esta tabla no tiene forma de
+   * tocar el CV aunque alguien quisiera.
+   */
+  onSolve?: (term: string) => void
 }
 
-export function TermTable({ terms }: TableProps) {
+export function TermTable({ terms, onSolve }: TableProps) {
   const t = useTranslations("editor.ats")
   if (terms.length === 0) return null
 
@@ -862,12 +870,36 @@ export function TermTable({ terms }: TableProps) {
                           lo que lo vuelve prueba y no afirmación. Confundirlos
                           es hacer el trabajo equivocado.
                         */}
-                        {/* SIN BOTONES, POR CONSTRUCCIÓN.
-                            Acá vivían «agregar» y «demostrar», que se dibujaban
-                            sólo si alguien pasaba sus funciones. Desde que el
-                            informe diagnostica y Tailor arregla, nadie las pasa:
-                            dos botones imposibles con su copia, sus colores y su
-                            estado de ocupado mantenidos por las dudas. */}
+                        {/* LA PUERTA DE LA FILA, y no un botón que escriba.
+                            El informe sigue sin tocar el CV: esto LLEVA a Tailor
+                            y aterriza en la tarjeta de ese término. Antes acá
+                            había dos botones que escribían; los saqué creyendo
+                            que eran código muerto y eran la puerta que había que
+                            cablear — el CEO lo reportó con captura: «te salían
+                            botones de mejorar y te llevaba al tailor». */}
+                        {/* LA PUERTA SÓLO SE ABRE DONDE HAY ALGO DETRÁS.
+                            La condición miraba la CUENTA del texto («tu CV no lo
+                            dice»), y quien decide si Tailor tiene trabajo para
+                            ese término es la AUDITORÍA («no lo demuestra»). Son
+                            dos opiniones sobre lo mismo y pueden discrepar: un
+                            término escrito de otra forma cuenta 0 y sin embargo
+                            está demostrado — el botón habría llevado a una
+                            tarjeta que no existe. Se pregunta por lo demostrado,
+                            que es lo que produce la tarjeta. */}
+                        {onSolve && !row.proven && (
+                          <span className="shrink-0">
+                            <Btn
+                              variant="outline"
+                              tone="ai"
+                              onClick={() => onSolve(row.term)}
+                              className="!min-h-[32px] !text-[10px]"
+                              ariaLabel={`${t("solve_with_tailor")} — ${row.term}`}
+                            >
+                              <Sparkles className="h-3 w-3 shrink-0" />
+                              {t("solve_with_tailor")}
+                            </Btn>
+                          </span>
+                        )}
                       </span>
                     </div>
                   </li>

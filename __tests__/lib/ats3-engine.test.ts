@@ -483,8 +483,18 @@ describe("el análisis se entrega en actos", () => {
     const score = scoreResume(tree, SPEC, audit, CHECKS)
     const index = buildTermIndex(termsOf(SPEC, tree))
     const findings = findingsOf(tree, SPEC, audit, score, index)
-    const ids = findings.map((f) => f.nodeId)
-    expect(new Set(ids).size).toBe(ids.length)
+    /**
+     * UNA TARJETA POR LÍNEA **Y SUJETO**, que es la regla que el motor declara.
+     *
+     * «Una línea, una tarjeta» vale para lo que se dice DE la línea: verbo,
+     * resultado, cifra. Lo que habla de OTRA cosa —un término que falta, uno que
+     * no está en Habilidades— trae sujeto y abre la suya, porque si no queda
+     * escondido como detalle de un hallazgo que no es el suyo y pierde su
+     * sección: reportado con captura, «faltan 8 habilidades duras» y ni una
+     * tarjeta de habilidades en Tailor.
+     */
+    const claves = findings.map((f) => (f.subject ? `${f.nodeId}:${f.subject}` : f.nodeId))
+    expect(new Set(claves).size).toBe(claves.length)
     // Y nada se perdió por el camino: el que se fusionó dejó su tipo.
     expect(findings.flatMap((f) => f.merged).length).toBeGreaterThanOrEqual(findings.length)
   })
