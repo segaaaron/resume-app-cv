@@ -138,7 +138,15 @@ export const PROMPT_VERSION = {
   // mueve una candidatura es la que el rol valora, no cualquiera.
   // p1-7: las dos listas vienen ORDENADAS por peso real —lo que el aviso repite
   // y lo que enuncia al abrir pesa más—. El motor atiende en ese orden.
-  P1: "p1-7", // parser de vacante
+  // p1-8 (2026-08-30): `softSignals` estaba en el esquema y en la plantilla de
+  // salida SIN UNA SOLA REGLA en el prompt. El modelo llenaba el campo con lo
+  // que le parecía: propiedades del entregable ("pixel-accurate", "accessible")
+  // y responsabilidades del puesto ("contribute to iOS engineering practices").
+  // Eso llegaba a la pantalla como "las blandas que el aviso pide" y después la
+  // auditoría tenía que juzgar si un logro las demuestra — imposible: no hablan
+  // de la persona. Un campo declarado sin regla no lo llena nadie, lo llena el
+  // azar. Reportado en producción con captura.
+  P1: "p1-8", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
