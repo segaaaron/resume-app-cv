@@ -17,23 +17,13 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Plus, Search, Sparkles, Tag, Trash2, User, Wrench } from "lucide-react"
+// El lenguaje de pulsación vive con el resto del vocabulario visual: definirlo
+// acá otra vez era la misma frase en dos archivos.
+import { Chip, Note, PRESSABLE, toneOf, type Tone } from "./ui"
+import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Search, Sparkles, Tag,  User } from "lucide-react"
 import { READY_SCORE, scoreBand } from "@/lib/ats3/score"
 import type { PanelCheck, PanelSection, PanelSectionId, PanelTerm } from "./view-model"
 
-/**
- * CÓMO RESPONDE UN BOTÓN AL TOCARLO. Un lenguaje, no quince decisiones sueltas.
- *
- * `brightness` funciona sobre cualquier fondo —los del panel son tokens— así que
- * un solo tratamiento sirve para el sólido, el de borde y el fantasma. El acuse
- * de pulsación es un `scale` mínimo, sin reflow, y se anula con
- * `prefers-reduced-motion`, que es una preferencia del sistema y no una opinión
- * nuestra.
- */
-export const PRESSABLE =
-  "transition-[filter,transform] duration-150 hover:brightness-95 active:scale-[0.97] " +
-  "motion-reduce:transition-none motion-reduce:active:scale-100 " +
-  "disabled:pointer-events-none disabled:opacity-60"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCOREDIAL
@@ -58,7 +48,9 @@ const RADIUS = 54
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 const COUNT_UP_MS = 520
 
-type Tone = "ok" | "warn" | "bad"
+/* El tipo del significado vive en `ui.tsx` y se importa. Declararlo otra vez acá
+   —"ok" | "warn" | "bad"— daba DOS tipos con el mismo nombre en la misma
+   carpeta: el que este archivo usaba y el que pintaba los colores. */
 
 /**
  * EL COLOR DICE EL PUNTAJE. Nada más, y por eso se puede creer.
@@ -88,14 +80,14 @@ type Tone = "ok" | "warn" | "bad"
  * crítico tiene su propia tarjeta, en rojo, con su propio texto. Cada cosa dicha
  * una vez, en su lugar: la regla de este panel desde el principio.
  */
-/** El dueño de la regla es `scoreBand`; acá sólo se le pregunta. */
-const toneOf = scoreBand
-
-const TONE_VAR: Record<Tone, string> = {
-  ok: "var(--a-ok)",
-  warn: "var(--a-warn)",
-  bad: "var(--a-bad)",
-}
+/**
+ * El dueño de la regla es `scoreBand`; acá sólo se le pregunta.
+ *
+ * Se llama `bandOf` y no `toneOf` porque `toneOf` ya nombra otra cosa —los
+ * tokens de un significado, en `ui.tsx`—: dos funciones con el mismo nombre en
+ * la misma carpeta es como se cruza la información sin que nadie lo note.
+ */
+const bandOf = scoreBand
 
 /** Cuenta hasta el valor nuevo. Adorno con red — ver dentro. */
 function useCountUp(target: number): number {
@@ -178,9 +170,9 @@ interface DialProps {
 
 export function ScoreDial({ score, criticalCount, criticalSolvable, recoverable, criticalDetail = [] }: DialProps) {
   const t = useTranslations("editor.ats")
-  const tone = toneOf(score)
+  const tone = bandOf(score)
   const shown = useCountUp(score)
-  const color = TONE_VAR[tone]
+  const color = toneOf(tone).solid
 
   return (
     <div className="flex flex-col gap-3">
@@ -251,7 +243,7 @@ export function ScoreDial({ score, criticalCount, criticalSolvable, recoverable,
           <p className="text-[15px] font-bold leading-tight [text-wrap:balance] [overflow-wrap:anywhere]" style={{ color }}>
             {criticalCount > 0
               ? t("verdict_blocked", { count: criticalCount })
-              : score >= READY_SCORE
+              : bandOf(score) === "ok"
                 ? t("verdict_ready")
                 : t("verdict_below")}
           </p>
@@ -485,20 +477,17 @@ export function ReportSectionCard({ section, defaultOpen = false, renderCheck, i
             )}
 
             {total > 0 && (
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold ${scored && pct !== null ? "" : "ml-auto"}`}
-                style={
-                  openCount > 0
-                    ? { background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }
-                    : { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
-                }
+              <Chip
+                size="xs"
+                tone={openCount > 0 ? "warn" : "ok"}
+                className={`shrink-0 ${scored && pct !== null ? "" : "ml-auto"}`}
               >
                 {openCount > 0
                   ? openWeightless
                     ? t("section_open_no_score", { count: openCount })
                     : t("section_open", { count: openCount })
                   : t("section_clean", { count: total })}
-              </span>
+              </Chip>
             )}
           </span>
         ) : null}
@@ -522,18 +511,6 @@ export function ReportSectionCard({ section, defaultOpen = false, renderCheck, i
 // ─────────────────────────────────────────────────────────────────────────────
 // CHECKROW
 // ─────────────────────────────────────────────────────────────────────────────
-/**
- * ¿Este hallazgo tiene salida?
- *
- * Vive acá, en la fila que lo pinta, y no en un módulo del motor: es una
- * pregunta de PANTALLA —«¿dibujo el aviso de "sin puerta"?»— y el motor v3 no
- * tiene por qué contestarla. Un informativo tiene salida por definición: su
- * salida es saberlo.
- */
-function tieneSalida(check: PanelCheck): boolean {
-  if (check.informational) return true
-  return check.owner === "user" || check.owner === "tailor" || !!check.action
-}
 
 /**
  * Un hallazgo, con su salida.
@@ -555,17 +532,21 @@ const STATE_ICON = {
   crit: AlertCircle,
 } as const
 
-const STATE_COLOR = {
-  pass: "var(--a-ok)",
-  warn: "var(--a-warn)",
-  crit: "var(--a-bad)",
-} as const
-
-const STATE_BG = {
-  pass: "var(--a-ok-soft)",
-  warn: "var(--a-warn-soft)",
-  crit: "var(--a-bad-soft)",
-} as const
+/**
+ * QUÉ SIGNIFICA CADA ESTADO — y nada más que eso.
+ *
+ * Acá vivían dos mapas de COLOR, uno para la tinta y otro para el fondo, que
+ * repetían lo que `ui.tsx` ya sabe. Con la información cruzada, cambiar el rojo
+ * del panel obligaba a acordarse de cinco lugares y el que se olvidara quedaba
+ * contradiciendo a los otros cuatro: es exactamente cómo murió el motor viejo.
+ * Este archivo declara su dominio —un chequeo que pasa, que avisa o que rompe—
+ * y el color lo pone quien tiene esa competencia.
+ */
+const STATE_TONE = {
+  pass: "ok",
+  warn: "warn",
+  crit: "bad",
+} as const satisfies Record<PanelCheck["state"], Tone>
 
 /**
  * Las cuatro clases que produce `dateFormatClass`, dichas como las lee una
@@ -583,7 +564,6 @@ const DATE_FORMAT_KEY: Record<string, string> = {
 interface RowProps {
   check: PanelCheck
   /** Abre el ejecutor sobre ESTE hallazgo. Ausente = el hallazgo no es de tailor. */
-  onSolve?: (checkId: string) => void
   /**
    * Ejecuta el arreglo determinista: unificar fechas, agregar la habilidad,
    * reunir la línea partida. Sin modelo y sin cuota.
@@ -593,11 +573,9 @@ interface RowProps {
    * con él — «un diagnóstico sin botón es una crítica sin puerta», que es la
    * regla que este panel existe para cumplir.
    */
-  onFix?: (checkId: string) => void
-  busy?: boolean
 }
 
-export function CheckRow({ check, onSolve, onFix, busy }: RowProps) {
+export function CheckRow({ check }: RowProps) {
   const t = useTranslations("editor.ats")
   const [open, setOpen] = useState(false)
   /**
@@ -621,15 +599,10 @@ export function CheckRow({ check, onSolve, onFix, busy }: RowProps) {
     }
   }
   const Icon = STATE_ICON[check.state]
-  const color = STATE_COLOR[check.state]
+  const tokens = toneOf(STATE_TONE[check.state])
+  const color = tokens.solid
   // `open` de arriba es si la fila está desplegada; esto es si el hallazgo sigue
   // sin resolver. Dos preguntas distintas que compartían nombre.
-  const unresolved = check.state !== "pass"
-  // Nada que aplicar sobre un informativo: existe para que él decida con el dato.
-  const canSolve = !check.informational && check.owner === "tailor" && !!onSolve && unresolved
-  const canFix = !check.informational && check.owner === "auto" && !!onFix && !!check.action && unresolved
-  /** Cortar una línea de sobra: determinista como los demás `auto`, pero destructivo. */
-  const isCut = check.id.startsWith("tips.cut")
 
   return (
     <div
@@ -644,7 +617,7 @@ export function CheckRow({ check, onSolve, onFix, busy }: RowProps) {
       >
         <span
           className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-          style={{ background: STATE_BG[check.state], color }}
+          style={{ background: tokens.soft, color }}
         >
           <Icon className="h-3 w-3" />
         </span>
@@ -665,22 +638,17 @@ export function CheckRow({ check, onSolve, onFix, busy }: RowProps) {
               panel valen 0 puntos, porque lo que hacen es sacarte de la lista
               por otra vía: sin email nadie te llama, y el puntaje no lo mide.
               Decir eso convierte la contradicción en el dato que faltaba. */}
-          <span
-            className="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9.5px] font-bold tabular-nums"
-            style={
-              check.weight > 0
-                ? { background: "var(--a-accent-soft)", color: "var(--a-accent-ink)" }
-                : check.state === "crit"
-                  ? { background: "var(--a-bad-soft)", color: "var(--a-bad-ink)" }
-                  : { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }
-            }
+          <Chip
+            size="xs"
+            className="mt-1"
+            tone={check.weight > 0 ? "accent" : check.state === "crit" ? "bad" : "neutral"}
           >
             {check.weight > 0
               ? t("check_points", { points: check.weight })
               : check.state === "crit"
                 ? t("check_blocks_anyway")
                 : t("check_no_score")}
-          </span>
+          </Chip>
         </span>
 
         <ChevronDown
@@ -701,75 +669,29 @@ export function CheckRow({ check, onSolve, onFix, busy }: RowProps) {
           {check.evidence && check.evidence.length > 0 && (
             <ul className="mt-2 flex flex-wrap gap-1.5">
               {check.evidence.slice(0, 8).map((e, i) => (
-                <li
-                  key={`${check.id}-ev-${i}`}
-                  /* ENVUELVE, NO CORTA. Con `truncate` la ficha era una línea sin
-                     retorno: en el riel de ~320px «Marketing Digital / Community
-                     Manager · 2023 – 2024» se cortaba en «· 202…» — y el año es
-                     JUSTO el dato del que habla el hallazgo de fechas. El
-                     `title` no alcanza: en un panel nadie descubre un tooltip, y
-                     en táctil no existe. Ahora la ficha crece a dos renglones y
-                     dice el nombre entero; las cortas siguen siendo pastillas. */
-                  className="max-w-full rounded-md px-2 py-1 text-[10.5px] font-medium leading-snug [overflow-wrap:anywhere]"
-                  style={{ background: "var(--a-surface-3)", color: "var(--a-ink-2)" }}
-                  title={e}
-                >
-                  {e}
+                <li key={`${check.id}-ev-${i}`} className="max-w-full">
+                  {/* ENVUELVE, NO CORTA — lo hace la ficha del vocabulario. Con
+                      `truncate` esto era una línea sin retorno: en el riel de
+                      ~320px «Marketing Digital / Community Manager · 2023 –
+                      2024» se cortaba en «· 202…», y el año es JUSTO el dato del
+                      que habla el hallazgo de fechas. */}
+                  <Note size="xs">{e}</Note>
                 </li>
               ))}
             </ul>
           )}
 
-          {/* Sólo el candidato sabe el mes que falta o la cifra real. Decírselo es
-              la salida; ofrecerle un botón que lo adivine, no. */}
-          {/* Un informativo no promete que el chequeo se cierre: no se cierra. */}
-          {check.owner === "user" && !check.informational && (
-            <p
-              className="mt-2 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug"
-              style={{ background: "var(--a-warn-soft)", color: "var(--a-ink-2)" }}
-            >
-              {t("check_only_you")}
-            </p>
-          )}
         </div>
       )}
 
-      {canFix && (
-        <button
-          type="button"
-          onClick={() => onFix?.(check.id)}
-          disabled={busy}
-          className={`${PRESSABLE} flex w-full items-center gap-1.5 border-t px-3 py-2 text-[11.5px] font-semibold`}
-          style={{ borderColor: "var(--a-border)", color: "var(--a-accent-ink)", background: "var(--a-accent-soft)" }}
-        >
-          {/* EL BOTÓN DICE LO QUE HACE. «Arreglar» sobre una propuesta de corte
-              prometía una reparación y abría un borrado: la misma pregunta mal
-              hecha que ya se pagó en la tarjeta de fusión. */}
-          {isCut ? <Trash2 className="h-3 w-3 shrink-0" /> : <Wrench className="h-3 w-3 shrink-0" />}
-          {isCut ? t("fix_remove") : t("check_fix_now")}
-        </button>
-      )}
+      {/* SIN BOTONES, Y AHORA POR CONSTRUCCIÓN.
+          Acá vivían «arreglar» y «resolver con Tailor», que se dibujaban sólo si
+          alguien pasaba la función que los resuelve. Desde que el informe
+          diagnostica y Tailor arregla, nadie la pasa: eran dos botones que no
+          podían aparecer, con su copia y sus colores mantenidos por las dudas.
+          Quitarlos convierte la regla en estructura — esta fila no tiene de
+          dónde sacar un botón, no importa quién la use. */}
 
-      {canSolve && (
-        <button
-          type="button"
-          onClick={() => onSolve?.(check.id)}
-          disabled={busy}
-          className={`${PRESSABLE} flex w-full items-center gap-1.5 border-t px-3 py-2 text-[11.5px] font-semibold`}
-          style={{ borderColor: "var(--a-border)", color: "var(--a-ai-ink)", background: "var(--a-ai-soft)" }}
-        >
-          <Sparkles className="h-3 w-3 shrink-0" />
-          {t("solve_with_tailor")}
-        </button>
-      )}
-
-      {/* Un diagnóstico sin salida es una crítica sin puerta. No debería existir,
-          y si aparece hay que verlo en desarrollo antes que el usuario. */}
-      {!tieneSalida(check) && check.state !== "pass" && (
-        <p className="px-3 pb-2 text-[10px] italic" style={{ color: "var(--a-muted-2)" }}>
-          {t("check_no_exit")}
-        </p>
-      )}
     </div>
   )
 }
@@ -812,25 +734,20 @@ export function CheckRow({ check, onSolve, onFix, busy }: RowProps) {
 /** Los tres estados, en el orden en que conviene trabajarlos. */
 type Group = "missing" | "listed" | "proven"
 
-const GROUP_DOT: Record<Group, string> = {
-  missing: "var(--a-bad)",
-  listed: "var(--a-warn)",
-  proven: "var(--a-ok)",
+/** Qué significa cada grupo. El color, otra vez, lo pone el vocabulario. */
+const GROUP_TONE: Record<Group, Tone> = {
+  missing: "bad",
+  listed: "warn",
+  proven: "ok",
 }
 
 const GROUP_ORDER: readonly Group[] = ["missing", "listed", "proven"]
 
 interface TableProps {
   terms: PanelTerm[]
-  /** Agrega el término a Habilidades. Determinista, sin llamada al modelo. */
-  onAdd?: (term: string) => void
-  /** Se lo pasa a tailor para que lo escriba dentro de una viñeta. */
-  onWeave?: (term: string) => void
-  addedTerms?: ReadonlySet<string>
-  busyTerm?: string | null
 }
 
-export function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm }: TableProps) {
+export function TermTable({ terms }: TableProps) {
   const t = useTranslations("editor.ats")
   if (terms.length === 0) return null
 
@@ -846,7 +763,11 @@ export function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm }: Table
   // es trabajo real aunque el filtro ya lo cuente. Lo probado, al final.
   const groups = new Map<Group, PanelTerm[]>()
   for (const row of terms) {
-    const g = groupOf(row, addedTerms?.has(row.term) ?? false)
+    /* Sin «recién agregado»: eso era estado de la tabla cuando ella misma
+       agregaba términos. Ahora agrega Tailor, el CV cambia y la cuenta se vuelve
+       a medir sobre el documento — una cuenta medida no necesita que nadie le
+       avise. */
+    const g = groupOf(row, false)
     const bucket = groups.get(g)
     if (bucket) bucket.push(row)
     else groups.set(g, [row])
@@ -862,7 +783,7 @@ export function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm }: Table
             {/* El estado, dicho UNA vez. Antes era un chip por fila: diez chips
                 amarillos idénticos apilados que no distinguían nada entre sí. */}
             <h4 className="mb-1.5 flex items-center gap-1.5 px-0.5">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: GROUP_DOT[g] }} />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: toneOf(GROUP_TONE[g]).solid }} />
               <span
                 className="text-[9.5px] font-bold uppercase tracking-[0.07em]"
                 style={{ color: "var(--a-muted)" }}
@@ -882,11 +803,8 @@ export function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm }: Table
               style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}
             >
               {rows.map((row, i) => {
-                const added = addedTerms?.has(row.term) ?? false
-                const present = row.cv > 0 || added
-                const shown = added ? row.cv + 1 : row.cv
-                const canWeave = !!onWeave && (row.cv === 0 || row.listOnly) && !added
-                const canAdd = !!onAdd && row.cv === 0 && !added
+                const present = row.cv > 0
+                const shown = row.cv
                 return (
                   <li
                     key={row.term}
@@ -929,14 +847,6 @@ export function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm }: Table
                       </span>
 
                       <span className="flex shrink-0 items-center gap-1">
-                        {added && (
-                          <span
-                            className="flex items-center gap-1 text-[10.5px] font-bold"
-                            style={{ color: "var(--a-ok)" }}
-                          >
-                            <Check className="h-3 w-3" /> {t("term_added")}
-                          </span>
-                        )}
                         {/*
                           LOS BOTONES DICEN QUÉ HACEN.
                           ── EL DEFECTO (reportado, 2026-08-22) ──────────────
@@ -952,52 +862,12 @@ export function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm }: Table
                           lo que lo vuelve prueba y no afirmación. Confundirlos
                           es hacer el trabajo equivocado.
                         */}
-                        {canAdd && (
-                          <button
-                            type="button"
-                            onClick={() => onAdd?.(row.term)}
-                            /* El nombre completo, VISIBLE. Vivía sólo en el
-                               `title` —invisible en táctil y en lector de
-                               pantalla— y el botón decía «Add» a secas: el
-                               usuario no sabía si agregaba a Habilidades o
-                               escribía una viñeta. Es el mismo defecto del «+»
-                               que este panel ya pagó una vez. */
-                            title={t("term_add")}
-                            aria-label={t("term_add")}
-                            className="flex h-8 shrink-0 items-center gap-1 rounded-lg border px-2 text-[10px] font-bold transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                            style={{
-                              borderColor: "var(--a-border-2)",
-                              color: "var(--a-ink-2)",
-                              background: "var(--a-surface-2)",
-                              // El anillo de foco tiene que VERSE: `--a-accent`
-                              // da 2.41:1 sobre blanco y desaparecía. La tinta
-                              // del mismo acento da 6.81:1.
-                              outlineColor: "var(--a-accent-ink)",
-                            }}
-                          >
-                            <Plus className="h-3 w-3 shrink-0" />
-                            {t("term_add")}
-                          </button>
-                        )}
-                        {canWeave && (
-                          <button
-                            type="button"
-                            onClick={() => onWeave?.(row.term)}
-                            disabled={busyTerm === row.term}
-                            title={t("term_weave")}
-                            aria-label={t("term_weave")}
-                            className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-[10px] font-bold transition-transform hover:scale-[1.04] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                            style={{
-                              background: "var(--a-ai-soft)",
-                              color: "var(--a-ai-ink)",
-                              boxShadow: "var(--a-sh-sm)",
-                              outlineColor: "var(--a-ai)",
-                            }}
-                          >
-                            <Sparkles className="h-3 w-3 shrink-0" />
-                            {t("term_weave")}
-                          </button>
-                        )}
+                        {/* SIN BOTONES, POR CONSTRUCCIÓN.
+                            Acá vivían «agregar» y «demostrar», que se dibujaban
+                            sólo si alguien pasaba sus funciones. Desde que el
+                            informe diagnostica y Tailor arregla, nadie las pasa:
+                            dos botones imposibles con su copia, sus colores y su
+                            estado de ocupado mantenidos por las dudas. */}
                       </span>
                     </div>
                   </li>

@@ -25,7 +25,8 @@ import type { AuditFacts } from "@/lib/ats3/score"
 import type { ResumeSections } from "@/types/resume"
 // LA PANTALLA DE SIEMPRE. El motor cambió debajo; el informe que el usuario
 // aprendió a leer —dial, secciones, filas de chequeo, tabla de términos— no.
-import { ScoreDial, ReportSectionCard, CheckRow, TermTable, PRESSABLE } from "./report-ui"
+import { ScoreDial, ReportSectionCard, CheckRow, TermTable } from "./report-ui"
+import { Btn, Card, Chip, Note } from "./ui"
 import TailorPanel, { workOf, verdictsToDo, type DoneEntry } from "./TailorPanel"
 import { sectionsOf, termsOfSpec, headlineOf } from "./view-model"
 
@@ -58,7 +59,7 @@ export default function Ats3Panel() {
 
   /** Los hallazgos, dichos en la forma que la pantalla ya sabía pintar. */
   const todos = useMemo(() => [...a.regressed, ...a.findings], [a.findings, a.regressed])
-  const secciones = useMemo(() => sectionsOf(a.score, todos), [a.score, todos])
+  const secciones = useMemo(() => sectionsOf(a.score, todos, a.textOf), [a.score, todos, a.textOf])
   const regresados = useMemo(() => new Set(a.regressed.map((f) => f.id)), [a.regressed])
   /** Las cuatro cifras de la cabecera salen juntas: no pueden discrepar. */
   const cabecera = useMemo(() => headlineOf(a.score, secciones), [a.score, secciones])
@@ -125,16 +126,9 @@ export default function Ats3Panel() {
       />
 
       {a.error && (
-        <p
-          ref={errorRef}
-          role="alert"
-          className="rounded-xl border px-4 py-3 text-sm"
-          /* Con los tokens del panel, como todo lo demás: el rojo de Tailwind
-             escrito a mano era la única pieza del informe con paleta propia. */
-          style={{ borderColor: "var(--a-bad)", background: "var(--a-bad-soft)", color: "var(--a-bad-ink)" }}
-        >
+        <Note ref={errorRef} tone="bad" role="alert">
           {t("failed")} · {a.error}
-        </p>
+        </Note>
       )}
 
       {a.score && (
@@ -173,12 +167,9 @@ export default function Ats3Panel() {
                       que el usuario ya tocó no es lo mismo que uno nuevo, y
                       callarlo es lo que hace sentir el panel un bucle. */}
                   {regresados.has(check.id) && (
-                    <span
-                      className="self-start rounded-full px-2 py-0.5 text-[10px] font-bold"
-                      style={{ background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }}
-                    >
+                    <Chip tone="warn" size="xs" className="self-start">
                       {t("badge_regressed")}
-                    </span>
+                    </Chip>
                   )}
                   {/* SIN MANOS, Y NO POR OMISIÓN.
                       `CheckRow` dibuja su botón sólo si le dan la función que lo
@@ -215,15 +206,10 @@ export default function Ats3Panel() {
               lleva el trabajo a quien lo hace, con la cuenta derivada de lo que
               Tailor va a mostrar y no armada a mano acá. */}
           {paraTailor > 0 && (
-            <button
-              type="button"
-              onClick={() => setTailorAbierto(true)}
-              className={`${PRESSABLE} flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-[13.5px] font-bold text-white`}
-              style={{ background: "var(--a-ai)" }}
-            >
+            <Btn tone="ai" onClick={() => setTailorAbierto(true)} className="min-h-[48px] w-full !text-[13.5px]">
               <Sparkles className="h-4 w-4" />
               {t("open_tailor", { count: paraTailor })}
-            </button>
+            </Btn>
           )}
         </>
       )}
@@ -419,10 +405,7 @@ function Anatomy({
   ]
 
   return (
-    <section
-      className="rounded-2xl border p-4"
-      style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}
-    >
+    <Card radius="2xl" className="p-4">
       <h3 className="text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_title")}</h3>
       <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_caption")}</p>
 
@@ -445,10 +428,7 @@ function Anatomy({
         ))}
       </ul>
 
-      <p
-        className="mt-3 rounded-lg px-2.5 py-2 text-[11px] leading-snug"
-        style={{ background: "var(--a-surface-2)", color: "var(--a-muted)" }}
-      >
+      <Note className="mt-3">
         {/* Un componente que no se pudo medir reparte su peso y queda en cero:
             decir «vale 0,0 de 0,0 puntos» es ruido con forma de dato. */}
         {metric && metric.max > 0 && (
@@ -457,7 +437,7 @@ function Anatomy({
           </b>
         )}
         {t("bq_band")}
-      </p>
+      </Note>
       <p className="mt-1.5 text-[11px]" style={{ color: "var(--a-muted-2)" }}>
         {t("bq_complete", { n: complete, total })}
       </p>
@@ -466,22 +446,16 @@ function Anatomy({
       <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_summary_caption")}</p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
         {resumen.map(([clave, ok]) => (
-          <li
-            key={clave}
-            /* El estado se distingue por ICONO además de color: un panel que
-               sólo cambia el tono deja afuera a quien no distingue los dos. */
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium"
-            style={
-              ok
-                ? { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
-                : { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }
-            }
-          >
-            {ok ? <Check className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-            {t(clave)}
+          <li key={clave}>
+            {/* El estado se distingue por ICONO además de color: un panel que
+                sólo cambia el tono deja afuera a quien no distingue los dos. */}
+            <Chip tone={ok ? "ok" : "neutral"} className="flex items-center gap-1.5">
+              {ok ? <Check className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+              {t(clave)}
+            </Chip>
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   )
 }

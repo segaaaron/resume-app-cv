@@ -35,8 +35,9 @@ import { Check, Plus, Sparkles, X } from "lucide-react"
 import { Z_MODAL } from "@/lib/ui/z-layers"
 import { normalize } from "@/lib/ats3/contracts"
 import type { AnchoredSuggestion, Finding, Placeholder, TriageDecision } from "@/lib/ats3/contracts"
-import { PRESSABLE } from "./report-ui"
+import { Btn, Card, Chip, Diff, Label, Note, PRESSABLE } from "./ui"
 import type { PanelCheck, PanelSection, PanelSectionId } from "./view-model"
+import type { Tone } from "./ui"
 import type { useAts3 } from "./useAts3"
 
 type Ats3 = ReturnType<typeof useAts3>
@@ -69,7 +70,6 @@ export interface DoneEntry {
 export function workOf(sections: readonly PanelSection[]): PanelCheck[] {
   return sections
     .flatMap((s) => s.checks)
-    .filter((c) => !c.informational && c.owner !== "user")
     .sort((a, b) => b.weight - a.weight)
 }
 
@@ -82,6 +82,17 @@ export function workOf(sections: readonly PanelSection[]): PanelCheck[] {
  * que este panel ya pagó tres veces: un número que cuenta lo que la función
  * SABE en vez de lo que la pantalla OFRECE.
  */
+/**
+ * ¿ESTA TARJETA LA CIERRA UN ACTO DETERMINISTA?
+ *
+ * La respuesta la daban DOS lugares con la misma expresión escrita a mano: el
+ * botón de la tarjeta y el masivo. Iguales hoy, y el día que una cambie el
+ * usuario ve un botón que el lote no toca — o al revés. Se pregunta una vez.
+ */
+export function esDeterminista(check: PanelCheck): boolean {
+  return check.owner === "auto"
+}
+
 export function verdictsToDo(decisions: readonly TriageDecision[]): TriageDecision[] {
   return decisions.filter((d) => d.verdict !== "KEEP")
 }
@@ -230,7 +241,7 @@ export default function TailorPanel({
    * pantalla. Se cuenta lo que se ve, que es la única cuenta que el usuario
    * puede comprobar.
    */
-  const enLote = mostradas.filter((c) => c.owner === "auto" && !!c.action)
+  const enLote = mostradas.filter(esDeterminista)
   /* Los veredictos hablan del espacio de la página, no de una sección del
      informe: se muestran en las vistas generales y no bajo un filtro de
      sección, donde prometerían pertenecer a algo que no les corresponde. */
@@ -366,13 +377,9 @@ export default function TailorPanel({
             empuja la caja. */}
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
           {a.error && (
-            <p
-              role="alert"
-              className="rounded-xl px-4 py-3 text-sm"
-              style={{ background: "var(--a-bad-soft)", color: "var(--a-bad-ink)" }}
-            >
+            <Note tone="bad" role="alert">
               {t("failed")} · {a.error}
-            </p>
+            </Note>
           )}
 
           {/* «Ya está bien» NO es un fallo: el modelo leyó la línea y dice que no
@@ -380,18 +387,11 @@ export default function TailorPanel({
               una respuesta honesta. */}
           <div ref={respuestaRef} className="flex flex-col gap-3 empty:hidden">
           {a.rejected && (
-            <p
-              className="rounded-lg px-3 py-2 text-xs"
-              style={
-                a.rejected.reason === "already_good"
-                  ? { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
-                  : { background: "var(--a-warn-soft)", color: "var(--a-ink-2)" }
-              }
-            >
+            <Note tone={a.rejected.reason === "already_good" ? "ok" : "warn"}>
               {a.rejected.reason === "already_good"
                 ? t("already_good")
                 : `${t("rewrite_rejected")}${a.rejected.detail ? ` · ${a.rejected.detail}` : ""}`}
-            </p>
+            </Note>
           )}
 
           {a.pending && (
@@ -525,54 +525,39 @@ function TriageBoard({
       )}
 
       {ultimo && (
-        <div
-          className="mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
-          style={{ background: "var(--a-warn-soft)" }}
-        >
-          <span className="flex-1" style={{ color: "var(--a-ink-2)" }}>{t("dropped")}</span>
-          <button
-            type="button"
+        <div className="mb-3 flex items-center gap-2">
+          <Note tone="warn" className="flex-1">{t("dropped")}</Note>
+          <Btn
+            variant="outline"
             onClick={() => {
               onUndo(ultimo.roleIndex, ultimo.bulletIndex, ultimo.text)
               setUltimo(null)
             }}
-            className={`rounded-md border px-2 py-1 font-semibold ${PRESSABLE}`}
-            style={{ borderColor: "var(--a-border)", background: "var(--a-surface)", color: "var(--a-ink-2)" }}
           >
             {t("undo")}
-          </button>
+          </Btn>
         </div>
       )}
 
       <ul className="flex flex-col gap-2">
         {decisions.map((d) => (
           <li key={d.bulletId} className="flex items-start gap-2 text-xs">
-            <span
-              className="rounded-md px-2 py-0.5 font-semibold"
-              style={VERDICT_STYLE[d.verdict] ?? { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }}
-            >
-              {t(`verdict_${d.verdict}`)}
-            </span>
+            <Chip tone={VERDICT_TONE[d.verdict] ?? "neutral"}>{t(`verdict_${d.verdict}`)}</Chip>
             <span className="min-w-0 flex-1">
               {/* DE QUÉ LÍNEA HABLA. El veredicto y el motivo se entienden sólo
                   con su sujeto delante: "Sacar · duplica la viñeta de arriba"
                   sobre un CV de veinte líneas no le dice a nadie cuál sacar. */}
+              {/* Al confirmar el borrado, la misma línea se pinta como lo que va
+                  a desaparecer. Repetirla tachada debajo sería el mismo texto
+                  largo dos veces en la misma fila. */}
               {textOf(d.bulletId) && (
-                <span
-                  className={`mb-1 block rounded-md px-2 py-1 text-[11px] font-medium leading-snug [overflow-wrap:anywhere] ${
-                    // Al confirmar el borrado, la misma línea se pinta como lo
-                    // que va a desaparecer. Repetirla tachada debajo sería el
-                    // mismo texto largo dos veces en la misma fila.
-                    confirmando?.bulletId === d.bulletId ? "line-through decoration-1" : ""
-                  }`}
-                  style={
-                    confirmando?.bulletId === d.bulletId
-                      ? { background: "var(--a-bad-soft)", color: "var(--a-bad-ink)" }
-                      : { background: "var(--a-surface-3)", color: "var(--a-ink-2)" }
-                  }
+                <Note
+                  tone={confirmando?.bulletId === d.bulletId ? "bad" : "neutral"}
+                  strike={confirmando?.bulletId === d.bulletId}
+                  className="mb-1"
                 >
                   {textOf(d.bulletId)}
-                </span>
+                </Note>
               )}
               <span className="block" style={{ color: "var(--a-muted)" }}>{d.reason}</span>
 
@@ -581,15 +566,9 @@ function TriageBoard({
               {d.needsUserConfirm && (
                 <span className="mt-1 block">
                   <em className="block not-italic" style={{ color: "var(--a-ink)" }}>{d.needsUserConfirm}</em>
-                  <button
-                    type="button"
-                    disabled={busyNode !== null}
-                    onClick={() => onRewrite(d.bulletId)}
-                    className={`mt-1 rounded-md px-2 py-1 font-semibold text-white ${PRESSABLE}`}
-                    style={{ background: "var(--a-accent-ink)" }}
-                  >
+                  <Btn disabled={busyNode !== null} onClick={() => onRewrite(d.bulletId)} className="mt-1">
                     {t("yes_i_did")}
-                  </button>
+                  </Btn>
                 </span>
               )}
 
@@ -597,50 +576,32 @@ function TriageBoard({
                   puerta que REWRITE: comprimir una línea ES reescribirla más corta,
                   y abrir una acción propia sería un segundo camino para lo mismo. */}
               {(d.verdict === "REWRITE" || d.verdict === "DEMOTE") && !d.needsUserConfirm && (
-                <button
-                  type="button"
-                  disabled={busyNode !== null}
-                  onClick={() => onRewrite(d.bulletId)}
-                  className={`mt-1 rounded-md px-2 py-1 font-semibold text-white ${PRESSABLE}`}
-                  style={{ background: "var(--a-accent-ink)" }}
-                >
+                <Btn disabled={busyNode !== null} onClick={() => onRewrite(d.bulletId)} className="mt-1">
                   {busyNode === d.bulletId ? t("writing") : t("fix_it")}
-                </button>
+                </Btn>
               )}
 
               {d.verdict === "DROP" &&
                 (confirmando?.bulletId === d.bulletId ? (
                   <span className="mt-1 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
+                    <Btn
+                      tone="bad"
                       onClick={() => {
                         const quitada = onDrop(d.bulletId)
                         if (quitada) setUltimo(quitada)
                         setConfirmando(null)
                       }}
-                      className={`rounded-md px-2 py-1 font-semibold text-white ${PRESSABLE}`}
-                      style={{ background: "var(--a-bad)" }}
                     >
                       {t("confirm_drop")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmando(null)}
-                      className={`rounded-md border px-2 py-1 ${PRESSABLE}`}
-                      style={{ borderColor: "var(--a-border)", color: "var(--a-ink-2)" }}
-                    >
+                    </Btn>
+                    <Btn variant="outline" onClick={() => setConfirmando(null)}>
                       {t("cancel")}
-                    </button>
+                    </Btn>
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmando(d)}
-                    className={`mt-1 rounded-md border px-2 py-1 font-medium ${PRESSABLE}`}
-                    style={{ borderColor: "var(--a-border)", color: "var(--a-ink-2)" }}
-                  >
+                  <Btn variant="outline" onClick={() => setConfirmando(d)} className="mt-1">
                     {t("drop_it")}
-                  </button>
+                  </Btn>
                 ))}
             </span>
           </li>
@@ -651,20 +612,18 @@ function TriageBoard({
 }
 
 /**
- * EL COLOR DEL VEREDICTO SALE DE LOS TOKENS DEL PANEL, no de un literal.
+ * QUÉ SIGNIFICA CADA VEREDICTO, dicho en el vocabulario del panel.
  *
- * Venía con colores de Tailwind escritos a mano —`bg-emerald-500/10`— mientras
- * todo el resto de esta pantalla se pinta con `--a-*`. Dos paletas conviviendo
- * en la misma tarjeta: el día que un tono cambie, estos cinco se quedan como
- * están y nadie se entera. El significado ya existe en el panel —lo que está
- * bien, lo que avisa, lo que rompe, lo que hace la IA—, así que se usa ése.
+ * Antes era un mapa de colores escrito acá; ahora es el SIGNIFICADO y el color
+ * lo pone `ui.tsx`. Un veredicto nuevo es una línea, y el día que el tono de
+ * «avisa» cambie, cambia para todo el panel a la vez.
  */
-const VERDICT_STYLE: Record<string, { background: string; color: string }> = {
-  KEEP: { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" },
-  REWRITE: { background: "var(--a-ai-soft)", color: "var(--a-ai-ink)" },
-  REPLACE: { background: "var(--a-ai-soft)", color: "var(--a-ai-ink)" },
-  DEMOTE: { background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" },
-  DROP: { background: "var(--a-bad-soft)", color: "var(--a-bad-ink)" },
+const VERDICT_TONE: Record<string, Tone> = {
+  KEEP: "ok",
+  REWRITE: "ai",
+  REPLACE: "ai",
+  DEMOTE: "warn",
+  DROP: "bad",
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -737,7 +696,7 @@ function SuggestionSheet({
   }, [finalText, suggestion.keywordsUsed])
 
   return (
-    <div className="overflow-hidden rounded-2xl shadow-lg" style={{ background: "var(--a-surface)", border: "1px solid var(--a-border)" }}>
+    <Card radius="2xl" className="overflow-hidden shadow-lg">
       {/* CABECERA: qué se te pide decidir, y qué ganás con decir que sí. */}
       <div
         className="flex items-start justify-between gap-3 px-4 py-3"
@@ -746,56 +705,26 @@ function SuggestionSheet({
         <h3 className="text-[13px] font-semibold leading-snug" style={{ color: "var(--a-ink)" }}>
           {t("confirm_title")}
         </h3>
+        {/* Un cero no se disfraza: hay reescrituras que arreglan cómo se lee y no
+            mueven el número, y decirlo es lo que hace creíble al resto. */}
         {gain !== null && (
-          <span
-            className="shrink-0 rounded-full px-2 py-1 text-[10.5px] font-bold tabular-nums"
-            style={
-              gain > 0
-                ? { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
-                : { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }
-            }
-          >
-            {/* Un cero no se disfraza: hay reescrituras que arreglan cómo se lee
-                y no mueven el número, y decirlo es lo que hace creíble al resto. */}
+          <Chip tone={gain > 0 ? "ok" : "neutral"} className="shrink-0">
             {gain > 0 ? t("gain_points", { points: gain.toFixed(1) }) : t("gain_none")}
-          </span>
+          </Chip>
         )}
       </div>
 
       <div className="px-4 py-3">
-        {/* EL CAMBIO. Lo viejo se lee como lo que se va, lo nuevo como lo que
-            queda: mismo peso tipográfico para los dos daba una pantalla donde
-            había que adivinar cuál era cuál. */}
-        <p className="mb-1 text-[9.5px] font-bold uppercase tracking-wide" style={{ color: "var(--a-muted-2)" }}>
-          {t("before")}
-        </p>
-        <p
-          className="mb-3 text-[12px] leading-relaxed line-through decoration-1 [overflow-wrap:anywhere]"
-          style={{ color: "var(--a-muted)" }}
-        >
-          {suggestion.originalText}
-        </p>
-        <p className="mb-1 text-[9.5px] font-bold uppercase tracking-wide" style={{ color: "var(--a-accent-ink)" }}>
-          {t("after")}
-        </p>
-        <p
-          className="rounded-lg px-3 py-2 text-[13px] font-medium leading-relaxed [overflow-wrap:anywhere]"
-          style={{ background: "var(--a-accent-soft)", color: "var(--a-ink)" }}
-        >
-          {finalText}
-        </p>
+        {/* EL CAMBIO, con la misma pieza que usa la tarjeta de lo resuelto. */}
+        <Diff beforeLabel={t("before")} before={suggestion.originalText} afterLabel={t("after")} after={finalText} />
 
         {/* DE DÓNDE SALEN LOS PUNTOS: los términos del aviso que esta línea pasa
             a decir. Un número sin su motivo se aprende a ignorar. */}
         {lands.length > 0 && (
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {lands.map((k) => (
-              <li
-                key={k}
-                className="rounded-md px-2 py-0.5 text-[10.5px] font-medium"
-                style={{ background: "var(--a-surface-3)", color: "var(--a-ink-2)" }}
-              >
-                {k}
+              <li key={k}>
+                <Chip>{k}</Chip>
               </li>
             ))}
           </ul>
@@ -850,29 +779,17 @@ function SuggestionSheet({
         className="flex gap-2 px-4 py-3"
         style={{ background: "var(--a-surface-2)", borderTop: "1px solid var(--a-border)" }}
       >
-        <button
-          type="button"
-          disabled={blocked}
-          onClick={() => onAccept(finalText)}
-          className={`min-h-[44px] flex-1 rounded-xl px-4 text-[13px] font-semibold ${PRESSABLE}`}
-          style={
-            blocked
-              ? { background: "var(--a-surface-3)", color: "var(--a-muted-2)", cursor: "not-allowed" }
-              : { background: "var(--a-accent-ink)", color: "#FFFFFF" }
-          }
-        >
+        {/* El de aplicar es el ÚNICO principal de esta pantalla, y queda apagado
+            mientras falte la cifra: no por un `if` del que llama, sino por el
+            estado de acá. */}
+        <Btn disabled={blocked} onClick={() => onAccept(finalText)} className="min-h-[44px] flex-1 !text-[13px]">
           {blocked ? t("fill_required") : t("apply")}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`min-h-[44px] rounded-xl px-4 text-[13px] font-medium ${PRESSABLE}`}
-          style={{ border: "1px solid var(--a-border)", background: "var(--a-surface)", color: "var(--a-ink-2)" }}
-        >
+        </Btn>
+        <Btn variant="outline" onClick={onCancel} className="min-h-[44px] !text-[13px]">
           {t("cancel")}
-        </button>
+        </Btn>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -912,20 +829,14 @@ function FixCard({
   t: (k: string, v?: Record<string, string | number>) => string
   ta: (k: string, v?: Record<string, string | number>) => string
 }) {
-  const puedeReescribir = check.owner === "tailor"
-  const puedeAgregar = check.owner === "auto" && !!check.action
+  const puedeAgregar = esDeterminista(check)
+  const puedeReescribir = !puedeAgregar
   return (
-    <article
-      className="rounded-xl border"
-      style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}
-    >
+    <Card>
       <div className="flex items-start gap-2.5 px-3.5 pt-3">
-        <span
-          className="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
-          style={{ background: "var(--a-surface-3)", color: "var(--a-muted-2)" }}
-        >
+        <Chip size="xs" className="mt-0.5 shrink-0">
           {String(order).padStart(2, "0")}
-        </span>
+        </Chip>
         <div className="min-w-0 flex-1">
           {/* EL TÍTULO SALE DE `editor.ats`, no de `ats3`.
               `titleKey` es `type_<tipo>` y esa copia vive con el resto del
@@ -937,26 +848,16 @@ function FixCard({
             {ta(check.titleKey, check.params)}
           </h4>
           <span className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[9.5px] font-bold tabular-nums"
-              style={
-                check.weight > 0
-                  ? { background: "var(--a-accent-soft)", color: "var(--a-accent-ink)" }
-                  : { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }
-              }
-            >
+            <Chip size="xs" tone={check.weight > 0 ? "accent" : "neutral"}>
               {check.weight > 0 ? ta("check_points", { points: check.weight }) : ta("check_no_score")}
-            </span>
+            </Chip>
             {/* VOLVIÓ A APARECER. Un hallazgo que reaparece sobre una línea que
                 el usuario ya tocó no es lo mismo que uno nuevo, y callarlo es lo
                 que hace sentir el panel un bucle. */}
             {regressed && (
-              <span
-                className="rounded-full px-2 py-0.5 text-[9.5px] font-bold"
-                style={{ background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }}
-              >
+              <Chip size="xs" tone="warn">
                 {t("badge_regressed")}
-              </span>
+              </Chip>
             )}
           </span>
         </div>
@@ -977,12 +878,8 @@ function FixCard({
       {check.evidence && check.evidence.length > 0 && (
         <ul className="mx-3.5 mt-2.5 flex flex-col gap-1.5">
           {check.evidence.slice(0, 4).map((e, i) => (
-            <li
-              key={`${check.id}-ev-${i}`}
-              className="rounded-lg border px-3 py-2 text-[11.5px] leading-relaxed [overflow-wrap:anywhere]"
-              style={{ borderColor: "var(--a-border)", background: "var(--a-surface-3)", color: "var(--a-ink-2)" }}
-            >
-              {e}
+            <li key={`${check.id}-ev-${i}`}>
+              <Note>{e}</Note>
             </li>
           ))}
         </ul>
@@ -990,42 +887,26 @@ function FixCard({
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
         {puedeReescribir && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onSolve}
-            className={`${PRESSABLE} flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-[11.5px] font-bold text-white`}
-            style={{ background: "var(--a-ai)" }}
-          >
+          <Btn tone="ai" disabled={busy} onClick={onSolve}>
             <Sparkles className="h-3 w-3" />
             {busy ? t("writing") : t("fix_it")}
-          </button>
+          </Btn>
         )}
         {/* El arreglo determinista: no llama al modelo y no gasta cuota, así que
             no comparte el botón con la reescritura. */}
         {puedeAgregar && (
-          <button
-            type="button"
-            onClick={onFix}
-            className={`${PRESSABLE} flex min-h-[36px] items-center gap-1.5 rounded-lg border px-3 text-[11.5px] font-bold`}
-            style={{ borderColor: "var(--a-accent)", color: "var(--a-accent-ink)", background: "var(--a-accent-soft)" }}
-          >
+          <Btn variant="outline" onClick={onFix}>
             <Plus className="h-3 w-3" />
             {ta("term_add")}
-          </button>
+          </Btn>
         )}
         {puedeReescribir && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className={`${PRESSABLE} ml-auto min-h-[36px] rounded-lg px-2 text-[11px] font-medium`}
-            style={{ color: "var(--a-muted-2)" }}
-          >
+          <Btn variant="quiet" onClick={onDismiss} className="ml-auto">
             {t("dismiss")}
-          </button>
+          </Btn>
         )}
       </div>
-    </article>
+    </Card>
   )
 }
 
@@ -1047,50 +928,32 @@ function DoneCard({
 }) {
   void t
   return (
-    <article className="rounded-xl border" style={{ borderColor: "var(--a-ok)", background: "var(--a-ok-soft)" }}>
+    <Card tone="ok" filled>
       <div className="flex items-start gap-2 px-3.5 py-3">
         <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--a-ok-ink)" }} />
         <div className="min-w-0 flex-1">
           <h4 className="text-[12.5px] font-bold leading-snug" style={{ color: "var(--a-ok-ink)" }}>
             {entry.title}
           </h4>
-          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--a-ok-ink)" }}>
-            {ta("fix_applied")}
-          </span>
+          <Label tone="ok">{ta("fix_applied")}</Label>
 
+          {/* EL MISMO ANTES/DESPUÉS QUE LA CONFIRMACIÓN.
+              Es la misma pieza a propósito: si las dos pantallas lo dibujaran
+              por su cuenta, una podría enseñar algo distinto de lo que quedó
+              escrito en el CV. */}
           {entry.after && (
-            <div className="mt-2 flex flex-col gap-1.5">
-              {entry.before && (
-                <div
-                  className="rounded-lg border px-3 py-2"
-                  style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}
-                >
-                  <p className="text-[9.5px] font-bold uppercase tracking-wide" style={{ color: "var(--a-muted-2)" }}>
-                    {ta("diff_current")}
-                  </p>
-                  <p
-                    className="text-[11.5px] leading-relaxed line-through decoration-1 [overflow-wrap:anywhere]"
-                    style={{ color: "var(--a-muted)" }}
-                  >
-                    {entry.before}
-                  </p>
-                </div>
-              )}
-              <div
-                className="rounded-lg border px-3 py-2"
-                style={{ borderColor: "var(--a-ok)", background: "var(--a-surface)" }}
-              >
-                <p className="text-[9.5px] font-bold uppercase tracking-wide" style={{ color: "var(--a-ok-ink)" }}>
-                  {ta("diff_rewrite")}
-                </p>
-                <p className="text-[11.5px] leading-relaxed [overflow-wrap:anywhere]" style={{ color: "var(--a-ink)" }}>
-                  {entry.after}
-                </p>
-              </div>
+            <div className="mt-2">
+              <Diff
+                beforeLabel={ta("diff_current")}
+                before={entry.before ?? ""}
+                afterLabel={ta("diff_rewrite")}
+                after={entry.after}
+                tone="ok"
+              />
             </div>
           )}
         </div>
       </div>
-    </article>
+    </Card>
   )
 }

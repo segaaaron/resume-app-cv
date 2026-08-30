@@ -50,9 +50,10 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     // encaja mejor: la puerta existía y estaba tapiada. Si el trabajo descrito
     // no lo sostiene, lo rechaza un guard y el usuario ve por qué — que es la
     // respuesta honesta, no un botón que promete lo que no puede cumplir.
+    // La línea la dice el HALLAZGO (`nodeId`), no una copia dentro de la fila:
+    // el mismo dato en dos objetos es como terminan diciendo cosas distintas.
     const req = checkOf(finding({ type: "missing_requirement", component: "must", nodeId: "b_7" }))
     expect(req.owner).toBe("tailor")
-    expect(req.action?.targetId).toBe("b_7")
   })
 
   it("los puntos que promete la fila son los que midió el motor", () => {
