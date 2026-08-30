@@ -22,6 +22,7 @@
 
 import {
   PROMPT_VERSION,
+  DETAIL_SEPARATOR,
   RUBRIC_VERSION,
   bulletIdFor,
   buildTermIndex,
@@ -359,7 +360,7 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
     const clave = subject ? `${nodeId}:${subject}` : nodeId
     const existing = out.find((f) => (f.subject ? `${f.nodeId}:${f.subject}` : f.nodeId) === clave)
     if (existing) {
-      existing.detail = existing.detail ? `${existing.detail} · ${detail}` : detail
+      existing.detail = existing.detail ? `${existing.detail}${DETAIL_SEPARATOR}${detail}` : detail
       existing.gain += gain
       if (!existing.merged.includes(type)) existing.merged.push(type)
       return

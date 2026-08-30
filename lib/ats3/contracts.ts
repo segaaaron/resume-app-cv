@@ -512,6 +512,18 @@ export const FINDING_TYPES = [
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
 
+/**
+ * CÓMO SE ENCADENAN LOS DETALLES DE DOS HALLAZGOS FUSIONADOS.
+ *
+ * Vive acá, con el vocabulario, porque lo escribe el motor al fusionar y lo LEE
+ * la pantalla para volver a separarlos: dos requisitos que caen en la misma
+ * línea son una sola tarjeta —una sola reescritura los aterriza a los dos— pero
+ * siguen siendo dos cosas que nombrar. Con el separador escrito en dos lugares,
+ * el día que cambie la pantalla muestra «Combine · async/await» como si fuera el
+ * nombre de una sola habilidad.
+ */
+export const DETAIL_SEPARATOR = " · "
+
 export function findingId(nodeId: NodeId, type: FindingType): string {
   return sha256(nodeId, type, RUBRIC_VERSION).slice(0, 16)
 }

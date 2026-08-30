@@ -18,7 +18,7 @@
 // nada.
 
 import type { Finding, JobSpec } from "@/lib/ats3/contracts"
-import { normalize, termKey } from "@/lib/ats3/contracts"
+import { DETAIL_SEPARATOR, normalize, termKey } from "@/lib/ats3/contracts"
 import type { ComponentKey, Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,8 +34,18 @@ import type { ComponentKey, Score } from "@/lib/ats3/score"
 /** Las seis secciones del informe, agrupadas por lo que el usuario reconoce. */
 export type PanelSectionId = "search" | "hard" | "soft" | "other" | "format" | "tips"
 
-/** Quién cierra el hallazgo: el ejecutor, un arreglo determinista, o el usuario. */
-export type PanelOwner = "tailor" | "auto" | "user"
+/**
+ * QUIÉN CIERRA EL HALLAZGO — y sólo los dos que el motor emite de verdad.
+ *
+ * Había un tercero, `"user"`, para lo que sólo puede arreglar la persona. El
+ * motor v3 no lo produce NUNCA: cada hallazgo declara su remedio y los dos que
+ * existen los cierra el producto. Mantenerlo en el tipo dejaba media pantalla
+ * escrita para un caso imposible —un aviso, una condición, una clave de texto—
+ * y cualquiera que leyera el código creería que ese camino existe. Si mañana el
+ * motor necesita devolverle algo al usuario, se agrega acá y el compilador
+ * señala cada lugar que tiene que atenderlo.
+ */
+export type PanelOwner = "tailor" | "auto"
 
 export interface PanelCheck {
   id: string
@@ -47,12 +57,8 @@ export interface PanelCheck {
   detailKey?: string
   params?: Record<string, string | number>
   owner: PanelOwner
-  /** El botón. Ausente cuando no hay nada que la aplicación pueda hacer sola. */
-  action?: { kind: string; targetId?: string; originalText?: string; value?: string }
   /** Qué lo disparó, nombrado: la línea, el requisito, el término. */
   evidence?: string[]
-  /** Informa y no se aplica: su salida es saberlo. */
-  informational?: boolean
 }
 
 export interface PanelSection {
@@ -139,7 +145,24 @@ function pctOf(score: Score, keys: ComponentKey[]): number | null {
  * promesa del modelo: es el mismo número que el dial suma como recuperable, así
  * que el panel no puede prometer puntos que el puntaje no vaya a dar.
  */
-export function checkOf(f: Finding): PanelCheck {
+export function checkOf(
+  f: Finding,
+  /**
+   * QUÉ DICE ESA LÍNEA HOY.
+   *
+   * `f.nodeText` es lo que el motor LEYÓ al analizar, y la pantalla lo pintaba
+   * como si fuera el texto actual. En la misma ventana el tablero de veredictos
+   * ya mostraba la línea viva: dos versiones del mismo renglón, una al lado de
+   * la otra, apenas el usuario editara algo. Una sola pregunta, una sola
+   * respuesta — y la que corresponde es la del CV que la persona tiene delante,
+   * porque es sobre ése que va a decidir.
+   *
+   * Sin resolutor se cae en la lectura del motor: es lo que había, y una
+   * pantalla que no puede preguntar no debe quedarse muda.
+   */
+  textoVivo?: (nodeId: string) => string,
+): PanelCheck {
+  const linea = textoVivo?.(f.nodeId) || f.nodeText
   return {
     id: f.id,
     // La sección sale del componente del que el motor sacó la ganancia, no de
@@ -148,6 +171,20 @@ export function checkOf(f: Finding): PanelCheck {
     state: f.gain >= CRITICAL_GAIN ? "crit" : "warn",
     weight: Number(f.gain.toFixed(1)),
     titleKey: `type_${f.type}`,
+    /**
+     * CUÁNTOS REQUISITOS CIERRA ESTA TARJETA.
+     *
+     * Dos requisitos que caen en la misma línea se fusionan a propósito: UNA
+     * reescritura los aterriza a los dos, y abrir dos tarjetas sobre la misma
+     * viñeta sería pedir dos consultas para el mismo trabajo y que la segunda
+     * pise a la primera.
+     *
+     * Pero el título seguía diciendo «falta un requisito» en singular llevando
+     * tres adentro, y la tabla del informe contaba 7 mientras el botón ofrecía
+     * 4: dos números ciertos que juntos se leen como una mentira. La tarjeta
+     * dice cuántos cierra y los nombra de a uno.
+     */
+    params: f.type === "missing_requirement" ? { count: partesDe(f.detail).length } : undefined,
     /**
      * POR QUÉ IMPORTA, y sale del TIPO del hallazgo.
      *
@@ -190,10 +227,6 @@ export function checkOf(f: Finding): PanelCheck {
      * ofrecerlo como arreglo sería vender un punto que el puntaje no da.
      */
     owner: f.remedy === "add_skill" ? "auto" : "tailor",
-    action:
-      f.remedy === "add_skill"
-        ? { kind: "add_skill", targetId: f.nodeId, value: f.detail }
-        : { kind: "rewrite_bullet", targetId: f.nodeId, originalText: f.nodeText },
     /**
      * QUÉ señala el hallazgo, no dónde aterrizó.
      *
@@ -203,15 +236,31 @@ export function checkOf(f: Finding): PanelCheck {
      * clientes…"» — el texto de una viñeta presentado como si fuera el defecto.
      * En los demás, la línea SÍ es lo señalado.
      */
-    evidence: (f.type === "missing_requirement" ? [f.detail] : [f.nodeText, f.detail])
+    evidence: (f.type === "missing_requirement" ? partesDe(f.detail) : [linea, f.detail])
       .filter((x) => x.trim().length > 0),
   }
 }
 
+/**
+ * Los detalles que el motor fusionó, otra vez de a uno.
+ *
+ * Se separan con la MISMA constante con la que se unieron: leer el formato del
+ * productor adivinando el separador es como una ficha termina diciendo
+ * «Combine · async/await» como si fuera el nombre de una sola habilidad.
+ */
+function partesDe(detail: string): string[] {
+  return detail.split(DETAIL_SEPARATOR).map((x) => x.trim()).filter(Boolean)
+}
+
 /** Las seis secciones, con sus hallazgos adentro y su cobertura medida. */
-export function sectionsOf(score: Score | null, findings: readonly Finding[]): PanelSection[] {
+export function sectionsOf(
+  score: Score | null,
+  findings: readonly Finding[],
+  /** El texto vivo de una línea. Se pasa una vez y lo usan todas las filas. */
+  textoVivo?: (nodeId: string) => string,
+): PanelSection[] {
   const ids = Object.keys(COMPONENTS_OF) as PanelSectionId[]
-  const checks = findings.map(checkOf)
+  const checks = findings.map((f) => checkOf(f, textoVivo))
   return ids.map((id) => ({
     id,
     // Puntúa la que tiene componentes: es verdad por construcción, no por
