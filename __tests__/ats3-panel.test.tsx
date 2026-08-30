@@ -18,7 +18,6 @@ import { act } from "react"
 const messages: Record<string, string> = {
   posting_label: "Pegá la vacante",
   posting_placeholder: "Pegá el aviso",
-  analyze: "Analizar",
   analyzing: "Analizando…",
   failed: "No se pudo",
   score_caption: "Preparación para esta vacante",
@@ -71,11 +70,19 @@ const messages: Record<string, string> = {
   section_tips: "Lo que mira la persona",
   section_tips_blurb: "Después del filtro automático",
   section_hard: "Habilidades duras",
+  // La pantalla de entrada (espacio `editor.ats`).
+  title: "ATS Score",
+  pro_badge: "Pro",
+  description: "La mayoría de empresas filtran CVs automáticamente.",
+  placeholder: "Pega aquí el texto completo de la vacante...",
+  hint: "Copia y pega el texto de la oferta tal como aparece.",
+  analyze: "Analizar compatibilidad",
   type_no_metric: "Le falta la cifra",
 }
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, params?: Record<string, string | number>) => {
+  useTranslations: (ns?: string) => (key: string, params?: Record<string, string | number>) => {
+    void ns
     const raw = messages[key] ?? key
     return params ? raw.replace(/\{(\w+)\}/g, (_m, k) => String(params[k] ?? `{${k}}`)) : raw
   },
@@ -321,7 +328,7 @@ async function analyze() {
   apiFetch.mockResolvedValueOnce(ndjsonResponse(ACTS))
   await mount()
   await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
-  await click("Analizar")
+  await click("Analizar compatibilidad")
   expect(texto()).toContain("64")
 }
 
@@ -400,7 +407,7 @@ describe("el panel pinta lo que el motor midió", () => {
 
   it("no analiza con un aviso demasiado corto: el botón está apagado", async () => {
     await mount()
-    expect(botón("Analizar").disabled).toBe(true)
+    expect(botón("Analizar compatibilidad").disabled).toBe(true)
     expect(apiFetch).not.toHaveBeenCalled()
   })
 })
@@ -492,7 +499,7 @@ describe("la cifra la escribe el candidato", () => {
     await mount()
     await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
     apiFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "server_error" }) })
-    await click("Analizar")
+    await click("Analizar compatibilidad")
     // Un 500 leído como NDJSON no coincidía con ningún acto: el usuario veía un
     // aviso genérico arriba y el panel exactamente igual que antes de apretar.
     expect(texto()).toContain("server_error")
@@ -586,7 +593,7 @@ describe("el puntaje se mueve mientras trabajás", () => {
     ]))
     await mount()
     await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
-    await click("Analizar")
+    await click("Analizar compatibilidad")
 
     apiFetch.mockClear()
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, stored: 1 }) })
@@ -594,9 +601,12 @@ describe("el puntaje se mueve mientras trabajás", () => {
 
     const escrito = updateSectionData.mock.calls.find((c) => c[0] === "skills")
     expect(escrito).toBeTruthy()
-    const skills = escrito![1] as { name: string }[]
+    const skills = escrito![1] as { name: string; level: string }[]
     // Agrega al final, sin pisar lo que la persona ya tenía.
     expect(skills.map((s) => s.name)).toEqual(["Excel", "Medios de pago"])
+    // El nivel NO lo decidimos nosotros: "advanced" era una afirmación sobre la
+    // persona que nadie hizo. Se usa el valor por defecto del esquema del CV.
+    expect(skills[1].level).toBe("intermediate")
     // Y ninguna llamada al modelo: la única petición es la que anota lo resuelto.
     const cuerpos = apiFetch.mock.calls.map((c) => JSON.parse((c[1] as { body: string }).body))
     expect(cuerpos.every((b) => b.action === "resolve")).toBe(true)

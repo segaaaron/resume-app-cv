@@ -517,7 +517,14 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       if (!limpio) return
       const actuales = sectionData.skills ?? []
       if (actuales.some((s) => normalize(s.name ?? "") === normalize(limpio))) return
-      updateSectionData("skills", [...actuales, { id: `sk_${nodeHash(limpio)}`, name: limpio, level: "advanced" }] as ResumeSections["skills"])
+      /**
+       * EL NIVEL NO LO DECIDIMOS NOSOTROS.
+       *
+       * Escribía "advanced": una afirmación sobre la persona que nadie hizo, y
+       * la doctrina prohíbe exactamente eso. Se usa el valor por defecto del
+       * propio esquema del CV, y el candidato lo ajusta en Contenido si quiere.
+       */
+      updateSectionData("skills", [...actuales, { id: `sk_${nodeHash(limpio)}`, name: limpio, level: "intermediate" }] as ResumeSections["skills"])
       registrarResuelto(nodeId, limpio, "AI_SUGGESTION")
       setState((st) => olvidar(st, nodeId))
     },

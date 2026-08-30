@@ -344,4 +344,27 @@ describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => 
       postingWeights(spec, jd)[spec.mustHave[2].skill],
     )
   })
+
+  it("el peso se cuenta por PALABRA: «excelente» no es «Excel»", () => {
+    // Medido antes de subirlo: buscando la subcadena, "R" pesaba más en un
+    // aviso donde la letra vive dentro de "buscamos" y "reportes", y "Excel"
+    // contaba dentro de "excelencia". Es la clase que este proyecto ya pagó con
+    // «plusvalía» conteniendo «plus».
+    const conTrampa = {
+      ...spec,
+      mustHave: [
+        { skill: "Excel", raw: "Excel", years: null, category: null },
+        { skill: "R", raw: "R", years: null, category: null },
+      ],
+    }
+    const w = postingWeights(conTrampa, "Buscamos analista con excelente trato. Excelencia diaria. Reportes claros.")
+    expect(w["Excel"]).toBe(1)
+    expect(w["R"]).toBe(1)
+  })
+
+  it("y sí cuenta la palabra entera, esté donde esté", () => {
+    const conReportes = { ...spec, mustHave: [{ skill: "reportes", raw: "reportes", years: null, category: null }] }
+    const w = postingWeights(conReportes, "Reportes diarios. Los reportes se envían. Sin reportes no hay control.")
+    expect(w["reportes"]).toBe(1.25)
+  })
 })

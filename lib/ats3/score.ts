@@ -279,20 +279,35 @@ function effectiveWeights(raws: RawComponent[]): Map<ComponentKey, number> {
  * se puede probar es sólo que repetir importa, no cuánto.
  */
 export function postingWeights(spec: JobSpec, jdText: string): Record<string, number> {
-  const aviso = normalize(jdText)
-  const titulo = normalize(`${spec.roleTitleRaw ?? ""} ${spec.roleTitleCanonical ?? ""}`)
+  const aviso = ` ${normalize(jdText)} `
+  const titulo = ` ${normalize(`${spec.roleTitleRaw ?? ""} ${spec.roleTitleCanonical ?? ""}`)} `
   const pesos: Record<string, number> = {}
   for (const r of [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])]) {
     const aguja = normalize(r.raw || r.skill)
     if (!aguja) continue
-    let veces = 0
-    for (let i = aviso.indexOf(aguja); i !== -1; i = aviso.indexOf(aguja, i + 1)) veces++
-    let peso = 1
-    if (titulo.includes(aguja)) peso += 0.5
-    if (veces >= 3) peso += 0.25
-    pesos[r.skill] = peso
+    pesos[r.skill] = 1 + (titulo.includes(` ${aguja} `) ? 0.5 : 0) + (veces(aviso, aguja) >= 3 ? 0.25 : 0)
   }
   return pesos
+}
+
+/**
+ * CUÁNTAS VECES DICE ESTE TEXTO ESE TÉRMINO — como PALABRA, no como subcadena.
+ *
+ * ── EL DEFECTO QUE ESTO CIERRA, MEDIDO ANTES DE SUBIRLO ────────────────────
+ * La primera versión buscaba la subcadena y le daba peso extra a "R" en un
+ * aviso donde la letra aparece dentro de "buscamos", "analista" y "reportes";
+ * "Excel" contaba dentro de "excelente" y "excelencia". Es la misma clase que
+ * este proyecto ya pagó con «plusvalía» conteniendo «plus».
+ *
+ * Los dos textos van rodeados de espacios y la aguja también: `normalize`
+ * convierte toda puntuación en separador, así que un límite de palabra es un
+ * espacio y nada más. Funciona igual para "SQL" que para "atención al público".
+ */
+function veces(textoConBordes: string, aguja: string): number {
+  const pat = ` ${aguja} `
+  let n = 0
+  for (let i = textoConBordes.indexOf(pat); i !== -1; i = textoConBordes.indexOf(pat, i + 1)) n++
+  return n
 }
 
 export function scoreResume(
