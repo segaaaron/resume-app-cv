@@ -109,6 +109,16 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
     if (personaEnVariante) return fail("wrong_person", personaEnVariante)
     const perdidoEnVariante = droppedTerms(ctx.original, variante, ctx.index)
     if (perdidoEnVariante.length) return fail("drops_content", perdidoEnVariante.join(", "))
+    /**
+     * Y LA VARIANTE ES JUSTO LA QUE MÁS TIENTA A BORRARLA.
+     *
+     * Se escribe para el candidato que NO tiene el dato, así que el modelo la
+     * redacta sin números — y si el original ya traía uno, se lo lleva puesto.
+     * El botón que existe para no poner una cifra que nadie dio no puede ser el
+     * que borra la que el candidato sí dio.
+     */
+    const cifrasEnVariante = droppedFigures(ctx.original, variante)
+    if (cifrasEnVariante.length) return fail("drops_content", cifrasEnVariante.join(", "))
   }
 
   /**
@@ -197,6 +207,10 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
 
   const lost = droppedTerms(ctx.original, text, ctx.index)
   if (lost.length) return fail("drops_content", lost.join(", "))
+
+  // El texto de los huecos no cuenta: "[n%]" no conserva la cifra, la pide.
+  const cifras = droppedFigures(ctx.original, text.replace(/\[[^\]]*\]/g, " "))
+  if (cifras.length) return fail("drops_content", cifras.join(", "))
 
   if (addsNothing(ctx.original, text)) {
     return fail("adds_nothing", "la reescritura dice lo mismo con otras palabras")
@@ -365,6 +379,43 @@ export function inventedFigure(text: string, original: string, s: Suggestion): s
   }
   void s
   return null
+}
+
+/**
+ * UNA CIFRA QUE EL ORIGINAL YA DECLARABA NO SE BORRA.
+ *
+ * Es el espejo de `inventedFigure`, y faltaba. Reportado en producción con
+ * captura el 2026-08-30, con la propuesta lista para aplicarse:
+ *
+ *   dice hoy   "…unit tests to ensure code reliability, reducing regressions by 5%."
+ *   quedaría   "…unit tests to improve code reliability and reduce regressions."
+ *
+ * Los doce chequeos la dejaron pasar: `drops_content` mira los términos de la
+ * VACANTE y ninguno mira los números. Así, el panel ofrecía como mejora una
+ * línea estrictamente peor —la cifra es lo más difícil de conseguir y lo que
+ * más pesa en una viñeta— y el usuario la aplicaba creyendo que subía.
+ *
+ * Un año suelto no cuenta: "2019" en "desde 2019" es una fecha, no una medida, y
+ * exigir que sobreviva rechaza reescrituras buenas que reordenan el período.
+ */
+export function droppedFigures(original: string, rewritten: string): string[] {
+  const after = digitsOf(rewritten)
+  const perdidas: string[] = []
+  // Se devuelve la cifra COMO EL CANDIDATO LA ESCRIBIÓ ("5%"), no sus dígitos:
+  // es lo que viaja al reintento, y decirle al modelo «perdiste 5» en vez de
+  // «perdiste 5%» le pide adivinar de qué número se le habla.
+  for (const m of original.matchAll(/\d[\d.,]*\s*%?/g)) {
+    const digits = m[0].replace(/\D/g, "")
+    if (!digits || bareYear(digits) || after.has(digits)) continue
+    const escrita = m[0].trim()
+    if (!perdidas.includes(escrita)) perdidas.push(escrita)
+  }
+  return perdidas
+}
+
+/** 1900–2099 a secas: una fecha, no una medida. */
+function bareYear(digits: string): boolean {
+  return /^(19|20)\d{2}$/.test(digits)
 }
 
 /**

@@ -753,11 +753,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   const sig = ledgerSignature(req.ledger)
   const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, sig, req.model)
 
-  const cached = (await req.store.read("ats3-fix", key)) as Suggestion | null
-  if (cached) {
-    return { ok: true, suggestion: anchor(cached, node.hash, node.text, 0), served: true, calls: 0 }
-  }
-
   // La línea que se reemplaza suelta su propia apertura: si no, choca consigo
   // misma y el modelo elige un verbo peor para esquivar un conflicto inexistente.
   const ledger = releaseOpener(req.ledger, node.text)
@@ -767,6 +762,27 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     declared: req.tree.declaredSkills,
     ledger,
     isSummary,
+  }
+
+  /**
+   * LO GUARDADO VUELVE A PASAR POR LOS GUARDS.
+   *
+   * Se servía tal cual, y ahí estaba el agujero: los guards juzgan la respuesta
+   * el día que llega, así que una propuesta escrita ANTES de que existiera un
+   * chequeo lo esquiva para siempre — el caché la sirve idéntica en cada visita
+   * y ningún reintento la vuelve a mirar. Cazado el 2026-08-30 al agregar el
+   * chequeo de la cifra que el original ya traía: sin esto, la línea reportada
+   * con captura seguía ofreciendo borrar su propio "5%" después de arreglarlo.
+   *
+   * Un guard nuevo tiene que valer para lo ya guardado, o no vale.
+   *
+   * Si lo guardado ya no pasa, se sigue de largo como si no hubiera nada: se
+   * gasta una llamada —sólo la primera vez, porque lo bueno se vuelve a
+   * guardar— en vez de entregar algo que hoy sabemos que está mal.
+   */
+  const cached = (await req.store.read("ats3-fix", key)) as Suggestion | null
+  if (cached && checkSuggestion(cached, ctx).ok) {
+    return { ok: true, suggestion: anchor(cached, node.hash, node.text, 0), served: true, calls: 0 }
   }
   const ask = (nudge?: string) =>
     isSummary
