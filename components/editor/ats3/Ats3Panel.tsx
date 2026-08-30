@@ -14,16 +14,19 @@
 // Todo lo que decide vive en `lib/ats3/`. Acá no se calcula un puntaje, ni una
 // ganancia, ni si una reescritura es buena.
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { Lightbulb, Loader2, Target } from "lucide-react"
+import { Check, Lightbulb, Loader2, Minus, Sparkles, Target } from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
-import type { Placeholder, AnchoredSuggestion, TriageDecision } from "@/lib/ats3/contracts"
+import { readBullets } from "@/lib/ats3/engine"
+import { statesQuantity } from "@/lib/ats3/score"
+import type { AuditFacts } from "@/lib/ats3/score"
 import type { ResumeSections } from "@/types/resume"
 // LA PANTALLA DE SIEMPRE. El motor cambió debajo; el informe que el usuario
 // aprendió a leer —dial, secciones, filas de chequeo, tabla de términos— no.
 import { ScoreDial, ReportSectionCard, CheckRow, TermTable, PRESSABLE } from "./report-ui"
+import TailorPanel, { workOf, verdictsToDo, type DoneEntry } from "./TailorPanel"
 import { sectionsOf, termsOfSpec, headlineOf } from "./view-model"
 
 
@@ -65,21 +68,46 @@ export default function Ats3Panel() {
   )
 
   /**
-   * "Ya está bien" NO es un fallo: el modelo leyó la línea y dice que no hay
-   * nada que mejorar. Pintarlo como rechazo enseña a desconfiar de una
-   * respuesta honesta.
+   * EL TRABAJO QUE TAILOR PUEDE CERRAR, contado por quien lo va a hacer.
+   *
+   * El botón dice el mismo número que la lista de Tailor va a mostrar. Dos
+   * cifras que cuentan cosas distintas, una al lado de la otra, se leen como una
+   * mentira aunque las dos sean ciertas — este panel ya lo pagó dos veces.
    */
-  const rechazo = a.rejected ? (
-    <p
-      className={`rounded-lg px-3 py-2 text-xs ${
-        a.rejected.reason === "already_good" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
-      }`}
-    >
-      {a.rejected.reason === "already_good"
-        ? t("already_good")
-        : `${t("rewrite_rejected")}${a.rejected.detail ? ` · ${a.rejected.detail}` : ""}`}
-    </p>
-  ) : null
+  const paraTailor = useMemo(
+    () => workOf(secciones).length + verdictsToDo(a.triage).length,
+    [secciones, a.triage],
+  )
+  const [tailorAbierto, setTailorAbierto] = useState(false)
+  /**
+   * CUÁNTO VALE LA CIFRA EN EL ANÁLISIS, dicho por el propio puntaje.
+   *
+   * `effectiveWeight` es el peso REAL del componente una vez repartido lo que no
+   * se pudo medir: es el techo que ese componente puede dar hoy, no el nominal.
+   */
+  const medidaDeLaCifra = useMemo(() => {
+    const c = a.score?.components.find((x) => x.key === "metric")
+    return c ? { points: c.points, max: c.effectiveWeight } : null
+  }, [a.score])
+
+  /** Las líneas del CV vivo: la cifra se cuenta con la misma función del puntaje. */
+  const líneas = useMemo(
+    () =>
+      (sectionData.workExperience ?? []).flatMap((r) => readBullets(r.description ?? "")),
+    [sectionData.workExperience],
+  )
+  /** Lo resuelto en esta sesión: sobrevive a cerrar y volver a abrir Tailor. */
+  const [hechas, setHechas] = useState<DoneEntry[]>([])
+
+  /**
+   * Un error del análisis se lleva la vista, porque es lo único que la pantalla
+   * puede contestar a un clic que no salió. `scrollIntoView` no existe en el DOM
+   * de los tests, así que se llama con guarda.
+   */
+  const errorRef = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    if (a.error) errorRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" })
+  }, [a.error])
 
   return (
     <div className="ats-panel flex flex-col gap-5">
@@ -97,7 +125,14 @@ export default function Ats3Panel() {
       />
 
       {a.error && (
-        <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <p
+          ref={errorRef}
+          role="alert"
+          className="rounded-xl border px-4 py-3 text-sm"
+          /* Con los tokens del panel, como todo lo demás: el rojo de Tailwind
+             escrito a mano era la única pieza del informe con paleta propia. */
+          style={{ borderColor: "var(--a-bad)", background: "var(--a-bad-soft)", color: "var(--a-bad-ink)" }}
+        >
           {t("failed")} · {a.error}
         </p>
       )}
@@ -145,42 +180,14 @@ export default function Ats3Panel() {
                       {t("badge_regressed")}
                     </span>
                   )}
-                  <CheckRow
-                    check={check}
-                    // El botón pide la reescritura de ESA línea. Un requisito que
-                    // la vacante exige no lo tiene: `owner: "user"`, y ninguna
-                    // reescritura de una línea que no habla de eso lo cierra.
-                    onSolve={(id) => {
-                      const f = todos.find((x) => x.id === id)
-                      if (f) a.requestRewrite(f.nodeId)
-                    }}
-                    /**
-                     * El arreglo determinista: agregar el término a Habilidades.
-                     * No llama al modelo y no gasta cuota, así que no comparte
-                     * el botón con la reescritura — la fila los distingue.
-                     */
-                    onFix={(id) => {
-                      const f = todos.find((x) => x.id === id)
-                      if (f) a.addSkill(f.nodeId, f.detail)
-                    }}
-                    busy={a.busyNode !== null}
-                  />
-                  {/* «No me interesa» es del motor v3: cierra el hallazgo sin
-                      escribir nada y sin gastar una consulta. Sin él, lo único
-                      que saca una tarjeta de la pantalla es pagar por ella. */}
-                  {check.owner === "tailor" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const f = todos.find((x) => x.id === check.id)
-                        if (f) a.dismiss(f.nodeId)
-                      }}
-                      className={`${PRESSABLE} self-end rounded-md px-2 py-1 text-[11px] font-medium`}
-                      style={{ color: "var(--a-muted-2)" }}
-                    >
-                      {t("dismiss")}
-                    </button>
-                  )}
+                  {/* SIN MANOS, Y NO POR OMISIÓN.
+                      `CheckRow` dibuja su botón sólo si le dan la función que lo
+                      resuelve. El informe no se la da a propósito: acá se dice
+                      QUÉ falta y cuánto pesa, y lo que escribe en el CV vive
+                      entero en Tailor. Es la regla del CEO hecha estructura —
+                      este archivo no importa una sola función que toque el CV,
+                      así que el botón no puede volver por descuido. */}
+                  <CheckRow check={check} />
                 </div>
               )}
             >
@@ -192,25 +199,44 @@ export default function Ats3Panel() {
             </ReportSectionCard>
           ))}
 
-          {rechazo}
+          {a.audit && (
+            <Anatomy
+              audit={a.audit}
+              quantified={líneas.filter(statesQuantity).length}
+              total={líneas.length}
+              metric={medidaDeLaCifra}
+              existe={(id) => a.textOf(id).length > 0}
+              t={t}
+            />
+          )}
 
-          <TriageBoard
-            decisions={a.triage}
-            onDrop={a.dropBullet}
-            onUndo={a.undoDrop}
-            onRewrite={a.requestRewrite}
-            busyNode={a.busyNode}
-            t={t}
-          />
+          {/* LA ÚNICA SALIDA DEL INFORME.
+              Doce puntos de contacto se fueron a Tailor y queda uno: el que
+              lleva el trabajo a quien lo hace, con la cuenta derivada de lo que
+              Tailor va a mostrar y no armada a mano acá. */}
+          {paraTailor > 0 && (
+            <button
+              type="button"
+              onClick={() => setTailorAbierto(true)}
+              className={`${PRESSABLE} flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-[13.5px] font-bold text-white`}
+              style={{ background: "var(--a-ai)" }}
+            >
+              <Sparkles className="h-4 w-4" />
+              {t("open_tailor", { count: paraTailor })}
+            </button>
+          )}
         </>
       )}
 
-      {a.pending && (
-        <SuggestionSheet
-          suggestion={a.pending}
-          onCancel={() => a.setPending(null)}
-          onAccept={(text) => a.accept(a.pending!, text)}
-          t={t}
+      {tailorAbierto && (
+        <TailorPanel
+          a={a}
+          sections={secciones}
+          findings={todos}
+          regressed={regresados}
+          done={hechas}
+          onDone={(e) => setHechas((h) => (h.some((x) => x.id === e.id) ? h : [...h, e]))}
+          onClose={() => setTailorAbierto(false)}
         />
       )}
     </div>
@@ -276,7 +302,8 @@ function JobBox(props: {
 
       {props.value.trim().length > 0 && (
         <p className="flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-400">
-          <Lightbulb className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />
+          {/* Con el token del panel: era el último color escrito a mano del informe. */}
+          <Lightbulb className="mt-0.5 h-3 w-3 shrink-0" style={{ color: "var(--a-warn)" }} />
           {props.hint}
         </p>
       )}
@@ -297,240 +324,164 @@ function JobBox(props: {
   )
 }
 
-const VERDICT_STYLE: Record<string, string> = {
-  KEEP: "bg-emerald-500/10 text-emerald-500",
-  REWRITE: "bg-[var(--primary)]/10 text-[var(--primary)]",
-  REPLACE: "bg-violet-500/10 text-violet-500",
-  DEMOTE: "bg-amber-500/10 text-amber-500",
-  DROP: "bg-red-500/10 text-red-500",
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// LA ANATOMÍA — tus viñetas y tu resumen, medidos
+// ─────────────────────────────────────────────────────────────────────────────
 
-function TriageBoard({
-  decisions,
-  onDrop,
-  onUndo,
-  onRewrite,
-  busyNode,
+/**
+ * POR QUÉ AGREGADO Y NO SÓLO POR TARJETA.
+ *
+ * La tarjeta de un arreglo contesta «¿esta línea mejoró?». Esta vista contesta
+ * la otra pregunta, que es la que decide si el CV se manda: «¿cuántas de mis
+ * líneas dicen algo medible?». Sin ella el usuario arregla tres viñetas, no sabe
+ * si eso mueve la aguja y vuelve a preguntarle al panel lo mismo.
+ *
+ * VA EN EL INFORME Y NO EN TAILOR, y es la regla del CEO: acá se MIDE. Cada
+ * línea con defecto ya tiene su tarjeta del otro lado, así que poner un botón
+ * acá sería el segundo camino para lo mismo.
+ *
+ * NO MIDE POR SU CUENTA: los tres ejes son los que devolvió la auditoría y la
+ * cifra es la que cuenta el puntaje. Una cuarta opinión sobre si una línea tiene
+ * número es exactamente lo que este motor vino a terminar.
+ */
+function Anatomy({
+  audit,
+  quantified,
+  total,
+  metric,
+  existe,
   t,
 }: {
-  decisions: TriageDecision[]
-  onDrop: (nodeId: string) => { roleIndex: number; bulletIndex: number; text: string } | null
-  onUndo: (roleIndex: number, bulletIndex: number, text: string) => void
-  onRewrite: (nodeId: string) => void
-  busyNode: string | null
+  audit: AuditFacts
+  /** Las que declaran una cantidad, contadas por el puntaje. */
+  quantified: number
+  total: number
+  /**
+   * LA VARA DE LA CIFRA ES EL PUNTAJE, y por eso viene de él.
+   *
+   * El panel viejo pintaba un objetivo de 60-70% de líneas con número. Ese
+   * umbral vivía en la configuración del motor viejo y estaba marcado ahí mismo
+   * como elegido, no medido — y el motor v3 no lo tiene. Escribirlo acá sería
+   * una vara inventada que además el número no comparte: el panel diría «te
+   * falta» contra algo que el puntaje no mide.
+   *
+   * Lo que SÍ es cierto y no necesita umbral: cuánto vale la cifra en el
+   * análisis. Sale del componente que ya la puntúa, así que la pantalla y el
+   * número no pueden discrepar.
+   */
+  metric: { points: number; max: number } | null
+  /** ¿Esta línea sigue en el CV? La misma pregunta que se hace el puntaje. */
+  existe: (nodeId: string) => boolean
   t: (k: string, v?: Record<string, string | number>) => string
 }) {
-  /** Lo último que se sacó, para poder devolverlo. Un borrado sin vuelta atrás no se ofrece. */
-  const [ultimo, setUltimo] = useState<{ roleIndex: number; bulletIndex: number; text: string } | null>(null)
-  /** DROP borra contenido: se muestra la línea exacta antes de tocarla. */
-  const [confirmando, setConfirmando] = useState<TriageDecision | null>(null)
+  if (total === 0) return null
+  /**
+   * SÓLO LAS LÍNEAS QUE EL CV TIENE DE VERDAD.
+   *
+   * El juicio por viñeta lo devuelve un modelo, y un modelo puede contestar por
+   * una línea que no existe: un id mal copiado, una que el usuario ya borró.
+   * Contándolas contra el total de líneas reales, el panel puede mostrar «9 de
+   * 8» — un número imposible que además contradice al puntaje, que ya las
+   * descarta por su cuenta. Se descartan con la misma vara: si la línea no está
+   * en el CV vivo, no se cuenta.
+   */
+  const reales = audit.bullets.filter((b) => existe(b.id))
+  const verb = reales.filter((b) => b.hasActionVerb).length
+  const result = reales.filter((b) => b.hasResult).length
+  const method = reales.filter((b) => b.hasMethod).length
+  const complete = reales.filter((b) => b.hasActionVerb && b.hasResult && b.hasMethod).length
+  /**
+   * SIN BANDA, Y NO ES UN OLVIDO.
+   *
+   * El panel viejo pintaba un objetivo de 60–70% de líneas con cifra. Ese número
+   * vivía en la configuración del motor VIEJO y estaba marcado ahí mismo como
+   * `basis: "chosen"` — elegido, no medido. Traerlo escrito a mano en esta
+   * pantalla sería un umbral inventado que además nadie puntúa: el motor v3 no
+   * tiene banda, así que el panel diría «te falta» sobre una vara que el número
+   * no comparte.
+   *
+   * Se dice lo que SÍ es cierto y no necesita umbral: llenar todas las líneas de
+   * números se lee fabricado. Cuántas exactamente es una decisión del CEO y una
+   * medición, no una constante que yo elija acá.
+   */
 
-  // Con la lista vacía el tablero se va, PERO no si hay algo que deshacer: al
-  // sacar la última línea, el aviso de "deshacer" desaparecía junto con ella —
-  // justo en el momento en que el usuario lo necesita.
-  if (decisions.length === 0 && !ultimo) return null
+  const filas: [string, number][] = [
+    ["bq_verb", verb],
+    ["bq_result", result],
+    ["bq_method", method],
+    ["bq_metric", quantified],
+  ]
+  const resumen: [string, boolean][] = [
+    ["bq_sum_identity", audit.summary.identity],
+    ["bq_sum_proof", audit.summary.proof],
+    ["bq_sum_fit", audit.summary.fit],
+    ["bq_sum_extra", audit.summary.extra],
+  ]
+
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm">
-      {decisions.length > 0 && (
-        <>
-          <h3 className="mb-1 text-sm font-semibold">{t("triage_title")}</h3>
-          <p className="mb-1 text-xs text-[var(--muted-foreground)]">{t("triage_caption")}</p>
-          {/* DOS COSAS CIERTAS QUE JUNTAS SE LEEN COMO UNA MENTIRA si no se
-              explican: el panel pide sacar una línea y el número no se mueve.
-              Es correcto —cortar lo irrelevante no te hace más apto— pero desde
-              afuera parece trabajo que no cuenta. Se dice. */}
-          <p className="mb-3 text-[11px] text-[var(--muted-foreground)]">{t("triage_space_note")}</p>
-        </>
-      )}
+    <section
+      className="rounded-2xl border p-4"
+      style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}
+    >
+      <h3 className="text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_title")}</h3>
+      <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_caption")}</p>
 
-      {ultimo && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs">
-          <span className="flex-1 text-amber-600">{t("dropped")}</span>
-          <button
-            type="button"
-            onClick={() => {
-              onUndo(ultimo.roleIndex, ultimo.bulletIndex, ultimo.text)
-              setUltimo(null)
-            }}
-            className={`rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 font-semibold ${PRESSABLE}`}
-          >
-            {t("undo")}
-          </button>
-        </div>
-      )}
-
-      <ul className="flex flex-col gap-2">
-        {decisions.map((d) => (
-          <li key={d.bulletId} className="flex items-start gap-2 text-xs">
-            <span className={`rounded-md px-2 py-0.5 font-semibold ${VERDICT_STYLE[d.verdict] ?? ""}`}>
-              {t(`verdict_${d.verdict}`)}
+      <ul className="mt-3 flex flex-col gap-2">
+        {filas.map(([clave, n]) => (
+          <li key={clave} className="flex items-center gap-3 text-[12px]">
+            <span className="w-[9ch] shrink-0 text-right font-bold tabular-nums" style={{ color: "var(--a-ink)" }}>
+              {n}/{total}
             </span>
-            <span className="flex-1">
-              <span className="block text-[var(--muted-foreground)]">{d.reason}</span>
-
-              {/* En REPLACE el motor NUNCA afirma que la persona hizo algo:
-                  pregunta, y la respuesta es del usuario. */}
-              {d.needsUserConfirm && (
-                <span className="mt-1 block">
-                  <em className="block not-italic text-[var(--foreground)]">{d.needsUserConfirm}</em>
-                  <button
-                    type="button"
-                    disabled={busyNode !== null}
-                    onClick={() => onRewrite(d.bulletId)}
-                    className={`mt-1 rounded-md bg-[var(--primary)] px-2 py-1 font-semibold text-[var(--primary-foreground)] ${PRESSABLE}`}
-                  >
-                    {t("yes_i_did")}
-                  </button>
-                </span>
-              )}
-
-              {/* Un veredicto sin botón es un reproche. DEMOTE entra por la misma
-                  puerta que REWRITE: comprimir una línea ES reescribirla más corta,
-                  y abrir una acción propia sería un segundo camino para lo mismo. */}
-              {(d.verdict === "REWRITE" || d.verdict === "DEMOTE") && !d.needsUserConfirm && (
-                <button
-                  type="button"
-                  disabled={busyNode !== null}
-                  onClick={() => onRewrite(d.bulletId)}
-                  className={`mt-1 rounded-md bg-[var(--primary)] px-2 py-1 font-semibold text-[var(--primary-foreground)] ${PRESSABLE}`}
-                >
-                  {busyNode === d.bulletId ? t("writing") : t("fix_it")}
-                </button>
-              )}
-
-              {d.verdict === "DROP" &&
-                (confirmando?.bulletId === d.bulletId ? (
-                  <span className="mt-1 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const quitada = onDrop(d.bulletId)
-                        if (quitada) setUltimo(quitada)
-                        setConfirmando(null)
-                      }}
-                      className={`rounded-md bg-red-500 px-2 py-1 font-semibold text-white ${PRESSABLE}`}
-                    >
-                      {t("confirm_drop")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmando(null)}
-                      className={`rounded-md border border-[var(--border)] px-2 py-1 ${PRESSABLE}`}
-                    >
-                      {t("cancel")}
-                    </button>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmando(d)}
-                    className={`mt-1 rounded-md border border-[var(--border)] px-2 py-1 font-medium ${PRESSABLE}`}
-                  >
-                    {t("drop_it")}
-                  </button>
-                ))}
+            <span className="min-w-0 flex-1" style={{ color: "var(--a-ink-2)" }}>{t(clave)}</span>
+            {/* La barra dice lo mismo que el número: quien lee de un vistazo no
+                tiene que hacer la división. */}
+            <span className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full" style={{ background: "var(--a-track)" }}>
+              <span
+                className="block h-full rounded-full"
+                style={{ width: `${Math.round((n / total) * 100)}%`, background: "var(--a-accent)" }}
+              />
             </span>
           </li>
         ))}
       </ul>
-    </section>
-  )
-}
 
-/**
- * La hoja de confirmación: acá el candidato pone las cifras.
- *
- * El botón está APAGADO mientras quede un hueco obligatorio sin completar — y no
- * por un `if` del que llama, sino por el estado de esta pantalla. Y lo que se
- * escribe es lo que quedó en la caja, nunca la propuesta cruda: aplicar el texto
- * del modelo después de que el usuario lo editó es escribir algo que nadie
- * aceptó.
- */
-function SuggestionSheet({
-  suggestion,
-  onCancel,
-  onAccept,
-  t,
-}: {
-  suggestion: AnchoredSuggestion
-  onCancel: () => void
-  onAccept: (finalText: string) => void
-  t: (k: string, v?: Record<string, string | number>) => string
-}) {
-  const [values, setValues] = useState<Record<string, string>>({})
-  const [useVariant, setUseVariant] = useState(false)
+      <p
+        className="mt-3 rounded-lg px-2.5 py-2 text-[11px] leading-snug"
+        style={{ background: "var(--a-surface-2)", color: "var(--a-muted)" }}
+      >
+        {/* Un componente que no se pudo medir reparte su peso y queda en cero:
+            decir «vale 0,0 de 0,0 puntos» es ruido con forma de dato. */}
+        {metric && metric.max > 0 && (
+          <b style={{ color: "var(--a-ink-2)" }}>
+            {t("bq_metric_worth", { points: metric.points.toFixed(1), max: metric.max.toFixed(1) })}{" "}
+          </b>
+        )}
+        {t("bq_band")}
+      </p>
+      <p className="mt-1.5 text-[11px]" style={{ color: "var(--a-muted-2)" }}>
+        {t("bq_complete", { n: complete, total })}
+      </p>
 
-  const requiredMissing = suggestion.placeholders.some(
-    (p) => p.required && !(values[p.token] ?? "").trim(),
-  )
-
-  const finalText = useMemo(() => {
-    if (useVariant && suggestion.variantWithoutMetric) return suggestion.variantWithoutMetric
-    let out = suggestion.text
-    for (const p of suggestion.placeholders) {
-      const v = (values[p.token] ?? "").trim()
-      if (v) out = out.split(p.token).join(v)
-    }
-    return out
-  }, [suggestion, useVariant, values])
-
-  const blocked = !useVariant && requiredMissing
-
-  return (
-    <div className="rounded-2xl border-2 border-[var(--primary)]/40 bg-[var(--card)] p-4 shadow-lg">
-      <h3 className="mb-3 text-sm font-semibold">{t("confirm_title")}</h3>
-
-      <div className="mb-3 rounded-xl bg-[var(--background)] p-3">
-        <p className="mb-1 text-[11px] uppercase tracking-wide text-[var(--muted-foreground)]">{t("before")}</p>
-        <p className="mb-3 text-sm text-[var(--muted-foreground)] line-through decoration-1">{suggestion.originalText}</p>
-        <p className="mb-1 text-[11px] uppercase tracking-wide text-[var(--muted-foreground)]">{t("after")}</p>
-        <p className="text-sm leading-relaxed">{finalText}</p>
-      </div>
-
-      {!useVariant &&
-        suggestion.placeholders.map((p: Placeholder) => (
-          <div key={p.token} className="mb-3">
-            <label className="mb-1 block text-xs font-medium" htmlFor={`slot-${p.token}`}>
-              {p.label} {p.required && <span className="text-red-500">*</span>}
-            </label>
-            <input
-              id={`slot-${p.token}`}
-              value={values[p.token] ?? ""}
-              onChange={(e) => setValues((v) => ({ ...v, [p.token]: e.target.value }))}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
-              placeholder={p.token}
-            />
-            <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">{p.hint}</p>
-            <p className="text-[11px] text-[var(--muted-foreground)]">{t("evidence")}: {p.evidenceNeeded}</p>
-          </div>
+      <h3 className="mt-4 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_summary_title")}</h3>
+      <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_summary_caption")}</p>
+      <ul className="mt-2 flex flex-wrap gap-1.5">
+        {resumen.map(([clave, ok]) => (
+          <li
+            key={clave}
+            /* El estado se distingue por ICONO además de color: un panel que
+               sólo cambia el tono deja afuera a quien no distingue los dos. */
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium"
+            style={
+              ok
+                ? { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
+                : { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }
+            }
+          >
+            {ok ? <Check className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+            {t(clave)}
+          </li>
         ))}
-
-      {suggestion.variantWithoutMetric && suggestion.placeholders.length > 0 && (
-        <label className="mb-3 flex items-center gap-2 text-xs">
-          <input type="checkbox" checked={useVariant} onChange={(e) => setUseVariant(e.target.checked)} />
-          {/* Si no tiene el dato, la salida es una versión sin cifra — nunca un
-              número que puso el modelo. */}
-          {t("no_data")}
-        </label>
-      )}
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={blocked}
-          onClick={() => onAccept(finalText)}
-          className={`flex-1 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] ${PRESSABLE}`}
-        >
-          {blocked ? t("fill_required") : t("apply")}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium ${PRESSABLE}`}
-        >
-          {t("cancel")}
-        </button>
-      </div>
-    </div>
+      </ul>
+    </section>
   )
 }

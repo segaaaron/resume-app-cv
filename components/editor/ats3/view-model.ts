@@ -18,7 +18,7 @@
 // nada.
 
 import type { Finding, JobSpec } from "@/lib/ats3/contracts"
-import { normalize } from "@/lib/ats3/contracts"
+import { normalize, termKey } from "@/lib/ats3/contracts"
 import type { ComponentKey, Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,6 +149,17 @@ export function checkOf(f: Finding): PanelCheck {
     weight: Number(f.gain.toFixed(1)),
     titleKey: `type_${f.type}`,
     /**
+     * POR QUÉ IMPORTA, y sale del TIPO del hallazgo.
+     *
+     * El campo estaba declarado acá, lo leía la fila del informe y NADIE lo
+     * llenaba: una explicación prometida por el tipo y por la pantalla que
+     * nunca llegaba. El motor no emite prosa —ni debe—, pero el tipo ya dice
+     * exactamente de qué defecto habla, así que la explicación es suya y no de
+     * cada hallazgo. `detail` sigue diciendo el caso concreto (qué eje falta,
+     * qué término), y viaja aparte en la evidencia.
+     */
+    detailKey: `type_${f.type}_detail`,
+    /**
      * LA PUERTA LA DICE EL MOTOR, NO LA PANTALLA.
      *
      * Antes acá se decidía la acción a ojo y todo terminaba en "reescribí esta
@@ -253,15 +264,36 @@ export function termsOfSpec(
   const demostrados = new Set(covered.map(normalize))
   const filas: PanelTerm[] = []
   const push = (term: string, raw: string, section: PanelTerm["section"]) => {
+    /**
+     * EL NOMBRE CANÓNICO ES LA IDENTIDAD Y ES LO QUE SE PINTA.
+     *
+     * `raw` es la redacción con la que el aviso lo enunció, y una sola oración
+     * del aviso puede enunciar VARIOS requisitos: medido en producción el
+     * 2026-08-30, P1 devolvió Xcode, Instruments y TestFlight —tres requisitos
+     * distintos— los tres con el mismo `raw`, "Familiarity with Xcode,
+     * Instruments, and TestFlight". La tabla pintaba `raw`, así que mostraba la
+     * misma oración tres veces, y el dedup no las veía porque comparaba contra
+     * el canónico mientras guardaba la oración. Tres filas idénticas, una tabla
+     * ilegible y el usuario sin saber qué habilidad le falta.
+     *
+     * `raw` sigue sirviendo para CONTAR —el filtro compara cadenas y hay avisos
+     * que sólo escriben la forma larga—, pero como respaldo del canónico, no
+     * como su reemplazo: contar la oración entera devuelve siempre 1 en el aviso
+     * y 0 en el CV, que es una medición sin información.
+     */
+    const nombre = (term || raw).trim()
+    if (!nombre) return
     // Un término no puede estar en dos tablas: entraría dos veces al denominador
-    // de la lectura y se leería como si la vacante lo pidiera dos veces.
-    if (filas.some((f) => normalize(f.term) === normalize(term))) return
-    const cv = veces(cvText, raw) || veces(cvText, term)
-    const probado = demostrados.has(normalize(term))
+    // de la lectura y se leería como si la vacante lo pidiera dos veces. Se
+    // compara con `termKey`, la misma llave de igualdad que usa el motor, para
+    // que "CI/CD" y "ci-cd" no abran dos filas.
+    if (filas.some((f) => termKey(f.term) === termKey(nombre))) return
+    const cv = veces(cvText, nombre) || veces(cvText, raw)
+    const probado = demostrados.has(normalize(nombre))
     filas.push({
-      term: raw || term,
+      term: nombre,
       section,
-      jd: veces(jdText, raw) || veces(jdText, term),
+      jd: veces(jdText, nombre) || veces(jdText, raw),
       cv,
       listOnly: cv > 0 && !probado,
       proven: probado,

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { createRoot, type Root } from "react-dom/client"
 import * as React from "react"
 import { act } from "react"
@@ -31,6 +31,22 @@ const messages: Record<string, string> = {
   badge_regressed: "Volvió a aparecer",
   points: "puntos",
   empty_line: "(vacía)",
+  open_tailor: "Arreglar con Tailor",
+  apply_all: "Aplicar las {count}",
+  apply_all_rest: "{count} de a una",
+  term_add: "Agregar a Habilidades",
+  why_matters: "Por qué importa.",
+  fix_applied: "Aplicado",
+  diff_current: "Ahora dice",
+  diff_rewrite: "Reescritura de Tailor",
+  tailor_title: "Tailor",
+  tailor_pending: "cosas para arreglar",
+  tailor_sub: "Cada tarjeta sale del análisis",
+  tailor_none_done: "Nada resuelto todavía",
+  filter_all: "Todas",
+  filter_open: "Pendientes",
+  filter_done: "Hechas",
+  close: "Cerrar",
   rewrite_rejected: "No pasó los controles",
   already_good: "La línea ya está bien",
   fix_it: "Escribirla mejor",
@@ -132,7 +148,15 @@ vi.mock("@/stores/atsPostingStore", () => ({
 }))
 
 vi.mock("@/stores/resumeStore", () => ({
-  useResumeStore: (selector: (s: typeof storeState) => unknown) => selector(storeState),
+  /**
+   * El doble expone `getState` porque el store real lo expone: quien escribe una
+   * lista tiene que poder leer la que quedó, no la del render anterior. Sin esto
+   * el doble ocultaba justo los defectos de escritura seguida.
+   */
+  useResumeStore: Object.assign(
+    (selector: (s: typeof storeState) => unknown) => selector(storeState),
+    { getState: () => storeState },
+  ),
 }))
 
 /**
@@ -275,6 +299,21 @@ beforeEach(() => {
   root = createRoot(container)
 })
 
+/**
+ * SE DESMONTA AL TERMINAR CADA CASO.
+ *
+ * Un árbol que queda montado deja trabajo pendiente en el planificador de React
+ * —los efectos pasivos corren en un macrotask—, y ese trabajo se despierta
+ * DESPUÉS de que vitest cierra el DOM del archivo: `ReferenceError: window is
+ * not defined`, un error que no señala a ningún caso.
+ */
+afterEach(async () => {
+  await act(async () => {
+    root.unmount()
+  })
+  container.remove()
+})
+
 /** Montar y dejar que React termine: sin esto se afirma sobre un DOM a medias. */
 async function mount() {
   await act(async () => {
@@ -282,11 +321,16 @@ async function mount() {
   })
 }
 
-const texto = () => container.textContent ?? ""
+/**
+ * Se mira el DOCUMENTO y no el contenedor: Tailor abre en un portal colgado del
+ * `body`, así que buscar dentro del div del panel no lo encontraría nunca. El
+ * contenedor está dentro del documento, así que esto cubre las dos pantallas.
+ */
+const texto = () => document.body.textContent ?? ""
 
 function botón(nombre: string): HTMLButtonElement {
-  const b = [...container.querySelectorAll("button")].find((x) => x.textContent?.trim() === nombre)
-  if (!b) throw new Error(`sin botón "${nombre}" · hay: ${[...container.querySelectorAll("button")].map((x) => x.textContent).join(" | ")}`)
+  const b = [...document.body.querySelectorAll("button")].find((x) => x.textContent?.trim() === nombre)
+  if (!b) throw new Error(`sin botón "${nombre}" · hay: ${[...document.body.querySelectorAll("button")].map((x) => x.textContent).join(" | ")}`)
   return b as HTMLButtonElement
 }
 
@@ -297,7 +341,7 @@ async function click(nombre: string) {
 }
 
 async function escribir(selector: string, valor: string) {
-  const el = container.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement
+  const el = document.body.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement
   if (!el) throw new Error(`sin campo ${selector}`)
   await act(async () => {
     const setter = Object.getOwnPropertyDescriptor(
@@ -317,7 +361,7 @@ async function escribir(selector: string, valor: string) {
  * pasaría a afirmar sobre una pantalla que nunca se enteró.
  */
 async function marcar(selector: string) {
-  const el = container.querySelector(selector) as HTMLInputElement
+  const el = document.body.querySelector(selector) as HTMLInputElement
   if (!el) throw new Error(`sin casilla ${selector}`)
   await act(async () => {
     el.dispatchEvent(new MouseEvent("click", { bubbles: true }))
@@ -367,6 +411,8 @@ describe("el panel pinta lo que el motor midió", () => {
 
   it("el triage se ve, con su veredicto por línea", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     expect(texto()).toContain("Qué merece el espacio")
     expect(texto()).toContain("Sacar")
   })
@@ -374,11 +420,15 @@ describe("el panel pinta lo que el motor midió", () => {
   it("NINGÚN veredicto queda sin puerta: DROP ofrece su botón", async () => {
     // Un veredicto que sólo se mira es un reproche, no un producto.
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     expect(botón("Sacar del CV")).toBeTruthy()
   })
 
   it("sacar una línea PIDE confirmación y recién entonces toca el CV", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     await click("Sacar del CV")
     // Es la primera acción que DESTRUYE contenido: se ve la línea antes.
     expect(updateSectionData).not.toHaveBeenCalled()
@@ -391,6 +441,8 @@ describe("el panel pinta lo que el motor midió", () => {
 
   it("y se puede deshacer: un borrado sin vuelta atrás no se ofrece", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     const lineas = (d: string) => d.split("\n").map((l) => l.replace(/^\s*[•\-*]\s*/, "").trim()).filter(Boolean)
     const antes = lineas((storeState.sectionData.workExperience[0] as { description: string }).description)
     await click("Sacar del CV")
@@ -415,6 +467,7 @@ describe("el panel pinta lo que el motor midió", () => {
 describe("la cifra la escribe el candidato", () => {
   async function openSheet() {
     await analyze()
+    await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
     await click("Escribirla mejor")
     expect(texto()).toContain("Confirmá antes de escribirlo")
@@ -453,6 +506,8 @@ describe("la cifra la escribe el candidato", () => {
 
   it("«ya está bien» NO se pinta como un fallo", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: false, reason: "already_good", detail: "" }) })
     await click("Escribirla mejor")
     // El modelo leyó la línea y declinó, y declinó bien: mostrarlo como rechazo
@@ -463,6 +518,8 @@ describe("la cifra la escribe el candidato", () => {
 
   it("si la línea ya no existe, NO se escribe y NO se dice que se aplicó", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -485,6 +542,8 @@ describe("la cifra la escribe el candidato", () => {
 
   it("un rechazo del motor se dice, con su motivo", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ ok: false, reason: "verb_collision", detail: "Atendí" }),
@@ -507,6 +566,8 @@ describe("la cifra la escribe el candidato", () => {
 
   it("el botón de la fila pide la reescritura de ESA línea, no de otra", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
     await click("Escribirla mejor")
     // El hallazgo viaja con su nodo: el índice se corre en cuanto el usuario
@@ -521,6 +582,8 @@ describe("la cifra la escribe el candidato", () => {
 
   it("«no me interesa» cierra el hallazgo sin gastar una consulta, y lo RECUERDA", async () => {
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     apiFetch.mockClear()
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, stored: 1 }) })
     await click("No me interesa")
@@ -541,6 +604,8 @@ describe("el puntaje se mueve mientras trabajás", () => {
     // soluciona. Antes el dial quedaba clavado hasta reanalizar —una llamada
     // más—, así que el usuario arreglaba cinco cosas y no veía moverse nada.
     await analyze()
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
     // Lo que el motor midió al analizar: el pilar de impacto, con la única
     // línea medible sin cifra.
     const antes = texto()
@@ -594,6 +659,8 @@ describe("el puntaje se mueve mientras trabajás", () => {
     await mount()
     await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
     await click("Analizar compatibilidad")
+    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
+    await click("Arreglar con Tailor")
 
     apiFetch.mockClear()
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, stored: 1 }) })

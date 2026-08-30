@@ -13,7 +13,7 @@
 // Todo eso vive en `lib/ats3/` y se prueba ejecutándolo. Acá sólo hay estado de
 // pantalla: qué llegó, qué se está esperando y qué falló.
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAtsPostingStore } from "@/stores/atsPostingStore"
@@ -512,11 +512,31 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * mayúsculas o acentos.
    */
   const addSkill = useCallback(
-    (nodeId: string, term: string) => {
+    /**
+     * DEVUELVE SI ESCRIBIÓ, y hace falta.
+     *
+     * Cuando el término ya está en la lista, esto no toca nada y sale — que es
+     * lo correcto. Pero quien llama lo daba por hecho igual: la tarjeta se
+     * marcaba como resuelta sin haber escrito una letra, y como el hallazgo NO
+     * se retira, quedaba en pendientes y en hechas a la vez. Un botón que dice
+     * «listo» justo cuando no hizo nada es el defecto que este proyecto ya pagó
+     * con captura.
+     */
+    (nodeId: string, term: string): boolean => {
       const limpio = term.trim()
-      if (!limpio) return
-      const actuales = sectionData.skills ?? []
-      if (actuales.some((s) => normalize(s.name ?? "") === normalize(limpio))) return
+      if (!limpio) return false
+      /**
+       * SE LEE LA LISTA VIVA, NO LA DEL RENDER.
+       *
+       * `sectionData` es la foto del render en curso, y React no la actualiza
+       * hasta el siguiente. Dos llamadas seguidas —lo que hace «aplicar todo», y
+       * también dos clics rápidos— leían las dos la MISMA lista vieja: la
+       * segunda habilidad pisaba a la primera y el usuario terminaba con una
+       * sola, sin ningún error a la vista. Se pregunta al store por su estado
+       * actual, que es el único que sabe lo que se acaba de escribir.
+       */
+      const actuales = useResumeStore.getState().sectionData.skills ?? []
+      if (actuales.some((s) => normalize(s.name ?? "") === normalize(limpio))) return false
       /**
        * EL NIVEL NO LO DECIDIMOS NOSOTROS.
        *
@@ -527,9 +547,66 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       updateSectionData("skills", [...actuales, { id: `sk_${nodeHash(limpio)}`, name: limpio, level: "intermediate" }] as ResumeSections["skills"])
       registrarResuelto(nodeId, limpio, "AI_SUGGESTION")
       setState((st) => olvidar(st, nodeId))
+      return true
     },
-    [registrarResuelto, sectionData.skills, updateSectionData],
+    [registrarResuelto, updateSectionData],
   )
+
+  /**
+   * CUÁNTO GANA ESTA REESCRITURA, MEDIDO — no prometido.
+   *
+   * La hoja de confirmación mostraba el antes y el después y nada más: el
+   * usuario tenía que decidir a ojo si le convenía. El motor ya sabe la
+   * respuesta —`applySuggestion` escribe sobre una COPIA, vuelve a puntuar y
+   * resta— y es exactamente el número que el dial va a moverse al aplicar, así
+   * que la pantalla no puede prometer puntos que el puntaje no vaya a dar.
+   *
+   * Se mide sobre el texto FINAL, con los huecos ya completados: el aporte
+   * cambia cuando el candidato escribe su cifra, y enseñarle la ganancia de un
+   * texto que no es el que se va a escribir es la misma mentira de siempre.
+   *
+   * `null` cuando no se pudo medir (sin auditoría todavía, o la línea cambió):
+   * un cero se leería como "no sirve de nada", que es la conclusión opuesta.
+   */
+  const previewGain = useCallback(
+    (s: AnchoredSuggestion, finalText: string): number | null => {
+      if (!state.spec || !state.audit) return null
+      const tree = buildTree(payloadResume())
+      const r = applySuggestion(
+        tree,
+        { ...s, text: finalText },
+        state.spec,
+        state.audit,
+        state.checks,
+        openLedger(tree, state.spec, new Set(state.covered)),
+      )
+      return r.ok ? r.delta : null
+    },
+    [payloadResume, state.audit, state.checks, state.covered, state.spec],
+  )
+
+  /**
+   * EL TEXTO VIVO DE UNA LÍNEA, POR SU ID.
+   *
+   * El triage viaja con `bulletId` y nada más —así lo devuelve el modelo— y la
+   * pantalla no tenía forma de decir DE QUÉ LÍNEA habla cada veredicto: mostraba
+   * "Sacar · duplica la viñeta de arriba" sobre un CV de veinte líneas. Un
+   * veredicto sin su sujeto no es una recomendación, es un acertijo, y el
+   * borrado pedía confirmación sin enseñar lo que iba a borrar.
+   *
+   * Se resuelve contra el CV VIVO y no contra una copia que el motor mandó
+   * cuando analizó: entre el análisis y el clic el usuario puede haber editado,
+   * y enseñar el texto viejo antes de un borrado es peor que no enseñar nada.
+   *
+   * Es un mapa y no una búsqueda por fila: armar el árbol una vez por render en
+   * vez de una vez por veredicto.
+   */
+  const textOf = useMemo(() => {
+    const tree = buildTree(payloadResume())
+    const m = new Map<string, string>([[tree.summary.id, tree.summary.text]])
+    for (const r of tree.roles) for (const b of r.bullets) m.set(b.id, b.text)
+    return (nodeId: string): string => m.get(nodeId) ?? ""
+  }, [payloadResume])
 
   const dismiss = useCallback(
     (nodeId: string) => {
@@ -559,5 +636,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     addSkill,
     accept,
     dismiss,
+    textOf,
+    previewGain,
   }
 }
