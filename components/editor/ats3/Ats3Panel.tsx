@@ -16,6 +16,7 @@
 
 import { useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
+import { Lightbulb, Loader2, Target } from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
 import type { Placeholder, AnchoredSuggestion, TriageDecision } from "@/lib/ats3/contracts"
@@ -39,6 +40,8 @@ function cvText(data: ResumeSections): string {
 
 export default function Ats3Panel() {
   const t = useTranslations("editor.ats3")
+  /** La copia de la pantalla de entrada, que el producto ya tenía escrita. */
+  const tv = useTranslations("editor.ats")
   // El CV y su idioma salen del store, no de props: quien monta el panel no
   // tiene por qué saber de qué depende el motor, y un dato que viaja por dos
   // caminos termina discrepando en uno.
@@ -85,9 +88,12 @@ export default function Ats3Panel() {
         onChange={a.setJd}
         onRun={a.analyze}
         loading={a.loading}
-        label={t("posting_label")}
-        placeholder={t("posting_placeholder")}
-        cta={a.loading ? t("analyzing") : t("analyze")}
+        title={tv("title")}
+        proBadge={tv("pro_badge")}
+        description={tv("description")}
+        placeholder={tv("placeholder")}
+        hint={tv("hint")}
+        cta={a.loading ? t("analyzing") : tv("analyze")}
       />
 
       {a.error && (
@@ -213,35 +219,78 @@ export default function Ats3Panel() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * LA PANTALLA DE ENTRADA DEL ATS — el diseño que el producto ya tenía.
+ *
+ * Recuperado TAL CUAL del panel que se borró: mismo chip con degradado cyan,
+ * mismo título, misma insignia del plan, misma caja con borde cyan claro y
+ * fondo translúcido, mismo botón redondeado con su sombra cyan. Lo único que
+ * cambia es de dónde vienen los datos: el motor v3 en vez del viejo.
+ *
+ * No se reinterpreta nada. La copia sale de las mismas claves i18n que ya
+ * existían, así que lo que se lee es exactamente lo que se leía.
+ */
 function JobBox(props: {
   value: string
   onChange: (v: string) => void
   onRun: () => void
   loading: boolean
-  label: string
+  title: string
+  proBadge: string
+  description: string
   placeholder: string
+  hint: string
   cta: string
 }) {
   const short = props.value.trim().length < 20
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-gradient-to-b from-[var(--card)] to-[var(--background)] p-4 shadow-sm">
-      <label htmlFor="ats3-jd" className="mb-2 block text-sm font-semibold">
-        {props.label}
-      </label>
-      <textarea
-        id="ats3-jd"
-        value={props.value}
-        onChange={(e) => props.onChange(e.target.value)}
-        placeholder={props.placeholder}
-        rows={5}
-        className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm outline-none focus:border-[var(--primary)]"
-      />
+    <div className="flex flex-col gap-3 pb-1">
+      <div className="mb-1 flex items-center gap-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-dash-cyan to-[#0077B6] shadow-lg shadow-dash-cyan/30">
+          <Target className="h-4 w-4 text-white" />
+        </div>
+        <div className="flex-1">
+          <span className="text-sm font-bold text-slate-800">{props.title}</span>
+        </div>
+        <span className="rounded-full bg-gradient-to-r from-dash-cyan to-[#00A8CC] px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-white shadow-sm">
+          {props.proBadge}
+        </span>
+      </div>
+
+      <p className="mb-3 text-[11px] leading-relaxed text-slate-500">{props.description}</p>
+
+      <div className="relative">
+        {/* La etiqueta no se dibuja pero existe: un placeholder desaparece al
+            escribir y dejaría el único campo de la pantalla sin nombre. */}
+        <label htmlFor="ats3-jd" className="sr-only">
+          {props.title}
+        </label>
+        <textarea
+          id="ats3-jd"
+          value={props.value}
+          onChange={(e) => props.onChange(e.target.value)}
+          placeholder={props.placeholder}
+          className="min-h-[110px] w-full resize-none rounded-2xl border border-cyan-100 bg-white/80 px-4 py-3 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition-all placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-cyan-300"
+        />
+      </div>
+
+      {props.value.trim().length > 0 && (
+        <p className="flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-400">
+          <Lightbulb className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />
+          {props.hint}
+        </p>
+      )}
+
       <button
         type="button"
         onClick={props.onRun}
         disabled={props.loading || short}
-        className={`mt-3 w-full rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] shadow ${PRESSABLE}`}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-dash-cyan to-[#00A8CC] py-2.5 text-xs font-bold text-white shadow-lg shadow-dash-cyan/30 transition-all duration-200 hover:scale-[1.01] hover:shadow-dash-cyan/50 active:scale-[0.99] disabled:cursor-not-allowed disabled:scale-100 disabled:opacity-50"
+        // La etiqueta cambia sola mientras espera: sin esto, para un lector de
+        // pantalla el botón se queda mudo quince segundos.
+        aria-live="polite"
       >
+        {props.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
         {props.cta}
       </button>
     </div>
