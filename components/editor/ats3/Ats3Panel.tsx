@@ -141,7 +141,6 @@ export default function Ats3Panel() {
           <ScoreDial
             score={cabecera.score}
             criticalCount={cabecera.criticalCount}
-            criticalSolvable={cabecera.criticalSolvable}
             criticalDetail={cabecera.detail}
             recoverable={cabecera.recoverable}
           />

@@ -93,9 +93,9 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     ])
     const cab = headlineOf(score(), secciones)
     expect(cab.criticalCount).toBe(2)
-    // Los dos los puede cerrar el ejecutor: el requisito, escribiéndolo en la
-    // línea donde el motor lo ancló.
-    expect(cab.criticalSolvable).toBe(2)
+    // Los dos los cierra el ejecutor, y eso ya no se cuenta aparte: todo crítico
+    // lo cierra, porque el único remedio determinista declara ganancia 0 y un
+    // crítico exige 3. La cifra partida describía un caso sin entrada posible.
     // Lo que tiene botón ya se explica en su tarjeta: repetirlo acá convierte la
     // cabecera en una lista de todo el panel.
     expect(cab.detail).toEqual(["Excel avanzado"])

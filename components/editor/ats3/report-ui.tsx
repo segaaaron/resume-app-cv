@@ -20,7 +20,7 @@ import { useTranslations } from "next-intl"
 // El lenguaje de pulsación vive con el resto del vocabulario visual: definirlo
 // acá otra vez era la misma frase en dos archivos.
 import { Btn, Chip, Note, PRESSABLE, toneOf, type Tone } from "./ui"
-import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Search, Sparkles, Tag,  User } from "lucide-react"
+import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Sparkles, Tag,  User } from "lucide-react"
 import { READY_SCORE, scoreBand } from "@/lib/ats3/score"
 import type { PanelCheck, PanelSection, PanelSectionId, PanelTerm } from "./view-model"
 
@@ -136,17 +136,16 @@ interface DialProps {
   /** Críticos ABIERTOS. Con uno, el veredicto no puede decir que está listo. */
   criticalCount: number
   /**
-   * De esos críticos, cuántos puede cerrar el ejecutor.
+   * NO HAY UN «CUÁNTOS PUEDE CERRAR EL EJECUTOR», Y POR ESO NO ESTÁ.
    *
-   * EL DEFECTO QUE CIERRA (reportado por el CEO, 2026-08-21, con captura): el
-   * título decía «2 arreglos críticos antes de mandarlo» y el botón de abajo
-   * ofrecía «resolver 1 pendiente». Su pregunta fue exacta: ¿cuál dice la verdad?
-   * Las dos — y por eso era peor. Uno era una reescritura; el otro, un requisito
-   * de la vacante que el CV no cumple, y ninguna reescritura cambia eso. Llamar
-   * «arreglo» a un requisito manda al candidato a buscar un botón que no puede
-   * existir. Ahora la cifra se parte y se dice cuál es cuál.
+   * Hubo un `criticalSolvable` para partir la cifra —el CEO reportó con captura
+   * que el título decía «2 arreglos críticos» y el botón ofrecía «resolver 1»—.
+   * Esa partición dejó de tener sentido cuando el motor dejó de emitir hallazgos
+   * que sólo el usuario puede cerrar: el único remedio determinista es
+   * `add_skill`, su emisor declara ganancia 0, y un crítico exige 3. Así que
+   * todo crítico lo cierra el ejecutor, siempre, y las dos ramas que decían lo
+   * contrario no tenían entrada posible.
    */
-  criticalSolvable: number
   /**
    * QUÉ es lo crítico, no cuántos hay.
    *
@@ -168,7 +167,7 @@ interface DialProps {
   recoverable: number
 }
 
-export function ScoreDial({ score, criticalCount, criticalSolvable, recoverable, criticalDetail = [] }: DialProps) {
+export function ScoreDial({ score, criticalCount, recoverable, criticalDetail = [] }: DialProps) {
   const t = useTranslations("editor.ats")
   const tone = bandOf(score)
   const shown = useCountUp(score)
@@ -248,13 +247,7 @@ export function ScoreDial({ score, criticalCount, criticalSolvable, recoverable,
                 : t("verdict_below")}
           </p>
           <p className="mt-1 text-[11px] leading-snug [overflow-wrap:anywhere]" style={{ color: "var(--a-muted)" }}>
-            {criticalCount === 0
-              ? t("verdict_scope_hint")
-              : criticalSolvable === 0
-                ? t("verdict_blocked_yours", { count: criticalCount })
-                : criticalSolvable === criticalCount
-                  ? t("verdict_blocked_hint")
-                  : t("verdict_blocked_split", { fix: criticalSolvable, yours: criticalCount - criticalSolvable })}
+            {criticalCount === 0 ? t("verdict_scope_hint") : t("verdict_blocked_hint")}
           </p>
 
           {/* Y CUÁL es. Se envuelve, nunca se corta: un requisito a medias no se
@@ -310,8 +303,7 @@ export function ScoreDial({ score, criticalCount, criticalSolvable, recoverable,
  * porcentaje. Inventarle uno para que la fila quede pareja sería volver al defecto.
  */
 
-const SECTION_ICON: Record<PanelSectionId, typeof Search> = {
-  search: Search,
+const SECTION_ICON: Record<PanelSectionId, typeof Tag> = {
   hard: Tag,
   soft: User,
   other: Sparkles,

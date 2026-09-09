@@ -32,7 +32,23 @@ import type { ComponentKey, Score } from "@/lib/ats3/score"
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Las seis secciones del informe, agrupadas por lo que el usuario reconoce. */
-export type PanelSectionId = "search" | "hard" | "soft" | "other" | "format" | "tips"
+/**
+ * ── POR QUÉ YA NO HAY UNA SECCIÓN «QUE TE ENCUENTREN» ────────────────────────
+ *
+ * Se alimentaba del componente `title` y pintaba su porcentaje. El problema no
+ * era el número —el cargo se mide bien y sigue pesando en el total— sino que
+ * NINGÚN hallazgo del motor declara ese componente: los que emite son `must`,
+ * `nice`, `metric`, `summary`, `xyz` y `checks`. La sección filtraba sus
+ * tarjetas y el resultado era siempre cero, para cualquier CV y cualquier
+ * vacante. Un cajón que nunca puede contener nada, con un porcentaje malo
+ * arriba y nada que apretar debajo.
+ *
+ * La regla del CEO es «el ATS muestra lo que falta, tailor lo soluciona»: un
+ * número que nadie puede mover la contradice. El cargo no desaparece del
+ * producto —sigue valiendo 0,15 del pilar de relevancia y el dial lo cuenta—;
+ * lo que desaparece es la promesa de que había algo que hacer con él.
+ */
+export type PanelSectionId = "hard" | "soft" | "other" | "format" | "tips"
 
 /**
  * QUIÉN CIERRA EL HALLAZGO — y sólo los dos que el motor emite de verdad.
@@ -103,7 +119,6 @@ export interface PanelTerm {
  * lista, y eso también se deriva acá abajo en vez de decidirse a dedo.
  */
 const COMPONENTS_OF: Record<PanelSectionId, ComponentKey[]> = {
-  search: ["title"],
   hard: ["must"],
   // El motor v3 lee las blandas de la vacante para poder nombrarlas, y no las
   // puntúa. La sección lo declara y la tarjeta lo dice por escrito.
@@ -385,7 +400,6 @@ export function headlineOf(score: Score | null, sections: readonly PanelSection[
     score: score ? Math.round(score.total) : 0,
     criticalCount: críticos.length,
     /** De esos, los que el ejecutor sí puede cerrar escribiendo. */
-    criticalSolvable: críticos.filter((c) => c.owner === "tailor").length,
     /**
      * QUÉ es lo crítico — y sólo lo que NO tiene botón: un requisito que la
      * vacante exige. Lo que tiene botón ya se explica en su propia tarjeta, y

@@ -344,8 +344,22 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * Si falla, se pierde una anotación, nunca el arreglo.
    */
   const registrarResuelto = useCallback(
-    (nodeId: string, texto: string, resolvedBy: "AI_SUGGESTION" | "DISMISSED") => {
-      const hallazgos = [...state.findings, ...state.regressed].filter((f) => f.nodeId === nodeId)
+    /**
+     * SE ANOTA EL HALLAZGO QUE SE CERRÓ, NO LA LÍNEA ENTERA.
+     *
+     * `olvidar` ya distinguía las dos cosas en la pantalla —cerrar un hallazgo
+     * retira ése, sacar la línea retira todo lo que hablaba de ella— y esto se
+     * quedó anotando por nodo. Las dos respuestas discrepaban, y la que
+     * sobrevivía al análisis siguiente era la equivocada: con dos tarjetas sobre
+     * la misma viñeta, cerrar una escribía la resolución de las DOS y la otra no
+     * volvía. Descartada a mano, no volvía NUNCA.
+     *
+     * Sin `findingId` se anota la línea entera, que es lo correcto en el único
+     * caso donde eso es cierto: `dropBullet`, donde la viñeta deja de existir.
+     */
+    (nodeId: string, texto: string, resolvedBy: "AI_SUGGESTION" | "DISMISSED", findingId?: string) => {
+      const deLaLinea = [...state.findings, ...state.regressed].filter((f) => f.nodeId === nodeId)
+      const hallazgos = findingId ? deLaLinea.filter((f) => f.id === findingId) : deLaLinea
       if (hallazgos.length === 0 || jd.trim().length < 20) return
       // Envuelto: una anotación que falla —o una petición que ni sale— NO puede
       // tumbar el aplicado. El CV ya está escrito; esto es memoria, no el acto.
@@ -421,7 +435,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       const medido =
         state.spec && state.audit
           ? applySuggestion(tree, { ...s, text: finalText }, state.spec, state.audit, state.checks,
-              openLedger(tree, state.spec, new Set(state.covered)))
+              openLedger(tree, state.spec, new Set(state.covered)), state.weights)
           : null
       if (medido && !medido.ok) {
         setError(medido.reason && !medido.reason.ok ? medido.reason.reason : "stale_node")
@@ -442,7 +456,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         updateSectionData("workExperience", roles)
       }
       setPending(null)
-      registrarResuelto(s.bulletId, finalText, "AI_SUGGESTION")
+      registrarResuelto(s.bulletId, finalText, "AI_SUGGESTION", pendingFinding ?? undefined)
       /**
        * EL DIAL SE MUEVE ACÁ, con la medición del motor sobre el CV nuevo.
        *
@@ -570,7 +584,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * propio esquema del CV, y el candidato lo ajusta en Contenido si quiere.
        */
       updateSectionData("skills", [...actuales, { id: `sk_${nodeHash(limpio)}`, name: limpio, level: "intermediate" }] as ResumeSections["skills"])
-      registrarResuelto(nodeId, limpio, "AI_SUGGESTION")
+      registrarResuelto(nodeId, limpio, "AI_SUGGESTION", findingId)
       setState((st) => olvidar(st, findingId ? { findingId } : { nodeId }))
       return true
     },
@@ -604,10 +618,11 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         state.audit,
         state.checks,
         openLedger(tree, state.spec, new Set(state.covered)),
+        state.weights,
       )
       return r.ok ? r.delta : null
     },
-    [payloadResume, state.audit, state.checks, state.covered, state.spec],
+    [payloadResume, state.audit, state.checks, state.covered, state.spec, state.weights],
   )
 
   /**
@@ -638,7 +653,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       // Descartar también es resolver: el usuario dijo que no le interesa, y
       // volver a mostrárselo en la próxima corrida es no haberlo escuchado.
       const nodo = findNode(buildTree(payloadResume()), nodeId)
-      registrarResuelto(nodeId, nodo?.text ?? "", "DISMISSED")
+      registrarResuelto(nodeId, nodo?.text ?? "", "DISMISSED", findingId)
       setState((st) => olvidar(st, findingId ? { findingId } : { nodeId }))
     },
     [payloadResume, registrarResuelto],
