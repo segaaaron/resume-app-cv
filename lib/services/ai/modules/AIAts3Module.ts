@@ -621,7 +621,25 @@ export class AIAts3Module implements AtsAi {
       `PRESUPUESTO POR PUESTO / BUDGET PER ROLE:\n${JSON.stringify(budget)}`,
     ].join("\n\n")
     const out = await this.ask(triagePrompt(this.deps.language), body, TriageSchema, "P3")
-    return out.decisions
+    /**
+     * UN REPLACE SIN SU PREGUNTA ES UN REWRITE.
+     *
+     * El tablero le da botón a REWRITE y DEMOTE por su veredicto, a DROP por el
+     * suyo, y a REPLACE SÓLO a través de `needsUserConfirm` — porque en REPLACE
+     * el motor no afirma que la persona hizo algo, pregunta. Ese campo es
+     * nulable en el contrato y lo único que lo pedía era un renglón del prompt,
+     * y un prompt es una petición, no un contrato: medido en este mismo motor,
+     * el modelo se saltea reglas de prosa dos de cada doce líneas.
+     *
+     * Sin la pregunta, la fila salía con la línea, el motivo y NADA que apretar
+     * — que es la definición de reproche que el comentario del tablero dice que
+     * no puede pasar. Se degrada acá, donde se lee la respuesta, con la misma
+     * vara que la auditoría ya aplica a una blanda DEMOSTRADA sin línea que la
+     * pruebe: si no viene lo que hace válido al veredicto, vale el de al lado.
+     */
+    return out.decisions.map((d) =>
+      d.verdict === "REPLACE" && !d.needsUserConfirm?.trim() ? { ...d, verdict: "REWRITE" as const } : d,
+    )
   }
 
   async rewriteBullet(input: RewriteInput): Promise<Suggestion> {

@@ -134,10 +134,21 @@ const analyzeSchema = z.object({
   language: z.enum(["es", "en"]).default("es"),
   resume: resumeSchema,
   /**
-   * Verificaciones de lectura automática que el cliente ya midió sobre el
-   * documento renderizado. `null` = no se pudo medir, y entonces sale del
-   * denominador en vez de contar como fallada: castigar por algo que nadie miró
-   * es fabricar un defecto.
+   * Verificaciones de lectura que el cliente haya medido sobre el documento
+   * renderizado. `null` = no se pudo medir, y entonces sale del denominador en
+   * vez de contar como fallada: castigar por algo que nadie miró es fabricar un
+   * defecto.
+   *
+   * HOY NADIE LAS MANDA: el panel envía `{}` siempre, y el pilar de lectura se
+   * calcula entero con `readableChecks`, que deriva de los datos estructurados y
+   * no mira el PDF. Se dice acá porque el comentario anterior afirmaba que el
+   * cliente «ya midió sobre el documento renderizado» y que su medición gana:
+   * las dos frases describían un productor que no existe, y quien las leyera
+   * daría por cubierta una comprobación que nadie hace.
+   *
+   * El campo se conserva porque la puerta es correcta —medir el PDF exportado
+   * vale más que derivarlo— pero mientras no haya quien la cruce, esto es un
+   * hueco declarado, no una defensa.
    */
   checks: z.record(z.string().max(40), z.boolean().nullable()).default({}),
 })
@@ -208,6 +219,30 @@ export async function POST(req: Request) {
   if (!parsed.success) return apiError(422, "invalid_data", { req })
 
   try {
+    /**
+     * EL CV TIENE QUE SER SUYO, Y ESO NO LO CONTESTA `requireUser`.
+     *
+     * `requireUser` autentica a la PERSONA; el `resumeId` llega en el cuerpo y
+     * decide dos cosas que no son suyas: la clave del registro de resoluciones
+     * (`cacheKey.log`) y la columna por la que se borra el caché cuando el CV se
+     * elimina. Sin esta comprobación, quien conociera el id de otro —es un cuid,
+     * y viaja en la URL del editor— podía escribir en su registro y silenciarle
+     * hallazgos que sí le corresponden.
+     *
+     * Es el mismo `where` que usa `ResumeService` en cada camino que toca un CV:
+     * el id NUNCA va solo. Una fila por clave primaria; el coste no se mide.
+     *
+     * VA DENTRO DEL `try`, y no es un detalle de estilo: `handleError` es lo que
+     * escribe la falla en el panel de Service Errors —la directiva es que TODAS
+     * se vean, 4xx incluidas—. Con la consulta afuera, una base caída lanzaba
+     * fuera del handler y el 500 llegaba sin una línea en el panel.
+     */
+    const propio = await db.resume.findFirst({
+      where: { id: parsed.data.resumeId, userId: authResult.userId },
+      select: { id: true },
+    })
+    if (!propio) return apiError(404, "not_found", { req })
+
     /**
      * REGISTRAR LO RESUELTO NO GASTA CUOTA, y se contesta antes de pedirla.
      *

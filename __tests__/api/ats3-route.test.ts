@@ -25,7 +25,13 @@ vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({
   refundDailyQuota: vi.fn(),
 }))
 vi.mock("@/lib/db", () => ({
-  db: { aiAnswerCache: { findUnique: vi.fn(), create: vi.fn(), upsert: vi.fn() } },
+  // `resume.findFirst` es la comprobación de dueño: el CV tiene que ser de quien
+  // pide. El doble contesta que sí, porque estos casos miden el motor y no la
+  // autorización; sin él la ruta se cae antes de llegar a lo que se prueba.
+  db: {
+    aiAnswerCache: { findUnique: vi.fn(), create: vi.fn(), upsert: vi.fn() },
+    resume: { findFirst: vi.fn().mockResolvedValue({ id: "cv1" }) },
+  },
 }))
 const logAIUsage = vi.fn()
 vi.mock("@/lib/ai-client", () => ({ AI_MODEL_PROSE: "modelo-de-prueba", logAIUsage: (...a: unknown[]) => logAIUsage(...a) }))
