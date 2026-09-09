@@ -1,123 +1,165 @@
 # El contrato del ATS — cómo tiene que comportarse
 
 Este documento existe porque el plan anterior vivía en `scratchpad/`, que el
-proyecto borra, y se perdió. Todo lo de acá está **verificado contra el código**
-el 2026-08-27, no recordado.
+proyecto borra, y se perdió.
+
+**Reescrito el 2026-09-08 contra `lib/ats3`, verificado archivo por archivo.** La
+versión anterior estaba fechada el 2026-08-27 y nombraba como dueños de sus
+invariantes a seis módulos que el borrado del motor viejo (2026-08-29) se llevó:
+`applied-checks`, `applied-memory`, `recruiter-verified`, `build-report`,
+`panel-report` y `report`. Las invariantes seguían siendo correctas; los dueños
+ya no existían. Un documento de intención que nombra archivos borrados es peor
+que ninguno, porque la próxima auditoría lo usa de vara y mide contra un motor
+que no está.
 
 ## La regla que manda (CEO)
 
 > Si te sugiero un merge, eliminar o cambiar un bullet, **no te contradigas más
 > tarde**.
 
-De ahí salen las cuatro invariantes de abajo. Cada una nombra el archivo que la
-posee. Si una respuesta se puede dar en dos lugares, es un defecto, aunque los
-dos coincidan hoy.
+> El ATS muestra lo que falta, **tailor lo soluciona**. Sin nada que se
+> contradiga ni se repita.
+
+De ahí salen las invariantes de abajo. Cada una nombra el archivo que la posee.
+Si una respuesta se puede dar en dos lugares, es un defecto, aunque los dos
+coincidan hoy.
+
+## Las piezas, y son éstas
+
+```
+lib/ats3/contracts.ts   vocabulario, ids, hashes, esquemas Zod
+lib/ats3/engine.ts      8 fases, 5 capas de caché, parches sobre copia
+lib/ats3/guards.ts      los 12 chequeos + lealtad + reintento
+lib/ats3/ledger.ts      memoria entre viñetas + presupuesto de espacio
+lib/ats3/score.ts       puntaje aditivo + semáforo
+```
+
+Fuera de los cinco: `lib/services/ai/modules/AIAts3Module.ts` (los 6 prompts),
+`app/api/ai/ats3/route.ts` (el único borde) y `components/editor/ats3/`
+(6 archivos). **El ATS v3 no importa nada de `lib/ats/`** — el motor viejo sigue
+existiendo con 19 módulos porque los usan la carta, `/tools/ats-checker`, la
+plantilla ATS y el asistente, que no son éste.
 
 ## 1 · Un número, un dueño
 
-**¿Cuántas viñetas admite un puesto?** → `lib/ats/role-budget.ts`, que lee
-`BULLETS_PER_ROLE_MIN`/`MAX` de `lib/ats/scoring-config.ts`.
-
-Hoy: **3 a 6 para todo puesto**, sin distinguir antigüedad. El editor
-(`WorkExperience.tsx`) aplica el mismo techo y lo anuncia en su ayuda.
-
-Ninguna capa puede guardar un tope propio. Una banda más estricta río abajo
-significa pedirle al usuario que borre la línea que el editor le acaba de
-aceptar — que es exactamente el bucle reportado el 2026-08-25 y el 2026-08-27.
+- **¿Cuánto vale cerrar esto?** → `score.ts`. `gainOf` devuelve el
+  `gainPerUnit` del mismo objeto que pinta el dial: no hay una segunda fórmula,
+  así que la tarjeta y el número no pueden discrepar.
+- **¿De qué color va?** → `scoreBand` en `score.ts` (<55 rojo · 55-79 amarillo ·
+  ≥80 verde). El color dice el PUNTAJE y nada más; lo crítico lo dice el
+  veredicto, que además exige cero críticos abiertos para decir «listo».
+- **¿Cuánto se puede recuperar?** → `view-model.ts`, acotado al techo real
+  (`min(suma, 100 - total)`): el dial no puede prometer puntos imposibles.
+- **¿Cuántas cosas hay que hacer?** → una sola expresión,
+  `workOf(secciones).length + verdictsToDo(triage).length`, y la usan el botón
+  del informe y la pestaña de Tailor. Dos cifras ciertas que cuentan cosas
+  distintas se leen como una mentira.
 
 ## 2 · El índice es pista, el texto es identidad
 
-Dueño: `lib/ats/bullet-locate.ts` (`resolveBulletIndex`).
+Dueño: `buildTree` y `bulletIdFor`/`roleIdFor` en `contracts.ts`.
 
-Todo lo que se calcula en el análisis y se reusa después **viaja con el texto de
-la línea que señala**, nunca sólo con su posición. Aplicar un arreglo borra o
-mueve líneas, y desde ese momento toda posición guardada apunta a otra cosa.
+Los ids se derivan del TEXTO dentro de su puesto, no de la posición. Aplicar un
+arreglo reordena las líneas, y un id posicional convertiría cada hallazgo
+guardado en un puntero a la línea equivocada.
 
-Los tres canales, todos con su texto:
+- La sugerencia viaja con `originalText` y `basedOnHash` (`AnchoredSuggestion`).
+  Una reescritura que no sabe a qué línea reemplaza **no se publica**.
+- `isStale` compara el hash al aplicar: una propuesta pensada sobre una versión
+  vieja no pisa la edición que el usuario hizo mientras esperaba.
+- Dos puestos idénticos se desempatan (`roleIdFor`), o al escribir de vuelta uno
+  pisa al otro y desaparecen las viñetas de un trabajo entero.
 
-| Qué viaja | Campo | Se resuelve en |
-|---|---|---|
-| Par de fusión | `SemanticPair.texts` | `merge-candidates.ts` |
-| Par de repetición | `RepeatedPair.a.text` / `b.text` | `writing-checks.ts` |
-| Hallazgo del reclutador | `CvFixAction.originalText` | `recruiter-verified.ts` |
+## 3 · Cada clave de caché nombra TODO de lo que depende su respuesta
 
-Reglas de borde:
+Dueño: `cacheKey` en `engine.ts`. Cinco capas: `ats3-jd`, `ats3-audit`,
+`ats3-triage`, `ats3-fix`, `ats3-log`.
 
-- El texto se adjunta **en el servidor**, único punto sin deriva posible, y se
-  re-adjunta también en los aciertos de caché (`groundForThisResume`).
-- Debe estar **declarado en el schema Zod** del borde HTTP: Zod descarta en
-  silencio lo que no declara, y el campo borrado devuelve el defecto entero.
-- Si la línea ya no se puede ubicar, el hallazgo **se descarta**. Nunca se
-  señala una línea distinta, y nunca se muestra un botón que escribiría en el
-  renglón equivocado.
+Una clave incompleta es peor que no tener caché: sirve la respuesta de otra
+pregunta. `treeHash` cubre viñetas, resumen, **cargo, empresa, fechas y
+habilidades declaradas** — las cuatro últimas se agregaron el 2026-09-08, porque
+`compactTree` se las manda al modelo y la clave no las miraba: corregir el cargo
+no movía el puntaje durante 30 días.
 
-## 3 · Aplicado es aplicado, y no aplicado no se marca
+**Lo guardado vuelve a pasar por los guards.** Un guard nuevo tiene que valer
+para lo ya guardado o no vale: una propuesta escrita antes de que el chequeo
+existiera lo esquivaría para siempre.
 
-Dueños: `lib/ats/applied-checks.ts` (la huella) y `lib/ats/applied-memory.ts`
-(la firma del texto aceptado, que sobrevive al análisis siguiente).
+## 4 · Aplicado es aplicado, y no aplicado no se marca
 
-- Un hallazgo cerrado **sigue cerrado** cuando llega un análisis nuevo. Vaciar
-  las marcas al re-analizar devuelve al usuario los arreglos que ya hizo — se
-  escribió dos veces, con dos nombres distintos, y las dos veces fue un bug.
-- Un hallazgo que vuelve **describiendo otra cosa** recupera su botón solo: eso
-  lo decide la huella, no un reset.
-- **Nada se marca como aplicado si no se escribió.** Que la línea señalada no
-  aparezca no es "ya está resuelto": si no se sabe cuál era, es un error y se
-  dice como error.
+Dueños: `loyalty` en `guards.ts` (qué se vuelve a mostrar) y el registro
+`ats3-log` (qué se cerró).
 
-## 4 · Un hallazgo dice quién lo dice y si mueve el puntaje
+- Un hallazgo cerrado **sigue cerrado** cuando llega un análisis nuevo.
+- Un hallazgo que vuelve **describiendo otra cosa** se avisa como regresión: lo
+  decide el `nodeHash`, no un reset.
+- **Se anota el hallazgo que se cerró, no la línea entera.** Con dos tarjetas
+  sobre una viñeta, anotar por línea mataba la hermana — y descartada a mano no
+  volvía nunca. Sin `findingId` se anota la línea, que es lo correcto en el único
+  caso donde eso es cierto: cuando la viñeta deja de existir.
+- **Nada se marca como aplicado si no se escribió.** `addSkill` devuelve si
+  escribió; una función que no lo dice hace mentir a quien la llama.
+- La identidad de un hallazgo es `nodo + tipo` (+ un matiz cuando dos comparten
+  los dos, como los siete chequeos de lectura).
 
-- `owner` distingue quién resuelve: `tailor` escribe el texto, `auto` es
-  determinista, `user` es un dato que sólo tiene el candidato.
-- Las acciones del panel (`set_title`, `weave_term`, `strip_glyphs`) **no las
-  puede pedir el modelo**: `rejectionOf` las descarta como `panel_only_action`.
-- El rótulo de una sección no puede atribuir a un reclutador lo que calcula el
-  código, ni afirmar que no mueve el puntaje si sus tarjetas llevan peso.
+## 5 · Un hallazgo declara su remedio, y la pantalla sólo traduce
 
-## 5 · Un defecto que el detector no ve no existe para nadie
+`rewrite` · `weave` · `add_skill`. La pantalla no adivina cómo se cierra: si lo
+adivinara volvería a decir «reescribí esta línea» para todo, y reescribir la
+línea de 2015 no la desentierra.
 
-Medido de punta a punta el 2026-08-27 con el CV reportado, cuya línea decía
-`Active use of AI-assisted development tools…`:
+- **El triage manda sobre la línea.** `KEEP` y `DROP` cierran cualquier hallazgo
+  sobre esa viñeta: pedir una mejora sobre una de las dos es contradecirse en la
+  misma pantalla.
+- **Ningún veredicto sin botón.** Un `REPLACE` sin su pregunta degrada a
+  `REWRITE` al leer la respuesta: el campo es nulable y sólo lo pedía un renglón
+  del prompt, y un prompt es una petición, no un contrato.
+- **Un componente que puntúa sin hallazgos que lo nombren no tiene sección.** El
+  cargo (`title`) pesa y se mide, y ninguna tarjeta puede moverlo: por eso ya no
+  hay una sección «Que te encuentren» pintando un porcentaje sin nada debajo.
 
-```
-weakVerbBullets : []        isImprovableLine : NO   ← el producto era ciego
-```
+## 6 · Ningún camino escribe en el CV sin pasar por los guards
 
-Y la ceguera se propaga entera: sin defecto no hay tarjeta, sin tarjeta el
-ejecutor nunca recibe la línea, y si el reclutador la señala `rejectionOf` la
-descarta como `line_has_no_defect`. Nadie la arregla nunca.
+Dueño: `checkSuggestion` en `guards.ts`, con sus 12 razones: `invented_term` ·
+`invented_figure` · `wrong_person` · `verb_collision` · `keyword_over_budget` ·
+`duplicate_claim` · `drops_content` · `adds_nothing` · `too_many_placeholders` ·
+`placeholder_in_summary` · `stale` · `empty`.
 
-Tres causas encadenadas, las tres cerradas:
+- La **variante sin cifra** —lo que se escribe al pulsar «no tengo ese dato»—
+  pasa por los mismos chequeos: es la puerta que más tienta a borrar la cifra que
+  el candidato sí dio.
+- Un rechazo **dice cuál fue**: «no se pudo» con el uso ya cobrado es lo que hace
+  que alguien deje de apretar el botón.
+- **Un reintento, nunca dos** por motivo. Dos esconden un prompt que dejó de
+  funcionar. El techo del camino completo son seis llamadas y está contado en
+  `runRewrite`.
+- **El prompt y el guard dicen lo mismo.** P4 le exige al modelo que alguna
+  palabra del término ya esté en la línea; `inventedTerms` lo hace cumplir. Si
+  discrepan, gana el código.
 
-1. **`WEAK_OPENERS` enumera frases**, y la lista siguiente siempre llega tarde.
-   La regla se **deriva** de la gramática: `opensNominally` pregunta si la línea
-   arranca con un sintagma nominal en vez de con el verbo del trabajo, usando
-   listas cerradas de determinantes y preposiciones. Medido sobre 21 líneas en
-   dos idiomas: **6 de 6 detectadas, 0 falsos positivos**. La ventana de la
-   preposición es de dos palabras y ese número salió de la medición — con tres,
-   «Reduje el tiempo DE cierre contable» caía como nominal.
-2. **La pregunta tenía cuatro dueños**: `opensWeak`, `opensWeakly`,
-   `isImprovableLine` y `bulletsOf`, cada uno con su copia de
-   `WEAK_OPENERS.some(startsWith)`. Uno aprendió algo nuevo y los otros
-   siguieron ciegos. Hoy contesta `opensWeakly` y sólo él.
-3. **`weakVerbBullets` no tenía consumidor**: se calculaba en cada análisis y
-   nadie lo leía. La única tarjeta que preguntaba por líneas flojas salía de
-   `rankRoleBullets`, o sea de las que CAEN del ranking de su puesto — así que
-   una línea mal escrita sólo recibía atención si además el puesto estaba
-   sobrecargado. Ahora tiene tarjeta propia (`tips.weak_opener`), con tope y
-   respetando «una viñeta, un lugar».
+## 7 · La cuota se cobra por petición, y lo que no se gastó se devuelve
 
-## Lo que se midió contra la API real, y qué se cayó
+- Una petición, una cuota, aunque la entrega venga en cinco actos NDJSON.
+- El stream se abre **después** del primer acto: un 403, un 429 o un 422 dentro
+  de un 200 dejarían al panel en blanco en vez del aviso correcto.
+- `calls === 0` → `refundDailyQuota`. Una corrida servida entera del caché no
+  gastó nada.
+- **Una fila por petición** en `AIUsageLog`: el panel agrupa por conteo, y seis
+  prompts en seis filas figurarían como seis llamadas.
+- Registrar lo resuelto **no gasta cuota**: es una escritura, no una llamada.
+- **El CV tiene que ser suyo.** `requireUser` autentica a la persona; el
+  `resumeId` llega en el cuerpo y se comprueba con el mismo `where` que usa
+  `ResumeService`. Va dentro del `try`, porque `handleError` es lo que escribe la
+  falla en el panel de Service Errors.
 
-Tres hipótesis, dos descartadas por la medición:
+## Lo que este contrato NO promete
 
-| Sospechoso | Resultado |
-|---|---|
-| `improve-bullet` prefija el verbo | **0 de 4**. Reescribe bien: «Active use of…» → «Accelerated Swift and SwiftUI refactoring…» |
-| El tejedor de habilidades lo escribe | **0 de 4**. Escribe bien: «Conducted Code Review for Swift…» |
-| El ejecutor lo arregla si se lo pides | **No lo toca**: devuelve `rewrites: []` sin descartes, incluso con `reason: "weak_verb"` |
-
-De ahí la conclusión: el motor que arregla esta forma es `improve-bullet`, y es
-el que la tarjeta nueva termina llamando. El defecto nunca fue que el modelo
-escribiera mal — era que nadie le pedía arreglar esa línea.
-
+- **La lectura del PDF renderizado no participa del puntaje.** El esquema acepta
+  un campo `checks` para eso y el panel manda `{}` siempre: el pilar se calcula
+  con `readableChecks`, que deriva de los datos estructurados. Queda dicho para
+  que nadie lea el campo como una defensa que existe.
+- **Una viñeta que la auditoría no devuelve no recibe hallazgo.** Falla callado a
+  propósito: rellenar los ejes que el modelo no juzgó sería fabricar un juicio
+  sobre una línea que nadie leyó.
+- **Las blandas no puntúan**, por decisión de producto. La sección lo declara y
+  la tarjeta lo dice.
