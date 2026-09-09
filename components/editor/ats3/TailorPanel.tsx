@@ -720,7 +720,14 @@ function TriageBoard({
                   después pedir que saques algo es lo que el CEO no quiere. */}
               {d.verdict === "MERGE" && d.mergeWith && (
                 <>
-                  <Note tone="neutral" className="mt-1">{textOf(d.mergeWith)}</Note>
+                  {/* La OTRA línea, y sólo si existe. Sin la guarda, un id que
+                      no resuelve —el usuario la editó o la sacó entre el
+                      análisis y el clic— pinta una caja gris vacía debajo del
+                      motivo: el mismo defecto que la fila principal ya cerraba
+                      dos renglones más arriba. Visto en pantalla, no en un test. */}
+                  {textOf(d.mergeWith) && (
+                    <Note tone="neutral" className="mt-1">{textOf(d.mergeWith)}</Note>
+                  )}
                   <span className="mt-1 flex flex-wrap items-center gap-2">
                     <Btn
                       tone="ai"
