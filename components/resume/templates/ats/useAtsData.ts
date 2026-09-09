@@ -12,6 +12,7 @@ import { useMemo } from "react"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { ATS_SKILLS } from "@/lib/ats/skills-dictionary"
+import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { normalizeTerm } from "@/lib/ats/vocabulary"
 import { designAccent } from "@/lib/resume/template-accent"
 import type { IconKey } from "./atoms"
@@ -101,10 +102,34 @@ export function useAtsData(): AtsView {
     if (pd.github) contacts.push(["git", pd.github])
     if (pd.website) contacts.push(["globe", pd.website])
 
-    const skillNames = skills.map((s) => s.name).filter(Boolean)
+    /**
+     * LO QUE LA PLANTILLA ATS RECIBE, Y ES UN SOLO NÚMERO (CEO, 2026-09-09).
+     *
+     * «Las plantillas con ATS pueden recibir hasta 20 skills; si tenés 100, sólo
+     * las necesarias entran.» El corte vive acá porque acá es donde las 16
+     * plantillas ATS reciben sus datos: escrito en cada una, dos ya se habían
+     * ido por su cuenta a 12 y las otras catorce no cortaban nada — con cien
+     * habilidades, catorce CVs se desbordaban y dos escondían ochenta y ocho sin
+     * decirlo.
+     *
+     * CUÁLES son «las necesarias» NO se decide acá y no se puede: la plantilla
+     * no tiene la vacante delante —se renderiza desde el dashboard, desde la
+     * descarga, desde la miniatura—. Eso lo decide `skillPlan` en el panel, con
+     * los pesos medidos sobre el aviso, y escribe la lista en ESE orden. Acá
+     * sólo se respeta el techo: si el usuario pasó por Tailor, las primeras
+     * veinte son exactamente las que su postulación pide; si no pasó, son las
+     * suyas en su orden, que es la única respuesta honesta sin vacante.
+     */
+    const skillNames = skills.map((s) => s.name).filter(Boolean).slice(0, SKILLS_MAX)
     const SKILL_PCT: Record<string, number> = { beginner: 55, intermediate: 70, advanced: 85, expert: 95 }
     const SKILL_LBL: Record<string, string> = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced", expert: "Expert" }
-    const skillBars = skills.filter((s) => s.name).map((s) => ({ name: s.name, level: SKILL_LBL[s.level] ?? "Proficient", pct: SKILL_PCT[s.level] ?? 75 }))
+    // Las barras pintan LAS MISMAS que la lista: dos cortes distintos sobre el
+    // mismo dato es como una plantilla termina mostrando veinte chips y treinta
+    // barras.
+    const skillBars = skills
+      .filter((s) => s.name)
+      .slice(0, SKILLS_MAX)
+      .map((s) => ({ name: s.name, level: SKILL_LBL[s.level] ?? "Proficient", pct: SKILL_PCT[s.level] ?? 75 }))
 
     return {
       accent: (sig: string) => designAccent(config.colorScheme, sig),

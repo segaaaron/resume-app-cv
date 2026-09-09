@@ -60,7 +60,7 @@ export default function AtsCardinal() {
         {((d.visible("skills") && d.skills.length > 0) || (d.visible("certifications") && d.certs.length > 0)) && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 26, marginBottom: 18 }}>
             {d.visible("skills") && d.skills.length > 0 && (
-              <div><AHead icon="bolt" color={c} font={LATO} variant="box" size={11.5}>{d.label("skills")}</AHead><AChips items={d.skills.slice(0, 12)} color={c} font={LATO} variant="outline" /></div>
+              <div><AHead icon="bolt" color={c} font={LATO} variant="box" size={11.5}>{d.label("skills")}</AHead><AChips items={d.skills} color={c} font={LATO} variant="outline" /></div>
             )}
             {d.visible("certifications") && d.certs.length > 0 && (
               <div><AHead icon="medal" color={c} font={LATO} variant="box" size={11.5}>{d.label("certifications")}</AHead><ABullets items={d.certs} color={c} font={LATO} marker="star" fs={10.4} /></div>

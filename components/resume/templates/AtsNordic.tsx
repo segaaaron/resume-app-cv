@@ -59,7 +59,7 @@ export default function AtsNordic() {
             {d.visible("skills") && d.skills.length > 0 && (
               <>
                 <AHead icon="gear" color={c} font={CABIN} variant="caps" size={11.5}>{d.label("skills")}</AHead>
-                <div style={{ marginBottom: 16 }}><AChips items={d.skills.slice(0, 12)} color={c} font={CABIN} variant="soft" /></div>
+                <div style={{ marginBottom: 16 }}><AChips items={d.skills} color={c} font={CABIN} variant="soft" /></div>
               </>
             )}
             {d.visible("languages") && d.languages.length > 0 && (
