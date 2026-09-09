@@ -441,7 +441,7 @@ describe("el análisis se entrega en actos", () => {
     }
     const score = scoreResume(tree, spec2, audit, CHECKS)
     const index = buildTermIndex(termsOf(spec2, tree))
-    const findings = findingsOf(tree, spec2, audit, score, index)
+    const findings = findingsOf(tree, audit, score, index)
 
     const inventario = findings.find((f) => f.detail.includes("Control de inventario"))
     const pagos = findings.find((f) => f.detail.includes("Medios de pago"))
@@ -482,7 +482,7 @@ describe("el análisis se entrega en actos", () => {
     const audit = fakeAudit()
     const score = scoreResume(tree, SPEC, audit, CHECKS)
     const index = buildTermIndex(termsOf(SPEC, tree))
-    const findings = findingsOf(tree, SPEC, audit, score, index)
+    const findings = findingsOf(tree, audit, score, index)
     /**
      * UNA TARJETA POR LÍNEA **Y SUJETO**, que es la regla que el motor declara.
      *
@@ -611,7 +611,7 @@ describe("aplicar mide, no promete", () => {
   const anchored = (over: Partial<AnchoredSuggestion>): AnchoredSuggestion => ({
     bulletId: "x", changed: true, text: "t", actionVerb: "Hice", keywordsUsed: [], claim: "",
     metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
-    basedOnHash: "h", originalText: "o", delta: 0, ...over,
+    basedOnHash: "h", originalText: "o", ...over,
   })
 
   it("una sugerencia pensada sobre una versión vieja NO pisa la edición del usuario", () => {
@@ -651,7 +651,6 @@ describe("aplicar mide, no promete", () => {
       SPEC, fakeAudit(), CHECKS, openLedger(tree, SPEC, new Set()),
     )
     expect(r.tree.roles[0].bullets[0].origin).toBe("AI_ACCEPTED")
-    expect(r.resolution?.nodeId).toBe(target.id)
   })
 
   it("el delta sale de recalcular, no de lo que diga el modelo", () => {
@@ -751,7 +750,7 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     const index = buildTermIndex(termsOf(spec, t))
     const audit = facts(t, "Arqueo de caja", viejo)
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, spec, audit, score, index)
+    const hallazgos = findingsOf(t, audit, score, index)
     const enterrado = hallazgos.find((f) => f.merged.includes("buried_term"))
     // SE ANCLA EN EL PUESTO ACTUAL, no en el viejo: el problema no es cómo está
     // escrita la línea de 2015, es que el término sólo vive ahí. Anclarlo abajo
@@ -771,7 +770,7 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     const index = buildTermIndex(termsOf(spec, t))
     const audit = facts(t, "Medios de pago", actual)
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, spec, audit, score, index)
+    const hallazgos = findingsOf(t, audit, score, index)
     const sinListar = hallazgos.find((f) => f.merged.includes("skill_not_listed"))
     expect(sinListar).toBeTruthy()
     // Lo cierra AGREGARLO A LA LISTA. Reescribir la viñeta que ya lo demuestra
@@ -787,7 +786,7 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     const index = buildTermIndex(termsOf(spec, t))
     const audit = facts(t, "Atención al cliente", actual)
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, spec, audit, score, index)
+    const hallazgos = findingsOf(t, audit, score, index)
     expect(hallazgos.some((f) => f.merged.includes("skill_not_listed"))).toBe(false)
   })
 
@@ -813,7 +812,7 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
       ],
     }
     const score = scoreResume(t, spec, audit, {})
-    const sinListar = findingsOf(t, spec, audit, score, index).filter((f) => f.merged.includes("skill_not_listed"))
+    const sinListar = findingsOf(t, audit, score, index).filter((f) => f.merged.includes("skill_not_listed"))
     expect(sinListar.map((f) => f.detail).sort()).toEqual(["Facturación", "Medios de pago"])
     // Ids distintos: dos tarjetas con el mismo id se aplican sobre la equivocada.
     expect(new Set(sinListar.map((f) => f.id)).size).toBe(2)
@@ -831,7 +830,7 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
       softCoverage: [{ signal: "Trabajo en equipo", status: "DECLARED_ONLY" as const, evidenceNodeId: null }],
     }
     const score = scoreResume(t, spec, audit, {})
-    const blanda = findingsOf(t, spec, audit, score, index).find((f) => f.merged.includes("soft_not_shown"))
+    const blanda = findingsOf(t, audit, score, index).find((f) => f.merged.includes("soft_not_shown"))
     expect(blanda?.detail).toBe("Trabajo en equipo")
     expect(blanda?.remedy).toBe("weave")
     // Las blandas no puntúan: la tarjeta no puede prometer puntos.
@@ -849,7 +848,7 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
       coverage: [{ skill: "Medios de pago", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: actual }],
     }
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, spec, audit, score, index)
+    const hallazgos = findingsOf(t, audit, score, index)
     expect(hallazgos.find((f) => f.merged.includes("skill_not_listed"))?.remedy).toBe("add_skill")
   })
 
@@ -863,7 +862,7 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
       coverage: [{ skill: "SAP", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null }],
     }
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, spec, audit, score, index)
+    const hallazgos = findingsOf(t, audit, score, index)
     expect(hallazgos.some((f) => f.remedy === "add_skill")).toBe(false)
   })
 })

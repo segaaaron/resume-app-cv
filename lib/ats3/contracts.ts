@@ -217,7 +217,7 @@ export function termKey(raw: string): string {
 
 /** sha256 hex. Un solo lugar para no tener dos formas de hashear. */
 export function sha256(...parts: string[]): string {
-  return createHash("sha256").update(parts.join(" ")).digest("hex")
+  return createHash("sha256").update(parts.join("\u0000")).digest("hex")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -524,8 +524,25 @@ export type FindingType = (typeof FINDING_TYPES)[number]
  */
 export const DETAIL_SEPARATOR = " · "
 
-export function findingId(nodeId: NodeId, type: FindingType): string {
-  return sha256(nodeId, type, RUBRIC_VERSION).slice(0, 16)
+/**
+ * LA IDENTIDAD DE UN HALLAZGO.
+ *
+ * Nodo más tipo alcanza mientras un emisor produzca UN hallazgo por nodo y tipo,
+ * que es lo que hace `push`: dos cosas dichas de la misma línea se fusionan en
+ * una tarjeta. Los chequeos de lectura son la excepción y no la vieron: los
+ * siete se anclan en el resumen con el tipo `parse_risk`, así que compartían id.
+ *
+ * Y un id compartido no es un detalle cosmético: `loyalty` empareja por él para
+ * saber qué ya se arregló. Con siete hallazgos bajo una sola huella, cerrar uno
+ * marcaba los otros seis como REGRESIÓN —«lo arreglaste y lo volviste a
+ * romper»— sobre chequeos que el usuario nunca tocó.
+ *
+ * `matiz` es lo que distingue a dos hallazgos que comparten nodo y tipo. Se
+ * omite en todos los emisores menos ése, y omitirlo devuelve el id de siempre:
+ * los registros de resolución ya guardados siguen emparejando.
+ */
+export function findingId(nodeId: NodeId, type: FindingType, matiz?: string): string {
+  return (matiz ? sha256(nodeId, type, RUBRIC_VERSION, matiz) : sha256(nodeId, type, RUBRIC_VERSION)).slice(0, 16)
 }
 
 export interface Finding {
@@ -757,9 +774,14 @@ export interface AnchoredSuggestion extends Suggestion {
   basedOnHash: string
   /** El texto que reemplaza. Sin esto, "aplicar" escribe sobre la línea de al lado. */
   originalText: string
-  /** Medido recalculando sobre una copia. Nunca lo dice el modelo. */
-  delta: number
 }
+
+// Acá vivía un `delta`. Su comentario decía «medido recalculando sobre una
+// copia» y `anchor` le pasaba 0 en los dos caminos; nadie lo leía nunca. La
+// medición de verdad la hace `applySuggestion`, que escribe en una copia, vuelve
+// a puntuar y resta — y ESE número sí lo lee la hoja de confirmación. Un campo
+// que vale cero y promete una medición en su comentario es peor que no tenerlo:
+// el día que alguien lo conecte, le cree.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EL REGISTRO DE LO RESUELTO

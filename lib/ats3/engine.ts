@@ -316,7 +316,7 @@ export const cacheKey = {
 // `score.ts`. Un hallazgo sin ganancia medida es una opinión.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, score: Score, index: TermIndex): Finding[] {
+export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, index: TermIndex): Finding[] {
   const out: Finding[] = []
   /**
    * `component` no es un dato extra: es DE DÓNDE sale `gain`, dicho en la misma
@@ -374,6 +374,22 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
   for (const role of tree.roles) {
     for (const b of role.bullets) {
       const facts = byId.get(b.id)
+      /**
+       * UNA VIÑETA QUE LA AUDITORÍA NO DEVOLVIÓ NO RECIBE HALLAZGO, Y ES CALLADO.
+       *
+       * P2 juzga el documento entero en una llamada; si omite una línea, acá no
+       * hay con qué decidir y se sigue de largo. El puntaje no se descuadra
+       * —`score` filtra por los ids que el CV tiene de verdad, así que esa línea
+       * sale del numerador Y del denominador— pero el usuario lee que está bien
+       * cuando en realidad nadie la miró.
+       *
+       * Se deja así a propósito: rellenar los ejes que faltan sería fabricar un
+       * juicio sobre una línea que el modelo no leyó, que es peor que callarse.
+       * Pedirle la diferencia cuesta una llamada más por análisis y decirlo en
+       * pantalla es una decisión de producto — las dos exceden lo que este
+       * archivo puede decidir solo. Queda escrito para que el próximo no lo
+       * descubra tarde ni lo tape con un valor por defecto.
+       */
       if (!facts) continue
       if (!facts.hasResult || !facts.hasMethod || !facts.hasActionVerb) {
         push("no_result", "xyz", b.id, b.text, gainOf(score, "xyz"), missingParts(facts))
@@ -393,7 +409,22 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
   for (const c of audit.coverage) {
     if (c.status === "FOUND") continue
     const key = c.requirement === "MUST" ? "must" : "nice"
-    const target = bestHomeFor(tree, c.skill, index)
+    /**
+     * DONDE LA AUDITORÍA YA DIJO QUE ESTÁ EL TRABAJO, Y SI NO, LA MEJOR CASA.
+     *
+     * `IMPLIED` significa «el trabajo descrito lo demuestra pero el CV no lo
+     * NOMBRA», y en ese caso P2 puede citar la línea. Esa cita vale más que
+     * `bestHomeFor`, que es una heurística de raíces compartidas: es el nodo
+     * donde la evidencia vive de verdad.
+     *
+     * Y no es cosmético. El prompt de reescritura le exige al modelo que alguna
+     * palabra del término ya esté en la línea —«si no comparte nada, NO ENTRA»—
+     * y el guard `invented_term` hace cumplir lo mismo. Anclar el requisito en
+     * una línea que no lo respalda es pedir una reescritura que las dos reglas
+     * van a rechazar; anclarlo donde la auditoría vio el trabajo es pedirla
+     * donde puede salir bien.
+     */
+    const target = c.evidenceNodeId && findNode(tree, c.evidenceNodeId) ? c.evidenceNodeId : bestHomeFor(tree, c.skill, index)
     /**
      * SU PROPIA TARJETA, Y NO LA DE LA VIÑETA DONDE ATERRIZA.
      *
@@ -505,7 +536,6 @@ export function findingsOf(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, s
     )
   }
 
-  void spec
   return out
 }
 
@@ -635,8 +665,11 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   // ── acto 1: el puntaje, que no cuesta una sola llamada ────────────────────
   //
   // Lo que el motor puede medir solo, MÁS lo que el cliente haya medido sobre el
-  // documento renderizado. El cliente gana: si midió el PDF de verdad, esa
-  // medición vale más que una derivada de los datos.
+  // documento renderizado. El cliente gana cuando manda algo: una medición sobre
+  // el PDF de verdad vale más que una derivada de los datos.
+  //
+  // Hoy el panel manda `{}` y este pilar sale entero de `readableChecks`. Queda
+  // dicho para que nadie lea la línea de abajo como que el PDF ya se mide.
   const checks = { ...readableChecks(tree), ...input.checks }
   /**
    * Los pesos salen del TEXTO del aviso, no del modelo: la misma vacante da
@@ -674,13 +707,15 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
 
   // ── los hallazgos, filtrados por lo que el usuario ya resolvió ────────────
   const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
-  const all = findingsOf(tree, spec, audit, score, index)
+  const all = findingsOf(tree, audit, score, index)
   for (const [nombre, ok] of Object.entries(checks)) {
     // Un chequeo que falla y no genera hallazgo es un punto perdido que el
     // usuario no puede recuperar porque nadie le dijo qué arreglar.
     if (ok === false) {
       all.push({
-        id: findingId(tree.summary.id, "parse_risk"),
+        // El matiz es el chequeo: sin él los siete comparten huella y cerrar
+        // uno acusa a los demás de una regresión que nadie provocó.
+        id: findingId(tree.summary.id, "parse_risk", nombre),
         type: "parse_risk",
         component: "checks",
         // Lo que un lector automático no extrae bien se arregla en el documento,
@@ -725,8 +760,35 @@ export function termsOf(spec: JobSpec, tree: ResumeTree): TermVariants[] {
   return out
 }
 
+/**
+ * LA HUELLA DEL CV, Y CUBRE TODO LO QUE LA AUDITORÍA MIRA.
+ *
+ * Es la clave de las dos capas que preguntan por el documento entero: la
+ * auditoría (P2) y el triage (P3). La regla que gobierna las claves de este
+ * motor está escrita veinte líneas más arriba —«cada una nombra TODO de lo que
+ * depende su respuesta»— y ésta la incumplía: contaba las viñetas y el resumen,
+ * y `compactTree` le manda al modelo ADEMÁS el cargo, la empresa, el período y
+ * las habilidades declaradas.
+ *
+ * La consecuencia no se veía como un error. El candidato corregía su cargo —lo
+ * que la vacante pide, lo que `titleAlignment` puntúa— la huella salía idéntica,
+ * se servía la auditoría vieja y el dial no se movía. Treinta días, que es lo
+ * que tarda `purgeAiCaches` en borrar la fila. Hacer lo correcto y que el número
+ * no responda es la forma callada del bucle que este motor existe para no tener.
+ *
+ * El orden es el del documento y no se ordena aparte: mover un puesto de sitio
+ * cambia lo que el modelo lee —qué llega primero, qué queda enterrado— así que
+ * también tiene que cambiar la huella.
+ */
 function treeHash(tree: ResumeTree): string {
-  return sha256(...tree.roles.flatMap((r) => r.bullets.map((b) => b.hash)), tree.summary.hash).slice(0, 16)
+  return sha256(
+    ...tree.roles.flatMap((r) => [r.title, r.company, r.startDate, r.endDate, ...r.bullets.map((b) => b.hash)]),
+    tree.summary.hash,
+    // Separadas del resto: una habilidad que se llame igual que una empresa no
+    // puede producir la misma huella que el caso donde están intercambiadas.
+    "skills",
+    ...tree.declaredSkills,
+  ).slice(0, 16)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -801,7 +863,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    */
   const cached = (await req.store.read("ats3-fix", key)) as Suggestion | null
   if (cached && checkSuggestion(cached, ctx).ok) {
-    return { ok: true, suggestion: anchor(cached, node.hash, node.text, 0), served: true, calls: 0 }
+    return { ok: true, suggestion: anchor(cached, node.hash, node.text), served: true, calls: 0 }
   }
   const ask = (nudge?: string) =>
     isSummary
@@ -823,6 +885,22 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           nudge,
         })
 
+  /**
+   * EL TECHO DE ESTE CAMINO SON SEIS LLAMADAS, Y LA CUOTA SE COBRA UNA.
+   *
+   * Se acumulan porque cada reintento responde a algo distinto y ninguno sabe de
+   * los otros: la propuesta (1), el reintento por declinar contradiciendo lo que
+   * el propio modelo declaró (2), el reintento por guard (3), la verificación de
+   * P6 (4), el reintento por prometer una cifra y no ofrecer el hueco (5) y su
+   * verificación (6).
+   *
+   * Cada uno está justificado por separado y la regla de «nunca dos reintentos»
+   * se cumple DENTRO de cada motivo. Lo que nadie declaró es el total: el tope
+   * diario existe para frenar el gasto y acá una ranura compra hasta seis
+   * llamadas. No se pone un techo acá porque elegir el número sin la
+   * distribución real sería elegirlo a ojo, y el dato ya se guarda: `AIUsageLog`
+   * escribe una fila por petición con sus tokens. Se mide ahí antes de acotar.
+   */
   let calls = 0
   let first = await ask()
   calls++
@@ -906,11 +984,11 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   }
 
   await req.store.write("ats3-fix", key, first)
-  return { ok: true, suggestion: anchor(first, node.hash, node.text, 0), served: false, calls }
+  return { ok: true, suggestion: anchor(first, node.hash, node.text), served: false, calls }
 }
 
-function anchor(s: Suggestion, hash: string, originalText: string, delta: number): AnchoredSuggestion {
-  return { ...s, basedOnHash: hash, originalText, delta }
+function anchor(s: Suggestion, hash: string, originalText: string): AnchoredSuggestion {
+  return { ...s, basedOnHash: hash, originalText }
 }
 
 function roleContextOf(tree: ResumeTree, nodeId: NodeId): string {
@@ -935,8 +1013,13 @@ export interface ApplyResult {
   ledger: Ledger
   delta: number
   reason?: GuardVerdict
-  resolution?: Resolution
 }
+
+// Acá vivía una `resolution` que nadie leía, y además mentía: armaba su id con
+// el tipo quemado en "no_result", así que para un `no_metric` o un requisito —que
+// lleva sujeto en su clave— habría anotado un hallazgo distinto del que se
+// cerró. La resolución buena la arma el cliente con los ids que el motor ya le
+// entregó, que son los únicos que `loyalty` puede emparejar.
 
 /**
  * Aplica una sugerencia y devuelve cuánto sumó DE VERDAD.
@@ -952,27 +1035,39 @@ export function applySuggestion(
   audit: AuditFacts,
   checks: ParseChecks,
   ledger: Ledger,
+  /**
+   * LOS MISMOS PESOS CON LOS QUE SE PINTA EL DIAL.
+   *
+   * ── LO QUE ESTO NO ARREGLA, MEDIDO ─────────────────────────────────────────
+   * Hoy no cambia ni un decimal, y conviene que quede escrito para que nadie lo
+   * "verifique" con una sonda que mide otra cosa. La auditoría es la MISMA antes
+   * y después —esta función sólo reescribe un texto— y los pesos entran
+   * únicamente en `must`/`nice`, que salen de `audit.coverage`. Lo que sí cambia
+   * al reescribir —`metric`, `verbs`— se pondera con `COMPONENT_WEIGHT`, que es
+   * fijo. Medido sobre un aviso que repite SAP tres veces: delta 6,5625 con
+   * pesos y 6,5625 sin ellos.
+   *
+   * Se pasan igual, y por una sola razón: el número que esta función promete y
+   * el que la pantalla pinta después tienen que salir de los MISMOS insumos, no
+   * coincidir de casualidad. Hoy coinciden porque ningún componente que dependa
+   * del árbol usa los pesos; el día que uno lo haga, esto ya está bien y nadie
+   * tiene que acordarse.
+   */
+  termWeights: Record<string, number> = {},
 ): ApplyResult {
   if (isStale(s.basedOnHash, s.bulletId, tree)) {
     return { ok: false, tree, ledger, delta: 0, reason: { ok: false, reason: "stale", detail: s.bulletId } }
   }
 
-  const before = scoreResume(tree, spec, audit, checks)
+  const before = scoreResume(tree, spec, audit, checks, termWeights)
   const copy = writeInto(tree, s.bulletId, s.text)
-  const after = scoreResume(copy, spec, audit, checks)
+  const after = scoreResume(copy, spec, audit, checks, termWeights)
 
   return {
     ok: true,
     tree: copy,
     ledger: afterAccept(ledger, s),
     delta: deltaOf(before, after),
-    resolution: {
-      findingId: findingId(s.bulletId, "no_result"),
-      nodeId: s.bulletId,
-      nodeHashAtResolution: nodeHash(s.text),
-      resolvedBy: "AI_SUGGESTION",
-      resolvedAt: new Date().toISOString(),
-    },
   }
 }
 
