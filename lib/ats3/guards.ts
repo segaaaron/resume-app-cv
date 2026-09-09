@@ -64,6 +64,21 @@ export interface GuardContext {
   ledger: Ledger
   /** El resumen no admite huecos: es la primera línea que se lee. */
   isSummary?: boolean
+  /**
+   * CONTRA QUÉ SE JUZGA SI ALGO ESTÁ RESPALDADO. Por omisión, el mismo `original`.
+   *
+   * Son dos preguntas distintas y se estaban contestando con el mismo texto:
+   * «¿qué no se puede PERDER?» —eso es el original, y sólo el original— y «¿esto
+   * que nombra está respaldado?», que en una viñeta también es el original, pero
+   * en el RESUMEN es el CV entero. Un resumen habla de todo el documento: el
+   * modelo recibe las mejores viñetas justamente para eso, y el guard lo juzgaba
+   * contra el resumen viejo, así que nombrar una capacidad que las viñetas
+   * demuestran salía como `invented_term`.
+   *
+   * El motor viejo tenía esta separación con el nombre `groundingSource` y se
+   * perdió al construir v3 de cero. Vuelve acá, que es donde se decide.
+   */
+  grounding?: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,7 +112,7 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
     if (/\[[^\]]+\]/.test(variante)) {
       return fail("too_many_placeholders", "la variante sin cifra conserva un hueco sin llenar")
     }
-    const inventadaEnVariante = inventedFigure(variante, ctx.original, s)
+    const inventadaEnVariante = inventedFigure(variante, ctx.grounding ?? ctx.original, s)
     if (inventadaEnVariante) return fail("invented_figure", inventadaEnVariante)
     const inventadosEnVariante = inventedTerms(variante, ctx)
     if (inventadosEnVariante.length) return fail("invented_term", inventadosEnVariante.join(", "))
@@ -105,7 +120,7 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
     // huecos, la cifra y las herramientas, y NO la persona ni el contenido. Una
     // variante en tercera persona —o que se come el dato que la línea traía—
     // entra al CV por la puerta que existe para no poner un número inventado.
-    const personaEnVariante = wrongPerson(variante)
+    const personaEnVariante = wrongPerson(variante, ctx.isSummary)
     if (personaEnVariante) return fail("wrong_person", personaEnVariante)
     const perdidoEnVariante = droppedTerms(ctx.original, variante, ctx.index)
     if (perdidoEnVariante.length) return fail("drops_content", perdidoEnVariante.join(", "))
@@ -186,13 +201,13 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
     return fail("too_many_placeholders", "más de un hueco obligatorio")
   }
 
-  const persona = wrongPerson(text)
+  const persona = wrongPerson(text, ctx.isSummary)
   if (persona) return fail("wrong_person", persona)
 
   const invented = inventedTerms(text, ctx)
   if (invented.length) return fail("invented_term", invented.join(", "))
 
-  const figure = inventedFigure(text, ctx.original, s)
+  const figure = inventedFigure(text, ctx.grounding ?? ctx.original, s)
   if (figure) return fail("invented_figure", figure)
 
   if (verbCollides(ctx.ledger, s.actionVerb)) {
@@ -242,7 +257,7 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
  * fuertes del idioma. Ese lado lo cubren el prompt y P6 — decirlo es mejor que
  * fingir que el código lo cubre.
  */
-export function wrongPerson(text: string): string | null {
+export function wrongPerson(text: string, isSummary = false): string | null {
   const primera = text.trim().split(/\s+/)[0] ?? ""
   const limpia = primera.replace(/[^\p{L}]/gu, "")
   if (limpia.length < 4) return null
@@ -264,7 +279,45 @@ export function wrongPerson(text: string): string | null {
    * de caja) — y las tres están mal en una viñeta por el mismo motivo: no dicen
    * lo que ESTA persona hizo.
    */
-  if (/[^aeiouáéíóú]o$/.test(limpia)) {
+  /**
+   * ── Y EL SUSTANTIVO ESTÁ BIEN EN EL RESUMEN, QUE ES OTRA COSA ──────────────
+   *
+   * Esta rama caza el sustantivo a propósito: en una VIÑETA, «Manejo de caja» no
+   * dice lo que la persona hizo. Pero el resumen se escribe justo así, y no por
+   * gusto — P5 lo pide con todas las letras: «IDENTIDAD: qué ES la persona (…)
+   * se escribe como frase nominal o con el trabajo en sí», y la doctrina de la
+   * casa lo repite desde el 2026-08-19: «Cajera con experiencia en…».
+   *
+   * Sin esta excepción el guard rechazaba la forma que el prompt acababa de
+   * pedir, y de un modo que además discrimina: la vara es terminar en
+   * consonante + «o», así que caían los masculinos y pasaban los femeninos.
+   * Medido sobre 31 oficios reales: 14 rechazados —Cajero, Enfermero, Ingeniero,
+   * Médico, Técnico, Abogado, Empleado, Obrero, Panadero, Carpintero,
+   * Peluquero, Cocinero, Mecánico, Administrativo— y sus formas en femenino
+   * pasando todas. El usuario gastaba la consulta, el reintento le pedía al
+   * modelo lo contrario que P5, y se quedaba sin resumen.
+   *
+   * Lo que SÍ se sigue mirando en el resumen son las otras dos ramas: la tercera
+   * persona con tilde («Controló») y el infinitivo («Mantener»). Ésas están mal
+   * en los dos sitios.
+   *
+   * ── LO QUE ESTA EXCEPCIÓN DEJA PASAR, MEDIDO Y DICHO ───────────────────────
+   * Un pasado irregular de tercera SIN tilde abriendo un resumen: «Mantuvo las
+   * máquinas…». Esta rama era la única que lo cazaba, porque conflaciona tres
+   * cosas que terminan igual —el sustantivo, el presente y el irregular— y no
+   * hay forma de separarlas sin una lista de verbos, que este motor no tiene a
+   * propósito.
+   *
+   * Se acepta ese borde a sabiendas: del otro lado había un rechazo SEGURO y
+   * sistemático de la forma que el prompt pide, sesgado por género. Un guard
+   * demasiado estricto no es seguro, borra el producto — medido tres veces en
+   * este proyecto. Y el caso que queda no está solo: P5 lo prohíbe en prosa y
+   * P6 revisa la salida.
+   *
+   * Ojo, y es PREVIO a esta excepción: el guard mira SÓLO la primera palabra, así
+   * que «Su experiencia lo posiciona…» nunca se cazó, ni en viñeta ni en resumen.
+   */
+  if (!isSummary && /[^aeiouáéíóú]o$/.test(limpia)) {
     return `"${primera}" no es un pasado en primera persona: habla de otro, está en presente, o es un sustantivo`
   }
   if (/(ar|er|ir)$/i.test(limpia)) return `"${primera}" es un infinitivo, no lo que la persona hizo`
@@ -290,7 +343,8 @@ export function wrongPerson(text: string): string | null {
 export function inventedTerms(text: string, ctx: GuardContext): string[] {
   const declaredIndex = buildTermIndex(ctx.declared.map((d) => ({ canonical: d, variants: [] })))
   const inNew = termsIn(ctx.index, text)
-  const inOld = termsIn(ctx.index, ctx.original)
+  const respaldo = ctx.grounding ?? ctx.original
+  const inOld = termsIn(ctx.index, respaldo)
   const inDeclared = termsIn(declaredIndex, ctx.declared.join(" . "))
 
   const out: string[] = []
@@ -299,7 +353,7 @@ export function inventedTerms(text: string, ctx: GuardContext): string[] {
     // Declarado por el usuario en sus habilidades: puede nombrarse.
     if (inDeclared.has(term) || ctx.declared.some((d) => normalize(d) === normalize(term))) continue
     // La línea original YA HABLA de eso, sólo que con otras palabras.
-    if (supportedByOriginal(term, ctx.original)) continue
+    if (supportedByOriginal(term, respaldo)) continue
     out.push(term)
   }
   return out

@@ -843,6 +843,42 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     declared: req.tree.declaredSkills,
     ledger,
     isSummary,
+    /**
+     * EL RESUMEN SE JUZGA CONTRA EL CV ENTERO, NO CONTRA EL RESUMEN VIEJO.
+     *
+     * Un resumen habla de todo el documento —a P5 se le mandan las mejores
+     * viñetas justamente para eso— así que nombrar una capacidad que una viñeta
+     * demuestra NO es inventarla. Con el resumen viejo como única vara, un
+     * candidato cuyo resumen decía «Cajero con experiencia» no podía escribir
+     * «conciliaciones» aunque su propio CV lo probara dos líneas más abajo.
+     *
+     * Lo que NO se puede perder sigue siendo el original y sólo el original: son
+     * dos preguntas y ahora tienen dos campos.
+     *
+     * ── LO QUE ESTO AFLOJA, MEDIDO SOBRE TRES OFICIOS ──────────────────────────
+     * `supportedByOriginal` da por respaldado un término si alguna de sus
+     * palabras comparte cuatro letras con el respaldo, y con el CV entero esa
+     * superficie es mucho mayor que con una viñeta. Medido sobre cajero,
+     * enfermera y soldador, con los términos propios de cada oficio y doce
+     * ajenos de otros rubros:
+     *
+     *   legítimos que ahora pasan   8 de 9
+     *   ajenos que se cuelan        2 de 36  (6%)  — «compras» contra
+     *                               «comprobantes», «contabilidad» contra
+     *                               «Controlé»: colisiones de prefijo
+     *
+     * Se acepta: del otro lado el resumen no podía nombrar NADA que su propio CV
+     * demostrara, que es rechazo seguro del 100%. Y el 6% no queda sin dueño —
+     * P6 juzga lo semántico después, y el prompt lo prohíbe en prosa. Subir la
+     * raíz a seis letras rompería «atención» contra «atendí», que este proyecto
+     * midió y fijó en cuatro a propósito.
+     *
+     * La cifra NO se afloja: medido, una cifra que el CV ya dice pasa, y una
+     * nueva sigue bloqueada.
+     */
+    grounding: isSummary
+      ? [node.text, ...req.tree.roles.flatMap((r) => r.bullets.map((b) => b.text)), ...req.tree.declaredSkills].join(" . ")
+      : undefined,
   }
 
   /**
