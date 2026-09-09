@@ -1641,7 +1641,8 @@
       "skills_plan_out": "{count, plural, one {# leaves the template} other {# leave the template}}",
       "merge_it": "Merge them into one",
       "verdict_MERGE": "Merge",
-      "verdict_ADD": "Add"
+      "verdict_ADD": "Add",
+      "add_where": "Which role does it go in?"
     },
     "ats": {
       "tab": "ATS",
@@ -1812,7 +1813,11 @@
       "type_parse_risk": "hard to read",
       "type_buried_term": "It is there, buried in an old role",
       "type_soft_not_shown": "You declare it and no line demonstrates it",
-      "type_summary_gap": "incomplete summary"
+      "type_summary_gap": "incomplete summary",
+      "type_title_mismatch": "The posting looks for “{cargo}” and your CV does not say it that way",
+      "type_title_mismatch_detail": "The job title is among the first things a filter reads, and it compares strings: if the posting looks for “iOS Engineer” and your CV says “iOS Developer”, to the machine it is not the same role. If the work is the same, write it exactly like that in your summary — do not invent a title you never held.",
+      "type_verb_repeated": "“{verbo}” opens more than one bullet",
+      "type_verb_repeated_detail": "Six lines starting the same way read like a template, and the analysis counts how many distinct verbs open your experience. The weakest of the repeated ones gets rewritten; the others stay as they are."
     },
     "cv_review": {
       "title": "AI Resume Review",

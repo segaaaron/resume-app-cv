@@ -138,7 +138,6 @@ const AuditSchema = z.object({
     }),
     30,
   ),
-  titleAlignment: numero(0, 1, 0),
 })
 
 const TriageSchema = z.object({ decisions: listaDe(TriageDecisionSchema, 80) })
@@ -282,7 +281,6 @@ export function auditPrompt(lang: Lang): string {
     "   hasMethod     — dice con qué herramienta, técnica o enfoque",
     "5. Por cada habilidad BLANDA que la vacante pide, un estado: DEMONSTRATED (hay un logro que la evidencia, y citás el id de esa línea), DECLARED_ONLY (aparece como adjetivo o en una lista, sin ningún logro que la respalde), ABSENT (no hay rastro). Una blanda NO se cumple porque la palabra esté escrita: así se cumple sólo en la lista de adjetivos que todo reclutador saltea. Sin id de línea, nunca es DEMONSTRATED.",
     "6. El resumen se juzga en cuatro funciones: identity (quién es y cuántos años), proof (un logro concreto), fit (la conexión con lo que la vacante pide), extra (dominio, idioma o credencial que la vacante pida).",
-    "7. titleAlignment: de 0 a 1, cuánto se parece el cargo actual del candidato al que la vacante busca.",
   ]
   const en = [
     "You are a résumé auditor. You compare the structured CV against the structured job spec and return findings WITH EVIDENCE.",
@@ -299,7 +297,6 @@ export function auditPrompt(lang: Lang): string {
     "   hasMethod     — says with which tool, technique or approach",
     "5. For each SOFT skill the posting asks for, one state: DEMONSTRATED (an achievement evidences it, and you cite that line's id), DECLARED_ONLY (it appears as an adjective or in a list, with no achievement backing it), ABSENT (no trace). A soft skill is NOT met because the word is written: that only meets it in the adjective list every recruiter skips. With no line id, it is never DEMONSTRATED.",
     "6. The summary is judged on four jobs: identity (who they are, how many years), proof (one concrete achievement), fit (the link to what the posting asks), extra (domain, language or credential the posting asks for).",
-    "7. titleAlignment: 0 to 1, how close the candidate's current title is to the one the posting seeks.",
   ]
   return (lang === "en" ? en : es).join("\n")
 }
@@ -487,7 +484,7 @@ export const OUTPUT_CONTRACT =
  */
 export const OUTPUT_SHAPE: Record<PromptId, string> = {
   P1: `{"roleTitleRaw":"","roleTitleCanonical":"","seniority":null,"yearsRequired":null,"domain":null,"workMode":null,"language":"es","metricThatMatters":null,"mustHave":[{"skill":"","raw":"","years":null,"category":null}],"niceToHave":[{"skill":"","raw":"","years":null,"category":null}],"responsibilities":[""],"softSignals":[""]}`,
-  P2: `{"bullets":[{"id":"","hasActionVerb":true,"hasResult":false,"hasMethod":true}],"summary":{"identity":true,"proof":false,"fit":false,"extra":false},"coverage":[{"skill":"","requirement":"MUST","status":"FOUND","evidenceNodeId":null}],"softCoverage":[{"signal":"","status":"DECLARED_ONLY","evidenceNodeId":null}],"titleAlignment":0.7}`,
+  P2: `{"bullets":[{"id":"","hasActionVerb":true,"hasResult":false,"hasMethod":true}],"summary":{"identity":true,"proof":false,"fit":false,"extra":false},"coverage":[{"skill":"","requirement":"MUST","status":"FOUND","evidenceNodeId":null}],"softCoverage":[{"signal":"","status":"DECLARED_ONLY","evidenceNodeId":null}]}`,
   P3: `{"decisions":[{"bulletId":"","verdict":"KEEP","reason":"","relevance":0.8,"proposedTopic":null,"needsUserConfirm":null}]}`,
   P4: `{"measurableAspect":"","bulletId":"","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[{"token":"[x%]","type":"PERCENT_DELTA","label":"","hint":"","evidenceNeeded":"","required":true}],"variantWithoutMetric":null}`,
   P5: `{"measurableAspect":null,"bulletId":"summary","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[],"variantWithoutMetric":null}`,
@@ -555,7 +552,6 @@ export class AIAts3Module implements AtsAi {
         status: s.status === "DEMONSTRATED" && !s.evidenceNodeId ? ("DECLARED_ONLY" as const) : s.status,
         evidenceNodeId: s.evidenceNodeId,
       })),
-      titleAlignment: raw.titleAlignment,
     }
   }
 

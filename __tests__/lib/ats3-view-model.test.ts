@@ -108,7 +108,29 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     // es un número que no habla de lo que la tarjeta lista debajo.
     const s = sectionsOf(score(), [])
     expect(s.find((x) => x.id === "tips")?.coveragePct).toBe(57)
-    expect(s.find((x) => x.id === "soft")?.scored).toBe(false)
+    // Las blandas puntúan: 0,10 del pilar de relevancia. Lo perdió v3 al
+    // construirse de cero y volvió el 2026-09-09.
+    expect(s.find((x) => x.id === "soft")?.scored).toBe(true)
+  })
+
+  /**
+   * UNA BLANDA NO CAE EN LA SECCIÓN DEL RECLUTADOR (CEO, 2026-09-09).
+   *
+   * Salía con el componente `xyz`, que pertenece a «Lo que mira la persona»: la
+   * tarjeta de una blanda aparecía bajo un porcentaje que mide otra cosa, y la
+   * sección «Habilidades blandas» existía sin poder recibir ni una tarjeta.
+   */
+  it("la blanda va a SU sección, y esa sección SÍ puntúa", () => {
+    const secciones = sectionsOf(score(), [finding({ type: "soft_not_shown", component: "soft", gain: 0 })])
+    const soft = secciones.find((x) => x.id === "soft")!
+    expect(soft.checks).toHaveLength(1)
+    expect(secciones.find((x) => x.id === "tips")?.checks).toHaveLength(0)
+    /**
+     * Y PUNTÚA. El motor viejo las pesaba 0,10 (`lib/ats/scoring-config.ts:56`)
+     * y v3 perdió ese peso al construirse de cero: durante diez días el panel
+     * pidió demostrarlas mientras el número no se movía.
+     */
+    expect(soft.scored).toBe(true)
   })
 
   it("un término demostrado sin decirlo con esas palabras NO se cuenta como escrito", () => {

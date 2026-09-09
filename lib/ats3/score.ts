@@ -37,11 +37,29 @@ export type Pillar = keyof typeof PILLAR_WEIGHT
 /** Reparto dentro de cada pilar. Cada bloque suma 1. */
 export const COMPONENT_WEIGHT = {
   parse: { checks: 1 },
-  relevance: { must: 0.6, nice: 0.25, title: 0.15 },
+  /**
+   * LAS BLANDAS PUNTÚAN, Y ESTE 0,10 NO ES NUEVO.
+   *
+   * ── LA REGRESIÓN QUE ESTO CIERRA (verificada, 2026-09-09) ──────────────────
+   * El motor viejo las pesaba: `lib/ats/scoring-config.ts:56` —
+   * `softSkills: { value: 0.10, basis: "chosen" }`—. Al construir v3 de cero el
+   * 2026-08-29 ese peso no se volvió a escribir, y durante diez días el panel
+   * pidió demostrarlas mientras el número no se movía: trabajo que el producto
+   * exige y no paga.
+   *
+   * No fue una decisión de producto. Quedó anotado como si lo fuera y no lo era.
+   *
+   * Los otros tres bajan proporcionalmente para dejarle su lugar: `must` sigue
+   * pesando más del doble que `nice`, y el orden entre ellos no cambia.
+   */
+  relevance: { must: 0.54, nice: 0.22, title: 0.14, soft: 0.1 },
   impact: { xyz: 0.45, metric: 0.3, verbs: 0.1, summary: 0.15 },
 } as const
 
-export type ComponentKey =
+/**
+ * LO QUE EL PUNTAJE MIDE. Cada uno tiene su pilar y su peso.
+ */
+export type ScoredComponent =
   | "checks"
   | "must"
   | "nice"
@@ -50,8 +68,29 @@ export type ComponentKey =
   | "metric"
   | "verbs"
   | "summary"
+  | "soft"
 
-const PILLAR_OF: Record<ComponentKey, Pillar> = {
+/**
+ * LO QUE UN HALLAZGO PUEDE NOMBRAR — hoy, lo mismo.
+ *
+ * ── EL CRUCE QUE ESTO CIERRA (CEO, 2026-09-09) ──────────────────────────────
+ * Una habilidad blanda sin demostrar salía con el componente `xyz`, que
+ * pertenece a «Lo que mira la persona»: la tarjeta de una blanda aparecía en la
+ * sección del reclutador, bajo un porcentaje que mide otra cosa. Y la sección
+ * «Habilidades blandas» existía sin poder recibir ni una tarjeta.
+ *
+ * `soft` es un componente que el puntaje NO mide, y eso es lo correcto: las
+ * blandas no puntúan por decisión de producto. Al no estar entre los medidos, la
+ * sección no pinta porcentaje —`pctOf` devuelve null— así que «esto no mueve el
+ * número» queda dicho por construcción, no por una excepción escrita a mano.
+ *
+ * Son dos tipos porque son dos preguntas. Con uno solo había que elegir entre
+ * dejar a las blandas fuera de las secciones o meterlas en el cálculo, y las dos
+ * están mal.
+ */
+export type ComponentKey = ScoredComponent
+
+const PILLAR_OF: Record<ScoredComponent, Pillar> = {
   checks: "parse",
   must: "relevance",
   nice: "relevance",
@@ -60,7 +99,18 @@ const PILLAR_OF: Record<ComponentKey, Pillar> = {
   metric: "impact",
   verbs: "impact",
   summary: "impact",
+  soft: "relevance",
 }
+
+/**
+ * LOS COMPONENTES QUE EL PUNTAJE MIDE, como dato.
+ *
+ * Sale de `PILLAR_OF`, que es quien los enumera de verdad: preguntar «¿esto
+ * puntúa?» en otra lista escrita a mano es como una sección termina diciendo que
+ * mueve un número que nadie calcula.
+ */
+export const SCORED_COMPONENTS = Object.keys(PILLAR_OF) as ScoredComponent[]
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LO QUE ENTRA
@@ -119,7 +169,10 @@ export interface AuditFacts {
     evidenceNodeId: string | null
   }[]
   /** Alineación del cargo con el que busca la vacante, de 0 a 1. */
-  titleAlignment: number
+  // Acá vivía `titleAlignment`, un 0..1 que el modelo devolvía para el cargo.
+  // Lo reemplazó `titleWritten`, que mide lo que el filtro mide —si la cadena
+  // está escrita— con la misma función que emite el hallazgo. Un campo que se le
+  // pide al modelo y no lo lee nadie son tokens pagados por nada.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,7 +180,8 @@ export interface AuditFacts {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ComponentScore {
-  key: ComponentKey
+  /** Sólo lo que el puntaje mide: `soft` no llega acá porque no se calcula. */
+  key: ScoredComponent
   pillar: Pillar
   numerator: number
   denominator: number
@@ -192,6 +246,24 @@ export function statesQuantity(text: string): boolean {
  * oficios—: acá sólo se mide REPETICIÓN, que es lo que un reclutador ve en
  * cinco segundos cuando seis líneas empiezan igual.
  */
+/**
+ * ¿EL CARGO QUE LA VACANTE BUSCA ESTÁ ESCRITO EN EL CV?
+ *
+ * Una sola función para las dos preguntas que dependen de esto: cuánto suma el
+ * cargo al puntaje y si hay que señalarlo. Con dos, el panel muestra una tarjeta
+ * que promete puntos que el número no da — medido.
+ *
+ * Por PALABRA y no por subcadena: una vacante que busca «Dev» no está cubierta
+ * por un CV que dice «Developer», aunque la cadena viva adentro. Es el defecto
+ * que este proyecto ya pagó con «plusvalía contiene plus».
+ */
+export function titleWritten(tree: ResumeTree, spec: JobSpec): boolean {
+  const cargo = normalize(spec.roleTitleRaw ?? "")
+  if (!cargo) return true // Sin cargo en el aviso no hay nada que comparar.
+  const donde = ` ${[tree.summary.text, ...tree.roles.map((r) => r.title)].map(normalize).join(" · ")} `
+  return donde.includes(` ${cargo} `)
+}
+
 export function distinctOpeners(texts: string[]): number {
   const openers = new Set<string>()
   for (const t of texts) {
@@ -206,7 +278,7 @@ export function distinctOpeners(texts: string[]): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface RawComponent {
-  key: ComponentKey
+  key: ScoredComponent
   numerator: number
   /** 0 = el componente NO APLICA a este CV contra esta vacante. */
   denominator: number
@@ -336,6 +408,23 @@ export function scoreResume(
     .filter((c) => c.requirement === "NICE" && c.status === "FOUND")
     .reduce((n, c) => n + peso(c.skill), 0)
 
+  /**
+   * UNA BLANDA DEMOSTRADA VALE MÁS QUE UNA SÓLO LISTADA.
+   *
+   * La vara ya estaba decidida en este proyecto —demostrada 1,0 · sólo listada
+   * 0,6— y es la única honesta: un término dentro de una viñeta con fecha es
+   * prueba; el mismo término suelto en una lista de adjetivos es una afirmación
+   * que cualquiera puede escribir. Ausente no suma.
+   *
+   * Sale de `softCoverage`, que la auditoría ya juzga en cada análisis: no
+   * cuesta una llamada nueva.
+   */
+  const softTotal = (spec.softSignals ?? []).length
+  const softFound = audit.softCoverage.reduce(
+    (n, s) => n + (s.status === "DEMONSTRATED" ? 1 : s.status === "DECLARED_ONLY" ? 0.6 : 0),
+    0,
+  )
+
   const bulletTexts = tree.roles.flatMap((r) => r.bullets.map((b) => b.text))
   /**
    * SÓLO LAS LÍNEAS QUE EL CV TIENE DE VERDAD.
@@ -360,7 +449,25 @@ export function scoreResume(
     { key: "nice", numerator: niceFound, denominator: niceTotal },
     // El título es una razón continua: su "denominador" es 1 porque se cubre
     // entero o en parte, no de a unidades.
-    { key: "title", numerator: clamp01(audit.titleAlignment), denominator: 1 },
+    /**
+     * EL CARGO LO MIDE EL CÓDIGO, NO EL MODELO. Un dueño para una pregunta.
+     *
+     * ── LOS DOS DEFECTOS QUE ESTO CIERRA, MEDIDOS ──────────────────────────
+     * El puntaje usaba `titleAlignment` —un número del modelo entre 0 y 1— y el
+     * hallazgo del cargo usa una comprobación de cadena. Dos respuestas a «¿el
+     * cargo coincide?», y se contradecían:
+     *
+     *   titleAlignment = 1   → la tarjeta salía y prometía 0,0 puntos
+     *   titleAlignment = 0,5 → la tarjeta prometía el peso ENTERO del componente
+     *
+     * Y hay un motivo de fondo para que gane el código: el filtro compara
+     * CADENAS. Que el modelo entienda que «Desarrollador iOS» y «iOS Engineer»
+     * son el mismo puesto no sirve de nada si el filtro no lo ve escrito. Se
+     * mide lo que el filtro mide, con la misma función que emite el hallazgo:
+     * escribir el cargo cierra la tarjeta Y sube el número, por construcción.
+     */
+    { key: "title", numerator: titleWritten(tree, spec) ? 1 : 0, denominator: 1 },
+    { key: "soft", numerator: softFound, denominator: softTotal },
     { key: "xyz", numerator: complete, denominator: bullets.length },
     { key: "metric", numerator: withQuantity, denominator: bulletTexts.length },
     { key: "verbs", numerator: distinctOpeners(bulletTexts), denominator: bulletTexts.length },

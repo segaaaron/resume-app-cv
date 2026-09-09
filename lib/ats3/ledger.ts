@@ -58,6 +58,15 @@ export const BULLETS_PER_PAGE = 15
 export const BULLETS_PER_ROLE_MAX = 6
 
 /**
+ * VIÑETAS QUE UN PUESTO NECESITA PARA ENTENDERSE (orden del CEO, 2026-09-09).
+ *
+ * «Un máximo de 6 por experiencia y 3 como mínimo.» Con menos de tres, el puesto
+ * no dice qué hizo la persona ahí: dice que estuvo. Es un umbral del documento,
+ * igual que el techo, y por eso vive al lado.
+ */
+export const BULLETS_PER_ROLE_MIN = 3
+
+/**
  * HABILIDADES QUE ENTRAN A LA PLANTILLA (orden del CEO, 2026-09-09).
  *
  * «Las plantillas con ATS pueden recibir hasta 20 skills; si tenés 100, sólo las

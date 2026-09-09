@@ -1641,7 +1641,8 @@
       "skills_plan_out": "{count, plural, one {Sale # de la plantilla} other {Salen # de la plantilla}}",
       "merge_it": "Fusionarlas en una",
       "verdict_MERGE": "Fusionar",
-      "verdict_ADD": "Agregar"
+      "verdict_ADD": "Agregar",
+      "add_where": "¿En qué puesto va?"
     },
     "ats": {
       "tab": "ATS",
@@ -1812,7 +1813,11 @@
       "type_parse_risk": "difícil de leer",
       "type_buried_term": "Está, pero enterrado en un puesto viejo",
       "type_soft_not_shown": "La declarás y ninguna línea la demuestra",
-      "type_summary_gap": "resumen incompleto"
+      "type_summary_gap": "resumen incompleto",
+      "type_title_mismatch": "La vacante busca «{cargo}» y tu CV no lo dice así",
+      "type_title_mismatch_detail": "El cargo es de lo primero que lee un filtro, y compara cadenas: si la vacante busca «iOS Engineer» y tu CV dice «Desarrollador iOS», para la máquina no es el mismo puesto. Si el trabajo es el mismo, escribilo tal cual en tu resumen — no inventes un cargo que no tuviste.",
+      "type_verb_repeated": "«{verbo}» abre más de una viñeta",
+      "type_verb_repeated_detail": "Seis líneas que empiezan igual se leen como una plantilla, y el análisis cuenta cuántos verbos distintos abren tu experiencia. Se reescribe la más floja de las que se repiten; las otras quedan como están."
     },
     "cv_review": {
       "title": "Revisión IA del CV",

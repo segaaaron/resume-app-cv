@@ -57,8 +57,7 @@ vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
       llamadas.audit++
       return {
         bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-        coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [], titleAlignment: 1,
-      }
+        coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [],      }
     }
     async triage() {
       llamadas.triage++
@@ -164,8 +163,7 @@ describe("la ruta del motor v3", () => {
       } }
       if (kind === "ats3-audit") return { payload: {
         bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-        coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [], titleAlignment: 1,
-      } }
+        coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [],      } }
       if (kind === "ats3-triage") return { payload: [] }
       return null
     }) as never)

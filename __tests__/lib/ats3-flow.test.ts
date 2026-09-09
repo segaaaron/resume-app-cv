@@ -38,7 +38,6 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
       summary: { identity: true, proof: false, fit: false, extra: false },
       coverage: [{ skill: "Combine", requirement: "MUST", status: "NOT_FOUND", evidenceNodeId: null }],
       softCoverage: [{ signal: "Trabajo en equipo", status: "DECLARED_ONLY", evidenceNodeId: null }],
-      titleAlignment: 0.5,
     }
     const score = scoreResume(tree, SPEC, audit, readableChecks(tree))
     const hallazgos = findingsOf(tree, audit, score, index)
@@ -78,7 +77,7 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
     const tree = buildTree(RAW)
     const audit = { bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
       coverage: [{ skill: "Combine", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null }],
-      softCoverage: [], titleAlignment: 1 } as unknown as AuditFacts
+      softCoverage: []} as unknown as AuditFacts
     const p = skillPlan(tree.declaredSkills, SPEC, audit, {})
     expect(p.add).toHaveLength(0)
     expect(p.drop).toHaveLength(0)
@@ -152,8 +151,7 @@ describe("fusionar dos viñetas en una", () => {
     expect(r.suggestion.mergedFrom).toBe(b.id)
     const ap = applySuggestion(tree, r.suggestion, SPEC, {
       bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: [], softCoverage: [], titleAlignment: 1,
-    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
+      coverage: [], softCoverage: [],    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
     expect(ap.ok).toBe(true)
     expect(ap.tree.roles[0].bullets).toHaveLength(1)
     expect(ap.tree.roles[0].bullets[0].text).toContain("confirmando los turnos")
@@ -225,8 +223,7 @@ describe("agregar una viñeta a un puesto que tiene pocas", () => {
     expect(r.suggestion.addToRole).toBe(tree.roles[0].id)
     const ap = applySuggestion(tree, r.suggestion, SPEC, {
       bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: [], softCoverage: [], titleAlignment: 1,
-    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
+      coverage: [], softCoverage: [],    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
     expect(ap.ok).toBe(true)
     expect(ap.tree.roles[0].bullets).toHaveLength(2)
     expect(ap.tree.roles[0].bullets[0].text).toBe("Gestioné la agenda del consultorio")

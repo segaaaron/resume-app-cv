@@ -741,7 +741,21 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     dropBullet,
     undoDrop,
     applySkills,
-    /** A qué puesto pertenece una viñeta. Lo necesita el veredicto que agrega. */
+    /**
+     * LOS PUESTOS DEL CV, para que el usuario elija dónde va una línea nueva.
+     *
+     * El motor RECOMIENDA uno —el del veredicto— y la pantalla lo deja marcado,
+     * pero la decisión es suya: «preguntar al usuario dónde sería un mejor
+     * match, pero siempre recomendando uno en específico» (CEO, 2026-09-09).
+     */
+    roles: buildTree(payloadResume()).roles.map((r) => ({
+      id: r.id,
+      label: [r.title, r.company].filter(Boolean).join(" — "),
+    })),
+    /** Una viñeta cualquiera de ese puesto: el ancla del pedido de agregar. */
+    anclaDe: (roleId: string) =>
+      buildTree(payloadResume()).roles.find((r) => r.id === roleId)?.bullets[0]?.id ?? null,
+    /** A qué puesto pertenece una viñeta: el que el motor recomienda. */
     roleOf: (nodeId: string) =>
       buildTree(payloadResume()).roles.find((r) => r.bullets.some((b) => b.id === nodeId))?.id ?? "",
     /** Las habilidades que el CV declara HOY. La lista viva, no la del análisis. */

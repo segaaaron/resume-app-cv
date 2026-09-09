@@ -203,7 +203,6 @@ const ACTS = [
       summary: { identity: true, proof: true, fit: true, extra: true },
       coverage: [],
       softCoverage: [],
-      titleAlignment: 1,
     },
     checks: {},
   },

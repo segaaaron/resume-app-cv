@@ -94,7 +94,6 @@ function fakeAudit(): AuditFacts {
       { skill: "Inventario", requirement: "NICE", status: "NOT_FOUND", evidenceNodeId: null },
     ],
     softCoverage: [],
-    titleAlignment: 0.9,
   }
 }
 
@@ -440,7 +439,6 @@ describe("el análisis se entrega en actos", () => {
       summary: { identity: true, proof: false, fit: false, extra: false },
       coverage: [{ skill: "Combine", requirement: "MUST", status: "NOT_FOUND", evidenceNodeId: null }],
       softCoverage: [{ signal: "Trabajo en equipo", status: "DECLARED_ONLY", evidenceNodeId: null }],
-      titleAlignment: 0.5,
     }
     const score = scoreResume(tree, spec, audit, {})
     const hallazgos = findingsOf(tree, audit, score, index)
@@ -488,7 +486,6 @@ describe("el análisis se entrega en actos", () => {
         { skill: "Medios de pago", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null },
       ],
       softCoverage: [],
-      titleAlignment: 1,
     }
     const score = scoreResume(tree, spec2, audit, CHECKS)
     const index = buildTermIndex(termsOf(spec2, tree))
@@ -790,7 +787,6 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     summary: { identity: true, proof: true, fit: true, extra: true },
     coverage: [{ skill, requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: nodo }],
     softCoverage: [],
-    titleAlignment: 1,
   })
 
   it("un requisito demostrado SÓLO en el puesto más viejo se señala como enterrado", () => {
@@ -883,6 +879,22 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     const score = scoreResume(t, spec, audit, {})
     const blanda = findingsOf(t, audit, score, index).find((f) => f.merged.includes("soft_not_shown"))
     expect(blanda?.detail).toContain("Trabajo en equipo")
+    /**
+     * SU COMPONENTE ES `soft`, y de ahí sale su sección.
+     *
+     * Salía con `xyz`, que pertenece a «Lo que mira la persona»: una línea cuyo
+     * único defecto era una blanda sin demostrar abría su tarjeta en la sección
+     * del RECLUTADOR, bajo un porcentaje que mide otra cosa. `soft` no lo mide
+     * el puntaje —las blandas no puntúan— así que su sección tampoco promete
+     * puntos.
+     *
+     * Se comprueba sobre una línea SIN otros hallazgos: cuando comparte tarjeta
+     * con algo que sí puntúa, manda lo que mueve el número, y eso es correcto.
+     */
+    const soloBlanda = findingsOf(t, { ...audit, bullets: t.roles[0].bullets.map((b) => ({
+      id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true, specificity: 0.9,
+    })) }, score, index).find((f) => f.merged.includes("soft_not_shown"))
+    expect(soloBlanda?.component).toBe("soft")
     // Y NO abre tarjeta propia: la blanda se demuestra reescribiendo esa línea,
     // que es la misma reescritura que cierra lo demás que le falta.
     expect(findingsOf(t, audit, score, index).filter((f) => f.nodeId === blanda?.nodeId)).toHaveLength(1)
@@ -930,8 +942,7 @@ const specSkills = {
 const auditSkills = {
   bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
   coverage: [{ skill: "Combine", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: "b1" }],
-  softCoverage: [], titleAlignment: 1,
-} as unknown as AuditFacts
+  softCoverage: [],} as unknown as AuditFacts
 
 /**
  * SI SE FUSIONA, NO SE PIDE ADEMÁS QUE SAQUES ALGO (CEO, 2026-09-09).
@@ -942,6 +953,91 @@ const auditSkills = {
  * El modelo puede devolver MERGE sobre una línea y DROP sobre la otra del par:
  * leído en pantalla, es el panel pidiendo juntarlas y tirar una a la vez.
  */
+/**
+ * LOS DOS UMBRALES DEL PUESTO LOS CUENTA EL CÓDIGO (CEO, 2026-09-09).
+ *
+ * «Que controle un máximo de 6 viñetas por experiencia y 3 como mínimo.» El
+ * techo ya lo contaba el motor; el piso quedaba en manos de que el modelo se
+ * acordara de devolver ADD, guiado por un renglón del prompt — y un prompt es
+ * una petición, no un contrato.
+ */
+describe("un puesto con menos de tres viñetas se señala aunque el modelo calle", () => {
+  const conUnaViñeta = {
+    summary: "Secretaria",
+    workExperience: [{
+      jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
+      description: "• Gestioné la agenda del consultorio",
+    }],
+    skills: [],
+  }
+
+  const motorMudo = (spec: JobSpec): AtsAi => ({
+    parseJob: async () => spec,
+    audit: async () => fakeAudit(),
+    triage: async () => [],
+    rewriteBullet: async () => ({}) as Suggestion,
+    rewriteSummary: async () => ({}) as Suggestion,
+  })
+
+  const correr = async (spec: JobSpec) => {
+    const actos: Record<string, unknown>[] = []
+    for await (const act of runAnalysis({
+      raw: conUnaViñeta, jdText: "Buscamos secretaria para agenda y turnos de consultorio médico",
+      language: "es", resumeId: "cv1", model: "m", ai: motorMudo(spec), store: new MemoryStore(),
+    })) actos.push(act as Record<string, unknown>)
+    return (actos.find((x) => x.act === "triage")!.decisions as TriageDecision[])
+  }
+
+  it("lo emite el motor, con una responsabilidad de la vacante y una PREGUNTA", async () => {
+    const spec = { ...SPEC, responsibilities: ["Atender el teléfono y derivar las consultas al profesional"] }
+    const add = (await correr(spec)).find((d) => d.verdict === "ADD")
+    expect(add).toBeTruthy()
+    expect(add!.proposedTopic).toContain("teléfono")
+    // NUNCA afirma que lo hizo: pregunta, y la respuesta es del usuario.
+    expect(add!.needsUserConfirm).toContain("¿Lo hiciste")
+  })
+
+  it("sin una responsabilidad que citar NO inventa un tema", async () => {
+    // El código puede detectar la falta; el hecho no lo pone él.
+    const add = (await correr({ ...SPEC, responsibilities: [] })).find((d) => d.verdict === "ADD")
+    expect(add).toBeUndefined()
+  })
+})
+
+/**
+ * ENTRE LAS QUE PUEDEN SOSTENER EL TÉRMINO, GANA LA MÁS DÉBIL (CEO, 2026-09-09).
+ *
+ * Antes las dos señales se sumaban y la afinidad es un entero mientras la
+ * debilidad valía 0,01: una línea fuerte con una palabra más de afinidad le
+ * ganaba SIEMPRE a la débil. Era un desempate, no una prioridad.
+ */
+describe("un requisito aterriza en la viñeta que menos aporta", () => {
+  it("gana la floja, no la que ya trae más términos del aviso", () => {
+    const tree = buildTree({
+      summary: "Cajera",
+      workExperience: [{
+        jobTitle: "Cajera", employer: "Súper", startDate: "2021-03", endDate: "2024-06",
+        description: [
+          "• Realicé el arqueo de caja al cierre con conciliación de comprobantes y control de diferencias",
+          "• Realicé el arqueo",
+        ].join("\n"),
+      }],
+      skills: [],
+    })
+    const spec = { ...SPEC, mustHave: [{ skill: "Arqueo de caja", raw: "arqueo de caja", years: null, category: null }] }
+    const index = buildTermIndex(termsOf(spec, tree))
+    const audit: AuditFacts = {
+      ...fakeAudit(),
+      bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true, specificity: 0.5 })),
+      coverage: [{ skill: "Arqueo de caja", requirement: "MUST", status: "NOT_FOUND", evidenceNodeId: null }],
+    }
+    const score = scoreResume(tree, spec, audit, {})
+    const req = findingsOf(tree, audit, score, index).find((f) => f.merged.includes("missing_requirement"))
+    // Las dos pueden sostenerlo; la segunda es la que menos aporta.
+    expect(req?.nodeId).toBe(tree.roles[0].bullets[1].id)
+  })
+})
+
 describe("una fusión manda sobre lo que la contradice", () => {
   it("el veredicto que contradice a la fusión se retira", async () => {
     const tree = buildTree({
@@ -973,6 +1069,225 @@ describe("una fusión manda sobre lo que la contradice", () => {
     const triage = actos.find((x) => x.act === "triage")!.decisions as { bulletId: string; verdict: string }[]
     expect(triage.filter((d) => d.verdict === "DROP" && d.bulletId === b.id)).toHaveLength(0)
     expect(triage.find((d) => d.verdict === "MERGE")).toBeTruthy()
+  })
+})
+
+/**
+ * LAS BLANDAS MUEVEN EL NÚMERO (regresión cerrada el 2026-09-09).
+ *
+ * El motor viejo las pesaba —`lib/ats/scoring-config.ts:56`, `softSkills: 0.10`—
+ * y v3 perdió ese peso al construirse de cero. Durante diez días el panel pidió
+ * demostrarlas mientras el puntaje no se movía: trabajo que el producto exige y
+ * no paga.
+ *
+ * Medido con este mismo caso: 65,3 sin ninguna · 68,0 sólo listadas · 69,8
+ * demostradas.
+ */
+/**
+ * EL CARGO Y LOS VERBOS COBRABAN SIN REPORTAR (CEO, 2026-09-09).
+ *
+ * `title` descuenta 0,14 de la relevancia y `verbs` 0,10 del impacto, y ningún
+ * hallazgo declaraba esos componentes: se podían cerrar las cuarenta y ocho
+ * tarjetas del panel y quedar con casi un cuarto del peso perdido sin saber por
+ * qué.
+ */
+/**
+ * UN `FOUND` SE COMPRUEBA — si el modelo y el código discrepan, gana el código.
+ *
+ * ── EL DEFECTO QUE ESTO CIERRA, MEDIDO (CEO, 2026-09-09) ─────────────────────
+ * El prompt de P2 lo dice con todas las letras —«FOUND sólo si el CV lo dice con
+ * palabras que un lector literal reconocería»— y nada lo hacía cumplir. Con un
+ * CV que dice «Recibí y orienté a los visitantes» y una vacante que pide
+ * «Atención al público», el modelo devolvía FOUND: la tabla mostraba «tu CV lo
+ * dice 0 veces» y el puntaje contaba el requisito al 100%.
+ *
+ * El filtro compara CADENAS. Decirle a alguien que está cubierto cuando el
+ * término no está escrito es mandarlo a una postulación que ya perdió.
+ */
+describe("un requisito que el CV no NOMBRA no cuenta como cubierto", () => {
+  const raw = {
+    summary: "Cajera",
+    workExperience: [{ jobTitle: "Cajera", employer: "S", startDate: "2021-03", endDate: "2024-06",
+      description: "• Recibí y orienté a los visitantes del local" }],
+    skills: [],
+  }
+  const spec = {
+    ...SPEC,
+    mustHave: [{ skill: "Atención al público", raw: "atención al público", years: null, category: null }],
+  } as JobSpec
+
+  const correr = async () => {
+    const ai: AtsAi = {
+      parseJob: async () => spec,
+      audit: async (t) => ({
+        ...fakeAudit(),
+        coverage: [{ skill: "Atención al público", requirement: "MUST", status: "FOUND", evidenceNodeId: t.roles[0].bullets[0].id }],
+      }),
+      triage: async () => [],
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async () => ({}) as Suggestion,
+    }
+    const actos: Record<string, unknown>[] = []
+    for await (const a of runAnalysis({
+      raw, jdText: "Buscamos cajera con atención al público en sucursal",
+      language: "es", resumeId: "cv1", model: "m", ai, store: new MemoryStore(),
+    })) actos.push(a as Record<string, unknown>)
+    return actos
+  }
+
+  /**
+   * Y SE COMPARA POR LLAVE, no por la cadena que el modelo escribió.
+   *
+   * Medido: con «Atención al Público» —una mayúscula— o «Atencion al publico»
+   * —sin tilde— la comparación exacta degradaba un requisito que el CV SÍ dice,
+   * y el usuario perdía puntos por cómo el modelo escribió una palabra.
+   */
+  it("una mayúscula o una tilde de diferencia NO degradan lo que el CV sí dice", async () => {
+    const ai: AtsAi = {
+      parseJob: async () => spec,
+      audit: async (t) => ({
+        ...fakeAudit(),
+        coverage: [{ skill: "Atencion al Publico", requirement: "MUST", status: "FOUND", evidenceNodeId: t.roles[0].bullets[0].id }],
+      }),
+      triage: async () => [],
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async () => ({}) as Suggestion,
+    }
+    const actos: Record<string, unknown>[] = []
+    for await (const a of runAnalysis({
+      raw: { ...raw, workExperience: [{ ...raw.workExperience[0], description: "• Hice atención al público todos los días" }] },
+      jdText: "Buscamos cajera con atención al público en sucursal",
+      language: "es", resumeId: "cv1", model: "m", ai, store: new MemoryStore(),
+    })) actos.push(a as Record<string, unknown>)
+    const score = actos[0].score as { components: { key: string; numerator: number }[] }
+    expect(score.components.find((c) => c.key === "must")!.numerator).toBeGreaterThan(0)
+  })
+
+  it("el FOUND del modelo se degrada, y el puntaje no lo cuenta", async () => {
+    const actos = await correr()
+    const score = actos[0].score as { components: { key: string; numerator: number }[] }
+    expect(score.components.find((c) => c.key === "must")!.numerator).toBe(0)
+  })
+
+  it("y NO se pierde: el requisito sale con su tarjeta para escribirlo", async () => {
+    // `IMPLIED` es exactamente eso —el trabajo lo demuestra y el CV no lo
+    // nombra— y su salida ya existía. Se dice la verdad, no se esconde nada.
+    const actos = await correr()
+    const f = (actos.find((x) => x.act === "findings")!.findings as { merged: string[] }[])
+    expect(f.some((x) => x.merged.includes("missing_requirement"))).toBe(true)
+  })
+})
+
+describe("el cargo y los verbos repetidos tienen tarjeta", () => {
+  const cv = (desc: string, titulo = "Cajera") => ({
+    summary: "Cajera con experiencia",
+    workExperience: [{ jobTitle: titulo, employer: "Súper", startDate: "2021-03", endDate: "2024-06", description: desc }],
+    skills: [],
+  })
+  const hallazgos = (raw: ReturnType<typeof cv>, spec: JobSpec) => {
+    const t = buildTree(raw)
+    const a: AuditFacts = {
+      ...fakeAudit(),
+      bullets: t.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true, specificity: 0.9 })),
+    }
+    return findingsOf(t, a, scoreResume(t, spec, a, readableChecks(t)), buildTermIndex([]), spec)
+  }
+
+  it("el cargo se compara POR PALABRA, no por subcadena", () => {
+    /**
+     * Medido: una vacante que busca «Dev» daba por escrito el cargo en un CV que
+     * dice «Developer», porque «dev» vive dentro de «developer». Es el mismo
+     * defecto que este proyecto ya pagó con «plusvalía contiene plus».
+     */
+    const spec = { ...SPEC, roleTitleRaw: "Dev" } as JobSpec
+    const f = hallazgos(cv("• Atendí a los clientes", "Developer"), spec)
+    expect(f.some((x) => x.merged.includes("title_mismatch"))).toBe(true)
+  })
+
+  it("el cargo abre SU tarjeta y nombra el cargo, no el detalle del resumen", () => {
+    // Sin sujeto se fusionaba con «resumen incompleto» y el cargo quedaba dentro
+    // de su detalle: «identity, proof, fit · Jefa de caja».
+    const spec = { ...SPEC, roleTitleRaw: "Jefa de caja" } as JobSpec
+    const c = hallazgos(cv("• Atendí a los clientes"), spec).find((x) => x.merged.includes("title_mismatch"))
+    expect(c?.type).toBe("title_mismatch")
+    expect(c?.detail).toBe("Jefa de caja")
+  })
+
+  /**
+   * EL CARGO LO MIDE UNA SOLA FUNCIÓN — la tarjeta y el número no pueden
+   * discrepar.
+   *
+   * Medido antes de unificarlos: con `titleAlignment` del modelo en 1, la
+   * tarjeta salía prometiendo 0,0 puntos; en 0,5 prometía el peso entero. Dos
+   * respuestas a «¿el cargo coincide?» y se contradecían en la misma pantalla.
+   */
+  it("si hay tarjeta del cargo, escribirlo SUBE el número; si no la hay, ya suma", () => {
+    const spec = { ...SPEC, roleTitleRaw: "Jefa de sucursal" } as JobSpec
+    const t = buildTree(cv("• Atendí a los clientes"))
+    const a: AuditFacts = { ...fakeAudit(), bullets: [] }
+    const sinEscribir = scoreResume(t, spec, a, readableChecks(t))
+    expect(hallazgos(cv("• Atendí a los clientes"), spec).some((x) => x.merged.includes("title_mismatch"))).toBe(true)
+
+    // El mismo CV con el cargo escrito tal cual: sin tarjeta y con más puntos.
+    const conCargo = cv("• Atendí a los clientes", "Jefa de sucursal")
+    const t2 = buildTree(conCargo)
+    expect(hallazgos(conCargo, spec).some((x) => x.merged.includes("title_mismatch"))).toBe(false)
+    expect(scoreResume(t2, spec, a, readableChecks(t2)).total).toBeGreaterThan(sinEscribir.total)
+  })
+
+  it("el cargo escrito tal cual NO se señala", () => {
+    const spec = { ...SPEC, roleTitleRaw: "Cajera" } as JobSpec
+    expect(hallazgos(cv("• Atendí a los clientes"), spec).some((x) => x.merged.includes("title_mismatch"))).toBe(false)
+  })
+
+  it("cada apertura repetida tiene la suya, sobre la línea más floja", () => {
+    // Se emiten TODAS de una: resolver una y que aparezca la siguiente es el
+    // bucle que este panel existe para no tener.
+    const f = hallazgos(cv(["• Atendí a los clientes", "• Atendí el teléfono", "• Ordené la góndola", "• Ordené el depósito"].join("\n")), SPEC)
+    expect(f.filter((x) => x.merged.includes("verb_repeated"))).toHaveLength(2)
+  })
+})
+
+describe("demostrar una blanda sube el puntaje", () => {
+  const arbol = () =>
+    buildTree({
+      summary: "Cajera",
+      workExperience: [{
+        jobTitle: "Cajera", employer: "Súper", startDate: "2021-03", endDate: "2024-06",
+        description: "• Realicé el arqueo de caja al cierre",
+      }],
+      skills: [],
+    })
+
+  const conBlandas = (estado: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT"): AuditFacts => ({
+    ...fakeAudit(),
+    softCoverage: [{ signal: "Trabajo en equipo", status: estado, evidenceNodeId: null }],
+  })
+
+  const spec = { ...SPEC, softSignals: ["Trabajo en equipo"] } as JobSpec
+
+  it("demostrada vale más que sólo listada, y listada más que ausente", () => {
+    const t = arbol()
+    const de = (e: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT") =>
+      scoreResume(t, spec, conBlandas(e), readableChecks(t)).total
+    expect(de("DEMONSTRATED")).toBeGreaterThan(de("DECLARED_ONLY"))
+    expect(de("DECLARED_ONLY")).toBeGreaterThan(de("ABSENT"))
+  })
+
+  it("una vacante que NO pide blandas no castiga al candidato", () => {
+    /**
+     * El componente no aplica y REPARTE su peso entre los que sí se midieron —
+     * no se cuenta como un cero, que sería descontarle a alguien por algo que la
+     * vacante nunca pidió. Por eso «no las piden» tiene que quedar por encima de
+     * «las piden y no demostrás ninguna».
+     *
+     * No es igual a demostrarlas todas, y también es correcto: repartir 0,10
+     * entre componentes que están al 60% rinde menos que un componente al 100%.
+     */
+    const t = arbol()
+    const sinPedir = scoreResume(t, { ...SPEC, softSignals: [] } as JobSpec, { ...fakeAudit(), softCoverage: [] }, readableChecks(t))
+    const ninguna = scoreResume(t, spec, conBlandas("ABSENT"), readableChecks(t))
+    expect(sinPedir.total).toBeGreaterThan(ninguna.total)
   })
 })
 

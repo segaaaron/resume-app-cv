@@ -564,7 +564,14 @@ export default function TailorPanel({
               }}
               onUndo={a.undoDrop}
               onRewrite={(nodeId, mergeWith) => a.requestRewrite(nodeId, undefined, undefined, mergeWith)}
-              onAdd={(nodeId, tema) => a.requestRewrite(nodeId, undefined, tema, undefined, a.roleOf(nodeId))}
+              onAdd={(roleId, tema) => {
+                // El ancla del pedido es una viñeta de ESE puesto: el motor la
+                // usa para saber de qué puesto habla, no para reemplazarla.
+                const ancla = a.textOf(roleId) ? roleId : (a.anclaDe(roleId) ?? roleId)
+                a.requestRewrite(ancla, undefined, tema, undefined, roleId)
+              }}
+              roles={a.roles}
+              roleOf={a.roleOf}
               textOf={a.textOf}
               busyNode={a.busyNode}
               t={t}
@@ -619,6 +626,8 @@ function TriageBoard({
   onUndo,
   onRewrite,
   onAdd,
+  roles,
+  roleOf,
   textOf,
   busyNode,
   t,
@@ -627,8 +636,12 @@ function TriageBoard({
   onDrop: (nodeId: string) => { roleIndex: number; bulletIndex: number; text: string } | null
   onUndo: (roleIndex: number, bulletIndex: number, text: string) => void
   onRewrite: (nodeId: string, mergeWith?: string) => void
-  /** Escribe una línea NUEVA en el puesto de esa viñeta, con el tema confirmado. */
-  onAdd: (nodeId: string, tema: string) => void
+  /** Escribe una línea NUEVA en ESE puesto, con el tema que el usuario confirmó. */
+  onAdd: (roleId: string, tema: string) => void
+  /** Los puestos del CV, para elegir dónde va. */
+  roles: { id: string; label: string }[]
+  /** El puesto que el motor recomienda para esa viñeta. */
+  roleOf: (nodeId: string) => string
   /** De qué línea habla cada veredicto. Sin esto el tablero es un acertijo. */
   textOf: (nodeId: string) => string
   busyNode: string | null
@@ -638,6 +651,8 @@ function TriageBoard({
   const [ultimo, setUltimo] = useState<{ roleIndex: number; bulletIndex: number; text: string } | null>(null)
   /** DROP borra contenido: se muestra la línea exacta antes de tocarla. */
   const [confirmando, setConfirmando] = useState<TriageDecision | null>(null)
+  /** El puesto elegido para la línea nueva. `null` = el que el motor recomienda. */
+  const [destino, setDestino] = useState<string | null>(null)
 
   // Con la lista vacía el tablero se va, PERO no si hay algo que deshacer: al
   // sacar la última línea, el aviso de "deshacer" desaparecía junto con ella —
@@ -704,11 +719,32 @@ function TriageBoard({
               {d.needsUserConfirm && (
                 <span className="mt-1 block">
                   <em className="block not-italic" style={{ color: "var(--a-ink)" }}>{d.needsUserConfirm}</em>
+                  {/* DÓNDE VA, Y LA RECOMENDACIÓN VIENE MARCADA.
+                      El motor eligió el puesto que mejor encaja y queda
+                      seleccionado; el usuario puede moverlo. Con un solo puesto
+                      no se pregunta: no hay nada que elegir. */}
+                  {d.verdict === "ADD" && roles.length > 1 && (
+                    <label className="mt-1 block text-[11.5px]" style={{ color: "var(--a-muted)" }}>
+                      {t("add_where")}
+                      <select
+                        value={destino ?? roleOf(d.bulletId)}
+                        onChange={(e) => setDestino(e.target.value)}
+                        className="mt-1 block w-full rounded-lg px-2.5 py-2 text-[12px]"
+                        style={{ background: "var(--a-surface-2)", border: "1px solid var(--a-border)", color: "var(--a-ink)" }}
+                      >
+                        {roles.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <Btn
                     disabled={busyNode !== null}
                     onClick={() =>
                       d.verdict === "ADD"
-                        ? onAdd(d.bulletId, d.proposedTopic ?? d.needsUserConfirm ?? "")
+                        ? onAdd(destino ?? roleOf(d.bulletId), d.proposedTopic ?? d.needsUserConfirm ?? "")
                         : onRewrite(d.bulletId)
                     }
                     className="mt-1"

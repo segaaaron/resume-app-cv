@@ -19,6 +19,7 @@
 
 import type { Finding, JobSpec } from "@/lib/ats3/contracts"
 import { DETAIL_SEPARATOR, normalize, termKey } from "@/lib/ats3/contracts"
+import { SCORED_COMPONENTS } from "@/lib/ats3/score"
 import type { ComponentKey, Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,10 +114,20 @@ export interface PanelTerm {
  * lista, y eso también se deriva acá abajo en vez de decidirse a dedo.
  */
 const COMPONENTS_OF: Record<PanelSectionId, ComponentKey[]> = {
-  hard: ["must"],
-  // El motor v3 lee las blandas de la vacante para poder nombrarlas, y no las
-  // puntúa. La sección lo declara y la tarjeta lo dice por escrito.
-  soft: [],
+  /**
+   * El cargo va acá y no en «Lo que mira la persona»: es lo PRIMERO que lee un
+   * filtro y compara cadenas, igual que los requisitos duros. Sin esto caía en
+   * la sección del reclutador por descarte —`title` no estaba en ninguna— que es
+   * la clase de agrupamiento a dedo que este archivo existe para no tener.
+   */
+  hard: ["must", "title"],
+  /**
+   * Las blandas tienen componente propio y SÍ puntúan: 0,10 del pilar de
+   * relevancia, el mismo peso que el motor viejo les daba y que v3 había
+   * perdido. Antes esta lista estaba vacía y sus tarjetas caían en «Lo que mira
+   * la persona» —la sección del reclutador— bajo un porcentaje que mide otra cosa.
+   */
+  soft: ["soft"],
   other: ["nice"],
   format: ["checks"],
   tips: ["xyz", "metric", "verbs", "summary"],
@@ -205,7 +216,20 @@ export function checkOf(
      * 4: dos números ciertos que juntos se leen como una mentira. La tarjeta
      * dice cuántos cierra y los nombra de a uno.
      */
-    params: f.type === "missing_requirement" ? { count: partesDe(f.detail).length } : undefined,
+    /**
+     * Lo que el título necesita nombrar, sacado del `detail` del propio
+     * hallazgo. Sin esto la tarjeta pinta el marcador crudo —«{cargo}»— que es
+     * el mismo defecto que los tokens del motor: un dato del código escrito
+     * donde va la copia.
+     */
+    params:
+      f.type === "missing_requirement"
+        ? { count: partesDe(f.detail).length }
+        : f.type === "title_mismatch"
+          ? { cargo: f.detail }
+          : f.type === "verb_repeated"
+            ? { verbo: f.detail }
+            : undefined,
     /**
      * POR QUÉ IMPORTA, y sale del TIPO del hallazgo.
      *
@@ -291,10 +315,13 @@ export function sectionsOf(
   const checks = findings.map((f) => checkOf(f, textoVivo, glosa))
   return ids.map((id) => ({
     id,
-    // Puntúa la que tiene componentes: es verdad por construcción, no por
-    // convención. El campo dice lo que es —si mueve el número— en vez de
-    // devolver un identificador con nombre de categoría.
-    scored: COMPONENTS_OF[id].length > 0,
+    /**
+     * Puntúa la sección cuyo componente el PUNTAJE mide, no la que simplemente
+     * tiene uno. Las blandas tienen componente propio —para que sus tarjetas no
+     * caigan en la sección del reclutador— y no se miden: la pregunta se le hace
+     * a quien los enumera, `SCORED_COMPONENTS`, en vez de contar la lista.
+     */
+    scored: COMPONENTS_OF[id].some((k) => (SCORED_COMPONENTS as string[]).includes(k)),
     coveragePct: score ? pctOf(score, COMPONENTS_OF[id]) : null,
     checks: checks.filter((c) => c.section === id),
   }))

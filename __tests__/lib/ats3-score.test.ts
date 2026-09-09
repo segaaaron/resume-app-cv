@@ -96,7 +96,6 @@ function makeAudit(tree: ResumeTree, spec: JobSpec, mustFound: number, niceFound
     summary: { identity: true, proof: false, fit: true, extra: false },
     coverage: cov,
     softCoverage: [],
-    titleAlignment: rnd(),
   }
 }
 
@@ -138,7 +137,6 @@ describe("el total cae en [0,100] por construcción", () => {
       summary: { identity: true, proof: true, fit: true, extra: true },
       coverage: spec.mustHave.map((m) => ({ skill: m.skill, requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: null })),
       softCoverage: [],
-      titleAlignment: 1,
     }
     const tree2: ResumeTree = {
       ...tree,
@@ -300,13 +298,12 @@ describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => 
     También ${spec.mustHave[2].raw}. Repetimos: ${spec.mustHave[0].raw} todos los días.`
   const tree = makeTree(3)
   /**
-   * El fixture compartido usa `titleAlignment: rnd()`, así que dos llamadas
+   * El fixture compartido usaba un valor aleatorio para el cargo, así que dos llamadas
    * NO son comparables: la primera versión de este caso medía ese ruido y daba
    * rojo con el código correcto. Acá se fija.
    */
   const cubre = (skills: string[]) => ({
     ...makeAudit(tree, spec, 0, 0),
-    titleAlignment: 1,
     coverage: spec.mustHave.map((m) => ({
       skill: m.skill,
       requirement: "MUST" as const,

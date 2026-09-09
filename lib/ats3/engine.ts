@@ -45,9 +45,9 @@ import {
   type TermVariants,
   type TriageDecision,
 } from "@/lib/ats3/contracts"
-import { afterAccept, BULLETS_PER_ROLE_MAX, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
+import { afterAccept, BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
 import { checkSuggestion, findNode, isStale, loyalty, retryNudge, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
-import { deltaOf, gainOf, postingWeights, scoreResume, statesQuantity, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
+import { deltaOf, gainOf, postingWeights, scoreResume, statesQuantity, titleWritten, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUERTOS
@@ -343,7 +343,20 @@ export const cacheKey = {
 // `score.ts`. Un hallazgo sin ganancia medida es una opinión.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, index: TermIndex): Finding[] {
+export function findingsOf(
+  tree: ResumeTree,
+  audit: AuditFacts,
+  score: Score,
+  index: TermIndex,
+  /**
+   * LA VACANTE. Hace falta para el cargo: es lo único que ella dice y el CV no.
+   *
+   * Opcional para no romper a quien ya la llama sin ella; sin vacante el
+   * hallazgo del cargo no se emite, que es lo correcto —no hay contra qué
+   * compararlo—.
+   */
+  spec?: JobSpec,
+): Finding[] {
   const out: Finding[] = []
   /**
    * `component` no es un dato extra: es DE DÓNDE sale `gain`, dicho en la misma
@@ -395,6 +408,20 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
     // YA tienen tarjeta, así que tirarlos borraría el hallazgo más valioso del
     // panel. Su consejo se FUSIONA en la tarjeta que ya existe, y la ganancia se
     // suma porque cerrar las dos cosas mueve las dos componentes.
+    /**
+     * UNA LÍNEA, UNA TARJETA — y su sección la da el hallazgo que MÁS pesa.
+     *
+     * Partir por sección se probó y da tres tarjetas sobre la misma viñeta: el
+     * eje que le falta, el requisito de la vacante y la blanda. Las tres se
+     * cierran con LA MISMA reescritura, así que serían tres botones para un solo
+     * acto — el panel contradiciéndose, que es lo que esto existe para no tener.
+     *
+     * El cruce que el CEO reportó se cierra por el otro lado: con `soft` como
+     * componente propio, una línea cuyo ÚNICO hallazgo es la blanda abre su
+     * tarjeta en la sección de blandas. Cuando comparte línea con algo que sí
+     * puntúa, manda lo que mueve el número — y eso es correcto: el usuario
+     * necesita ver primero lo que le cambia el puntaje.
+     */
     const clave = subject ? `${nodeId}:${subject}` : nodeId
     const existing = out.find((f) => (f.subject ? `${f.nodeId}:${f.subject}` : f.nodeId) === clave)
     if (existing) {
@@ -582,7 +609,71 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
      * Tejer la blanda y arreglar el eje que falta son LA MISMA reescritura. Una
      * sola tarjeta, un solo botón, una sola consulta.
      */
-    push("soft_not_shown", "xyz", donde, textOf(tree, donde), 0, s.signal)
+    // Componente PROPIO: la tarjeta de una blanda va a la sección de blandas, no
+    // a la del reclutador. `soft` no lo mide el puntaje —las blandas no puntúan—
+    // así que la sección no pinta porcentaje, que es lo que corresponde.
+    // La ganancia sale del puntaje, como todas: desde que las blandas pesan
+    // 0,10, un 0 escrito a mano decía «no mueve el número» sobre algo que sí lo
+    // mueve. Un número a mano al lado de uno calculado se desincroniza siempre.
+    push("soft_not_shown", "soft", donde, textOf(tree, donde), gainOf(score, "soft"), s.signal)
+  }
+
+  /**
+   * EL CARGO QUE LA VACANTE BUSCA, ESCRITO TAL CUAL.
+   *
+   * `title` pesa 0,14 de la relevancia y ningún hallazgo lo declaraba: el
+   * puntaje descontaba por el cargo y el panel no lo mencionaba en ningún lado.
+   *
+   * La detección es DETERMINISTA y no usa `titleAlignment`: ese número es una
+   * opinión del modelo entre 0 y 1, y cortarlo por un umbral sería inventar una
+   * vara. Se pregunta lo que el filtro pregunta —¿la cadena está escrita?— sobre
+   * los cargos de los puestos y el resumen, que es donde un lector la busca.
+   *
+   * Se ancla en el RESUMEN porque es lo único de esos dos que este motor sabe
+   * escribir, y porque es la primera línea que lee cualquiera. El motor no toca
+   * el cargo de un puesto: eso es un dato del usuario y se edita en Contenido.
+   */
+  const cargo = (spec?.roleTitleRaw ?? "").trim()
+  if (cargo && spec) {
+    // La MISMA función que puntúa el cargo: con dos, la tarjeta promete puntos
+    // que el número no da. Medido antes de unificarlas.
+    if (!titleWritten(tree, spec)) {
+      /**
+       * CON SUJETO: tarjeta propia, y no la del resumen donde se ancla.
+       *
+       * Medido: sin él se fusionaba con «resumen incompleto» y el cargo quedaba
+       * escondido dentro de su detalle —«identity, proof, fit · Jefa de caja»—.
+       * El hallazgo no habla del resumen: habla del CARGO, y el resumen es sólo
+       * el único lugar de los dos que este motor sabe escribir.
+       */
+      push("title_mismatch", "title", tree.summary.id, tree.summary.text, gainOf(score, "title"), cargo, "rewrite", cargo)
+    }
+  }
+
+  /**
+   * DOS VIÑETAS QUE ABREN CON EL MISMO VERBO.
+   *
+   * `verbs` pesa 0,10 del impacto y tampoco tenía quién lo reportara. Y desde
+   * que `verb_collision` se retiró —bloqueaba una reescritura buena por un
+   * motivo de estilo— no quedaba NADA que tocara el tema mientras el puntaje
+   * seguía cobrándolo.
+   *
+   * Se señala la más débil de las que comparten apertura: es la que menos
+   * pierde al reescribirse, y la reescritura ya sabe no repetir un verbo del CV
+   * porque el ledger se lo dice al modelo.
+   */
+  const porApertura = new Map<string, typeof tree.roles[number]["bullets"]>()
+  for (const role of tree.roles) {
+    for (const b of role.bullets) {
+      const abre = normalize(b.text).split(" ")[0]
+      if (!abre) continue
+      porApertura.set(abre, [...(porApertura.get(abre) ?? []), b])
+    }
+  }
+  for (const [abre, repetidas] of porApertura) {
+    if (repetidas.length < 2) continue
+    const masDebil = [...repetidas].sort((a, b) => peso(a.text, index) - peso(b.text, index))[0]
+    push("verb_repeated", "verbs", masDebil.id, masDebil.text, gainOf(score, "verbs"), abre)
   }
 
   const summaryGaps = [
@@ -631,7 +722,23 @@ function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId 
     .split(" ")
     .filter((w) => w.length >= 4)
 
-  let best: { id: NodeId; score: number } | null = null
+  /**
+   * ── LA AFINIDAD DECIDE QUIÉN ES CANDIDATA; LA DEBILIDAD, QUIÉN GANA ────────
+   *
+   * «Si el hard y el soft recomiendan, dar prioridad a las viñetas más débiles o
+   * que no aportan mucho» (CEO, 2026-09-09).
+   *
+   * Antes las dos señales se sumaban, y la afinidad es un ENTERO mientras la
+   * debilidad valía como mucho 0,01: una línea fuerte con una palabra más de
+   * afinidad le ganaba SIEMPRE a la débil. La debilidad era un desempate, no una
+   * prioridad — que es lo contrario de lo que se pidió.
+   *
+   * Se separan las dos preguntas. La afinidad sigue primero y no se negocia: una
+   * línea que no puede sostener el término no es candidata por más floja que
+   * esté, porque ahí el término se cae en el guard. Entre las que SÍ pueden,
+   * gana la que menos aporta — la misma señal que el triage usa para REPLACE.
+   */
+  const candidatas: { id: NodeId; afinidad: number; peso: number }[] = []
   for (const role of tree.roles) {
     for (const b of role.bullets) {
       const texto = normalize(b.text).split(" ")
@@ -649,13 +756,18 @@ function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId 
        * para REPLACE —«la viñeta más débil del bloque»— y se mide igual: sin
        * términos del aviso y corta.
        */
-      const debilidad = (1 / (1 + termsIn(index, b.text).size)) * 0.01
-      const esCorta = 1 / Math.max(6, texto.length) * 0.001
-      const s = afinidad + debilidad + esCorta
-      if (!best || s > best.score) best = { id: b.id, score: s }
+      candidatas.push({ id: b.id, afinidad, peso: peso(b.text, index) })
     }
   }
-  return best?.id ?? tree.summary.id
+  if (candidatas.length === 0) return tree.summary.id
+
+  const sostienen = candidatas.filter((c) => c.afinidad > 0)
+  // Entre las que pueden sostenerlo, la más débil. Si ninguna puede, la que más
+  // se le acerca: es la única con alguna chance de pasar el guard.
+  const elegidas = sostienen.length > 0 ? sostienen : candidatas
+  return [...elegidas].sort((a, b) =>
+    sostienen.length > 0 ? a.peso - b.peso : b.afinidad - a.afinidad || a.peso - b.peso,
+  )[0].id
 }
 
 /**
@@ -826,6 +938,59 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     await input.store.write("ats3-audit", auditKey, audit)
   }
 
+  /**
+   * UN `FOUND` SE COMPRUEBA. Si el modelo y el código discrepan, gana el código.
+   *
+   * ── EL DEFECTO QUE ESTO CIERRA, MEDIDO ──────────────────────────────────────
+   * El prompt de P2 lo dice con todas las letras: «FOUND sólo si el CV lo dice
+   * con palabras que un lector literal reconocería» y «la frontera es lo que el
+   * filtro puede ver, no lo que vos entendés». Pero un prompt es una petición, no
+   * un contrato, y NADA lo hacía cumplir.
+   *
+   * Medido: con un CV que dice «Recibí y orienté a los visitantes» y una vacante
+   * que pide «Atención al público», el modelo devolvía FOUND. La tabla mostraba
+   * «tu CV lo dice 0 veces» y el puntaje contaba el requisito al 100%: dos
+   * respuestas a la misma pregunta, y la que el usuario ve en pantalla era la que
+   * NO movía su número.
+   *
+   * Peor que un número inflado: es una promesa. El filtro compara cadenas — ése
+   * es el producto entero— así que decirle a alguien que está cubierto cuando el
+   * término no está escrito es mandarlo a una postulación que ya perdió.
+   *
+   * `IMPLIED` es exactamente para eso —«el trabajo lo demuestra y el CV no lo
+   * NOMBRA»— y ya tiene su salida: el hallazgo que pide tejer el término en la
+   * línea donde la evidencia vive. No se pierde nada; se dice la verdad.
+   *
+   * Se comprueba con `termsIn`, la MISMA función con la que la tabla cuenta:
+   * por construcción, lo que el usuario lee y lo que el número cuenta no pueden
+   * discrepar.
+   */
+  /**
+   * SE COMPARA POR LLAVE, NO POR LA CADENA QUE EL MODELO ESCRIBIÓ.
+   *
+   * Medido: `c.skill` viene del modelo, y con «Atención al Público» —una mayúscula
+   * de diferencia— o «Atencion al publico» —sin tilde— la comparación exacta
+   * fallaba y DEGRADABA un requisito que el CV sí dice. El usuario perdía puntos
+   * por cómo el modelo escribió una palabra.
+   *
+   * `normalize` es la misma llave de igualdad que usan el matcher y la tabla:
+   * dos formas de escribir el mismo término son el mismo término.
+   */
+  const dichoEnElCv = new Set(
+    [
+      ...termsIn(
+        index,
+        [tree.summary.text, ...tree.roles.flatMap((r) => [r.title, ...r.bullets.map((b) => b.text)])].join(" . "),
+      ),
+    ].map(normalize),
+  )
+  audit = {
+    ...audit,
+    coverage: audit.coverage.map((c) =>
+      c.status === "FOUND" && !dichoEnElCv.has(normalize(c.skill)) ? { ...c, status: "IMPLIED" as const } : c,
+    ),
+  }
+
   // ── acto 1: el puntaje, que no cuesta una sola llamada ────────────────────
   //
   // ── UN SOLO DUEÑO PARA «¿ESTE CV SE LEE BIEN?» (CEO, 2026-09-09) ──────────
@@ -913,6 +1078,50 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   )
 
   const conVeredicto = new Set(decisions.map((d) => d.bulletId))
+
+  /**
+   * EL MÍNIMO LO DETECTA EL CÓDIGO, NO EL MODELO (CEO, 2026-09-09).
+   *
+   * «Que controle un máximo de 6 por experiencia y 3 como mínimo.» El techo ya
+   * lo contaba el motor; el piso quedaba en manos de que el modelo se acordara
+   * de devolver `ADD`, guiado por un renglón del prompt. Un prompt es una
+   * petición, no un contrato: un puesto con una sola viñeta podía pasar sin que
+   * nadie lo señalara. Los dos umbrales los cuenta ahora el mismo bucle.
+   *
+   * LO QUE EL CÓDIGO NO INVENTA: el hecho. La pregunta se arma con una
+   * responsabilidad que LA VACANTE enuncia y que este puesto todavía no
+   * menciona — citarla y preguntar no afirma nada sobre la persona. El usuario
+   * confirma, y recién ahí el modelo redacta.
+   */
+  for (const role of tree.roles) {
+    if (role.bullets.length >= BULLETS_PER_ROLE_MIN) continue
+    if (role.bullets.some((b) => conVeredicto.has(b.id))) continue
+    const ancla = role.bullets[0]
+    if (!ancla) continue
+    const dicho = role.bullets.map((b) => normalize(b.text)).join(" ")
+    const tema = spec.responsibilities.find((r) => {
+      const palabras = normalize(r).split(" ").filter((w) => w.length >= 4)
+      return palabras.length > 0 && !palabras.every((w) => dicho.includes(w))
+    })
+    if (!tema) continue
+    decisions.push({
+      bulletId: ancla.id,
+      verdict: "ADD",
+      reason:
+        input.language === "en"
+          ? `This role has ${role.bullets.length} of the ${BULLETS_PER_ROLE_MIN} bullets it needs to be understood.`
+          : `Este puesto tiene ${role.bullets.length} de las ${BULLETS_PER_ROLE_MIN} viñetas que necesita para entenderse.`,
+      relevance: 0.5,
+      proposedTopic: tema,
+      needsUserConfirm:
+        input.language === "en"
+          ? `The posting asks for this. Did you do it in this role? — "${tema}"`
+          : `La vacante pide esto. ¿Lo hiciste en este puesto? — «${tema}»`,
+      mergeWith: null,
+    })
+    conVeredicto.add(ancla.id)
+  }
+
   for (const role of tree.roles) {
     const sobran = role.bullets.length - BULLETS_PER_ROLE_MAX
     if (sobran <= 0) continue
@@ -941,7 +1150,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
 
   // ── los hallazgos, filtrados por lo que el usuario ya resolvió ────────────
   const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
-  const all = findingsOf(tree, audit, score, index)
+  const all = findingsOf(tree, audit, score, index, spec)
   for (const [nombre, ok] of Object.entries(checks)) {
     // Un chequeo que falla y no genera hallazgo es un punto perdido que el
     // usuario no puede recuperar porque nadie le dijo qué arreglar.

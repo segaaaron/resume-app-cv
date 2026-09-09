@@ -152,7 +152,12 @@ export const PROMPT_VERSION = {
   // está cubierto cuando el filtro lo va a descartar.
   // p2-3: las blandas que el aviso pide se JUZGAN —demostrada con el id del
   // logro, sólo declarada, o ausente—. Antes se extraían y no las miraba nadie.
-  P2: "p2-3", // auditoría
+  // p2-4 (2026-09-09): se retira `titleAlignment`. El cargo lo mide el código
+  // —si la cadena que el aviso busca está escrita, que es lo que el filtro
+  // compara— con la misma función que emite el hallazgo. El número del modelo no
+  // lo leía nadie y contradecía a la tarjeta: con alineación 1 la tarjeta salía
+  // prometiendo 0 puntos.
+  P2: "p2-4", // auditoría
   // p3-2: KEEP exige que la línea sea SUYA. Una correcta pero genérica ocupa el
   // lugar de una que distingue.
   // p3-3 (2026-09-09): sexto veredicto, MERGE — dos viñetas del mismo puesto que
@@ -522,6 +527,17 @@ export const FINDING_TYPES = [
   "parse_risk", // algo que un lector automático no va a extraer bien
   "buried_term", // lo demuestra, pero en un puesto viejo: el lector no llega
   "soft_not_shown", // la vacante la pide, el CV la declara y nada la respalda
+  /**
+   * ── LOS DOS QUE COBRABAN SIN REPORTAR (CEO, 2026-09-09) ────────────────────
+   * El puntaje descuenta por el cargo que no coincide (0,14 de la relevancia) y
+   * por los verbos repetidos (0,10 del impacto), y NINGÚN hallazgo declaraba
+   * esos componentes: el usuario podía cerrar las cuarenta y ocho tarjetas del
+   * panel y quedarse con casi un cuarto del peso perdido sin que nadie le
+   * dijera por qué. Un puntaje que cobra algo que no enseña a arreglar no es
+   * un puntaje, es un reproche con decimales.
+   */
+  "title_mismatch", // el cargo que la vacante busca no está escrito en el CV
+  "verb_repeated", // ese verbo abre más de una viñeta
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
 

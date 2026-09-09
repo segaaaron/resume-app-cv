@@ -224,7 +224,6 @@ describe("lo que NO viaja al modelo", () => {
         summary: { identity: true, proof: true, fit: true, extra: false },
         coverage: [],
         softCoverage: [],
-        titleAlignment: 0.5,
       }),
     )
     const tree: ResumeTree = {
@@ -372,17 +371,16 @@ describe("tampoco mueren los esquemas del módulo", () => {
   const mod = (c: IAIClient) => new AIAts3Module({ client: c, model: "m", language: "es" })
 
   it("la auditoría (P2) sobrevive a una respuesta con todo en null", async () => {
-    const c = responde({ bullets: null, summary: null, coverage: null, titleAlignment: null })
+    const c = responde({ bullets: null, summary: null, coverage: null})
     const r = await mod(c).audit({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec)
     expect(r.bullets).toEqual([])
     // Lo que el auditor no pudo afirmar NO cuenta como cumplido.
     expect(r.summary.identity).toBe(false)
-    expect(r.titleAlignment).toBe(0)
   })
 
   it("el triage (P3) descarta el veredicto ilegible y entrega los demás", async () => {
     const c = responde({ decisions: [{ bulletId: null, verdict: "NO_EXISTE" }, { bulletId: "b1", verdict: "KEEP", reason: null, relevance: null }] })
-    const r = await mod(c).triage({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec, { bullets: [], summary: { identity: false, proof: false, fit: false, extra: false }, coverage: [], softCoverage: [], titleAlignment: 0 }, {})
+    const r = await mod(c).triage({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec, { bullets: [], summary: { identity: false, proof: false, fit: false, extra: false }, coverage: [], softCoverage: []}, {})
     expect(r.map((d) => d.bulletId)).toEqual(["b1"])
   })
 
