@@ -17,7 +17,7 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAtsPostingStore } from "@/stores/atsPostingStore"
-import { applySuggestion, buildTree, removeNode, writeBack, writeInto, readBullets, type RawResume } from "@/lib/ats3/engine"
+import { appendBullet, applySuggestion, buildTree, removeNode, writeBack, writeInto, readBullets, type RawResume } from "@/lib/ats3/engine"
 import { openLedger } from "@/lib/ats3/ledger"
 import { findNode } from "@/lib/ats3/guards"
 import { nodeHash, normalize } from "@/lib/ats3/contracts"
@@ -307,7 +307,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      * Trabajo en equipo» y al modelo se le mandaba el CV, la vacante y nada más.
      * Se dice una vez, en un solo lugar, y los dos leen lo mismo.
      */
-    async (nodeId: string, findingId?: string, focus?: string, mergeWith?: string) => {
+    async (nodeId: string, findingId?: string, focus?: string, mergeWith?: string, addToRole?: string) => {
       if (!state.spec) return
       setBusyNode(nodeId)
       setPendingFinding(findingId ?? null)
@@ -335,6 +335,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             covered: state.covered,
             focus,
             mergeWith,
+            addToRole,
           }),
         })
         // Mismo motivo que en el análisis: un 500 devuelve `{error}` y sin este
@@ -452,7 +453,13 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * documento. Silencio es la peor respuesta posible: el usuario cree que su
        * CV cambió y descarga un PDF que no cambió.
        */
-      if (!findNode(tree, s.bulletId)) {
+      // Una línea NUEVA no tiene nodo que buscar: lo que tiene que existir es el
+      // puesto donde se escribe. Si el usuario lo borró entre pedir y aceptar,
+      // no hay dónde ponerla y se dice, en vez de escribir en el puesto de al lado.
+      const destinoValido = s.addToRole
+        ? tree.roles.some((r) => r.id === s.addToRole)
+        : Boolean(findNode(tree, s.bulletId))
+      if (!destinoValido) {
         setError("stale_node")
         return
       }
@@ -493,9 +500,10 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * arreglar. Dos caminos de escritura que no hacen lo mismo es como este
        * panel ya se contradijo antes.
        */
-      const aMano = s.mergedFrom
-        ? removeNode(writeInto(tree, s.bulletId, finalText), s.mergedFrom)
+      const escrito = s.addToRole
+        ? appendBullet(tree, s.addToRole, finalText)
         : writeInto(tree, s.bulletId, finalText)
+      const aMano = s.mergedFrom ? removeNode(escrito, s.mergedFrom) : escrito
       const written = writeBack(medido ? medido.tree : aMano, raw)
       if (s.bulletId === "summary") updateSectionData("summary", written.summary ?? "")
       else {
@@ -733,6 +741,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     dropBullet,
     undoDrop,
     applySkills,
+    /** A qué puesto pertenece una viñeta. Lo necesita el veredicto que agrega. */
+    roleOf: (nodeId: string) =>
+      buildTree(payloadResume()).roles.find((r) => r.bullets.some((b) => b.id === nodeId))?.id ?? "",
     /** Las habilidades que el CV declara HOY. La lista viva, no la del análisis. */
     declaredSkills: (sectionData.skills ?? []).map((s) => s.name ?? "").filter(Boolean),
     weights: state.weights,

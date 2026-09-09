@@ -65,24 +65,28 @@ export interface GuardContext {
   index: TermIndex
   ledger: Ledger
   /**
-   * LAS DOS LÍNEAS DE UNA FUSIÓN, cuando la hay.
+   * TEXTOS QUE DESAPARECEN SI NO ENTRAN EN EL RESULTADO.
    *
-   * ── POR QUÉ LA FUSIÓN NECESITA UNA VARA MÁS DURA ─────────────────────────
+   * ── POR QUÉ ESTOS DOS CASOS NECESITAN UNA VARA MÁS DURA ───────────────────
    * `drops_content` mira los términos de la VACANTE y las cifras: es la vara
    * correcta para una reescritura, donde lo demás sigue escrito en el CV aunque
-   * la línea cambie. En una fusión no: la segunda línea SE BORRA, así que
-   * cualquier cosa suya que no entre en el resultado no vuelve de ningún lado.
+   * la línea cambie. Hay dos casos donde no:
    *
+   *   fusionar → la segunda línea SE BORRA
+   *   agregar  → la línea no existe; el tema que el usuario confirmó es el
+   *              ÚNICO hecho que hay
+   *
+   * En los dos, lo que no entre en el resultado no vuelve de ningún lado.
    * Medido con el par que el CEO puso de ejemplo —«Gestioné la agenda» /
    * «Confirmé los turnos por teléfono»—: no hay ni un término del aviso ni una
    * cifra, así que el guard general las daba por buenas aunque el resultado se
    * comiera la mitad. El motor viejo tenía esta comprobación con el nombre
    * `contentDroppedFrom` y se perdió al construir v3 de cero.
    *
-   * Sólo corre en una fusión: aplicarla a toda reescritura prohibiría acortar,
-   * que es la mitad del valor del producto.
+   * Es UNA sola pregunta —«¿sobrevivió todo esto?»— y por eso es un solo campo:
+   * con uno por caso, el próximo llega sin nadie que lo reclame.
    */
-  mergeOf?: [string, string]
+  mustKeep?: string[]
   /**
    * LAS OTRAS VIÑETAS DEL CV. Sin ellas no se puede contestar «¿esto repite?».
    *
@@ -366,16 +370,16 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
   if (gemela) return fail("repeats", gemela)
 
   /**
-   * UNA FUSIÓN CONSERVA LO QUE DECÍAN LAS DOS. Sin excepción.
+   * LO QUE DESAPARECE TIENE QUE SOBREVIVIR EN EL RESULTADO. Sin excepción.
    *
    * Se mide por palabra con contenido —cuatro letras o más— y por raíz de
    * cuatro, la misma vara que el resto del archivo: «turnos» sobrevive como
-   * «turno», y «confirmé» como «confirmando». Una fusión no tiene por qué
-   * repetir las palabras exactas; tiene que no perder de qué hablaban.
+   * «turno», y «confirmé» como «confirmando». No hace falta repetir las palabras
+   * exactas; hace falta no perder de qué hablaban.
    */
-  if (ctx.mergeOf) {
+  if (ctx.mustKeep?.length) {
     const dicho = normalize(text).split(" ").filter(Boolean)
-    const perdidas = ctx.mergeOf
+    const perdidas = ctx.mustKeep
       .flatMap((linea) => normalize(linea).split(" ").filter((w) => w.length >= 4))
       .filter((w) => !dicho.some((d) => d === w || (d.length >= 4 && d.slice(0, 4) === w.slice(0, 4))))
     if (perdidas.length) return fail("drops_content", [...new Set(perdidas)].join(", "))

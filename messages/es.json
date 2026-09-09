@@ -1640,7 +1640,8 @@
       "skills_plan_in": "{count, plural, one {Entra #} other {Entran #}}",
       "skills_plan_out": "{count, plural, one {Sale # de la plantilla} other {Salen # de la plantilla}}",
       "merge_it": "Fusionarlas en una",
-      "verdict_MERGE": "Fusionar"
+      "verdict_MERGE": "Fusionar",
+      "verdict_ADD": "Agregar"
     },
     "ats": {
       "tab": "ATS",

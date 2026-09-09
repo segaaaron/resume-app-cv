@@ -1053,6 +1053,15 @@ export interface RewriteRequest {
   /** Lo que la tarjeta prometió cerrar. Ver `RewriteInput.focus`. */
   focus?: string
   /**
+   * EL PUESTO AL QUE SE AGREGA UNA LÍNEA NUEVA.
+   *
+   * Es el único camino que no parte de una línea del CV, y por eso es el único
+   * que exige un hecho del usuario ANTES de pedir nada: `focus` trae el tema que
+   * él confirmó, y ese tema es el «original» contra el que se juzga todo. El
+   * modelo redacta lo que la persona ya dijo que hizo; no lo inventa.
+   */
+  addToRole?: string
+  /**
    * LA OTRA LÍNEA DE UNA FUSIÓN. Cambia QUÉ no se puede perder.
    *
    * Una fusión escribe UNA línea que tiene que conservar lo que decían LAS DOS.
@@ -1084,16 +1093,34 @@ export type RewriteResult =
  * rechazo en una pantalla vacía con el uso ya cobrado.
  */
 export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
+  /**
+   * UNA LÍNEA NUEVA NO TIENE NODO, y ése es todo el caso especial.
+   *
+   * `nodeId` ancla el veredicto en una línea que existe —para saber a qué puesto
+   * pertenece— pero lo que se va a escribir no reemplaza a nadie. El hecho lo
+   * puso el usuario al confirmar el tema, y ese tema hace de original: es contra
+   * lo que los guards juzgan que la redacción no se lleve ni agregue nada.
+   */
+  const agregando = Boolean(req.addToRole)
   const node = findNode(req.tree, req.nodeId)
-  if (!node) return { ok: false, verdict: { ok: false, reason: "stale", detail: req.nodeId }, calls: 0 }
+  if (!node && !agregando) return { ok: false, verdict: { ok: false, reason: "stale", detail: req.nodeId }, calls: 0 }
+  if (agregando && !req.focus?.trim()) {
+    return { ok: false, verdict: { ok: false, reason: "empty", detail: "una línea nueva necesita el tema que el usuario confirmó" }, calls: 0 }
+  }
 
-  const isSummary = req.nodeId === req.tree.summary.id
+  const isSummary = !agregando && req.nodeId === req.tree.summary.id
   const sig = ledgerSignature(req.ledger)
-  const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, sig, req.model, `${req.focus ?? ""}|${req.mergeWith ?? ""}`)
+  /** Al agregar no hay línea previa: el ancla del caché es el tema confirmado. */
+  const hashBase = node?.hash ?? nodeHash(req.focus ?? "")
+  const key = cacheKey.fix(
+    req.nodeId, hashBase, req.jdKey, sig, req.model,
+    `${req.focus ?? ""}|${req.mergeWith ?? ""}|${req.addToRole ?? ""}`,
+  )
 
   // La línea que se reemplaza suelta su propia apertura: si no, choca consigo
   // misma y el modelo elige un verbo peor para esquivar un conflicto inexistente.
-  const ledger = releaseOpener(req.ledger, node.text)
+  // Al agregar no hay ninguna que soltar.
+  const ledger = node ? releaseOpener(req.ledger, node.text) : req.ledger
   /**
    * EN UNA FUSIÓN, EL ORIGINAL SON LAS DOS LÍNEAS.
    *
@@ -1101,11 +1128,23 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * que había, así que si se come un dato de cualquiera de las dos, el guard lo
    * caza. La que se fusiona se borra al aplicar; lo que se pierda acá no vuelve.
    */
-  const otra = req.mergeWith ? findNode(req.tree, req.mergeWith) : null
-  const original = otra ? `${node.text} ${otra.text}` : node.text
+  const otra = !agregando && req.mergeWith ? findNode(req.tree, req.mergeWith) : null
+  /**
+   * QUÉ NO SE PUEDE PERDER, según el caso:
+   *   reescribir  → la línea que reemplaza
+   *   fusionar    → las dos, porque una se borra
+   *   agregar     → el TEMA que el usuario confirmó, porque es el único hecho
+   *                 que hay: la línea todavía no existe.
+   */
+  const original = agregando ? (req.focus as string) : otra ? `${node!.text} ${otra.text}` : node!.text
   const ctx = {
     original,
-    mergeOf: otra ? ([node.text, otra.text] as [string, string]) : undefined,
+    /**
+     * Lo que se pierde si no entra: las dos líneas de una fusión, o el tema que
+     * el usuario confirmó al agregar. En una reescritura normal no hay nada que
+     * desaparezca, así que no va.
+     */
+    mustKeep: agregando ? [original] : otra ? [node!.text, otra.text] : undefined,
     index: req.index,
     ledger,
     isSummary,
@@ -1143,12 +1182,12 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    */
   const cached = (await req.store.read("ats3-fix", key)) as Suggestion | null
   if (cached && checkSuggestion(cached, ctx).ok) {
-    return { ok: true, suggestion: anchor(cached, node.hash, node.text, req.mergeWith), served: true, calls: 0 }
+    return { ok: true, suggestion: anchor(cached, hashBase, original, req.mergeWith, req.addToRole), served: true, calls: 0 }
   }
   const ask = (nudge?: string) =>
     isSummary
       ? req.ai.rewriteSummary({
-          current: node.text,
+          current: node!.text,
           spec: req.spec,
           topBullets: topBulletsOf(req.tree),
           ledger,
@@ -1157,7 +1196,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
         })
       : req.ai.rewriteBullet({
           original,
-          mergeOf: otra ? [node.text, otra.text] : undefined,
+          mergeOf: otra ? [node!.text, otra.text] : undefined,
           bulletId: req.nodeId,
           roleContext: roleContextOf(req.tree, req.nodeId),
           spec: req.spec,
@@ -1284,7 +1323,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * ya pagó una vez por confundir "faltó lo ideal" con "no hay nada que dar".
    */
   const prometeTamano = Boolean(first.measurableAspect?.trim())
-  const yaTieneCifra = /\d/.test(node.text)
+  const yaTieneCifra = /\d/.test(original)
   if (prometeTamano && first.placeholders.length === 0 && !yaTieneCifra) {
     const segunda = await ask(
       req.language === "en"
@@ -1298,11 +1337,11 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   }
 
   await req.store.write("ats3-fix", key, first)
-  return { ok: true, suggestion: anchor(first, node.hash, node.text, req.mergeWith), served: false, calls }
+  return { ok: true, suggestion: anchor(first, hashBase, original, req.mergeWith, req.addToRole), served: false, calls }
 }
 
-function anchor(s: Suggestion, hash: string, originalText: string, mergedFrom?: NodeId): AnchoredSuggestion {
-  return { ...s, basedOnHash: hash, originalText, mergedFrom }
+function anchor(s: Suggestion, hash: string, originalText: string, mergedFrom?: NodeId, addToRole?: string): AnchoredSuggestion {
+  return { ...s, basedOnHash: hash, originalText, mergedFrom, addToRole }
 }
 
 function roleContextOf(tree: ResumeTree, nodeId: NodeId): string {
@@ -1369,7 +1408,19 @@ export function applySuggestion(
    */
   termWeights: Record<string, number> = {},
 ): ApplyResult {
-  if (isStale(s.basedOnHash, s.bulletId, tree)) {
+  /**
+   * UNA LÍNEA NUEVA NO PUEDE ESTAR OBSOLETA: no existía cuando se pensó.
+   *
+   * El control de obsolescencia compara el hash de la línea con el que tenía al
+   * pedir la propuesta, y en un `ADD` no hay línea que comparar. Lo que sí se
+   * comprueba es que el puesto siga existiendo: si el usuario lo borró entre
+   * pedir y aceptar, no hay dónde escribir.
+   */
+  if (s.addToRole) {
+    if (!tree.roles.some((r) => r.id === s.addToRole)) {
+      return { ok: false, tree, ledger, delta: 0, reason: { ok: false, reason: "stale", detail: s.addToRole } }
+    }
+  } else if (isStale(s.basedOnHash, s.bulletId, tree)) {
     return { ok: false, tree, ledger, delta: 0, reason: { ok: false, reason: "stale", detail: s.bulletId } }
   }
 
@@ -1382,7 +1433,7 @@ export function applySuggestion(
    * arreglar—, y el puntaje mediría un documento que nadie va a tener. Se hace
    * sobre la COPIA, como todo acá: si algo falla, el CV del usuario no se tocó.
    */
-  const conTexto = writeInto(tree, s.bulletId, s.text)
+  const conTexto = s.addToRole ? appendBullet(tree, s.addToRole, s.text) : writeInto(tree, s.bulletId, s.text)
   const copy = s.mergedFrom ? removeNode(conTexto, s.mergedFrom) : conTexto
   const after = scoreResume(copy, spec, audit, checks, termWeights)
 
@@ -1391,6 +1442,32 @@ export function applySuggestion(
     tree: copy,
     ledger: afterAccept(ledger, s),
     delta: deltaOf(before, after),
+  }
+}
+
+/**
+ * Agrega una viñeta al final de un puesto, devolviendo un árbol NUEVO.
+ *
+ * Al final y no al principio: el orden de las viñetas lo eligió el usuario, y
+ * meter una línea nueva arriba de las suyas es reordenarle el CV sin permiso.
+ * Su id sale del mismo `bulletIdFor` que todas —del puesto y del texto—, así
+ * que el registro de lo resuelto y los hallazgos la nombran igual que a
+ * cualquier otra.
+ */
+export function appendBullet(tree: ResumeTree, roleId: string, text: string): ResumeTree {
+  return {
+    ...tree,
+    roles: tree.roles.map((r) =>
+      r.id !== roleId
+        ? r
+        : {
+            ...r,
+            bullets: [
+              ...r.bullets,
+              { id: bulletIdFor(r.id, text, new Set(r.bullets.map((b) => b.id))), text, hash: nodeHash(text), origin: "AI_ACCEPTED" as const },
+            ],
+          },
+    ),
   }
 }
 

@@ -564,6 +564,7 @@ export default function TailorPanel({
               }}
               onUndo={a.undoDrop}
               onRewrite={(nodeId, mergeWith) => a.requestRewrite(nodeId, undefined, undefined, mergeWith)}
+              onAdd={(nodeId, tema) => a.requestRewrite(nodeId, undefined, tema, undefined, a.roleOf(nodeId))}
               textOf={a.textOf}
               busyNode={a.busyNode}
               t={t}
@@ -617,6 +618,7 @@ function TriageBoard({
   onDrop,
   onUndo,
   onRewrite,
+  onAdd,
   textOf,
   busyNode,
   t,
@@ -625,6 +627,8 @@ function TriageBoard({
   onDrop: (nodeId: string) => { roleIndex: number; bulletIndex: number; text: string } | null
   onUndo: (roleIndex: number, bulletIndex: number, text: string) => void
   onRewrite: (nodeId: string, mergeWith?: string) => void
+  /** Escribe una línea NUEVA en el puesto de esa viñeta, con el tema confirmado. */
+  onAdd: (nodeId: string, tema: string) => void
   /** De qué línea habla cada veredicto. Sin esto el tablero es un acertijo. */
   textOf: (nodeId: string) => string
   busyNode: string | null
@@ -690,12 +694,25 @@ function TriageBoard({
               )}
               <span className="block" style={{ color: "var(--a-muted)" }}>{d.reason}</span>
 
-              {/* En REPLACE el motor NUNCA afirma que la persona hizo algo:
-                  pregunta, y la respuesta es del usuario. */}
+              {/* En REPLACE y en ADD el motor NUNCA afirma que la persona hizo
+                  algo: pregunta, y la respuesta es del usuario.
+
+                  En ADD la línea no existe todavía, así que lo único que hay es
+                  lo que él confirma: el tema viaja como `focus` y es contra eso
+                  que los guards juzgan la redacción. El modelo escribe lo que la
+                  persona ya dijo que hizo; no lo inventa. */}
               {d.needsUserConfirm && (
                 <span className="mt-1 block">
                   <em className="block not-italic" style={{ color: "var(--a-ink)" }}>{d.needsUserConfirm}</em>
-                  <Btn disabled={busyNode !== null} onClick={() => onRewrite(d.bulletId)} className="mt-1">
+                  <Btn
+                    disabled={busyNode !== null}
+                    onClick={() =>
+                      d.verdict === "ADD"
+                        ? onAdd(d.bulletId, d.proposedTopic ?? d.needsUserConfirm ?? "")
+                        : onRewrite(d.bulletId)
+                    }
+                    className="mt-1"
+                  >
                     {t("yes_i_did")}
                   </Btn>
                 </span>
@@ -792,6 +809,7 @@ const VERDICT_TONE: Record<string, Tone> = {
   DEMOTE: "warn",
   DROP: "bad",
   MERGE: "warn",
+  ADD: "accent",
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

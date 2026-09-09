@@ -159,7 +159,11 @@ export const PROMPT_VERSION = {
   // cuentan el mismo trabajo partido en dos. Se pide en el MISMO acto que ya
   // recibe el bloque entero, así que no cuesta una llamada nueva; y cambia lo
   // que el modelo devuelve, así que lo guardado con p3-2 ya no es la respuesta.
-  P3: "p3-3", // triage
+  // p3-4 (2026-09-09): séptimo veredicto, ADD — un puesto con menos de tres
+  // viñetas no dice qué hizo la persona ahí, y hasta ahora el motor sólo sabía
+  // señalar lo que sobra. El hecho lo pone el usuario: el modelo propone el tema
+  // y la pregunta, nunca afirma.
+  P3: "p3-4", // triage
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -672,7 +676,7 @@ export type Placeholder = z.infer<typeof PlaceholderSchema>
 // TRIAGE Y SUGERENCIAS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const VERDICTS = ["KEEP", "REWRITE", "REPLACE", "DEMOTE", "DROP", "MERGE"] as const
+export const VERDICTS = ["KEEP", "REWRITE", "REPLACE", "DEMOTE", "DROP", "MERGE", "ADD"] as const
 export type Verdict = (typeof VERDICTS)[number]
 
 export const TriageDecisionSchema = z.object({
@@ -802,6 +806,16 @@ export interface AnchoredSuggestion extends Suggestion {
   basedOnHash: string
   /** El texto que reemplaza. Sin esto, "aplicar" escribe sobre la línea de al lado. */
   originalText: string
+  /**
+   * EL PUESTO AL QUE SE AGREGA, cuando la línea es NUEVA.
+   *
+   * Un puesto con menos de tres viñetas no se entiende, y hasta hoy el motor no
+   * tenía cómo decirlo: podía señalar lo que sobra y no lo que falta, porque no
+   * sabía crear una línea. Con esto sí, y con la única regla que lo hace
+   * honesto: el HECHO lo pone el usuario —confirma el tema antes de que se
+   * escriba nada— y el modelo sólo lo redacta.
+   */
+  addToRole?: string
   /**
    * LA LÍNEA QUE SE ABSORBE, en una fusión. Se BORRA al aplicar.
    *

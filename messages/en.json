@@ -1640,7 +1640,8 @@
       "skills_plan_in": "{count, plural, one {# goes in} other {# go in}}",
       "skills_plan_out": "{count, plural, one {# leaves the template} other {# leave the template}}",
       "merge_it": "Merge them into one",
-      "verdict_MERGE": "Merge"
+      "verdict_MERGE": "Merge",
+      "verdict_ADD": "Add"
     },
     "ats": {
       "tab": "ATS",

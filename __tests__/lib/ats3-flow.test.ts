@@ -159,3 +159,77 @@ describe("fusionar dos viñetas en una", () => {
     expect(ap.tree.roles[0].bullets[0].text).toContain("confirmando los turnos")
   })
 })
+
+/**
+ * ESCRIBIR UNA LÍNEA NUEVA (CEO, 2026-09-09).
+ *
+ * «Un máximo de 6 viñetas por experiencia y 3 como mínimo.» El máximo ya lo
+ * sabía hacer el motor; el mínimo no, porque no sabía CREAR una línea — y
+ * emitir «te faltan dos» sin un botón es el reproche que este panel no hace.
+ *
+ * Lo que hace honesto el caso: la línea no sale de la nada. El usuario confirma
+ * el tema ANTES de que se pida nada, y ese tema es el original contra el que los
+ * guards juzgan la redacción. El modelo redacta lo que la persona dijo que hizo.
+ */
+describe("agregar una viñeta a un puesto que tiene pocas", () => {
+  const arbol = () =>
+    buildTree({
+      summary: "Secretaria",
+      workExperience: [{
+        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
+        description: "• Gestioné la agenda del consultorio",
+      }],
+      skills: [],
+    })
+
+  const motor = (texto: string): AtsAi => ({
+    parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts, triage: async () => [],
+    rewriteSummary: async () => ({}) as Suggestion,
+    rewriteBullet: async (input) => ({
+      bulletId: input.bulletId, changed: true, text: texto, actionVerb: texto.split(" ")[0],
+      keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null,
+      measurableAspect: null, declineBasis: null,
+    }) as Suggestion,
+  })
+
+  const pedir = async (texto: string, tema = "Atendí el teléfono y derivé las consultas") => {
+    const tree = arbol()
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, addToRole: tree.roles[0].id, focus: tema,
+      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai: motor(texto), store: new Store(),
+    })
+    return { tree, r }
+  }
+
+  it("sin el tema que el usuario confirmó NO se pide nada al modelo", async () => {
+    const tree = arbol()
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, addToRole: tree.roles[0].id,
+      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai: motor("x"), store: new Store(),
+    })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.calls).toBe(0)
+  })
+
+  it("la redacción no puede irse del tema que él confirmó", async () => {
+    const { r } = await pedir("Coordiné reuniones con proveedores internacionales")
+    expect(r.ok).toBe(false)
+  })
+
+  it("se AGREGA al final, sin tocar la que ya estaba", async () => {
+    const { tree, r } = await pedir("Atendí el teléfono del consultorio y derivé las consultas al profesional")
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.suggestion.addToRole).toBe(tree.roles[0].id)
+    const ap = applySuggestion(tree, r.suggestion, SPEC, {
+      bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
+      coverage: [], softCoverage: [], titleAlignment: 1,
+    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
+    expect(ap.ok).toBe(true)
+    expect(ap.tree.roles[0].bullets).toHaveLength(2)
+    expect(ap.tree.roles[0].bullets[0].text).toBe("Gestioné la agenda del consultorio")
+    expect(ap.tree.roles[0].bullets[1].text).toContain("Atendí el teléfono")
+  })
+})
