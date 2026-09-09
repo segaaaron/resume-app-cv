@@ -142,32 +142,6 @@ const AuditSchema = z.object({
 })
 
 const TriageSchema = z.object({ decisions: listaDe(TriageDecisionSchema, 80) })
-const VerifySchema = z.object({
-  // Un veredicto que no reconocemos NO aprueba: el validador sólo puede
-  // rechazar, así que ante la duda deja pasar la decisión al código.
-  verdict: z.enum(["PASS", "FAIL"]).catch("PASS"),
-  /**
-   * La evidencia se RECORTA, no rechaza.
-   *
-   * Medido: el verificador citó una frase de 240 caracteres y el esquema tiró la
-   * respuesta entera — la llamada pagada, la reescritura perdida, y el motivo
-   * era el LARGO de una explicación. Un tope de presentación no puede ser un
-   * error fatal.
-   */
-  violations: listaDe(
-    z.object({
-      type: z.string().max(80).catch("VIOLATION"),
-      // Y ACEPTA `null`. Medido contra la API el 2026-08-29: el verificador
-      // devolvió una violación sin poder citar el fragmento —el prompt le dice
-      // que un campo sin dato va en null— y el esquema tiró la respuesta
-      // ENTERA, perdiendo la reescritura con la llamada ya pagada. Es la quinta
-      // vez que este contrato contradice a su propio prompt: el tipo de campo
-      // que puede faltar se declara nulable, no obligatorio.
-      evidence: z.string().nullish().transform((v) => (v ?? "").slice(0, 200)),
-    }),
-    10,
-  ),
-})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LOS PROMPTS
@@ -222,7 +196,7 @@ export function figureRule(lang: Lang): string {
         // el modelo los copió tal cual: un CV en inglés recibió "[n/semana]".
         // Medido contra la API el 2026-08-29.
         "NUMBERS: you never write a figure the candidate did not give. When the achievement obviously has a size, you propose a TYPED SLOT and declare it: [x%], [n], [from x to y], [$x], [n people], [n/week], [x/y].",
-        "Each slot carries its type, a label, a hint of what range is believable FOR THIS KIND OF WORK, and what evidence the candidate would check. At most two slots per line, at most one required.",
+        "Each slot carries its type, a label, a hint of what range is believable FOR THIS KIND OF WORK, and what evidence the candidate would check. At most two slots per line; both may be required — the candidate fills them in before anything is written.",
         "THOSE FOUR FIELDS LIVE IN THEIR OWN OBJECT, NEVER IN THE TEXT. The line carries the token and nothing else — no type in brackets, no label, hint or evidence in parentheses or after a dash. What you write in `text` is what gets printed on someone's résumé.",
         "The hint SAYS OUT LOUD that an approximate figure or a range is enough — most people abandon the field believing they need the exact number, and a bullet with a rough size beats one with none. The approximation is the candidate's to give: you never write one.",
         "A range the user confirms is theirs. A number you decided is not.",
@@ -237,7 +211,7 @@ export function figureRule(lang: Lang): string {
       ].join("\n")
     : [
         "CIFRAS: nunca escribís un número que el candidato no dio. Cuando el logro tiene un tamaño evidente, proponés un HUECO TIPADO y lo declarás: [x%], [n], [de x a y], [$x], [n personas], [n/semana], [x/y].",
-        "Cada hueco lleva su tipo, una etiqueta, una pista de qué rango sería creíble PARA ESTE TIPO DE TRABAJO, y qué evidencia tendría que mirar el candidato. Máximo dos huecos por línea, máximo uno obligatorio.",
+        "Cada hueco lleva su tipo, una etiqueta, una pista de qué rango sería creíble PARA ESTE TIPO DE TRABAJO, y qué evidencia tendría que mirar el candidato. Máximo dos huecos por línea; los dos pueden ser obligatorios — el candidato los completa antes de que se escriba nada.",
         "ESOS CUATRO CAMPOS VIVEN EN SU OBJETO, NUNCA EN EL TEXTO. La línea lleva el token y nada más: ni el tipo entre corchetes, ni la etiqueta, la pista o la evidencia entre paréntesis o después de un guion. Lo que escribís en `text` es lo que se imprime en el currículum de alguien.",
         "La pista DICE EXPLÍCITAMENTE que un aproximado o un rango alcanza — la mayoría abandona el campo creyendo que necesita el número exacto, y una línea con un tamaño aproximado vale más que una sin ninguno. El aproximado lo pone el candidato: vos no escribís uno.",
         "Un rango que el usuario confirma es suyo; un número que decidiste vos, no.",
@@ -397,6 +371,8 @@ export function bulletPrompt(lang: Lang): string {
     "ESPECIFICIDAD: la línea tiene que contener algo que sólo ESTA persona podría escribir — la herramienta que usó, el ámbito concreto, el tamaño de lo que manejó, sacado del original. Una línea intercambiable con la de cualquier otro postulante no aporta. Si al reescribirla te queda genérica, el problema es que estás usando poco del original, no que falte agregar algo de afuera.",
     "",
     "MEMORIA DEL CV (se te da abajo): no repitas un verbo ya usado, no pases el presupuesto de un término, no vuelvas a contar un logro que ya tiene dueño, y variá el tipo de métrica si ya hay dos del mismo.",
+    "OTRAS LÍNEAS DEL CV (se te dan abajo): tu reescritura NO puede decir lo mismo que ninguna de ellas. Dos viñetas que cuentan el mismo trabajo ocupan dos renglones para un solo dato.",
+    "LO QUE ESTA LÍNEA TIENE QUE RESOLVER (se te da abajo cuando existe): es lo único que se le prometió al candidato sobre esta línea. Ciérralo en UNA reescritura; no abras nada que no esté ahí.",
     "",
     "DECLINAR (changed: false) es una respuesta válida y preferible a un cambio cosmético, PERO se declara. Si declinás, `declineBasis` lleva los tres ejes de la línea ORIGINAL: hasActionVerb (abre con un verbo en pasado que gobierna la oración), hasResult (dice qué cambió), hasMethod (dice con qué herramienta, técnica o enfoque).",
     "Los tres tienen que ser true para poder declinar. Con uno solo en false, la línea TIENE algo que arreglar y la reescribís. Medido: el modelo declinó sobre 'Participé en las reuniones con los padres' —apertura prohibida— y sobre 'Di la medicación', tres palabras sin resultado ni método.",
@@ -423,6 +399,8 @@ export function bulletPrompt(lang: Lang): string {
     "SPECIFICITY: the line must carry something only THIS person could write — the tool they used, the concrete scope, the size of what they handled, taken from the original. A line interchangeable with any other applicant's adds nothing. If your rewrite comes out generic, the problem is that you are using too little of the original, not that something external is missing.",
     "",
     "CV MEMORY (given below): do not reuse a verb already used, do not exceed a term's budget, do not retell an achievement that already has an owner, and vary the metric type if two of the same kind are already used.",
+    "OTHER LINES IN THE CV (given below): your rewrite must NOT say the same as any of them. Two bullets telling the same work spend two lines on one fact.",
+    "WHAT THIS LINE MUST FIX (given below when present): it is the only thing promised to the candidate about this line. Close it in ONE rewrite; do not open anything that is not there.",
     "",
     "DECLINING (changed: false) is a valid answer and better than a cosmetic edit, BUT it is declared. When you decline, `declineBasis` carries the three axes of the ORIGINAL line: hasActionVerb (opens with a past-tense verb governing the sentence), hasResult (says what changed), hasMethod (says with which tool, technique or approach).",
     "All three must be true to decline. With a single one false, the line HAS something to fix and you rewrite it. Measured: the model declined on 'Participated in the meetings with parents' — a forbidden opener — and on 'Gave the medication', three words with no result and no method.",
@@ -469,36 +447,6 @@ export function summaryPrompt(lang: Lang): string {
   return (lang === "en" ? en : es).join("\n")
 }
 
-export function verifyPrompt(lang: Lang): string {
-  const es = [
-    "Sos un verificador de hechos. Recibís un texto original y su reescritura. Tu ÚNICA tarea es detectar si la reescritura afirma algo que el original no sostiene. No evalúes estilo, calidad ni gramática.",
-    "",
-    "QUÉ ES UNA VIOLACIÓN",
-    "UNDECLARED_TOOL   — nombra una herramienta ausente del original y de las habilidades declaradas",
-    "UNDECLARED_ENTITY — nombra una empresa, producto, sector o equipo que no estaba",
-    "FIGURE_NOT_GIVEN  — afirma una cifra concreta que el candidato no dio (un hueco como [x%] NO es violación)",
-    "INFLATED_ROLE     — el original dice 'ayudé' o 'participé' y la reescritura dice 'lideré' o 'dirigí'",
-    "UNSUPPORTED_CLAIM — afirma un resultado que el original no menciona",
-    "",
-    "QUÉ NO ES UNA VIOLACIÓN, y es importante que no lo marques: explicar en qué consiste el trabajo con el vocabulario del oficio. Un arqueo ES cuadrar efectivo y comprobantes; un mantenimiento preventivo ES revisar desgaste y lubricación. Eso no afirma nada nuevo sobre la persona.",
-    noScoreRule("es"),
-  ]
-  const en = [
-    "You are a fact checker. You receive an original text and its rewrite. Your ONLY task is to detect whether the rewrite asserts something the original does not support. Do not judge style, quality or grammar.",
-    "",
-    "WHAT COUNTS AS A VIOLATION",
-    "UNDECLARED_TOOL   — names a tool absent from the original and from the declared skills",
-    "UNDECLARED_ENTITY — names a company, product, department or team that was not there",
-    "FIGURE_NOT_GIVEN  — asserts a concrete figure the candidate did not give (a slot like [x%] is NOT a violation)",
-    "INFLATED_ROLE     — the original says 'helped' or 'participated' and the rewrite says 'led' or 'directed'",
-    "UNSUPPORTED_CLAIM — asserts a result the original does not mention",
-    "",
-    "WHAT IS NOT A VIOLATION, and you must not flag it: explaining what the work consists of in the vocabulary of the trade. A cash count IS reconciling cash and receipts; preventive maintenance IS checking wear and lubrication. That asserts nothing new about the person.",
-    noScoreRule("en"),
-  ]
-  return (lang === "en" ? en : es).join("\n")
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // EL MÓDULO
 // ─────────────────────────────────────────────────────────────────────────────
@@ -539,7 +487,6 @@ export const OUTPUT_SHAPE: Record<PromptId, string> = {
   P3: `{"decisions":[{"bulletId":"","verdict":"KEEP","reason":"","relevance":0.8,"proposedTopic":null,"needsUserConfirm":null}]}`,
   P4: `{"measurableAspect":"","bulletId":"","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[{"token":"[x%]","type":"PERCENT_DELTA","label":"","hint":"","evidenceNeeded":"","required":true}],"variantWithoutMetric":null}`,
   P5: `{"measurableAspect":null,"bulletId":"summary","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[],"variantWithoutMetric":null}`,
-  P6: `{"verdict":"PASS","violations":[{"type":"","evidence":""}]}`,
 }
 
 /** El bloque que se le muestra al modelo, en los dos idiomas. */
@@ -649,6 +596,14 @@ export class AIAts3Module implements AtsAi {
       `VACANTE / POSTING:\n${JSON.stringify(compactSpec(input.spec))}`,
       `HABILIDADES DECLARADAS / DECLARED SKILLS:\n${JSON.stringify(input.declaredSkills)}`,
       `MEMORIA DEL CV / CV MEMORY:\n${JSON.stringify(compactLedger(input.ledger))}`,
+      // Lo que la tarjeta le prometió al usuario sobre ESTA línea, dicho una vez
+      // y en un solo lugar. Sin esto el modelo reescribía sin saber qué se le
+      // había prometido cerrar.
+      input.focus ? `LO QUE ESTA LÍNEA TIENE QUE RESOLVER / WHAT THIS LINE MUST FIX:\n${input.focus}` : "",
+      // Para que no devuelva una calcada: se le muestran, no se le castiga después.
+      input.siblings?.length
+        ? `OTRAS LÍNEAS DEL CV — NINGUNA SE REPITE / OTHER LINES IN THE CV — DO NOT REPEAT ANY:\n${JSON.stringify(input.siblings.slice(0, 20))}`
+        : "",
       input.nudge ? `CORREGÍ ESTO / FIX THIS:\n${input.nudge}` : "",
     ]
       .filter(Boolean)
@@ -669,75 +624,6 @@ export class AIAts3Module implements AtsAi {
       .join("\n\n")
     const s = await this.ask(summaryPrompt(this.deps.language), body, SuggestionSchema, "P5")
     return { ...s, bulletId: "summary", placeholders: [] }
-  }
-
-  async verify(original: string, rewritten: string, declared: string[]): Promise<{ pass: boolean; reason: string }> {
-    const body = [
-      `ORIGINAL:\n"""${original}"""`,
-      `REESCRITURA / REWRITE:\n"""${rewritten}"""`,
-      `HABILIDADES DECLARADAS / DECLARED SKILLS:\n${JSON.stringify(declared)}`,
-    ].join("\n\n")
-    const out = await this.ask(verifyPrompt(this.deps.language), body, VerifySchema, "P6")
-
-    /**
-     * ── QUÉ DE LO QUE DICE P6 BLOQUEA, Y QUÉ NO ────────────────────────────
-     *
-     * P6 no es el juez final: es un modelo opinando sobre otro. Medido en cinco
-     * oficios, cuando se le hacía caso a TODO bajaba la entrega de 12/15 a
-     * 8/15, y lo que tiraba era justo lo que el producto cobra — "coordiné
-     * turnos, gestionando la agenda" sobre "Atendí el teléfono para los turnos"
-     * lo marcaba como afirmación no sostenida.
-     *
-     * Bloquea sólo lo que es un HECHO comprobable y ajeno: una herramienta, una
-     * entidad, una cifra, una jerarquía inflada. "El resultado no está
-     * explícito" es una opinión sobre redacción, y sobre redacción decide el
-     * código con sus reglas, no un segundo modelo.
-     */
-    const BLOQUEAN = /TOOL|TECH|ENTITY|FIGURE|NUMBER|ROLE/i
-
-    /**
-     * UN HUECO NO ES UNA CIFRA, por más que P6 lo señale.
-     *
-     * Medido apenas el motor empezó a proponer huecos: el verificador devolvía
-     * `FIGURE_NOT_GIVEN: "[n registros/turno]"` y el filtro lo bloqueaba. Es
-     * exactamente al revés — el hueco existe PORQUE el candidato no dio el
-     * número, y es la forma correcta de pedírselo. Cuantos más huecos propone el
-     * motor, más reescrituras buenas mataba esto.
-     *
-     * Su prompt ya dice que un hueco no es violación; el modelo igual lo marca.
-     * Un prompt es una petición: acá se decide por código.
-     */
-    const esUnHueco = (evidencia: string) => /^\s*\[[^\]]*\]\s*$/.test(evidencia)
-
-    /**
-     * UNA ENTIDAD ES UN NOMBRE PROPIO, NO EL VOCABULARIO DEL OFICIO.
-     *
-     * Medido en cinco oficios: P6 etiqueta como `UNDECLARED_ENTITY` cosas como
-     * "estilismo", "salón" o "datos clínicos" —que son EN QUÉ CONSISTE el
-     * trabajo, justo lo que la doctrina obliga a nombrar— y con eso la entrega
-     * caía de 14 a 9 de 15.
-     *
-     * Lo que de verdad no puede aparecer es un NOMBRE PROPIO que nadie declaró:
-     * un empleador, una marca, un producto. Eso se reconoce por la mayúscula
-     * dentro de la frase, y eso sí lo puede probar el código. Una palabra común
-     * en minúscula describe el oficio; "Temenos" o "Clínica Norte", no.
-     */
-    const traeNombrePropio = (evidencia: string) =>
-      evidencia
-        .split(/[\s,;:/"'()]+/)
-        .slice(1)
-        .some((w) => /^[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑáéíóúñ]{2,}$/.test(w) && !original.includes(w))
-
-    const duras = out.violations.filter((v) => {
-      if (esUnHueco(v.evidence)) return false
-      if (!BLOQUEAN.test(v.type)) return false
-      if (/ENTITY/i.test(v.type) && !traeNombrePropio(v.evidence)) return false
-      return true
-    })
-    return {
-      pass: duras.length === 0,
-      reason: duras.map((v) => `${v.type}: ${v.evidence}`).join("; "),
-    }
   }
 
   // ───────────────────────────────────────────────────────────────────────────

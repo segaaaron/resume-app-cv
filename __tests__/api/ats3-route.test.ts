@@ -64,6 +64,15 @@ vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
       llamadas.triage++
       return []
     }
+    /** Devuelve una reescritura CALCADA al original: el guard la rechaza. */
+    async rewriteBullet(input: { bulletId: string; original: string }) {
+      this.deps.onUsage?.({ promptTokens: 300, completionTokens: 40, cachedTokens: 0 })
+      return {
+        bulletId: input.bulletId, changed: true, text: input.original, actionVerb: "Realicé",
+        keywordsUsed: [], claim: "", metricType: null, placeholders: [],
+        variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
+      }
+    }
   },
 }))
 
@@ -164,6 +173,67 @@ describe("la ruta del motor v3", () => {
     const salida = await actos(await POST(req(CUERPO)))
     expect(llamadas).toEqual({ jd: 0, audit: 0, triage: 0 })
     expect((salida.at(-1)!.telemetry as { calls: number }).calls).toBe(0)
+    expect(refundDailyQuota).toHaveBeenCalledWith("u1", "ats3", "PRO")
+  })
+
+  /**
+   * EL REGISTRO DE LO RESUELTO VIAJA CON LOS HALLAZGOS.
+   *
+   * El motor ya lo lee para no volver a señalar lo cerrado; entregarlo cuesta
+   * cero y es lo único que le permite a la pantalla volver a dibujar «Hechas»
+   * después de recargar. Sin esto ese registro vivía en memoria y se perdía con
+   * un F5, junto con todo el trabajo que la persona había hecho.
+   */
+  it("el acto de hallazgos entrega lo que el usuario ya cerró", async () => {
+    vi.mocked(db.aiAnswerCache.findUnique).mockImplementation((async ({ where }: { where: { kind_inputHash: { kind: string } } }) => {
+      if (where.kind_inputHash.kind !== "ats3-log") return null
+      return {
+        payload: [
+          {
+            findingId: "f-viejo", nodeId: "b1", nodeHashAtResolution: "h",
+            resolvedBy: "AI_SUGGESTION", resolvedAt: "2026-09-08T10:00:00.000Z",
+            title: "Le falta la cifra", kind: "applied",
+          },
+        ],
+      }
+    }) as never)
+
+    const salida = await actos(await POST(req(CUERPO)))
+    const hallazgos = salida.find((a) => a.act === "findings")!
+    expect((hallazgos.resolved as { findingId: string; title: string }[])[0]).toMatchObject({
+      findingId: "f-viejo",
+      title: "Le falta la cifra",
+    })
+  })
+
+  /**
+   * SIN RESULTADO NO SE COBRA LA RANURA (CEO, 2026-09-09).
+   *
+   * El bloqueo que quedaba no era un guard: era su PRECIO. Una reescritura que
+   * el motor no puede entregar descontaba igual el uso del día — el usuario
+   * apretaba, no recibía nada y quedaba con una consulta menos. Las llamadas al
+   * modelo se gastaron y se facturan; la ranura de su cuota mide trabajo
+   * entregado, no intentos.
+   */
+  it("un rechazo devuelve la ranura de la cuota", async () => {
+    const res = await POST(
+      req({
+        action: "rewrite",
+        resumeId: "cv1",
+        nodeId: "x",
+        jobDescription: CUERPO.jobDescription,
+        language: "es",
+        resume: CUERPO.resume,
+        spec: {
+          roleTitleRaw: "Cajera", roleTitleCanonical: "Cajera", metricThatMatters: "",
+          seniority: null, yearsRequired: null, domain: null, workMode: null, language: "es",
+          mustHave: [], niceToHave: [], responsibilities: [], softSignals: [],
+        },
+        covered: [],
+      }),
+    )
+    const body = (await res.json()) as { ok: boolean }
+    expect(body.ok).toBe(false)
     expect(refundDailyQuota).toHaveBeenCalledWith("u1", "ats3", "PRO")
   })
 

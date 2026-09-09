@@ -31,9 +31,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { createPortal } from "react-dom"
-import { Check, Plus, Sparkles, X } from "lucide-react"
-import { Z_MODAL } from "@/lib/ui/z-layers"
+import BrandLoadingScreen from "@/components/shared/BrandLoadingScreen"
+import { Check, Minus, Sparkles, X } from "lucide-react"
+import { Z_MODAL, Z_MODAL_FOLLOW_UP } from "@/lib/ui/z-layers"
 import { normalize } from "@/lib/ats3/contracts"
+import { skillPlan } from "@/lib/ats3/engine"
+import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import type { AnchoredSuggestion, Finding, Placeholder, TriageDecision } from "@/lib/ats3/contracts"
 import { Btn, Card, Chip, Diff, Label, Note, PRESSABLE } from "./ui"
 import type { PanelCheck, PanelSection, PanelSectionId } from "./view-model"
@@ -56,6 +59,20 @@ export interface DoneEntry {
   id: string
   title: string
   weight: number
+  /**
+   * QUÉ SE HIZO. El registro guardaba sólo dos de las cuatro formas de cerrar.
+   *
+   * ── EL DEFECTO QUE ESTO CIERRA (CEO, 2026-09-09, con captura) ──────────────
+   * «Si soluciono 30, en Hechas se ven 2 o 3.» Era cierto: sólo anotaba lo que
+   * se escribía. Sacar una línea del CV y descartar una tarjeta —dos decisiones
+   * que el usuario TOMÓ, una de ellas destructiva— no dejaban rastro en ningún
+   * lado, así que el trabajo hecho desaparecía de la pantalla sin explicación.
+   *
+   * Descartar no es arreglar, y por eso no se pinta con el tilde de aplicado:
+   * se pinta como lo que fue. El registro es de lo que HICISTE, no sólo de lo
+   * que se escribió.
+   */
+  kind: "applied" | "dropped" | "dismissed"
   before?: string
   after?: string
 }
@@ -74,27 +91,39 @@ export function workOf(sections: readonly PanelSection[]): PanelCheck[] {
 }
 
 /**
- * LOS VEREDICTOS QUE SON TRABAJO. `KEEP` no lo es.
+ * LOS VEREDICTOS QUE ESTE TABLERO OFRECE. `KEEP` y `REWRITE` no son suyos.
  *
- * «Dejar — esta línea se gana su lugar» es una respuesta y no una tarea: no
- * tiene botón porque no hay nada que hacer. Contarlo en el botón del informe
- * sería prometer siete arreglos y abrir una pantalla con cuatro — el defecto
- * que este panel ya pagó tres veces: un número que cuenta lo que la función
- * SABE en vez de lo que la pantalla OFRECE.
+ * `KEEP` —«esta línea se gana su lugar»— es una respuesta, no una tarea: no
+ * tiene botón porque no hay nada que hacer. Contarlo sería prometer siete
+ * arreglos y abrir una pantalla con cuatro.
+ *
+ * ── Y `REWRITE` TAMPOCO, QUE ERA UNA PISADA (CEO, 2026-09-09) ───────────────
+ * Un veredicto REWRITE deja la línea abierta, así que esa viñeta TIENE su
+ * tarjeta. El tablero mostraba además su propia fila con otro botón: dos
+ * botones para la misma acción sobre la misma línea, y la misma línea contada
+ * DOS VECES en «48 cosas para arreglar». Peor, el del tablero era el peor de
+ * los dos: pide la reescritura sin el `focus` de la tarjeta, así que el modelo
+ * la recibía sin saber qué se le había prometido al usuario.
+ *
+ * El reparto queda limpio y sin solaparse:
+ *   el tablero  → qué pasa con la LÍNEA   (sacarla, comprimirla, reemplazarla)
+ *   las tarjetas → qué pasa con su CONTENIDO (reescribirla)
  */
+
 /**
- * ¿ESTA TARJETA LA CIERRA UN ACTO DETERMINISTA?
+ * CUÁNTO QUEDA POR ARREGLAR. Un número, un dueño.
  *
- * La respuesta la daban DOS lugares con la misma expresión escrita a mano: el
- * botón de la tarjeta y el masivo. Iguales hoy, y el día que una cambie el
- * usuario ve un botón que el lote no toca — o al revés. Se pregunta una vez.
+ * La misma suma estaba escrita en dos pantallas —el botón del informe y la
+ * cabecera de esta ventana—. Iguales hoy; el día que una cambie, el informe
+ * promete siete y la ventana abre con cuatro, que es el defecto que este panel
+ * ya pagó tres veces. Se pregunta acá, que es donde vive lo que se cuenta.
  */
-export function esDeterminista(check: PanelCheck): boolean {
-  return check.owner === "auto"
+export function pendingCount(sections: readonly PanelSection[], triage: readonly TriageDecision[]): number {
+  return workOf(sections).length + verdictsToDo(triage).length
 }
 
 export function verdictsToDo(decisions: readonly TriageDecision[]): TriageDecision[] {
-  return decisions.filter((d) => d.verdict !== "KEEP")
+  return decisions.filter((d) => d.verdict !== "KEEP" && d.verdict !== "REWRITE")
 }
 
 export default function TailorPanel({
@@ -149,8 +178,21 @@ export default function TailorPanel({
   }, [onClose])
 
   const trabajo = useMemo(() => workOf(sections), [sections])
+  /**
+   * LAS HABILIDADES QUE ESTE CV LLEVA PARA ESTA VACANTE.
+   *
+   * Se calcula acá y no se pide al servidor: `skillPlan` es determinista y no
+   * llama al modelo, así que preguntarlo costaría una vuelta para obtener lo
+   * mismo. Se muestra sólo si CAMBIA algo — un plan idéntico a tu lista no es
+   * trabajo, es ruido con forma de tarjeta.
+   */
+  const plan = useMemo(
+    () => (a.spec && a.audit ? skillPlan(a.declaredSkills, a.spec, a.audit, a.weights) : null),
+    [a.spec, a.audit, a.declaredSkills, a.weights],
+  )
+  const planAbierto = plan && (plan.add.length > 0 || plan.drop.length > 0)
   /** Lo mismo que cuenta el botón del informe: una cifra, un dueño. */
-  const pendientes = useMemo(() => trabajo.length + verdictsToDo(a.triage).length, [trabajo, a.triage])
+  const pendientes = useMemo(() => pendingCount(sections, a.triage), [sections, a.triage])
   /**
    * «HECHAS» ES LO QUE SE RESOLVIÓ EN ESTA SESIÓN, y se cuenta acá.
    *
@@ -168,35 +210,46 @@ export default function TailorPanel({
    * un arreglo que nunca se escribió en el CV. Agregar a Habilidades y
    * descartar sí son inmediatos y ciertos; la reescritura se marca al aceptarla.
    */
-  const marcar = (check: PanelCheck, cambio?: { before?: string; after?: string }) => {
-    onDone({ id: check.id, title: ta(check.titleKey, check.params), weight: check.weight, ...cambio })
+  /**
+   * ARMA LA ENTRADA UNA VEZ Y LA MANDA A LOS DOS LECTORES.
+   *
+   * La misma forma va a la lista de esta sesión y al registro que se guarda: con
+   * dos construcciones distintas, lo que ves antes de recargar y lo que ves
+   * después terminan diciendo cosas distintas sobre el mismo acto.
+   */
+  const entradaDe = (check: PanelCheck, kind: DoneEntry["kind"], cambio?: { before?: string; after?: string }): DoneEntry => ({
+    id: check.id,
+    title: ta(check.titleKey, check.params),
+    weight: check.weight,
+    kind,
+    ...cambio,
+  })
+  const marcar = (check: PanelCheck, kind: DoneEntry["kind"], cambio?: { before?: string; after?: string }) => {
+    onDone(entradaDe(check, kind, cambio))
   }
 
   /** Al aceptar, el hallazgo se conoce por su línea: es lo único que trae la propuesta. */
   const marcarPorNodo = (nodeId: string, cambio: { before: string; after: string }) => {
-    const f = findings.find((x) => x.nodeId === nodeId)
-    const c = f && trabajo.find((x) => x.id === f.id)
-    if (c) marcar(c, cambio)
+    const c = checkDe(nodeId)
+    if (c) marcar(c, "applied", cambio)
   }
+
+  const checkDe = (nodeId: string) => {
+    const f = findings.find((x) => x.nodeId === nodeId)
+    return f && trabajo.find((x) => x.id === f.id)
+  }
+
+  /** La misma entrada, para el registro que se guarda. */
+  const registroDe = (nodeId: string, kind: DoneEntry["kind"], cambio?: { before?: string; after?: string }) => {
+    const c = checkDe(nodeId)
+    return c ? entradaDe(c, kind, cambio) : undefined
+  }
+
 
   const nodoDe = (checkId: string) => findings.find((f) => f.id === checkId)
 
 
 
-  /**
-   * EL ACTO DETERMINISTA, EN UN SOLO LUGAR.
-   *
-   * Lo usan el botón de la tarjeta y el masivo. Escrito dos veces, uno de los
-   * dos se olvida de anotar lo resuelto el día que cambie — que es como este
-   * panel terminó con seis nombres para la misma regla.
-   */
-  const aplicarSolo = (check: PanelCheck) => {
-    const f = nodoDe(check.id)
-    if (!f) return
-    // Se marca DESPUÉS y sólo si escribió: dar por resuelto lo que no se escribió
-    // deja la tarjeta en pendientes y en hechas al mismo tiempo.
-    if (a.addSkill(f.nodeId, f.detail, check.id)) marcar(check, { after: f.detail })
-  }
 
   /**
    * LAS SECCIONES QUE HAY, NO UNA LISTA ESCRITA A MANO.
@@ -259,7 +312,6 @@ export default function TailorPanel({
    * pantalla. Se cuenta lo que se ve, que es la única cuenta que el usuario
    * puede comprobar.
    */
-  const enLote = mostradas.filter(esDeterminista)
   /* Los veredictos hablan del espacio de la página, no de una sección del
      informe: se muestran en las vistas generales y no bajo un filtro de
      sección, donde prometerían pertenecer a algo que no les corresponde. */
@@ -359,34 +411,13 @@ export default function TailorPanel({
             </button>
           ))}
 
-          {/* «APLICAR TODO» APLICA TODO LO QUE PUEDE APLICAR, Y LO DICE.
-              Entra sólo lo que se ejecuta SOLO —agregar un término a
-              Habilidades, que no llama al modelo ni gasta cuota—. Una
-              reescritura necesita una consulta nueva y tu confirmación, así que
-              en lote sería un clic disparando N llamadas que mueren todas en la
-              misma pantalla; sacar una línea destruye contenido y no se hace sin
-              verla. El criterio no se enumera, se DERIVA: es quién puede
-              cerrarlo. Y si queda trabajo afuera se dice cuánto — dos números
-              distintos uno al lado del otro, sin explicación, se leen como que
-              el botón falla. */}
-          {enLote.length > 0 && (
-            <span className="ml-auto flex items-center gap-2">
-              {pendientes > enLote.length && (
-                <span className="text-[10.5px] leading-tight" style={{ color: "var(--a-muted-2)" }}>
-                  {t("apply_all_rest", { count: pendientes - enLote.length })}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => enLote.forEach(aplicarSolo)}
-                className={`${PRESSABLE} flex min-h-[32px] items-center gap-1.5 rounded-lg px-3 text-[11.5px] font-bold text-white`}
-                style={{ background: "var(--a-accent-ink)" }}
-              >
-                <Plus className="h-3 w-3" />
-                {t("apply_all", { count: enLote.length })}
-              </button>
-            </span>
-          )}
+          {/* ── ACÁ VIVÍA «APLICAR LAS N» (2026-09-09) ────────────────────────
+              Aplicaba en lote lo único que se ejecutaba solo: agregar términos
+              a Habilidades. Ese acto ya no existe suelto — la lista entera la
+              decide `skillPlan` y se acepta de una vez en su propia tarjeta, con
+              lo que entra y lo que sale a la vista. Un botón que aplica «todo lo
+              que puede» sobre un conjunto vacío es un botón que no puede
+              aparecer. */}
         </div>
 
         {/* `flex-1 min-h-0` es lo que hace que el scroll ocurra ACÁ ADENTRO. Sin
@@ -406,10 +437,56 @@ export default function TailorPanel({
           <div ref={respuestaRef} className="flex flex-col gap-3 empty:hidden">
           {a.rejected && (
             <Note tone={a.rejected.reason === "already_good" ? "ok" : "warn"}>
+              {/* EL MOTIVO SE DICE, NO SE PEGA EL TOKEN AL LADO.
+                  Acá salía «La propuesta no pasó los controles y no se aplicó ·
+                  Realicé»: el motivo era el nombre del guard —que el usuario no
+                  tiene por qué conocer— y el detalle, un verbo suelto sin
+                  frase. Reportado con captura: «¿qué controles? ¿qué mierdas es
+                  eso?». Cada motivo tiene su renglón en el diccionario y nombra
+                  el dato adentro de la oración; el texto viejo queda de red
+                  para un motivo que todavía no tenga el suyo. */}
               {a.rejected.reason === "already_good"
                 ? t("already_good")
-                : `${t("rewrite_rejected")}${a.rejected.detail ? ` · ${a.rejected.detail}` : ""}`}
+                : t.has(`reject_${a.rejected.reason}`)
+                  ? t(`reject_${a.rejected.reason}`, { detail: a.rejected.detail })
+                  : t("rewrite_rejected")}
             </Note>
+          )}
+
+          {/* LAS HABILIDADES QUE ENTRAN A TU PLANTILLA, ANTES DE ESCRIBIRLAS.
+              Una lista de cien términos no la lee nadie y el filtro cuenta cada
+              uno UNA vez, así que el resto sólo ocupa. Se enseña qué entra y qué
+              sale —con el nombre exacto— y se escribe cuando lo aceptás. */}
+          {planAbierto && plan && (
+            <Card tone="accent" filled>
+              <div className="px-4 py-3">
+                <h3 className="text-[13px] font-semibold" style={{ color: "var(--a-ink)" }}>
+                  {t("skills_plan_title", { max: SKILLS_MAX })}
+                </h3>
+                <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: "var(--a-muted)" }}>
+                  {t("skills_plan_sub", { total: a.declaredSkills.length, max: SKILLS_MAX })}
+                </p>
+                {plan.add.length > 0 && (
+                  <>
+                    <Label tone="ok">{t("skills_plan_in", { count: plan.add.length })}</Label>
+                    <ul className="mb-2 mt-1 flex flex-wrap gap-1.5">
+                      {plan.add.map((s) => <li key={s}><Chip tone="ok">{s}</Chip></li>)}
+                    </ul>
+                  </>
+                )}
+                {plan.drop.length > 0 && (
+                  <>
+                    <Label>{t("skills_plan_out", { count: plan.drop.length })}</Label>
+                    <ul className="mb-2 mt-1 flex flex-wrap gap-1.5">
+                      {plan.drop.map((s) => <li key={s}><Chip>{s}</Chip></li>)}
+                    </ul>
+                  </>
+                )}
+                <div className="mt-2 flex gap-2">
+                  <Btn onClick={() => a.applySkills(plan.final)}>{t("apply")}</Btn>
+                </div>
+              </div>
+            </Card>
           )}
 
           {a.pending && (
@@ -417,8 +494,9 @@ export default function TailorPanel({
               suggestion={a.pending}
               onCancel={() => a.setPending(null)}
               onAccept={(text) => {
-                marcarPorNodo(a.pending!.bulletId, { before: a.pending!.originalText, after: text })
-                a.accept(a.pending!, text)
+                const cambio = { before: a.pending!.originalText, after: text }
+                marcarPorNodo(a.pending!.bulletId, cambio)
+                a.accept(a.pending!, text, registroDe(a.pending!.bulletId, "applied", cambio))
               }}
               gainOf={a.previewGain}
               t={t}
@@ -449,9 +527,10 @@ export default function TailorPanel({
                 // Con QUÉ tarjeta se pidió: una línea puede tener dos, y al
                 // aplicar sólo se cierra la que se resolvió.
                 const f = nodoDe(check.id)
-                if (f) a.requestRewrite(f.nodeId, check.id)
+                // Lo que ESTA tarjeta dice, dicho también al modelo — la MISMA
+                // frase que el usuario leyó, no el token crudo del motor.
+                if (f) a.requestRewrite(f.nodeId, check.id, check.focus)
               }}
-              onFix={() => aplicarSolo(check)}
               onDismiss={() => {
                 // NO entra en «Hechas»: descartar no es arreglar. La lista de
                 // resueltas existe para releer lo que se escribió en el CV, y
@@ -459,7 +538,9 @@ export default function TailorPanel({
                 // con el tilde de «Aplicado» sería decirle que hizo algo que no
                 // hizo.
                 const f = nodoDe(check.id)
-                if (f) a.dismiss(f.nodeId, check.id)
+                if (!f) return
+                marcar(check, "dismissed")
+                a.dismiss(f.nodeId, check.id, entradaDe(check, "dismissed"))
               }}
               t={t}
               ta={ta}
@@ -474,7 +555,13 @@ export default function TailorPanel({
               decir NI nada que deshacer. */}
           <TriageBoard
               decisions={veredictos}
-              onDrop={a.dropBullet}
+              onDrop={(nodeId) => {
+                const texto = a.textOf(nodeId)
+                const entrada: DoneEntry = { id: `drop:${nodeId}`, title: texto, weight: 0, kind: "dropped", before: texto }
+                const quitada = a.dropBullet(nodeId, entrada)
+                if (quitada) onDone(entrada)
+                return quitada
+              }}
               onUndo={a.undoDrop}
               onRewrite={a.requestRewrite}
               textOf={a.textOf}
@@ -501,6 +588,21 @@ export default function TailorPanel({
           )}
         </div>
       </section>
+
+      {/* LA PANTALLA DE CARGA ES LA DE LA APP, NO UNA NUEVA.
+          `BrandLoadingScreen` ya la pintan el boundary de ruta, el aviso de
+          navegación y la espera del login: dibujar otra acá sería la cuarta
+          versión de la misma imagen, y el día que la marca cambie se actualizan
+          tres. Va un peldaño por encima del modal —`Z_MODAL_FOLLOW_UP`, la
+          misma regla de siempre: lo que nace dentro de un modal va encima de
+          él— y se come el clic, así que el fondo no cierra la ventana mientras
+          se escribe. El apagado de los botones sigue debajo por lo que siempre
+          estuvo: una sola reescritura en vuelo. */}
+      {a.busyNode !== null && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <BrandLoadingScreen label={t("writing")} zIndex={Z_MODAL_FOLLOW_UP} />
+        </div>
+      )}
     </div>,
     document.body,
   )
@@ -681,7 +783,20 @@ function SuggestionSheet({
   const [values, setValues] = useState<Record<string, string>>({})
   const [useVariant, setUseVariant] = useState(false)
 
-  const requiredMissing = suggestion.placeholders.some((p) => p.required && !(values[p.token] ?? "").trim())
+  /**
+   * NINGÚN HUECO SIN LLENAR ENTRA AL CV — ni los que el modelo marcó opcionales.
+   *
+   * Esto miraba sólo `p.required`, así que un hueco opcional vacío se aplicaba
+   * TAL CUAL: `finalText` sólo reemplaza el token cuando hay valor, y el
+   * currículum salía con "[x%]" impreso. El campo `required` es un juicio del
+   * modelo sobre cuál cifra importa más; no es permiso para escribir un
+   * corchete en el CV de alguien.
+   *
+   * La salida para quien no tiene el dato ya existe y es explícita: la casilla
+   * «no tengo ese dato», que escribe la versión sin cifra. Una decisión suya,
+   * no un descuido.
+   */
+  const requiredMissing = suggestion.placeholders.some((p) => !(values[p.token] ?? "").trim())
 
   const finalText = useMemo(() => {
     if (useVariant && suggestion.variantWithoutMetric) return suggestion.variantWithoutMetric
@@ -842,7 +957,6 @@ function FixCard({
   busy,
   writing,
   onSolve,
-  onFix,
   onDismiss,
   t,
   ta,
@@ -855,13 +969,12 @@ function FixCard({
   /** Y ES ÉSTA la que está escribiendo. */
   writing: boolean
   onSolve: () => void
-  onFix: () => void
   onDismiss: () => void
   t: (k: string, v?: Record<string, string | number>) => string
   ta: (k: string, v?: Record<string, string | number>) => string
 }) {
-  const puedeAgregar = esDeterminista(check)
-  const puedeReescribir = !puedeAgregar
+  /* Toda tarjeta se cierra reescribiendo su línea: es el único remedio que el
+     motor emite desde que la lista de habilidades tiene su propio dueño. */
   return (
     <Card>
       <div className="flex items-start gap-2.5 px-3.5 pt-3">
@@ -919,25 +1032,13 @@ function FixCard({
       )}
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
-        {puedeReescribir && (
-          <Btn tone="ai" disabled={busy} onClick={onSolve}>
-            <Sparkles className="h-3 w-3" />
-            {writing ? t("writing") : t("fix_it")}
-          </Btn>
-        )}
-        {/* El arreglo determinista: no llama al modelo y no gasta cuota, así que
-            no comparte el botón con la reescritura. */}
-        {puedeAgregar && (
-          <Btn variant="outline" onClick={onFix}>
-            <Plus className="h-3 w-3" />
-            {ta("term_add")}
-          </Btn>
-        )}
-        {puedeReescribir && (
-          <Btn variant="quiet" onClick={onDismiss} className="ml-auto">
-            {t("dismiss")}
-          </Btn>
-        )}
+        <Btn tone="ai" disabled={busy} onClick={onSolve}>
+          <Sparkles className="h-3 w-3" />
+          {writing ? t("writing") : t("fix_it")}
+        </Btn>
+        <Btn variant="quiet" onClick={onDismiss} className="ml-auto">
+          {t("dismiss")}
+        </Btn>
       </div>
     </Card>
   )
@@ -959,31 +1060,50 @@ function DoneCard({
   t: (k: string, v?: Record<string, string | number>) => string
   ta: (k: string, v?: Record<string, string | number>) => string
 }) {
-  void t
+  const escritura = entry.kind === "applied"
   return (
-    <Card tone="ok" filled>
+    /* El tono dice qué pasó: lo que se escribió en el CV va en verde; sacar una
+       línea y descartar una tarjeta son decisiones tuyas, no arreglos, y
+       pintarlas con el tilde de «Aplicado» sería decirte que hiciste algo que no
+       hiciste. */
+    <Card tone={escritura ? "ok" : "neutral"} filled>
       <div className="flex items-start gap-2 px-3.5 py-3">
-        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--a-ok-ink)" }} />
+        {escritura ? (
+          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--a-ok-ink)" }} />
+        ) : (
+          <Minus className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--a-muted)" }} />
+        )}
         <div className="min-w-0 flex-1">
-          <h4 className="text-[12.5px] font-bold leading-snug" style={{ color: "var(--a-ok-ink)" }}>
+          <h4 className="text-[12.5px] font-bold leading-snug" style={{ color: escritura ? "var(--a-ok-ink)" : "var(--a-ink-2)" }}>
             {entry.title}
           </h4>
-          <Label tone="ok">{ta("fix_applied")}</Label>
+          <Label tone={escritura ? "ok" : "neutral"}>
+            {entry.kind === "applied" ? ta("fix_applied") : t(`done_${entry.kind}`)}
+          </Label>
 
           {/* EL MISMO ANTES/DESPUÉS QUE LA CONFIRMACIÓN.
               Es la misma pieza a propósito: si las dos pantallas lo dibujaran
               por su cuenta, una podría enseñar algo distinto de lo que quedó
               escrito en el CV. */}
-          {entry.after && (
+          {/* Una línea que se SACÓ no tiene «después»: mostrar un antes/después
+              con la mitad vacía se lee como que algo se escribió. Se muestra lo
+              que había, que es lo único que hay para enseñar. */}
+          {entry.after ? (
             <div className="mt-2">
               <Diff
                 beforeLabel={ta("diff_current")}
                 before={entry.before ?? ""}
                 afterLabel={ta("diff_rewrite")}
                 after={entry.after}
-                tone="ok"
+                tone={escritura ? "ok" : "neutral"}
               />
             </div>
+          ) : (
+            entry.before && (
+              <Note tone="neutral" strike className="mt-2">
+                {entry.before}
+              </Note>
+            )
           )}
         </div>
       </div>

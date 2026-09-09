@@ -167,11 +167,18 @@ export const PROMPT_VERSION = {
   // de la línea original y el motor comprueba la coherencia: decir "ya está
   // bien" mientras se declara que falta el método es una contradicción que el
   // código puede ver, y se pide una vez más nombrando lo que falta.
-  P4: "p4-7", // reescritura de viñeta
+  // p4-8 (2026-09-09): el prompt pedía "máximo un hueco obligatorio" y el CEO
+  // especificó la forma contraria — "[x usuarios] … [x%]", dos cifras suyas en
+  // la misma línea. Cambia lo que el modelo escribe, así que lo guardado con la
+  // versión anterior ya no es la respuesta a esta pregunta.
+  // p4-9 (2026-09-09): la petición lleva ahora DOS cosas que nunca viajaron —lo
+  // que la tarjeta prometió cerrar sobre esa línea, y las otras viñetas del CV
+  // con la orden de no repetir ninguna—. Antes el modelo reescribía a ciegas y
+  // el guard lo castigaba por repetir algo que nadie le había mostrado.
+  P4: "p4-9", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   P5: "p5-2", // resumen
-  P6: "p6-1", // validador
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -328,7 +335,6 @@ export const RequirementSchema = z.object({
    *  porque un aviso de soldadura no habla de "LANGUAGE" ni de "FRAMEWORK". */
   category: z.string().max(40).nullish().transform((v) => v ?? null),
 })
-export type Requirement = z.infer<typeof RequirementSchema>
 
 export const JobSpecSchema = z.object({
   // El aviso puede no nombrar el cargo, y el prompt ordena "un campo sin dato va
@@ -507,7 +513,6 @@ export const FINDING_TYPES = [
   "summary_gap", // al resumen le falta una de sus funciones
   "parse_risk", // algo que un lector automático no va a extraer bien
   "buried_term", // lo demuestra, pero en un puesto viejo: el lector no llega
-  "skill_not_listed", // lo demuestra en una línea y no está en Habilidades
   "soft_not_shown", // la vacante la pide, el CV la declara y nada la respalda
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
@@ -578,10 +583,12 @@ export interface Finding {
    *   rewrite   — reescribir el nodo señalado
    *   weave     — mencionar `detail` en el nodo señalado, que es una línea del
    *               puesto ACTUAL (el término vive en uno viejo)
-   *   add_skill — agregar `detail` a la lista de habilidades. Determinista:
-   *               ni una llamada al modelo.
+   * Hubo un `add_skill` —agregar un término suelto a Habilidades— y se retiró el
+   * 2026-09-09: la lista entera la decide `skillPlan` con el techo de veinte y
+   * los pesos del aviso, así que un remedio por término era la mitad de esa
+   * respuesta dada por otro dueño.
    */
-  remedy: "rewrite" | "weave" | "add_skill"
+  remedy: "rewrite"
   /**
    * DE QUÉ habla, cuando no habla de la línea.
    *
@@ -798,6 +805,20 @@ export interface Resolution {
   nodeHashAtResolution: string
   resolvedBy: "AI_SUGGESTION" | "USER_EDIT" | "DISMISSED"
   resolvedAt: string
+  /**
+   * CON QUÉ NOMBRE SE CERRÓ, Y QUÉ QUEDÓ ESCRITO.
+   *
+   * El motor no los lee: son para que la pantalla pueda volver a dibujar
+   * «Hechas» después de recargar. Sin ellos ese registro vivía en memoria y se
+   * perdía con un F5 —reportado— porque el hallazgo ya no existe cuando la
+   * lista lo necesita.
+   *
+   * Opcionales a propósito: lo escrito con la forma vieja sigue siendo legible.
+   */
+  title?: string
+  kind?: "applied" | "dropped" | "dismissed"
+  before?: string
+  after?: string
 }
 
 export const ResolutionSchema = z.object({
@@ -806,7 +827,24 @@ export const ResolutionSchema = z.object({
   nodeHashAtResolution: z.string().max(64),
   resolvedBy: z.enum(["AI_SUGGESTION", "USER_EDIT", "DISMISSED"]),
   resolvedAt: z.string().max(40),
+  /**
+   * CON QUÉ NOMBRE SE CERRÓ, Y QUÉ QUEDÓ ESCRITO.
+   *
+   * ── EL DEFECTO QUE ESTO CIERRA (CEO, 2026-09-09) ──────────────────────────
+   * «Hechas» vivía SÓLO en la memoria de la pantalla: recargabas y el registro
+   * de todo lo que habías resuelto desaparecía. El motor ya guardaba la
+   * resolución —para no volver a señalar lo mismo— pero guardaba lo mínimo para
+   * ESA pregunta: un id y un hash. Con eso no se puede volver a dibujar la
+   * lista, porque el hallazgo ya no existe cuando la pantalla la necesita.
+   *
+   * Son opcionales a propósito: lo escrito con la forma vieja sigue siendo
+   * legible y esas filas se muestran con lo que tienen. Un registro que se
+   * rompe con lo ya guardado no es un registro.
+   */
+  title: texto(160).optional(),
+  kind: z.enum(["applied", "dropped", "dismissed"]).optional(),
+  before: texto(600).optional(),
+  after: texto(600).optional(),
 })
 
 export const ResolutionLogSchema = z.array(ResolutionSchema).max(500)
-export type ResolutionLog = Resolution[]

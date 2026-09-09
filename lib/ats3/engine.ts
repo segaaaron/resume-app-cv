@@ -37,6 +37,7 @@ import {
   type FindingType,
   type JobSpec,
   type NodeId,
+  type Verdict,
   type Resolution,
   type ResumeTree,
   type Suggestion,
@@ -44,8 +45,8 @@ import {
   type TermVariants,
   type TriageDecision,
 } from "@/lib/ats3/contracts"
-import { afterAccept, ledgerSignature, openLedger, releaseOpener, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
-import { checkSuggestion, findNode, isStale, loyalty, retryNudge, type GuardVerdict } from "@/lib/ats3/guards"
+import { afterAccept, BULLETS_PER_ROLE_MAX, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
+import { checkSuggestion, findNode, isStale, loyalty, retryNudge, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
 import { deltaOf, gainOf, postingWeights, scoreResume, statesQuantity, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,13 +60,28 @@ export interface AtsAi {
   triage(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, budget: Record<NodeId, number>): Promise<TriageDecision[]>
   rewriteBullet(input: RewriteInput): Promise<Suggestion>
   rewriteSummary(input: SummaryInput): Promise<Suggestion>
-  verify(original: string, rewritten: string, declared: string[]): Promise<{ pass: boolean; reason: string }>
 }
 
 export interface RewriteInput {
   original: string
+  /**
+   * LO QUE ESTA LÍNEA TIENE QUE RESOLVER, dicho UNA vez.
+   *
+   * Es el `detail` de la tarjeta que apretó el usuario — la única tarjeta que
+   * esa línea puede tener— con todo adentro: el eje que falta, el término
+   * enterrado, la blanda sin demostrar. Antes el modelo reescribía A CIEGAS:
+   * recibía el CV, la vacante y el ledger, y NADA de lo que el panel le había
+   * prometido al usuario. Por eso podía volver con una línea que no cerraba lo
+   * que la tarjeta decía, y el usuario leía el panel contradiciéndose.
+   *
+   * Va acá y en ningún otro lado: una sola tarjeta, una sola instrucción, una
+   * sola reescritura.
+   */
+  focus?: string
   bulletId: NodeId
   roleContext: string
+  /** Las otras viñetas del CV: no puede devolver ninguna calcada. */
+  siblings?: string[]
   spec: JobSpec
   ledger: Ledger
   declaredSkills: string[]
@@ -302,8 +318,11 @@ export const cacheKey = {
     sha256(treeHashValue, jdHash, budget, PROMPT_VERSION.P3, model),
 
   /** Lleva la firma del ledger: si otra viñeta gastó ese verbo, esto ya no vale. */
-  fix: (nodeId: NodeId, nodeHashValue: string, jdHash: string, ledgerSig: string, model: string) =>
-    sha256(nodeId, nodeHashValue, jdHash, ledgerSig, PROMPT_VERSION.P4, model),
+  fix: (nodeId: NodeId, nodeHashValue: string, jdHash: string, ledgerSig: string, model: string, focus = "") =>
+    // El foco entra a la clave porque entra al prompt: sin él, pedir «le falta
+    // el método» y «tejé este término» sobre la misma línea devolvía la primera
+    // respuesta guardada para las dos.
+    sha256(nodeId, nodeHashValue, jdHash, ledgerSig, PROMPT_VERSION.P4, model, focus),
 
   /** El registro de lo resuelto, por CV y vacante. */
   log: (resumeId: string, jdHash: string) => sha256(resumeId, jdHash),
@@ -345,7 +364,18 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
      * términos sobre la misma viñeta habría agregado a Habilidades la
      * concatenación de los dos, que no es una habilidad de nadie.
      *
-     * Con sujeto propio, cada término tiene su tarjeta y su botón.
+     * ── LA VARA, Y VALE PARA TODO LO QUE EL MOTOR ENTREGA (CEO, 2026-09-09) ───
+     *
+     * Lleva sujeto SÓLO el hallazgo cuyo remedio NO toca el texto de la línea.
+     * Hoy NO lo lleva ninguno: el único que escribía fuera de la línea era
+     * `skill_not_listed`, y su pregunta la contesta ahora `skillPlan`. El campo
+     * se queda porque la regla sigue valiendo el día que aparezca otro.
+     *
+     * Todo lo que se cierra REESCRIBIENDO la línea comparte tarjeta, porque es
+     * la misma reescritura: el eje que falta, la cifra, el término enterrado y
+     * la blanda sin demostrar. Con tarjetas separadas la misma viñeta recibía
+     * dos órdenes a la vez y el usuario veía el panel contradecirse sobre una
+     * línea que él acababa de construir — reportado con captura.
      */
     subject?: string,
   ) => {
@@ -360,7 +390,34 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
     const clave = subject ? `${nodeId}:${subject}` : nodeId
     const existing = out.find((f) => (f.subject ? `${f.nodeId}:${f.subject}` : f.nodeId) === clave)
     if (existing) {
-      existing.detail = existing.detail ? `${existing.detail}${DETAIL_SEPARATOR}${detail}` : detail
+      /**
+       * MANDA EL QUE MÁS PESA, NO EL QUE LLEGÓ PRIMERO.
+       *
+       * ── EL DEFECTO QUE ESTO CIERRA ──────────────────────────────────────────
+       * El primero fijaba el título y el componente, y el orden del archivo es
+       * un accidente: los ejes de la viñeta se emiten antes que los requisitos,
+       * así que un requisito de la vacante —el hallazgo más valioso del panel—
+       * caía dentro de «no dice qué cambió» y perdía las dos cosas que lo hacen
+       * accionable: su título y su sección. Por esquivar eso se le había dado
+       * sujeto propio, y con sujeto abre OTRA tarjeta sobre la misma línea: dos
+       * tarjetas para una sola reescritura, que es lo que el CEO reportó.
+       *
+       * La tarjeta es de la LÍNEA, así que su nombre y su sección tienen que ser
+       * los de lo que más mueve el número. Determinista: mismos insumos, mismo
+       * ganador, misma pantalla.
+       *
+       * El `id` NO cambia: lo fija el primero y con él empareja `loyalty`. Si el
+       * id se moviera, cerrar el hallazgo hoy y volver mañana no encontraría la
+       * anotación, y el motor volvería a señalar lo ya resuelto.
+       */
+      if (gain > existing.gain) {
+        existing.type = type
+        existing.component = component
+        existing.remedy = remedy
+        existing.detail = detail ? `${detail}${existing.detail ? DETAIL_SEPARATOR + existing.detail : ""}` : existing.detail
+      } else {
+        existing.detail = existing.detail ? `${existing.detail}${DETAIL_SEPARATOR}${detail}` : detail
+      }
       existing.gain += gain
       if (!existing.merged.includes(type)) existing.merged.push(type)
       return
@@ -401,8 +458,6 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
     }
   }
 
-  /** El sujeto que agrupa a los requisitos entre sí. Ver el bloque de abajo. */
-  const REQUIREMENTS = "requisitos"
 
   // Lo que la vacante exige y el CV no demuestra. Es la palanca más grande del
   // puntaje, y en el motor viejo vivía fuera del ejecutor, como filas de tabla.
@@ -419,28 +474,26 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
      *
      * Y no es cosmético. El prompt de reescritura le exige al modelo que alguna
      * palabra del término ya esté en la línea —«si no comparte nada, NO ENTRA»—
-     * y el guard `invented_term` hace cumplir lo mismo. Anclar el requisito en
+     * y el prompt hace cumplir lo mismo. Anclar el requisito en
      * una línea que no lo respalda es pedir una reescritura que las dos reglas
      * van a rechazar; anclarlo donde la auditoría vio el trabajo es pedirla
      * donde puede salir bien.
      */
     const target = c.evidenceNodeId && findNode(tree, c.evidenceNodeId) ? c.evidenceNodeId : bestHomeFor(tree, c.skill, index)
     /**
-     * SU PROPIA TARJETA, Y NO LA DE LA VIÑETA DONDE ATERRIZA.
+     * COMPARTE LA TARJETA DE SU LÍNEA, y le da su nombre.
      *
-     * Sin sujeto, la clave de fusión es la LÍNEA: el requisito caía dentro de la
-     * tarjeta que esa viñeta ya tenía por su verbo o su cifra, y con ella se
-     * perdían las dos cosas que lo hacen accionable — su título («faltan N
-     * requisitos») y su sección, porque el que llega primero fija el componente.
-     * Reportado con captura: el panel decía «faltan 8 habilidades duras» y en
-     * Tailor no había NI UNA tarjeta de habilidades; el término aparecía
-     * escondido como detalle de otra cosa, «verbo · TestFlight».
+     * Tuvo tarjeta propia por un motivo real: el primero en llegar fijaba el
+     * título y la sección, y como los ejes de la viñeta se emiten antes, el
+     * requisito quedaba dentro de «no dice qué cambió» y perdía las dos cosas
+     * que lo hacen accionable. Pero dos tarjetas sobre una viñeta son dos
+     * órdenes para UNA sola reescritura — lo que el CEO reportó con captura.
      *
-     * El sujeto es COMPARTIDO por todos los requisitos de la misma línea, no el
-     * término: así se agrupan entre ellos —una sola reescritura los aterriza a
-     * todos— y no se mezclan con lo que se dice DE la línea.
+     * Se cerró donde correspondía: en `push`, que ahora le da el título y la
+     * sección al hallazgo que MÁS mueve el número. El requisito casi siempre lo
+     * es, así que conserva su nombre sin abrir una tarjeta más.
      */
-    push("missing_requirement", key, target, textOf(tree, target), gainOf(score, key), c.skill, "rewrite", REQUIREMENTS)
+    push("missing_requirement", key, target, textOf(tree, target), gainOf(score, key), c.skill, "rewrite")
   }
 
   /**
@@ -472,36 +525,27 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
      * lo que no había que tocar.
      */
     const arriba = bestHomeFor({ ...tree, roles: [tree.roles[0]] }, c.skill, index)
-    push("buried_term", "must", arriba, textOf(tree, arriba), 0, c.skill, "weave", c.skill)
+    // Sin sujeto, por lo mismo que la blanda: su remedio es REESCRIBIR esta
+    // línea, así que comparte tarjeta con lo demás que se dice de ella. El
+    // sujeto quedaría sólo para un remedio que NO toque el texto de la línea, y
+    // hoy no hay ninguno.
+    push("buried_term", "must", arriba, textOf(tree, arriba), 0, c.skill)
   }
 
   /**
-   * LO QUE EL CV DEMUESTRA Y NO DICE EN HABILIDADES.
+   * ── ACÁ VIVÍA `skill_not_listed`, EL TÉRMINO SUELTO (CEO, 2026-09-09) ──────
    *
-   * El filtro lee esa sección literalmente y es de lo primero que mira. Un
-   * término que la persona prueba en una viñeta y no figura en su lista existe
-   * para el lector humano y no para el automático. Determinista y sin tokens:
-   * el índice de términos ya sabe reconocerlo, y las habilidades declaradas
-   * están en el árbol.
+   * Emitía una tarjeta por cada término que el CV demuestra y la lista no
+   * nombra, con su botón para agregarlo. Servía, y aun así era media respuesta:
+   * miraba un término por vez, así que podía llevar tu sección de Habilidades a
+   * cien entradas — y una lista de cien no la lee nadie, ni el filtro la premia,
+   * porque cuenta cada término UNA vez.
+   *
+   * La pregunta completa es «cuáles lleva tu CV para ESTA vacante», y la
+   * contesta `skillPlan` con el techo de veinte y los pesos medidos sobre el
+   * aviso. Dos dueños para la misma pregunta es lo que este panel estuvo
+   * pagando toda la sesión: queda uno.
    */
-  const enLista = new Set<string>()
-  for (const s of tree.declaredSkills) for (const t of termsIn(index, s)) enLista.add(normalize(t))
-  for (const c of audit.coverage) {
-    /**
-     * FOUND e IMPLIED, las dos.
-     *
-     * FOUND es "lo dice con palabras que un lector literal reconoce"; IMPLIED es
-     * "el trabajo lo demuestra pero el CV no lo NOMBRA". El segundo es el caso
-     * que más pierde: la persona lo hace, el filtro no lo ve, y escribir el
-     * término en Habilidades es exactamente lo que lo arregla. Lo que NO se
-     * ofrece es un requisito NOT_FOUND: agregar una habilidad que no tiene es
-     * mentir en su CV.
-     */
-    if ((c.status !== "FOUND" && c.status !== "IMPLIED") || !c.evidenceNodeId) continue
-    if (enLista.has(normalize(c.skill))) continue
-    // Lo cierra AGREGARLO A LA LISTA, no reescribir la viñeta que ya lo prueba.
-    push("skill_not_listed", "must", c.evidenceNodeId, textOf(tree, c.evidenceNodeId), 0, c.skill, "add_skill", c.skill)
-  }
 
   /**
    * LA BLANDA QUE SE DECLARA Y NADA RESPALDA.
@@ -517,7 +561,20 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, in
   for (const s of audit.softCoverage) {
     if (s.status !== "DECLARED_ONLY") continue
     const donde = bestHomeFor(tree, s.signal, index)
-    push("soft_not_shown", "xyz", donde, textOf(tree, donde), 0, s.signal, "weave", s.signal)
+    /**
+     * SIN SUJETO: se FUSIONA con la tarjeta que esa línea ya tenía.
+     *
+     * El sujeto existe para el requisito que va a Habilidades —dos términos
+     * sobre una viñeta no pueden compartir un botón que agregue la
+     * concatenación de los dos—, y se le había puesto también a la blanda. Con
+     * eso la misma línea recibía DOS órdenes en la misma sección: «reescribila,
+     * le falta un eje» y «tejé esta blanda acá». Reportado por el CEO: el panel
+     * contradiciéndose sobre una viñeta que él acababa de construir.
+     *
+     * Tejer la blanda y arreglar el eje que falta son LA MISMA reescritura. Una
+     * sola tarjeta, un solo botón, una sola consulta.
+     */
+    push("soft_not_shown", "xyz", donde, textOf(tree, donde), 0, s.signal)
   }
 
   const summaryGaps = [
@@ -571,15 +628,107 @@ function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId 
     for (const b of role.bullets) {
       const texto = normalize(b.text).split(" ")
       // Lo que decide: cuántas palabras del requisito ya viven en esta línea.
+      // Sigue primero porque una línea que no puede sostener el término no es
+      // candidata por más floja que esté: ahí el término se cae en el guard.
       const afinidad = palabras.filter((p) => texto.some((t) => sameRoot(p, t))).length
-      // Desempates, en orden de importancia y siempre por debajo de la afinidad.
-      const yaTieneTerminos = termsIn(index, b.text).size * 0.01
+      /**
+       * ENTRE DOS QUE PUEDEN SOSTENERLO, GANA LA MÁS DÉBIL (CEO, 2026-09-09).
+       *
+       * «Si el hard y el soft recomiendan, dar prioridad a las viñetas más
+       * débiles o que no aportan mucho.» Antes el desempate premiaba a la que ya
+       * traía términos del aviso: el requisito caía sobre la línea que MEJOR
+       * estaba, y la floja se quedaba floja. Es la misma señal que el triage usa
+       * para REPLACE —«la viñeta más débil del bloque»— y se mide igual: sin
+       * términos del aviso y corta.
+       */
+      const debilidad = (1 / (1 + termsIn(index, b.text).size)) * 0.01
       const esCorta = 1 / Math.max(6, texto.length) * 0.001
-      const s = afinidad + yaTieneTerminos + esCorta
+      const s = afinidad + debilidad + esCorta
       if (!best || s > best.score) best = { id: b.id, score: s }
     }
   }
   return best?.id ?? tree.summary.id
+}
+
+/**
+ * LAS HABILIDADES QUE ESTE CV LLEVA PARA ESTA VACANTE.
+ *
+ * ── QUÉ PREGUNTA CONTESTA, Y POR QUÉ ES UNA SOLA ───────────────────────────
+ * «Según la postulación, que las skills se reemplacen por las necesarias; la
+ * plantilla recibe hasta veinte» (CEO, 2026-09-09). Antes esto lo contestaban
+ * dos cosas a medias: un hallazgo por término suelto —«esto lo demostrás y no
+ * está en la lista»— que podía llevar la lista a cien, y dos plantillas que
+ * cortaban en doce por su cuenta. Ni una ni otra miraban la vacante entera.
+ *
+ * ── LA REGLA, Y ES DETERMINISTA: no llama al modelo ni gasta cuota ──────────
+ *   1. Lo que el aviso PIDE va primero, ordenado por el peso medido sobre su
+ *      texto. Un requisito nunca se cae del corte.
+ *   2. Se suma lo que el CV DEMUESTRA en una viñeta y la lista no nombra: es lo
+ *      que el filtro lee literalmente y hoy no ve.
+ *   3. El resto de tus habilidades llena lo que queda, EN TU ORDEN. No se
+ *      reordena lo que vos escribiste sin motivo.
+ *
+ * Nada se escribe acá: devuelve el plan y la pantalla lo enseña. Quién lo
+ * acepta es el usuario.
+ */
+export function skillPlan(
+  declared: readonly string[],
+  spec: JobSpec,
+  audit: AuditFacts,
+  weights: Record<string, number> = {},
+): { final: string[]; add: string[]; drop: string[] } {
+  const pedidos = new Map<string, number>()
+  for (const r of spec.mustHave) pedidos.set(normalize(r.skill), (weights[r.skill] ?? 1) + 1)
+  for (const r of spec.niceToHave) if (!pedidos.has(normalize(r.skill))) pedidos.set(normalize(r.skill), weights[r.skill] ?? 1)
+
+  /** El nombre tal como está escrito: se conserva el del usuario si ya lo tiene. */
+  const comoLoEscribio = new Map(declared.map((d) => [normalize(d), d]))
+  const nombre = (s: string) => comoLoEscribio.get(normalize(s)) ?? s
+
+  const pedidas = [...new Set([...spec.mustHave, ...spec.niceToHave].map((r) => r.skill))]
+    .filter((s) => pedidos.has(normalize(s)))
+    .sort((a, b) => (pedidos.get(normalize(b)) ?? 0) - (pedidos.get(normalize(a)) ?? 0))
+
+  const final: string[] = []
+  const meter = (s: string) => {
+    const n = normalize(s)
+    if (!n || final.some((x) => normalize(x) === n) || final.length >= SKILLS_MAX) return
+    final.push(nombre(s))
+  }
+
+  /**
+   * 1 · Lo que el aviso pide Y tu CV sostiene —porque ya está en tu lista o
+   *     porque una viñeta lo demuestra—, ordenado por el peso del aviso.
+   *
+   * NO se agrega un término que el CV no sostiene, por más que la vacante lo
+   * pida. Escribir "Swift" en las habilidades de alguien que nunca lo nombró es
+   * afirmar un hecho sobre esa persona, y eso no lo decide el motor: para eso
+   * está la tarjeta que le pide demostrarlo en una línea.
+   */
+  const demostradas = new Set(
+    audit.coverage.filter((c) => c.status !== "NOT_FOUND").map((c) => normalize(c.skill)),
+  )
+  for (const s of pedidas) if (comoLoEscribio.has(normalize(s)) || demostradas.has(normalize(s))) meter(s)
+  // 2 · lo tuyo, en tu orden, hasta llenar el cupo
+  for (const s of declared) meter(s)
+
+  const enFinal = new Set(final.map(normalize))
+  return {
+    final,
+    add: final.filter((s) => !comoLoEscribio.has(normalize(s))),
+    drop: declared.filter((s) => !enFinal.has(normalize(s))),
+  }
+}
+
+/**
+ * CUÁNTO APORTA UNA LÍNEA A ESTA VACANTE. Más alto, más fuerte.
+ *
+ * Una sola definición de «débil» para las dos preguntas que la usan: dónde
+ * aterrizar un requisito y cuál sacar cuando sobran. Con dos definiciones, el
+ * motor podía aterrizar un término en la línea que a la vez proponía borrar.
+ */
+function peso(texto: string, index: TermIndex): number {
+  return termsIn(index, texto).size * 10 + normalize(texto).split(" ").length
 }
 
 /** Dos palabras con la misma raíz de cuatro letras hablan de lo mismo. */
@@ -614,7 +763,15 @@ export type Act =
   | { act: "job"; spec: JobSpec }
   /** Lo que la vacante pide y el CV ya demuestra: guía dónde gastar términos. */
   | { act: "covered"; terms: string[] }
-  | { act: "findings"; findings: Finding[]; suppressed: number; regressed: Finding[] }
+  /**
+   * `resolved` es EL REGISTRO DE LO QUE EL USUARIO YA CERRÓ, y viaja acá.
+   *
+   * El motor lo lee igual para no volver a señalar lo mismo; entregarlo cuesta
+   * cero y es lo único que le permite a la pantalla volver a dibujar «Hechas»
+   * después de recargar. Sin esto ese registro vivía en memoria y se perdía con
+   * un F5, junto con todo el trabajo que la persona había hecho.
+   */
+  | { act: "findings"; findings: Finding[]; suppressed: number; regressed: Finding[]; resolved: Resolution[] }
   | { act: "triage"; decisions: TriageDecision[]; budget: Record<NodeId, number> }
 
 export interface AnalysisInput {
@@ -623,7 +780,6 @@ export interface AnalysisInput {
   language: "es" | "en"
   resumeId: string
   model: string
-  checks: ParseChecks
   ai: AtsAi
   store: AtsStore
 }
@@ -664,13 +820,19 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
 
   // ── acto 1: el puntaje, que no cuesta una sola llamada ────────────────────
   //
-  // Lo que el motor puede medir solo, MÁS lo que el cliente haya medido sobre el
-  // documento renderizado. El cliente gana cuando manda algo: una medición sobre
-  // el PDF de verdad vale más que una derivada de los datos.
+  // ── UN SOLO DUEÑO PARA «¿ESTE CV SE LEE BIEN?» (CEO, 2026-09-09) ──────────
   //
-  // Hoy el panel manda `{}` y este pilar sale entero de `readableChecks`. Queda
-  // dicho para que nadie lea la línea de abajo como que el PDF ya se mide.
-  const checks = { ...readableChecks(tree), ...input.checks }
+  // Acá se fusionaba lo que el motor mide con lo que mandara el CLIENTE, y el
+  // cliente ganaba: `{ ...readableChecks(tree), ...input.checks }`. La idea era
+  // dejar lugar a una medición futura sobre el PDF renderizado — pero esa
+  // medición no existe, el panel manda `{}`, y mientras tanto la pregunta tenía
+  // dos dueños con el de afuera decidiendo. El borde aceptaba cualquier clave
+  // con cualquier booleano y pisaba lo que el motor había leído del documento.
+  //
+  // El motor lee el CV: es el único que lo tiene entero delante. Si algún día se
+  // mide el PDF de verdad, esa medición entra como un chequeo MÁS de
+  // `readableChecks`, no como alguien que le corrige la respuesta desde afuera.
+  const checks = readableChecks(tree)
   /**
    * Los pesos salen del TEXTO del aviso, no del modelo: la misma vacante da
    * siempre el mismo peso. Viajan con el puntaje porque la pantalla vuelve a
@@ -703,6 +865,48 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     telemetry.calls++
     await input.store.write("ats3-triage", triageKey, decisions)
   }
+  /**
+   * EL TECHO DE SEIS VIÑETAS POR PUESTO, CON SALIDA DE VERDAD.
+   *
+   * ── POR QUÉ ES UN VEREDICTO Y NO UN HALLAZGO (orden del CEO) ───────────────
+   * «Si ves viñetas a mejorar y ya tenés 6, sugerí eliminar la más débil.» Un
+   * hallazgo habría necesitado un remedio nuevo, un botón nuevo, una
+   * confirmación nueva y su propio deshacer — cuatro piezas para algo que el
+   * tablero YA hace: muestra la línea exacta, pide confirmación antes de borrar
+   * y ofrece devolverla. Y el tablero se llama «Qué merece el espacio de la
+   * página», que es literalmente esta pregunta.
+   *
+   * Así además no se pisa con nada: como DROP cierra la línea, esa viñeta deja
+   * de recibir tarjetas pidiéndole mejoras. El panel no puede decir «sacala» y
+   * «mejorala» a la vez.
+   *
+   * NO PISA AL MODELO: sólo habla de viñetas sobre las que el triage no dijo
+   * nada. Si el modelo ya decidió esa línea, manda él.
+   */
+  const conVeredicto = new Set(decisions.map((d) => d.bulletId))
+  for (const role of tree.roles) {
+    const sobran = role.bullets.length - BULLETS_PER_ROLE_MAX
+    if (sobran <= 0) continue
+    const candidatas = role.bullets.filter((b) => !conVeredicto.has(b.id))
+    // La más débil primero: la que menos términos del aviso dice y más corta es
+    // — la misma señal con la que el motor elige dónde aterrizar un requisito.
+    const porDebilidad = [...candidatas].sort((a, b) => peso(a.text, index) - peso(b.text, index))
+    for (const b of porDebilidad.slice(0, sobran)) {
+      decisions.push({
+        bulletId: b.id,
+        verdict: "DROP",
+        reason:
+          input.language === "en"
+            ? `This role has ${role.bullets.length} bullets and ${BULLETS_PER_ROLE_MAX} get read: this is the weakest of the block.`
+            : `Este puesto tiene ${role.bullets.length} viñetas y se leen ${BULLETS_PER_ROLE_MAX}: ésta es la más débil del bloque.`,
+        relevance: 0,
+        proposedTopic: null,
+        needsUserConfirm: null,
+      })
+      conVeredicto.add(b.id)
+    }
+  }
+
   yield { act: "triage", decisions, budget: budget.perRole }
 
   // ── los hallazgos, filtrados por lo que el usuario ya resolvió ────────────
@@ -739,11 +943,23 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    * hallazgos que NO son de una viñeta —un requisito que falta, el resumen, la
    * lectura del documento— no los toca esta regla: no hay veredicto sobre ellos.
    */
-  const cerradas = new Set(decisions.filter((d) => d.verdict === "KEEP" || d.verdict === "DROP").map((d) => d.bulletId))
+  /**
+   * UN VEREDICTO SOBRE LA LÍNEA CIERRA LA LÍNEA. LOS CUATRO.
+   *
+   * Estaban sólo KEEP y DROP. DEMOTE dice «se comprime» y REPLACE dice «ésta es
+   * la más débil, la vacante exige otra cosa» — y aun así la línea seguía
+   * recibiendo tarjetas pidiendo METERLE contenido: tejé esta blanda, agregá el
+   * método que falta. Agrandar lo que el tablero manda achicar o reemplazar.
+   *
+   * REWRITE es el único que NO cierra, y es correcto: «relevante pero floja» es
+   * exactamente la puerta que las tarjetas abren.
+   */
+  const CIERRAN: Verdict[] = ["KEEP", "DROP", "DEMOTE", "REPLACE"]
+  const cerradas = new Set(decisions.filter((d) => CIERRAN.includes(d.verdict)).map((d) => d.bulletId))
   const vigentes = all.filter((f) => !cerradas.has(f.nodeId))
 
   const seen = loyalty(vigentes, log)
-  yield { act: "findings", findings: seen.shown, suppressed: seen.suppressed.length, regressed: seen.regressed }
+  yield { act: "findings", findings: seen.shown, suppressed: seen.suppressed.length, regressed: seen.regressed, resolved: log }
 
   return telemetry
 }
@@ -804,6 +1020,8 @@ export interface RewriteRequest {
   language: "es" | "en"
   model: string
   jdKey: string
+  /** Lo que la tarjeta prometió cerrar. Ver `RewriteInput.focus`. */
+  focus?: string
   ai: AtsAi
   store: AtsStore
 }
@@ -832,7 +1050,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
 
   const isSummary = req.nodeId === req.tree.summary.id
   const sig = ledgerSignature(req.ledger)
-  const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, sig, req.model)
+  const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, sig, req.model, req.focus)
 
   // La línea que se reemplaza suelta su propia apertura: si no, choca consigo
   // misma y el modelo elige un verbo peor para esquivar un conflicto inexistente.
@@ -840,45 +1058,22 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   const ctx = {
     original: node.text,
     index: req.index,
-    declared: req.tree.declaredSkills,
     ledger,
     isSummary,
+    language: req.language,
     /**
-     * EL RESUMEN SE JUZGA CONTRA EL CV ENTERO, NO CONTRA EL RESUMEN VIEJO.
+     * LAS OTRAS LÍNEAS DEL CV, para que una reescritura no vuelva calcada a una
+     * viñeta que ya existe (orden del CEO, 2026-09-09). Se excluye la que se
+     * está reemplazando: chocaría contra sí misma, igual que el verbo.
      *
-     * Un resumen habla de todo el documento —a P5 se le mandan las mejores
-     * viñetas justamente para eso— así que nombrar una capacidad que una viñeta
-     * demuestra NO es inventarla. Con el resumen viejo como única vara, un
-     * candidato cuyo resumen decía «Cajero con experiencia» no podía escribir
-     * «conciliaciones» aunque su propio CV lo probara dos líneas más abajo.
-     *
-     * Lo que NO se puede perder sigue siendo el original y sólo el original: son
-     * dos preguntas y ahora tienen dos campos.
-     *
-     * ── LO QUE ESTO AFLOJA, MEDIDO SOBRE TRES OFICIOS ──────────────────────────
-     * `supportedByOriginal` da por respaldado un término si alguna de sus
-     * palabras comparte cuatro letras con el respaldo, y con el CV entero esa
-     * superficie es mucho mayor que con una viñeta. Medido sobre cajero,
-     * enfermera y soldador, con los términos propios de cada oficio y doce
-     * ajenos de otros rubros:
-     *
-     *   legítimos que ahora pasan   8 de 9
-     *   ajenos que se cuelan        2 de 36  (6%)  — «compras» contra
-     *                               «comprobantes», «contabilidad» contra
-     *                               «Controlé»: colisiones de prefijo
-     *
-     * Se acepta: del otro lado el resumen no podía nombrar NADA que su propio CV
-     * demostrara, que es rechazo seguro del 100%. Y el 6% no queda sin dueño —
-     * P6 juzga lo semántico después, y el prompt lo prohíbe en prosa. Subir la
-     * raíz a seis letras rompería «atención» contra «atendí», que este proyecto
-     * midió y fijó en cuatro a propósito.
-     *
-     * La cifra NO se afloja: medido, una cifra que el CV ya dice pasa, y una
-     * nueva sigue bloqueada.
+     * Acá vivía `grounding` —el CV entero como respaldo de lo que el resumen
+     * podía nombrar—, que existía sólo para `invented_term` e `invented_figure`.
+     * Sin esos dos guards no tiene a quién contestarle.
      */
-    grounding: isSummary
-      ? [node.text, ...req.tree.roles.flatMap((r) => r.bullets.map((b) => b.text)), ...req.tree.declaredSkills].join(" . ")
-      : undefined,
+    siblings: req.tree.roles
+      .flatMap((r) => r.bullets)
+      .filter((b) => b.id !== req.nodeId)
+      .map((b) => b.text),
   }
 
   /**
@@ -918,24 +1113,32 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           spec: req.spec,
           ledger,
           declaredSkills: req.tree.declaredSkills,
+          focus: req.focus,
+          /**
+           * LAS OTRAS LÍNEAS DEL PUESTO, para que no repita ninguna.
+           *
+           * El guard rechaza una reescritura calcada a otra viñeta, y hasta hoy
+           * el modelo nunca las había visto: se lo castigaba por repetir algo
+           * que nadie le mostró. Prevenir en la fuente cuesta cero tokens.
+           */
+          siblings: req.tree.roles
+            .flatMap((r) => r.bullets)
+            .filter((b) => b.id !== req.nodeId)
+            .map((b) => b.text),
           nudge,
         })
 
   /**
-   * EL TECHO DE ESTE CAMINO SON SEIS LLAMADAS, Y LA CUOTA SE COBRA UNA.
+   * EL TECHO DE ESTE CAMINO SON TRES LLAMADAS, Y LA CUOTA SE COBRA UNA.
    *
-   * Se acumulan porque cada reintento responde a algo distinto y ninguno sabe de
-   * los otros: la propuesta (1), el reintento por declinar contradiciendo lo que
-   * el propio modelo declaró (2), el reintento por guard (3), la verificación de
-   * P6 (4), el reintento por prometer una cifra y no ofrecer el hueco (5) y su
-   * verificación (6).
+   * La propuesta (1), el reintento por declinar contradiciendo lo que el propio
+   * modelo declaró (2), y el reintento por prometer una cifra y no ofrecer el
+   * hueco (3). El reintento por guard comparte ranura con el primero de esos
+   * dos, así que ninguna corrida los suma todos.
    *
-   * Cada uno está justificado por separado y la regla de «nunca dos reintentos»
-   * se cumple DENTRO de cada motivo. Lo que nadie declaró es el total: el tope
-   * diario existe para frenar el gasto y acá una ranura compra hasta seis
-   * llamadas. No se pone un techo acá porque elegir el número sin la
-   * distribución real sería elegirlo a ojo, y el dato ya se guarda: `AIUsageLog`
-   * escribe una fila por petición con sus tokens. Se mide ahí antes de acotar.
+   * Eran SEIS hasta el 2026-09-09. Bajaron solas al sacar lo que el CEO mandó
+   * sacar: el reintento por verbo repetido, la verificación de P6 y su segunda
+   * verificación. Menos llamadas por la misma ranura, no más.
    */
   let calls = 0
   let first = await ask()
@@ -973,6 +1176,19 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     if (!first.changed) return { ok: false, alreadyGood: true, calls }
   }
 
+  /**
+   * LA TERCERA PERSONA REGULAR SE CORRIGE, NO SE RECHAZA.
+   *
+   * «Atendió a los clientes» costaba la reescritura entera y la ranura de cuota
+   * por una letra que el código sabe conjugar. Se arregla acá, antes de juzgar;
+   * lo que el código NO puede probar —un irregular, un sustantivo— sigue cayendo
+   * en el guard, que es la respuesta honesta.
+   */
+  if (req.language !== "en") {
+    const enPrimera = toFirstPerson(first.text)
+    if (enPrimera) first = { ...first, text: enPrimera }
+  }
+
   let verdict = checkSuggestion(first, ctx)
 
   if (!verdict.ok) {
@@ -983,13 +1199,25 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   }
   if (!verdict.ok) return { ok: false, verdict, calls }
 
-  // El validador del modelo corre AL FINAL y sólo puede rechazar: nunca aprueba
-  // algo que los guards rechazaron. Si discrepan, gana el código.
-  const check = await req.ai.verify(node.text, first.text, req.tree.declaredSkills)
-  calls++
-  if (!check.pass) {
-    return { ok: false, verdict: { ok: false, reason: "invented_term", detail: check.reason }, calls }
-  }
+  /**
+   * ── ACÁ CORRÍA P6, EL VALIDADOR (CEO, 2026-09-09) ──────────────────────────
+   *
+   * Era una llamada más al modelo, DESPUÉS de que los guards dieran OK, con una
+   * sola tarea: «detectar si la reescritura afirma algo que el original no
+   * sostiene» — herramienta no declarada, entidad nueva, cifra no dada. Es
+   * exactamente la pregunta de `invented_term` e `invented_figure`, que el CEO
+   * mandó sacar. Dejarlo habría vuelto la orden un no-op: la misma reescritura
+   * seguiría muriendo, sólo que decidido por un segundo modelo en vez de por el
+   * código, y cobrando una llamada extra por hacerlo.
+   *
+   * Ya había tenido que acotarse una vez porque borraba producto: haciéndole
+   * caso a todo, la entrega caía de 14/15 a 9/15 — etiquetaba como invención el
+   * vocabulario del oficio («estilismo», «salón», «datos clínicos»), que es lo
+   * que la doctrina obliga a nombrar.
+   *
+   * Efecto medido por construcción: el techo de esta función baja de CINCO
+   * llamadas a TRES.
+   */
 
   /**
    * ── LA CIFRA QUE EL MODELO DECLARÓ Y NO OFRECIÓ ────────────────────────────
@@ -1013,9 +1241,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     )
     calls++
     if (segunda.changed && segunda.placeholders.length > 0 && checkSuggestion(segunda, ctx).ok) {
-      const revisada = await req.ai.verify(node.text, segunda.text, req.tree.declaredSkills)
-      calls++
-      if (revisada.pass) first = segunda
+      first = segunda
     }
   }
 

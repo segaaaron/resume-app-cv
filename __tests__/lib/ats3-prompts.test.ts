@@ -8,7 +8,6 @@ import {
   triagePrompt,
   bulletPrompt,
   summaryPrompt,
-  verifyPrompt,
   truthRule,
   figureRule,
 } from "@/lib/services/ai/modules/AIAts3Module"
@@ -31,10 +30,9 @@ const PROMPTS = [
   ["P3 triage", triagePrompt],
   ["P4 viñeta", bulletPrompt],
   ["P5 resumen", summaryPrompt],
-  ["P6 validador", verifyPrompt],
 ] as const
 
-describe("los seis prompts existen en los dos idiomas", () => {
+describe("los cinco prompts existen en los dos idiomas", () => {
   for (const [name, build] of PROMPTS) {
     it(`${name}: las dos ramas están escritas y son distintas`, () => {
       const es = build("es")
@@ -54,7 +52,7 @@ describe("los seis prompts existen en los dos idiomas", () => {
   }
 })
 
-describe("ninguno de los seis pide puntos", () => {
+describe("ninguno de los cinco pide puntos", () => {
   for (const [name, build] of PROMPTS) {
     it(`${name}: prohíbe explícitamente devolver puntaje`, () => {
       // El modelo que escribe la mejora no puede decidir cuánto vale: no conoce
@@ -94,13 +92,6 @@ describe("las reglas que no pueden faltar", () => {
   it("el resumen NO admite huecos, en los dos idiomas", () => {
     expect(summaryPrompt("es").toLowerCase()).toContain("huecos")
     expect(summaryPrompt("en").toLowerCase()).toContain("slots")
-  })
-
-  it("el validador tiene prohibido marcar el enriquecimiento legítimo", () => {
-    // Un validador que castiga explicar el oficio rompe justo lo que el
-    // producto cobra.
-    expect(verifyPrompt("es")).toContain("QUÉ NO ES UNA VIOLACIÓN")
-    expect(verifyPrompt("en")).toContain("WHAT IS NOT A VIOLATION")
   })
 
   it("el triage nunca deja un puesto sin viñetas", () => {
@@ -217,36 +208,13 @@ describe("los cuatro modos de fallo se distinguen", () => {
   })
 })
 
-describe("qué de lo que dice el verificador BLOQUEA de verdad", () => {
-  /**
-   * P6 no es el juez final: es un modelo opinando sobre otro. Las tres reglas
-   * salieron de medir cinco oficios contra la API — hacerle caso a todo bajaba
-   * la entrega de 14/15 a 9/15, y lo que tiraba era el valor del producto.
-   */
-  const verificador = (violations: { type: string; evidence: string }[]) =>
-    new ScriptedClient(JSON.stringify({ verdict: violations.length ? "FAIL" : "PASS", violations }))
-
-  it("un HUECO no es una cifra inventada: el hueco existe porque el candidato no la dio", async () => {
-    const c = verificador([{ type: "FIGURE_NOT_GIVEN", evidence: "[n registros/turno]" }])
-    expect((await mod(c).verify("Cargué los datos", "Cargué [n registros/turno]", [])).pass).toBe(true)
-  })
-
-  it("el vocabulario del oficio NO es una entidad inventada", async () => {
-    // "estilismo" y "salón" describen el trabajo; la doctrina OBLIGA a nombrarlo.
-    const c = verificador([{ type: "UNDECLARED_ENTITY", evidence: "organizar la agenda del salón" }])
-    expect((await mod(c).verify("Atendí el teléfono", "Coordiné turnos y agenda del salón", [])).pass).toBe(true)
-  })
-
-  it("pero un NOMBRE PROPIO que nadie declaró sí bloquea", async () => {
-    const c = verificador([{ type: "UNDECLARED_ENTITY", evidence: 'nombra "Temenos", que no está en el original' }])
-    expect((await mod(c).verify("Atendí la caja", "Operé Temenos en la caja", [])).pass).toBe(false)
-  })
-
-  it("y inflar el rol bloquea siempre", async () => {
-    const c = verificador([{ type: "INFLATED_ROLE", evidence: 'original dice "participé", reescritura dice "coordiné"' }])
-    expect((await mod(c).verify("Participé en las reuniones", "Coordiné las reuniones", [])).pass).toBe(false)
-  })
-})
+/*
+ * ── ACÁ SE MEDÍA QUÉ DE P6 BLOQUEABA (retirado el 2026-09-09) ───────────────
+ * P6 era un modelo opinando sobre otro, y preguntaba exactamente lo mismo que
+ * `invented_term` e `invented_figure`: el CEO mandó sacar los tres. Con los
+ * guards fuera, dejar la llamada habría costado un turno del modelo por
+ * reescritura para hacer cumplir una regla que ya no existe.
+ */
 
 describe("lo que NO viaja al modelo", () => {
   it("ni nombre, ni edad, ni foto, ni nacionalidad", async () => {
@@ -304,7 +272,6 @@ describe("cada prompt viaja con su versión", () => {
     P3: { version: PROMPT_VERSION.P3, huella: huella(triagePrompt("es") + triagePrompt("en")) },
     P4: { version: PROMPT_VERSION.P4, huella: huella(bulletPrompt("es") + bulletPrompt("en")) },
     P5: { version: PROMPT_VERSION.P5, huella: huella(summaryPrompt("es") + summaryPrompt("en")) },
-    P6: { version: PROMPT_VERSION.P6, huella: huella(verifyPrompt("es") + verifyPrompt("en")) },
   }
   /**
    * La foto: qué versión corresponde a qué texto, al 2026-08-29. Se actualiza a
@@ -390,24 +357,6 @@ describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas"
   })
 })
 
-it("el verificador puede no citar el fragmento y su respuesta NO se tira", async () => {
-  // Medido contra la API (2026-08-29): P6 devolvió `evidence: null` —el prompt
-  // le dice que un campo sin dato va en null— y el esquema descartaba la
-  // respuesta entera, perdiendo la reescritura con la llamada ya pagada.
-  const cliente: IAIClient = {
-    async chat() {
-      return {
-        choices: [{ message: { content: JSON.stringify({ verdict: "FAIL", violations: [{ type: "UNDECLARED_TOOL", evidence: null }] }) }, finish_reason: "stop" }],
-      } as unknown as ChatCompletion
-    },
-    async embed() { return [] },
-  }
-  const mod = new AIAts3Module({ client: cliente, model: "m", language: "es" })
-  const r = await mod.verify("original", "reescritura", [])
-  expect(r.pass).toBe(false)
-  expect(r.reason).toContain("UNDECLARED_TOOL")
-})
-
 /**
  * Los tres esquemas que viven en el módulo de prompts, contra el mismo peor
  * caso: TODOS los campos en null. La auditoría es el que más importa — corre en
@@ -435,13 +384,6 @@ describe("tampoco mueren los esquemas del módulo", () => {
     const c = responde({ decisions: [{ bulletId: null, verdict: "NO_EXISTE" }, { bulletId: "b1", verdict: "KEEP", reason: null, relevance: null }] })
     const r = await mod(c).triage({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec, { bullets: [], summary: { identity: false, proof: false, fit: false, extra: false }, coverage: [], softCoverage: [], titleAlignment: 0 }, {})
     expect(r.map((d) => d.bulletId)).toEqual(["b1"])
-  })
-
-  it("el verificador (P6) con un veredicto desconocido NO rechaza por las dudas", async () => {
-    // Sólo puede RECHAZAR: ante un veredicto que no reconocemos, la decisión
-    // vuelve al código, que ya juzgó con sus doce guards.
-    const c = responde({ verdict: "MAYBE", violations: null })
-    expect((await mod(c).verify("a", "b", [])).pass).toBe(true)
   })
 
   it("la vacante se pide ORDENADA por peso, y dice qué número le importa al puesto", () => {

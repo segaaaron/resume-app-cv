@@ -53,7 +53,8 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     // La línea la dice el HALLAZGO (`nodeId`), no una copia dentro de la fila:
     // el mismo dato en dos objetos es como terminan diciendo cosas distintas.
     const req = checkOf(finding({ type: "missing_requirement", component: "must", nodeId: "b_7" }))
-    expect(req.owner).toBe("tailor")
+    expect(req.section).toBe("hard")
+    expect(req.titleKey).toBe("type_missing_requirement")
   })
 
   it("los puntos que promete la fila son los que midió el motor", () => {

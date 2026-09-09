@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
   checkSuggestion,
-  inventedTerms,
-  inventedFigure,
   droppedTerms,
   wrongPerson,
   addsNothing,
@@ -39,7 +37,6 @@ const ledger = (over: Partial<Ledger> = {}): Ledger => ({
 const ctx = (over: Partial<GuardContext> = {}): GuardContext => ({
   original: "Trabajé en la caja del local",
   index: buildTermIndex([]),
-  declared: [],
   ledger: ledger(),
   ...over,
 })
@@ -56,99 +53,6 @@ const sug = (over: Partial<Suggestion> = {}): Suggestion => ({
   variantWithoutMetric: null,
   measurableAspect: null, declineBasis: null,
   ...over,
-})
-
-describe("una capacidad inventada se rechaza", () => {
-  it("nombra una herramienta que no está en el original ni en lo declarado", () => {
-    const c = ctx({
-      original: "Llevé el control del stock del depósito",
-      index: buildTermIndex([{ canonical: "SAP", variants: [] }, { canonical: "Excel", variants: [] }]),
-      declared: ["Excel"],
-    })
-    expect(inventedTerms("Llevé el control del stock del depósito en SAP", c)).toEqual(["SAP"])
-  })
-
-  it("pero SÍ puede nombrar lo que el candidato declaró en sus habilidades", () => {
-    const c = ctx({
-      original: "Llevé el control del stock del depósito",
-      index: buildTermIndex([{ canonical: "Excel", variants: [] }]),
-      declared: ["Excel"],
-    })
-    expect(inventedTerms("Llevé el control del stock del depósito con planillas de Excel", c)).toEqual([])
-  })
-})
-
-describe("tejer el término de la vacante NO es afirmar de más", () => {
-  /**
-   * Medido contra la API real: "Atendí a los clientes en la línea de cajas" →
-   * "Realicé atención al público en línea de cajas…". El guard marcaba
-   * "atención al público" como capacidad afirmada de la nada y rechazaba 3 de 3
-   * reescrituras. Tejer el término que la vacante busca es para lo que sirve el
-   * producto.
-   */
-  it("acepta el término del aviso cuando la línea ya habla de eso", () => {
-    const c = ctx({
-      original: "Atendí a los clientes en la línea de cajas",
-      index: buildTermIndex([{ canonical: "Atención al público", variants: ["atención al cliente"] }]),
-    })
-    expect(inventedTerms("Realicé atención al público en línea de cajas gestionando cobros", c)).toEqual([])
-  })
-
-  it("pero NO lo acepta cuando la línea no lo respalda", () => {
-    const c = ctx({
-      original: "Llevé el control del stock del depósito",
-      index: buildTermIndex([{ canonical: "SAP", variants: [] }, { canonical: "Gestión de SAP", variants: [] }]),
-    })
-    expect(inventedTerms("Llevé la gestión de SAP del depósito", c)).toContain("Gestión de SAP")
-  })
-
-  /**
-   * ── EL LÍMITE DEL GUARD, MEDIDO Y ESCRITO PARA QUE NADIE LO REINTENTE ──────
-   *
-   * "Gestión de Salesforce" apoyada sólo en la palabra "gestión" PASA este
-   * guard, y es deliberado. La vara estricta —exigir la palabra más específica—
-   * se midió contra la API en cinco oficios y rechazó 3 de 15 líneas que eran
-   * trabajo legítimo ("control de calidad de cordón" sobre "Revisé que las
-   * piezas salieran bien"; "manejo de grupo" sobre "Di clases a los chicos").
-   * Cerrar ese 20% de falsos positivos cuesta el valor central del producto.
-   *
-   * El caso NO queda sin dueño: lo juzga P6, y en esa misma medición lo hizo
-   * bien —cazó "sistema clínico" como entidad que el original no sostiene—.
-   * El código decide lo que puede PROBAR; lo semántico tiene verificador.
-   */
-  it("un término apoyado en una sola palabra pasa el código y queda para P6", () => {
-    const c = ctx({
-      original: "Hice la gestión de turnos del consultorio",
-      index: buildTermIndex([{ canonical: "Gestión de Salesforce", variants: [] }]),
-    })
-    expect(inventedTerms("Hice la gestión de Salesforce del consultorio", c)).toEqual([])
-  })
-
-  it("pero un término sin NADA en común sigue rechazado por el código", () => {
-    const c = ctx({
-      original: "Llevé el control del stock del depósito",
-      index: buildTermIndex([{ canonical: "Anestesia general", variants: [] }]),
-    })
-    expect(inventedTerms("Apliqué anestesia general en el depósito", c)).toContain("Anestesia general")
-  })
-})
-
-describe("EL CASO QUE UN GUARD ANCHO ROMPERÍA — y es lo que el producto cobra", () => {
-  /**
-   * "Realicé el arqueo" → "Cuadré efectivo, comprobantes y diferencias del
-   * turno". Seis palabras nuevas, ninguna es un hecho sobre la persona: es lo
-   * que un arqueo ES. La vara "palabras que no estaban antes" rechazaría esto,
-   * y con eso se cae el valor entero del producto.
-   */
-  it("enriquecer con el vocabulario del oficio NO es inventar", () => {
-    const c = ctx({ original: "Realicé el arqueo de caja", index: buildTermIndex([{ canonical: "Arqueo de caja", variants: ["arqueo"] }]) })
-    expect(inventedTerms("Cuadré efectivo, comprobantes y diferencias del turno en el arqueo de caja", c)).toEqual([])
-  })
-
-  it("lo mismo en un oficio manual", () => {
-    const c = ctx({ original: "Hice mantenimiento de las máquinas", index: buildTermIndex([]) })
-    expect(inventedTerms("Ejecuté el mantenimiento preventivo de las máquinas revisando lubricación y desgaste", c)).toEqual([])
-  })
 })
 
 describe("el CV habla de lo que la persona HIZO", () => {
@@ -179,26 +83,9 @@ describe("el CV habla de lo que la persona HIZO", () => {
       sug({ text: "Controló los signos vitales de los pacientes en cada turno", actionVerb: "Controló" }),
       ctx({ original: "Controlé a los pacientes" }),
     )
-    expect(v.ok).toBe(false)
-    if (!v.ok) expect(v.reason).toBe("wrong_person")
-  })
-})
-
-describe("la cifra la escribe el candidato", () => {
-  it("un número que el original no tenía se rechaza", () => {
-    expect(inventedFigure("Reduje las esperas un 40%", "Reduje las esperas", sug())).toBe("40")
-  })
-
-  it("un hueco tipado NO es una violación: es exactamente lo que se pide", () => {
-    expect(inventedFigure("Reduje las esperas un [x%]", "Reduje las esperas", sug())).toBeNull()
-  })
-
-  it("la cifra que el candidato ya había escrito sobrevive sin acusarlo", () => {
-    expect(inventedFigure("Atendí 40 mesas por turno con dos mozos", "Atendí 40 mesas", sug())).toBeNull()
-  })
-
-  it("el mismo número escrito distinto es el mismo número", () => {
-    expect(inventedFigure("Facturé 1,400 dólares", "Facturé 1.400 dólares", sug())).toBeNull()
+    // La persona ya NO rechaza: se corrige lo que el código sabe conjugar y lo
+    // demás se entrega. `wrongPerson` sigue siendo quien lo detecta.
+    expect(v.ok).toBe(true)
   })
 })
 
@@ -247,48 +134,68 @@ describe("el chequeo completo", () => {
   })
 
   /**
-   * Estos dos casos existen porque su ausencia se MIDIÓ: con los guards de
-   * invención desconectados a propósito, los 27 tests seguían en verde. Probar
-   * la función suelta no prueba que el chequeo completo la LLAME.
+   * ── LO QUE EL CEO MANDÓ SACAR (2026-09-09) ────────────────────────────────
+   *
+   * Acá vivían dos casos de punta a punta: una herramienta que el candidato
+   * nunca declaró y una cifra que nunca dio, las dos tirando la reescritura
+   * entera. Los guards que las cazaban ya no existen — la regla vive en el
+   * prompt, y la decisión, en la hoja de confirmación.
+   *
+   * En su lugar queda el que el CEO SÍ pidió: una viñeta no puede salir igual
+   * a otra del CV.
    */
-  it("rechaza de punta a punta una herramienta que el candidato nunca declaró", () => {
+  it("rechaza de punta a punta una reescritura calcada a OTRA viñeta del CV", () => {
     const v = checkSuggestion(
-      sug({ text: "Controlé el stock del depósito con SAP y reportes semanales", actionVerb: "Controlé" }),
+      sug({ text: "Coordiné la agenda del consultorio con los pacientes", actionVerb: "Coordiné" }),
       ctx({
-        original: "Llevé el control del stock del depósito",
-        index: buildTermIndex([{ canonical: "SAP", variants: [] }]),
-        declared: ["Excel"],
+        original: "Atendí el teléfono del consultorio",
+        siblings: ["Coordiné la agenda del consultorio con los pacientes"],
       }),
     )
     expect(v.ok).toBe(false)
-    if (!v.ok) expect(v.reason).toBe("invented_term")
+    if (!v.ok) expect(v.reason).toBe("repeats")
   })
 
-  it("rechaza de punta a punta una cifra que el candidato nunca dio", () => {
+  it("pero una reescritura que NO repite a ninguna vecina pasa", () => {
     const v = checkSuggestion(
-      sug({ text: "Reduje las esperas un 40% reorganizando la atención del turno", actionVerb: "Reduje" }),
-      ctx({ original: "Reduje las esperas reorganizando la atención" }),
+      sug({ text: "Coordiné la agenda del consultorio con los pacientes", actionVerb: "Coordiné" }),
+      ctx({
+        original: "Atendí el teléfono del consultorio",
+        siblings: ["Preparé los informes mensuales de facturación para la obra social"],
+      }),
     )
-    expect(v.ok).toBe(false)
-    if (!v.ok) expect(v.reason).toBe("invented_figure")
+    expect(v.ok).toBe(true)
   })
 
-  it("rechaza si el verbo ya abre otra línea del CV", () => {
+  /**
+   * REPETIR UN VERBO NO TIRA LA REESCRITURA (orden del CEO, 2026-09-09).
+   *
+   * Era el único guard que rechazaba por ESTILO y no por una mentira o una
+   * pérdida, y con eso quemaba la ranura de cuota del usuario. La regla vive
+   * ahora sólo en el prompt, que recibe la lista entera de verbos usados.
+   */
+  it("NO rechaza porque el verbo ya abra otra línea del CV", () => {
     const v = checkSuggestion(
       sug({ text: "Gestioné el inventario completo del depósito con control semanal", actionVerb: "Gestioné" }),
       ctx({ original: "Me encargaba del inventario", ledger: ledger({ verbsUsed: ["gestione"] }) }),
     )
-    expect(v.ok).toBe(false)
-    if (!v.ok) expect(v.reason).toBe("verb_collision")
+    expect(v.ok).toBe(true)
   })
 
-  it("rechaza si el logro ya tiene dueño en otra viñeta", () => {
+  /**
+   * EL LOGRO REPETIDO SE MIDE SOBRE EL TEXTO, NO SOBRE EL `claim` DECLARADO.
+   *
+   * La versión vieja comparaba la frase que el modelo declara contra los logros
+   * del ledger con 60% de solape: sobre tres palabras, dos compartidas ya son
+   * 66%. Se disparaba sola, y sobre un dato que el modelo se inventa. La
+   * pregunta la contesta el caso de arriba, contra las viñetas de verdad.
+   */
+  it("NO rechaza por el `claim` que el modelo declara", () => {
     const v = checkSuggestion(
       sug({ text: "Ordené el depósito completo reduciendo los faltantes del mes", claim: "reducción de faltantes", actionVerb: "Ordené" }),
       ctx({ original: "Acomodé el depósito", ledger: ledger({ claimsMade: ["faltantes reducidos"] }) }),
     )
-    expect(v.ok).toBe(false)
-    if (!v.ok) expect(v.reason).toBe("duplicate_claim")
+    expect(v.ok).toBe(true)
   })
 
   it("el resumen NO puede llevar un hueco: es la primera línea que se lee", () => {
@@ -306,18 +213,19 @@ describe("el chequeo completo", () => {
    * "no tengo ese dato". El guard revisaba `text` y NUNCA la variante: una cifra
    * ahí, o un corchete olvidado, entraba al documento sin pasar por nada.
    */
-  it("la variante sin cifra también se juzga: no puede traer un número inventado", () => {
+  it("la variante sin cifra también se juzga: tampoco puede repetir otra línea", () => {
     const v = checkSuggestion(
       sug({
         text: "Atendí a [n] clientes por turno resolviendo consultas",
         actionVerb: "Atendí",
         placeholders: [{ token: "[n]", type: "SCALE", label: "l", hint: "h", evidenceNeeded: "e", required: true }],
-        variantWithoutMetric: "Atendí a 300 clientes por turno resolviendo consultas",
+        variantWithoutMetric: "Atendió a los clientes por turno resolviendo consultas",
       }),
       ctx({ original: "Atendí a los clientes en la línea de cajas" }),
     )
-    expect(v.ok).toBe(false)
-    if (!v.ok) expect(v.reason).toBe("invented_figure")
+    // La persona ya NO rechaza: se corrige lo que el código sabe conjugar y lo
+    // demás se entrega. `wrongPerson` sigue siendo quien lo detecta.
+    expect(v.ok).toBe(true)
   })
 
   it("la variante NO puede quedarse con un hueco sin llenar", () => {
@@ -340,7 +248,7 @@ describe("el chequeo completo", () => {
     if (!v.ok) expect(v.reason).toBe("stale")
   })
 
-  it("más de un hueco obligatorio se rechaza", () => {
+  it("dos huecos obligatorios se ACEPTAN: es la forma que el CEO pidió", () => {
     const slot = (required: boolean) => ({
       token: "[x%]",
       type: "PERCENT_DELTA" as const,
@@ -351,6 +259,26 @@ describe("el chequeo completo", () => {
     })
     const v = checkSuggestion(
       sug({ text: "Reduje las esperas un [x%] atendiendo a [n] pacientes por día", placeholders: [slot(true), slot(true)], actionVerb: "Reduje" }),
+      ctx({ original: "Reduje las esperas atendiendo pacientes" }),
+    )
+    expect(v.ok).toBe(true)
+  })
+
+  it("tres huecos en una línea siguen siendo un formulario", () => {
+    const slot = (token: string) => ({
+      token,
+      type: "PERCENT_DELTA" as const,
+      label: "l",
+      hint: "h",
+      evidenceNeeded: "e",
+      required: true,
+    })
+    const v = checkSuggestion(
+      sug({
+        text: "Reduje las esperas un [x%] atendiendo a [n] pacientes por día en [t] minutos",
+        placeholders: [slot("[x%]"), slot("[n]"), slot("[t]")],
+        actionVerb: "Reduje",
+      }),
       ctx({ original: "Reduje las esperas atendiendo pacientes" }),
     )
     expect(v.ok).toBe(false)
@@ -431,7 +359,7 @@ describe("lealtad: no volver a señalar lo que el usuario ya resolvió", () => {
 
 describe("el rechazo le dice al modelo QUÉ falló", () => {
   it("en los dos idiomas, y nunca vacío", () => {
-    const v = { ok: false as const, reason: "verb_collision" as const, detail: "Lideré" }
+    const v = { ok: false as const, reason: "repeats" as const, detail: "Lideré" }
     expect(retryNudge(v, "es")).toContain("Lideré")
     expect(retryNudge(v, "en")).toContain("Lideré")
     expect(retryNudge(v, "es").length).toBeGreaterThan(10)
@@ -440,8 +368,7 @@ describe("el rechazo le dice al modelo QUÉ falló", () => {
 
   it("todo motivo de rechazo tiene su explicación en los dos idiomas", () => {
     const reasons = [
-      "invented_term", "invented_figure", "verb_collision", "keyword_over_budget",
-      "duplicate_claim", "drops_content", "adds_nothing", "too_many_placeholders",
+      "repeats", "drops_content", "too_many_placeholders",
       "placeholder_in_summary", "stale", "empty",
     ] as const
     for (const reason of reasons) {
@@ -462,13 +389,19 @@ describe("el rechazo le dice al modelo QUÉ falló", () => {
  * escribir un número que el candidato no dio.
  */
 describe("la variante sin cifra se juzga igual que el texto principal", () => {
-  it("rechaza una variante escrita en tercera persona", () => {
+  /**
+   * LA PERSONA YA NO RECHAZA, ACÁ NI EN EL TEXTO PRINCIPAL (CEO, 2026-09-09).
+   *
+   * Lo regular lo corrige el motor antes de juzgar; lo demás se entrega y lo ve
+   * el usuario en la confirmación, que es quien firma el CV. Lo que la variante
+   * SÍ sigue sin poder hacer es perder lo que la línea decía o repetir a otra.
+   */
+  it("NO rechaza una variante por la persona del verbo", () => {
     const v = checkSuggestion(
       sug({ text: "Concilié la caja diaria", variantWithoutMetric: "Concilió la caja diaria" }),
       ctx({ original: "Trabajé en la caja del local" }),
     )
-    expect(v.ok).toBe(false)
-    expect(v.ok ? "" : v.reason).toBe("wrong_person")
+    expect(v.ok).toBe(true)
   })
 
   it("rechaza una variante que se come lo que la línea decía", () => {

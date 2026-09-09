@@ -5,7 +5,9 @@
 // Un prompt es una petición, no un contrato. En volumen, el modelo va a nombrar
 // una herramienta que no estaba y va a salir a producción. Estas comprobaciones
 // son deterministas, corren sobre TODA salida, y son las que mandan: si el
-// validador del modelo (P6) y este archivo discrepan, gana este archivo.
+// validador del modelo y este archivo discrepan, gana este archivo. (El validador
+// P6 se retiró el 2026-09-09 por orden del CEO: preguntaba lo mismo que los dos
+// guards de invención, con una llamada más.)
 //
 // ── LOS DOS MOTIVOS DE QUE ESTO SEA UN SOLO ARCHIVO ─────────────────────────
 // 1. Cuando cada escritor corre "sus" chequeos, se desincronizan: uno termina
@@ -25,7 +27,6 @@ import {
   METRIC_TYPES,
   normalize,
   termsIn,
-  buildTermIndex,
   type TermIndex,
   type Suggestion,
   type ResumeTree,
@@ -33,19 +34,22 @@ import {
   type Resolution,
   type NodeId,
 } from "@/lib/ats3/contracts"
-import { verbCollides, keywordsOverBudget, claimAlreadyMade, type Ledger } from "@/lib/ats3/ledger"
+import { type Ledger } from "@/lib/ats3/ledger"
 
 export type GuardReason =
-  | "invented_term" // nombra algo que no está en el original ni en lo declarado
-  | "invented_figure" // una cifra que el candidato nunca dio
-  | "verb_collision" // ese verbo ya abre otra línea del CV
-  | "keyword_over_budget" // el término ya aparece dos veces
-  | "duplicate_claim" // ese logro ya tiene dueño
+  /**
+   * REPITE ALGO QUE EL CV YA DICE — el único guard que JUZGA (CEO, 2026-09-09).
+   *
+   * «Los guards que tengas tienen que cumplir sólo que no se cree viñetas
+   * similares.» Eran dos razones para la misma pregunta: `adds_nothing`
+   * comparaba contra la línea original y `duplicate_claim` contra las otras
+   * viñetas. Es una sola cosa —¿esto ya está dicho?— y ahora se contesta una
+   * sola vez, con una sola vara: el 90% del CEO.
+   */
+  | "repeats"
   | "drops_content" // se perdió información que el original tenía
-  | "adds_nothing" // dice lo mismo con otras palabras
   | "too_many_placeholders" // más de dos huecos, o más de uno obligatorio
   | "placeholder_in_summary" // el resumen se exporta con un corchete a la vista
-  | "wrong_person" // habla de la persona en tercera, o no la hace sujeto
   | "stale" // se pensó sobre una versión que ya no existe
   | "empty" // no hay texto que entregar
 
@@ -59,26 +63,29 @@ export interface GuardContext {
   original: string
   /** Términos en juego: los de la vacante y los que el candidato declaró. */
   index: TermIndex
-  /** Habilidades declaradas por el usuario: autorizan a nombrar una herramienta. */
-  declared: string[]
   ledger: Ledger
+  /**
+   * LAS OTRAS VIÑETAS DEL CV. Sin ellas no se puede contestar «¿esto repite?».
+   *
+   * Orden del CEO (2026-09-09): «lo que sí deberías validar es que una viñeta no
+   * debería ser idéntica con las otras, no repetir». Es la única pregunta que
+   * el guard no podía contestar: comparaba la reescritura contra SU PROPIO
+   * original y contra los `claim` que el modelo declara, nunca contra el texto
+   * de las líneas vecinas.
+   */
+  siblings?: string[]
   /** El resumen no admite huecos: es la primera línea que se lee. */
   isSummary?: boolean
   /**
-   * CONTRA QUÉ SE JUZGA SI ALGO ESTÁ RESPALDADO. Por omisión, el mismo `original`.
+   * EL IDIOMA DEL CV. `wrongPerson` es una regla del español y sólo del español.
    *
-   * Son dos preguntas distintas y se estaban contestando con el mismo texto:
-   * «¿qué no se puede PERDER?» —eso es el original, y sólo el original— y «¿esto
-   * que nombra está respaldado?», que en una viñeta también es el original, pero
-   * en el RESUMEN es el CV entero. Un resumen habla de todo el documento: el
-   * modelo recibe las mejores viñetas justamente para eso, y el guard lo juzgaba
-   * contra el resumen viejo, así que nombrar una capacidad que las viñetas
-   * demuestran salía como `invented_term`.
-   *
-   * El motor viejo tenía esta separación con el nombre `groundingSource` y se
-   * perdió al construir v3 de cero. Vuelve acá, que es donde se decide.
+   * Sin esto corría sobre TODO. Medido ejecutando la función: "Photo retouching
+   * workflows delivered weekly" y "Micro frontends rolled out across four
+   * squads" se rechazaban como tercera persona, porque la vara es «la primera
+   * palabra termina en consonante + o» y en inglés eso es un sustantivo común.
+   * El usuario perdía la reescritura con un motivo que no existe en su idioma.
    */
-  grounding?: string
+  language?: "es" | "en"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,16 +119,10 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
     if (/\[[^\]]+\]/.test(variante)) {
       return fail("too_many_placeholders", "la variante sin cifra conserva un hueco sin llenar")
     }
-    const inventadaEnVariante = inventedFigure(variante, ctx.grounding ?? ctx.original, s)
-    if (inventadaEnVariante) return fail("invented_figure", inventadaEnVariante)
-    const inventadosEnVariante = inventedTerms(variante, ctx)
-    if (inventadosEnVariante.length) return fail("invented_term", inventadosEnVariante.join(", "))
     // «Igual que el texto principal» era una promesa a medias: se le miraban los
     // huecos, la cifra y las herramientas, y NO la persona ni el contenido. Una
     // variante en tercera persona —o que se come el dato que la línea traía—
     // entra al CV por la puerta que existe para no poner un número inventado.
-    const personaEnVariante = wrongPerson(variante, ctx.isSummary)
-    if (personaEnVariante) return fail("wrong_person", personaEnVariante)
     const perdidoEnVariante = droppedTerms(ctx.original, variante, ctx.index)
     if (perdidoEnVariante.length) return fail("drops_content", perdidoEnVariante.join(", "))
     /**
@@ -196,29 +197,121 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
     return fail("too_many_placeholders", `la ficha del hueco se derramó al texto: ${derrame[0]}`)
   }
 
+  /**
+   * DOS HUECOS, Y LOS DOS PUEDEN SER OBLIGATORIOS (CEO, 2026-09-09).
+   *
+   * Acá vivía un segundo techo —"máximo UN hueco obligatorio"— que yo escribí y
+   * nadie pidió. Rechazaba exactamente la forma que el CEO especificó:
+   *
+   *   "…mejor experiencia de usuario de [x usuarios] mejorando también los
+   *    servicios en un [x%]"
+   *
+   * Dos cifras, las dos del candidato, las dos necesarias para que la línea
+   * diga algo. Con el techo viejo una de las dos tenía que declararse opcional
+   * — y un hueco opcional sin llenar se ESCRIBÍA EN EL CV con el corchete a la
+   * vista, porque la hoja de confirmación sólo frenaba por los obligatorios.
+   * El techo no protegía nada: empujaba el defecto de una puerta a la otra.
+   *
+   * El tope de dos huecos por línea se queda: tres cifras en una viñeta es un
+   * formulario, no una línea de currículum. La salida para quien no tiene el
+   * dato sigue siendo la versión sin cifra, que es una decisión suya y no un
+   * corchete olvidado.
+   */
   if (s.placeholders.length > 2) return fail("too_many_placeholders", `${s.placeholders.length} huecos`)
-  if (s.placeholders.filter((p) => p.required).length > 1) {
-    return fail("too_many_placeholders", "más de un hueco obligatorio")
-  }
 
-  const persona = wrongPerson(text, ctx.isSummary)
-  if (persona) return fail("wrong_person", persona)
+  /**
+   * ── ACÁ VIVÍA `wrong_person` COMO RECHAZO (CEO, 2026-09-09) ────────────────
+   *
+   * «Los guards tienen que cumplir sólo que no se creen viñetas similares.»
+   * Escribir «Mantuvo las máquinas» en vez de «Mantuve» es un defecto de
+   * redacción, no una línea repetida ni un dato perdido — y costaba la
+   * reescritura entera con la cuota gastada.
+   *
+   * NO SE PERDIÓ NADA, cambió de herramienta: la conjugación regular la arregla
+   * el código sin preguntar (`toFirstPerson`, en el motor, antes de juzgar), y
+   * la regla sigue escrita en P4 y P5 en los dos idiomas. Lo que queda —un
+   * irregular, un sustantivo— se entrega y lo ve el usuario en la confirmación,
+   * que es quien firma el CV.
+   *
+   * `wrongPerson` sigue exportada: es lo que decide si hay algo que corregir.
+   */
 
-  const invented = inventedTerms(text, ctx)
-  if (invented.length) return fail("invented_term", invented.join(", "))
+  /**
+   * ── ACÁ VIVÍAN `invented_term` E `invented_figure` (CEO, 2026-09-09) ────────
+   *
+   * Tiraban la reescritura entera si nombraba una herramienta ausente del
+   * original y de las Habilidades declaradas, o si traía una cifra que el
+   * candidato no había dado. Orden del CEO, dicha dos veces: «no quiero cosas
+   * que digan mentiras o inventos en tus guards».
+   *
+   * LO QUE ESTO CAMBIA, dicho sin adornos: una reescritura que nombre una
+   * herramienta que el CV no menciona, o que escriba una cifra como texto fijo,
+   * ya NO se descarta. Llega a la hoja de confirmación y el usuario decide —
+   * que es donde el CEO puso siempre la decisión.
+   *
+   * LO QUE NO CAMBIA: la regla sigue entera en el PROMPT. P4 le dice al modelo
+   * que la cifra se pide como hueco tipado (`[x%]`, `[x usuarios]`) y que el
+   * número lo pone quien lo vivió, y `truthRule` le prohíbe afirmar un hecho
+   * que el original no sostiene. Prevenir en la fuente cuesta cero tokens;
+   * castigar después costaba una llamada, un reintento y la cuota del usuario.
+   *
+   * Y el mecanismo del hueco NO dependía de este guard: lo sostienen el prompt
+   * y la hoja de confirmación, que desde hoy no deja pasar un corchete sin
+   * llenar —ni siquiera uno marcado como opcional—.
+   */
 
-  const figure = inventedFigure(text, ctx.grounding ?? ctx.original, s)
-  if (figure) return fail("invented_figure", figure)
+  /**
+   * ── POR QUÉ REPETIR UN VERBO YA NO TIRA LA REESCRITURA (CEO, 2026-09-09) ────
+   *
+   * Acá vivía `verb_collision`: si la propuesta abría con un verbo que ya abre
+   * otra línea del CV, se descartaba entera. Reportado con captura y con la
+   * pregunta correcta: «¿los guards ayudan o cagan el proyecto?».
+   *
+   * Los otros once guards protegen la VERDAD del CV — que no se nombre una
+   * herramienta que la persona no declaró, que no aparezca una cifra que nunca
+   * dio, que no se pierda lo que la línea ya decía. Repetir un verbo no miente
+   * ni pierde nada: es ESTILO. Y por un motivo cosmético se tiraba una línea
+   * verdadera y mejor escrita, con la ranura de cuota ya gastada y hasta dos
+   * llamadas al modelo hechas.
+   *
+   * Este proyecto ya lo midió dos veces y escribió la regla: «un guard
+   * demasiado estricto no es seguro: borra el producto» (invención 3/15, P6
+   * 5/15). Éste era el caso donde no se había aplicado.
+   *
+   * LA REGLA NO SE FUE, CAMBIÓ DE LUGAR: el prompt sigue recibiendo
+   * `verbsAlreadyUsed` con la lista entera y la orden de no repetirla (P4,
+   * "MEMORIA DEL CV"). Prevenir en la fuente cuesta CERO tokens; castigar
+   * después cuesta una llamada, un reintento y la cuota del usuario.
+   *
+   * Efecto lateral medido por construcción: el reintento por este motivo
+   * desaparece, así que el techo de `runRewrite` baja de SEIS llamadas a CINCO.
+   */
 
-  if (verbCollides(ctx.ledger, s.actionVerb)) {
-    return fail("verb_collision", s.actionVerb)
-  }
+  /**
+   * ── ACÁ VIVÍA `keyword_over_budget` (CEO, 2026-09-09) ──────────────────────
+   *
+   * Tiraba la reescritura si un término de la vacante ya aparecía dos veces en
+   * el CV. Es OPTIMIZACIÓN DE PUNTAJE, no verdad: la línea podía ser correcta,
+   * mejor escrita y aterrizar el término donde de verdad se sostiene, y se
+   * descartaba igual con la cuota gastada. Mismo caso exacto que
+   * `verb_collision`, y misma decisión.
+   *
+   * La regla sigue en el prompt: al modelo se le manda `termsWithBudgetLeft`
+   * con cuánto queda de cada término y cuál es prioritario. Prevenir en la
+   * fuente cuesta cero tokens.
+   */
 
-  const over = keywordsOverBudget(ctx.ledger, s.keywordsUsed)
-  if (over.length) return fail("keyword_over_budget", over.join(", "))
-
-  const dup = claimAlreadyMade(ctx.ledger, s.claim)
-  if (dup) return fail("duplicate_claim", dup)
+  /**
+   * ── LA MITAD VIEJA DE `duplicate_claim` SE FUE (CEO, 2026-09-09) ───────────
+   *
+   * Comparaba el `claim` que DECLARA el modelo contra los logros del ledger con
+   * 60% de solape. Sobre frases de tres palabras, dos compartidas ya son 66%: se
+   * disparaba solo. Y desde que la propuesta se compara contra el TEXTO de las
+   * otras viñetas —lo que el CEO pidió— preguntaba lo mismo por un camino más
+   * frágil y sobre un dato que el propio modelo se inventa.
+   *
+   * Queda la comparación de texto contra texto, más abajo.
+   */
 
   const lost = droppedTerms(ctx.original, text, ctx.index)
   if (lost.length) return fail("drops_content", lost.join(", "))
@@ -227,9 +320,31 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
   const cifras = droppedFigures(ctx.original, text.replace(/\[[^\]]*\]/g, " "))
   if (cifras.length) return fail("drops_content", cifras.join(", "))
 
-  if (addsNothing(ctx.original, text)) {
-    return fail("adds_nothing", "la reescritura dice lo mismo con otras palabras")
-  }
+  /**
+   * ¿ESTO YA ESTÁ DICHO? Contra la línea que reemplaza y contra las demás.
+   *
+   * Las dos superficies, una sola vara —el 90% del CEO, `TRIVIAL_EDIT_SIMILARITY`—
+   * y una sola razón. Contra el original: cambiar tres palabras no es una mejora
+   * y no vale gastarte una consulta. Contra las vecinas: dos viñetas que cuentan
+   * el mismo trabajo gastan dos renglones en un solo dato.
+   */
+  if (addsNothing(ctx.original, text)) return fail("repeats", ctx.original)
+
+  /**
+   * UNA VIÑETA NO PUEDE SALIR IGUAL A OTRA DEL CV (CEO, 2026-09-09).
+   *
+   * `duplicate_claim` preguntaba por el `claim` que el modelo DECLARA, y
+   * `addsNothing` compara la reescritura contra SU PROPIO original. Entre las
+   * dos quedaba el hueco: nada miraba el TEXTO de las líneas vecinas, así que
+   * una reescritura podía volver prácticamente calcada a otra viñeta del mismo
+   * CV y pasar los doce chequeos.
+   *
+   * Se mide con la misma función y la misma vara que ya usa este archivo —el
+   * 90% del CEO, `TRIVIAL_EDIT_SIMILARITY`—: dos varas para «¿esto es lo
+   * mismo?» terminan discrepando, y este proyecto ya pagó esa clase de defecto.
+   */
+  const gemela = (ctx.siblings ?? []).find((otra) => otra.trim() && addsNothing(otra, text))
+  if (gemela) return fail("repeats", gemela)
 
   return pass
 }
@@ -254,9 +369,37 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
  *
  * En inglés NO se juzga acá: los pasados irregulares (Led, Ran, Built, Wrote)
  * no tienen marca común, y una regla por sufijo rechazaría los verbos más
- * fuertes del idioma. Ese lado lo cubren el prompt y P6 — decirlo es mejor que
+ * fuertes del idioma. Ese lado lo cubre el prompt — decirlo es mejor que
  * fingir que el código lo cubre.
  */
+/**
+ * PONE LA APERTURA EN PRIMERA PERSONA, cuando se puede probar cómo.
+ *
+ * ── POR QUÉ CORREGIR Y NO RECHAZAR (CEO, 2026-09-09) ────────────────────────
+ * «Atendió a los clientes» era un rechazo: el usuario perdía la reescritura y
+ * la ranura de cuota por una letra. La conjugación regular del pasado en
+ * español es mecánica —-ó → -é para los verbos en -ar, -ió → -í para -er/-ir—
+ * así que en ese caso el código PUEDE arreglarlo y no hace falta preguntarle a
+ * nadie.
+ *
+ * Lo que NO se toca, a propósito: los irregulares (Mantuvo, Hizo, Puso) y los
+ * sustantivos (Manejo de caja). Ahí no hay una regla que el código pueda
+ * probar, y escribir una forma inventada sería peor que el rechazo. Esos siguen
+ * cayendo en el guard, que es la respuesta honesta.
+ */
+export function toFirstPerson(text: string): string | null {
+  const primera = text.trim().split(/\s+/)[0] ?? ""
+  const limpia = primera.replace(/[^\p{L}]/gu, "")
+  if (limpia.length < 4 || limpia === limpia.toUpperCase()) return null
+  const corregida = /ió$/.test(limpia)
+    ? limpia.replace(/ió$/, "í")
+    : /ó$/.test(limpia)
+      ? limpia.replace(/ó$/, "é")
+      : null
+  if (!corregida) return null
+  return text.replace(primera, primera.replace(limpia, corregida))
+}
+
 export function wrongPerson(text: string, isSummary = false): string | null {
   const primera = text.trim().split(/\s+/)[0] ?? ""
   const limpia = primera.replace(/[^\p{L}]/gu, "")
@@ -321,117 +464,6 @@ export function wrongPerson(text: string, isSummary = false): string | null {
     return `"${primera}" no es un pasado en primera persona: habla de otro, está en presente, o es un sustantivo`
   }
   if (/(ar|er|ir)$/i.test(limpia)) return `"${primera}" es un infinitivo, no lo que la persona hizo`
-  return null
-}
-
-/**
- * Términos que la reescritura nombra y el candidato nunca declaró.
- *
- * ── LA LÍNEA, QUE ES LO ÚNICO SUTIL DE TODO EL MOTOR ───────────────────────
- * Está prohibido afirmar un HECHO NUEVO sobre la persona: una herramienta que no
- * usó, un empleador, una certificación. NO está prohibido —es el valor que el
- * producto cobra— nombrar en qué CONSISTE el trabajo que ella dijo hacer: un
- * arqueo ES cuadrar efectivo, comprobantes y diferencias.
- *
- * Por eso la vara NO es "palabras que no estaban antes". Eso se midió en este
- * proyecto y rechaza por igual el caso malo y los dos enriquecimientos que se
- * cobran. La vara es más angosta: sólo se miran los TÉRMINOS DEL ÍNDICE —los que
- * la vacante nombra y los que el CV declara—, porque ésos son los que se
- * atribuyen como capacidad. Una palabra común nueva describe el oficio; un
- * término del índice que aparece de la nada es una capacidad inventada.
- */
-export function inventedTerms(text: string, ctx: GuardContext): string[] {
-  const declaredIndex = buildTermIndex(ctx.declared.map((d) => ({ canonical: d, variants: [] })))
-  const inNew = termsIn(ctx.index, text)
-  const respaldo = ctx.grounding ?? ctx.original
-  const inOld = termsIn(ctx.index, respaldo)
-  const inDeclared = termsIn(declaredIndex, ctx.declared.join(" . "))
-
-  const out: string[] = []
-  for (const term of inNew) {
-    if (inOld.has(term)) continue
-    // Declarado por el usuario en sus habilidades: puede nombrarse.
-    if (inDeclared.has(term) || ctx.declared.some((d) => normalize(d) === normalize(term))) continue
-    // La línea original YA HABLA de eso, sólo que con otras palabras.
-    if (supportedByOriginal(term, respaldo)) continue
-    out.push(term)
-  }
-  return out
-}
-
-/**
- * ¿La línea original respalda este término, aunque no lo nombre igual?
- *
- * ── EL FALSO POSITIVO QUE ESTO CIERRA, MEDIDO CONTRA LA API ────────────────
- * "Atendí a los clientes en la línea de cajas" → "Realicé atención al público
- * en línea de cajas…". La vacante pide "atención al público" y la línea original
- * ES atención al público: el guard lo marcaba como una capacidad afirmada de la
- * nada y RECHAZABA la reescritura. Medido: 3 de 3 rechazadas, dos por esto.
- *
- * Un guard así no protege nada — deja el producto sin producto, porque tejer el
- * término que la vacante busca es literalmente para lo que sirve.
- *
- * La vara: el término comparte una RAÍZ con lo que la línea ya dice. "atención"
- * y "atendí" comparten "aten"; "SAP" y "stock del depósito" no comparten nada, y
- * ése sigue rechazado. La raíz corta funciona igual en los dos idiomas y no
- * necesita diccionario.
- */
-function supportedByOriginal(term: string, original: string): boolean {
-  const source = normalize(original).split(" ").filter((w) => w.length >= 4)
-  const words = normalize(term).split(" ").filter((w) => w.length >= 4)
-  if (words.length === 0 || source.length === 0) return false
-
-  /**
-   * ── DÓNDE TERMINA LO QUE EL CÓDIGO PUEDE PROBAR ────────────────────────────
-   *
-   * Basta con que UNA palabra con contenido del término ya viva en la línea.
-   * Las dos varas más estrictas se midieron contra la API y las dos rechazan
-   * trabajo legítimo:
-   *
-   *   - "todas las palabras": "atención al público" contra "Atendí a los
-   *     clientes" exige que diga "público", y rechaza una reescritura correcta.
-   *   - "la palabra más específica": rechazó 3 de 15 líneas en cinco oficios —
-   *     "control de calidad de cordón" sobre "Revisé que las piezas salieran
-   *     bien", "manejo de grupo" sobre "Di clases a los chicos". Las dos son
-   *     exactamente lo que el producto tiene que hacer: tejer el término que la
-   *     vacante busca en el trabajo que la persona ya describió.
-   *
-   * Lo que esta vara deja pasar —"Gestión de Salesforce" apoyada sólo en la
-   * palabra "gestión"— NO queda sin dueño: es el caso que P6 juzga, y en la
-   * misma medición lo hizo bien (cazó "sistema clínico" como entidad que el
-   * original no sostiene). El código decide lo que puede PROBAR; lo semántico
-   * tiene un verificador, y el veredicto final sigue siendo del código.
-   */
-  return words.some((w) => source.some((s) => shareRoot(w, s)))
-}
-
-/**
- * Dos palabras que comparten una raíz de cuatro letras son la misma idea.
- *
- * Cuatro y no cinco, medido: "atención" y "atendí" comparten "aten" y son lo
- * mismo; con cinco ("atenc" contra "atend") el guard las daba por distintas y
- * rechazaba la reescritura buena.
- */
-function shareRoot(a: string, b: string): boolean {
-  if (a.length < 4 || b.length < 4) return false
-  return a.slice(0, 4) === b.slice(0, 4)
-}
-
-/**
- * Una cifra que el candidato nunca dio.
- *
- * Un hueco tipado NO es una violación: es exactamente lo que el producto pide —
- * el modelo propone el tamaño, el candidato pone el número. Lo prohibido es el
- * número presentado como hecho.
- */
-export function inventedFigure(text: string, original: string, s: Suggestion): string | null {
-  const before = digitsOf(original)
-  // El texto de los huecos no cuenta como cifra: "[x%]" no afirma nada.
-  const withoutSlots = text.replace(/\[[^\]]*\]/g, " ")
-  for (const d of digitsOf(withoutSlots)) {
-    if (!before.has(d)) return d
-  }
-  void s
   return null
 }
 
@@ -600,30 +632,18 @@ export function loyalty(findings: Finding[], log: Resolution[]): LoyaltyResult {
 export function retryNudge(v: GuardVerdict, language: "es" | "en"): string {
   if (v.ok) return ""
   const es: Record<GuardReason, string> = {
-    invented_term: `Nombraste algo que no está en la línea original ni en las habilidades declaradas: ${v.detail}. Sacalo.`,
-    invented_figure: `Escribiste la cifra ${v.detail}, que el candidato nunca dio. Usá un hueco tipado o dejá la línea sin número.`,
-    verb_collision: `El verbo "${v.detail}" ya abre otra línea de este CV. Elegí otro.`,
-    keyword_over_budget: `Estos términos ya aparecen dos veces en el CV: ${v.detail}. No los repitas.`,
-    duplicate_claim: `Ese logro ya está contado en otra viñeta ("${v.detail}"). Escribí sobre otra cosa de esta línea.`,
     drops_content: `Perdiste información que el original tenía: ${v.detail}. Conservala.`,
-    adds_nothing: `Tu reescritura dice lo mismo con otras palabras. O aporta algo, o devolvé changed: false.`,
+    repeats: `Eso ya lo dice esta línea del CV: "${v.detail}". Tu reescritura tiene que aportar algo distinto, o devolvé changed: false.`,
     too_many_placeholders: `Demasiados huecos (${v.detail}). Máximo dos, y sólo uno obligatorio.`,
     placeholder_in_summary: `El resumen no lleva huecos: se exporta tal cual.`,
-    wrong_person: `${v.detail}. Escribí lo que la persona HIZO, en pasado y en primera persona implícita: "Controlé", no "Controló" ni "Controlar".`,
     stale: `La línea cambió desde que la leíste.`,
     empty: `Devolviste una reescritura vacía.`,
   }
   const en: Record<GuardReason, string> = {
-    invented_term: `You named something absent from the original line and from the declared skills: ${v.detail}. Remove it.`,
-    invented_figure: `You wrote the figure ${v.detail}, which the candidate never provided. Use a typed slot or leave the line without a number.`,
-    verb_collision: `The verb "${v.detail}" already opens another line in this CV. Pick a different one.`,
-    keyword_over_budget: `These terms already appear twice in the CV: ${v.detail}. Do not repeat them.`,
-    duplicate_claim: `That achievement is already told in another bullet ("${v.detail}"). Write about something else in this line.`,
     drops_content: `You dropped information the original had: ${v.detail}. Keep it.`,
-    adds_nothing: `Your rewrite says the same thing in different words. Either add something, or return changed: false.`,
+    repeats: `This line of the CV already says it: "${v.detail}". Your rewrite must add something different, or return changed: false.`,
     too_many_placeholders: `Too many slots (${v.detail}). At most two, and only one required.`,
     placeholder_in_summary: `The summary carries no slots: it is exported as-is.`,
-    wrong_person: `${v.detail}. Write what the person DID, in the past tense and implicit first person.`,
     stale: `The line changed since you read it.`,
     empty: `You returned an empty rewrite.`,
   }

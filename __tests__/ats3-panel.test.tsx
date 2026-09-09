@@ -97,10 +97,17 @@ const messages: Record<string, string> = {
 }
 
 vi.mock("next-intl", () => ({
-  useTranslations: (ns?: string) => (key: string, params?: Record<string, string | number>) => {
+  useTranslations: (ns?: string) => {
     void ns
-    const raw = messages[key] ?? key
-    return params ? raw.replace(/\{(\w+)\}/g, (_m, k) => String(params[k] ?? `{${k}}`)) : raw
+    const t = (key: string, params?: Record<string, string | number>) => {
+      const raw = messages[key] ?? key
+      return params ? raw.replace(/\{(\w+)\}/g, (_m, k) => String(params[k] ?? `{${k}}`)) : raw
+    }
+    /* El traductor REAL trae `has`, y sin él el doble rompe la pantalla que lo
+       usa para caer al valor crudo cuando una clave todavía no existe: un doble
+       incompleto no deja pasar el bug, esconde el código que lo evita. */
+    t.has = (key: string) => key in messages
+    return t
   },
 }))
 
@@ -546,7 +553,7 @@ describe("la cifra la escribe el candidato", () => {
     await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ ok: false, reason: "verb_collision", detail: "Atendí" }),
+      json: async () => ({ ok: false, reason: "drops_content", detail: "Atendí" }),
     })
     await click("Escribirla mejor")
     // "No se pudo" con el uso ya cobrado es lo que hace que alguien deje de
@@ -578,6 +585,17 @@ describe("la cifra la escribe el candidato", () => {
     expect(body.nodeId).toBe(NODE_ID)
     // Y la vacante ya parseada vuelve con el pedido: no se re-pregunta.
     expect(body.spec).toBeTruthy()
+    /**
+     * LO QUE LA TARJETA PROMETIÓ VIAJA CON EL PEDIDO, Y ES LA MISMA FRASE.
+     *
+     * El modelo reescribía a ciegas: recibía el CV, la vacante y el ledger, y
+     * NADA de lo que el panel le había prometido al usuario sobre esa línea. Y
+     * cuando empezó a viajar, iba el token crudo del motor —«resultado»— que
+     * además es castellano aunque el CV esté en inglés. Va la frase que el
+     * usuario leyó: una glosa, dos consumidores.
+     */
+    expect(body.focus).toBeTruthy()
+    expect(texto()).toContain(body.focus)
   })
 
   it("«no me interesa» cierra el hallazgo sin gastar una consulta, y lo RECUERDA", async () => {
@@ -593,8 +611,14 @@ describe("la cifra la escribe el candidato", () => {
     expect(cuerpos).toHaveLength(1)
     expect(cuerpos[0].action).toBe("resolve")
     expect(cuerpos[0].entries[0].resolvedBy).toBe("DISMISSED")
-    // La fila se va: lo único que sacaba una tarjeta de la pantalla era pagar por ella.
-    expect(texto()).not.toContain("Le falta la cifra")
+    // Sale de PENDIENTES y queda en el registro, dicho por lo que fue.
+    //
+    // Antes desaparecía sin dejar rastro, y con ella el trabajo que el usuario
+    // había hecho: reportado con captura —«si soluciono 30, en Hechas se ven 2
+    // o 3»—. Descartar es una decisión suya y el registro es de lo que HIZO, no
+    // sólo de lo que se escribió; por eso no lleva el tilde de «Aplicado».
+    expect(texto()).toContain("done_dismissed")
+    expect(texto()).not.toContain("Escribirla mejor")
   })
 })
 
@@ -637,45 +661,81 @@ describe("el puntaje se mueve mientras trabajás", () => {
     expect(p.resumeId).toBe("cv1")
   })
 
-  it("agregar a Habilidades NO llama al modelo y escribe la lista", async () => {
-    // Es el remedio que el motor declara para "lo demostrás y no está en
-    // Habilidades". Reescribir la viñeta que ya lo demuestra no toca la sección
-    // que el filtro lee literalmente, que es lo único que lo arregla.
-    apiFetch.mockResolvedValueOnce(ndjsonResponse([
-      ACTS[0],
-      ACTS[1],
-      {
-        act: "findings",
-        suppressed: 0,
-        regressed: [],
-        findings: [{
-          id: "f9", type: "skill_not_listed", component: "must", remedy: "add_skill",
-          subject: "Medios de pago", merged: ["skill_not_listed"], nodeId: NODE_ID,
-          nodeText: "Atendí a los clientes en la línea de cajas", nodeHash: "h9",
-          gain: 0, detail: "Medios de pago",
-        }],
-      },
-    ]))
+  /**
+   * «HECHAS» SOBREVIVE A RECARGAR LA PÁGINA (CEO, 2026-09-09).
+   *
+   * Vivía sólo en la memoria de la pantalla: un F5 y el registro de todo lo
+   * resuelto desaparecía, junto con la única prueba de que el trabajo pasó. El
+   * motor ya guardaba la resolución para no volver a señalar lo mismo, pero
+   * guardaba lo mínimo para ESA pregunta —un id y un hash—, y con eso la lista
+   * no se puede volver a dibujar: el hallazgo ya no existe cuando hace falta.
+   */
+  it("el registro se dibuja con lo que el motor ya tenía guardado", async () => {
+    const conRegistro = {
+      ...ACTS[2],
+      resolved: [
+        {
+          findingId: "viejo1", nodeId: NODE_ID, nodeHashAtResolution: "h",
+          resolvedBy: "AI_SUGGESTION", resolvedAt: "2026-09-08T10:00:00.000Z",
+          title: "Le falta la cifra", kind: "applied",
+          before: "Atendí a los clientes", after: "Atendí a 60 clientes por turno",
+        },
+        {
+          findingId: "viejo2", nodeId: "otro", nodeHashAtResolution: "h2",
+          resolvedBy: "DISMISSED", resolvedAt: "2026-09-08T10:05:00.000Z",
+          title: "Sin tamaño", kind: "dismissed",
+        },
+      ],
+    }
+    apiFetch.mockResolvedValueOnce(ndjsonResponse([ACTS[0], ACTS[1], conRegistro]))
     await mount()
     await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
     await click("Analizar compatibilidad")
-    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
     await click("Arreglar con Tailor")
 
-    apiFetch.mockClear()
-    apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, stored: 1 }) })
-    await click("Agregar a Habilidades")
+    // Las dos filas están, cada una dicha por lo que fue, sin haber tocado nada
+    // en esta sesión.
+    expect(texto()).toContain("Atendí a 60 clientes por turno")
+    expect(texto()).toContain("done_dismissed")
+  })
 
+  /**
+   * LAS HABILIDADES QUE ENTRAN A LA PLANTILLA, ENSEÑADAS ANTES DE ESCRIBIRLAS.
+   *
+   * Acá vivía el test del término suelto —una tarjeta por habilidad con su
+   * botón—. Ese camino miraba un término por vez y podía llevar la lista a cien
+   * entradas; la pregunta completa la contesta `skillPlan` con el techo de
+   * veinte. Lo que NO cambió, y es lo que este caso protege: nada se escribe en
+   * el CV sin que el usuario lo vea y lo acepte.
+   */
+  it("el plan de habilidades enseña qué entra y no escribe hasta que lo aceptás", async () => {
+    // El CV DEMUESTRA «Arqueo de caja» en una viñeta y la lista no lo nombra:
+    // es exactamente lo que el filtro lee literalmente y hoy no ve.
+    const conCobertura = {
+      ...ACTS[0],
+      audit: {
+        ...(ACTS[0] as { audit: Record<string, unknown> }).audit,
+        coverage: [{ skill: "Arqueo de caja", requirement: "MUST", status: "FOUND", evidenceNodeId: NODE_ID }],
+      },
+    }
+    apiFetch.mockResolvedValueOnce(ndjsonResponse([conCobertura, ACTS[1], ACTS[2]]))
+    await mount()
+    await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
+    await click("Analizar compatibilidad")
+    await click("Arreglar con Tailor")
+
+    updateSectionData.mockClear()
+    // La vacante lo pide y el CV lo demuestra sin listarlo: entra.
+    expect(texto()).toContain("Arqueo de caja")
+    expect(updateSectionData.mock.calls.find((c) => c[0] === "skills")).toBeUndefined()
+
+    await click("Aplicar a mi CV")
     const escrito = updateSectionData.mock.calls.find((c) => c[0] === "skills")
     expect(escrito).toBeTruthy()
     const skills = escrito![1] as { name: string; level: string }[]
-    // Agrega al final, sin pisar lo que la persona ya tenía.
-    expect(skills.map((s) => s.name)).toEqual(["Excel", "Medios de pago"])
-    // El nivel NO lo decidimos nosotros: "advanced" era una afirmación sobre la
-    // persona que nadie hizo. Se usa el valor por defecto del esquema del CV.
-    expect(skills[1].level).toBe("intermediate")
-    // Y ninguna llamada al modelo: la única petición es la que anota lo resuelto.
-    const cuerpos = apiFetch.mock.calls.map((c) => JSON.parse((c[1] as { body: string }).body))
-    expect(cuerpos.every((b) => b.action === "resolve")).toBe(true)
+    // Conserva lo que la persona ya tenía —su id y su nivel son datos suyos— y
+    // suma lo que entra. Nunca más de las que la plantilla recibe.
+    expect(skills.map((s) => s.name)).toContain("Excel")
+    expect(skills.length).toBeLessThanOrEqual(20)
   })
 })

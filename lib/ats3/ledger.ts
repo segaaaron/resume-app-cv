@@ -45,6 +45,33 @@ export const KEYWORD_MAX = 2
  */
 export const BULLETS_PER_PAGE = 15
 
+/**
+ * VIÑETAS QUE SE LEEN DE UN PUESTO (orden del CEO, 2026-09-09).
+ *
+ * «Si ves viñetas a mejorar y ya tenés 6, sugerí eliminar la más débil.» Seis es
+ * lo que un reclutador lee de un mismo puesto antes de saltear; a partir de ahí,
+ * una línea más no agrega, TAPA a las que valen.
+ *
+ * Es un techo del documento, no del rubro: el mismo número que el producto ya
+ * usaba antes de v3.
+ */
+export const BULLETS_PER_ROLE_MAX = 6
+
+/**
+ * HABILIDADES QUE ENTRAN A LA PLANTILLA (orden del CEO, 2026-09-09).
+ *
+ * «Las plantillas con ATS pueden recibir hasta 20 skills; si tenés 100, sólo las
+ * necesarias entran.» Es el mismo 20 que el CEO fijó el 2026-08-27 para los
+ * requisitos duros que el motor mide, y por eso no es un número nuevo: una lista
+ * de cien términos no se lee, y el filtro tampoco la premia — cuenta cada uno
+ * una vez.
+ *
+ * Cuáles son «las necesarias» lo decide `skillPlan`, con los pesos medidos sobre
+ * el aviso. Sin vacante no hay respuesta, y por eso este tope NO vive en la
+ * plantilla: ahí sería «las primeras veinte que escribiste».
+ */
+export const SKILLS_MAX = 20
+
 export interface Ledger {
   /** Aperturas ya gastadas, normalizadas. Ninguna se repite. */
   verbsUsed: string[]
@@ -157,13 +184,12 @@ export function ledgerSignature(l: Ledger): string {
 /**
  * Devuelve el ledger sin la apertura de la línea que se está por reemplazar.
  *
- * ── EL DEFECTO QUE ESTO CIERRA, MEDIDO ─────────────────────────────────────
- * El ledger arranca con los verbos que el CV ya usa, incluido el de la línea
- * que el usuario mandó a reescribir. Sin soltarlo, esa línea choca contra SÍ
- * MISMA: "Atendí a los clientes" no puede volver como "Atendí a 60 clientes por
- * turno" aunque sea la mejor reescritura posible, y el modelo termina forzando
- * un verbo peor para esquivar un choque que no existe. La línea vieja se va: su
- * verbo queda libre.
+ * El ledger arranca con los verbos que el CV ya usa, incluido el de la línea que
+ * el usuario mandó a reescribir. Al modelo se le manda `verbsAlreadyUsed` con la
+ * orden de no repetir ninguno, así que sin soltarlo esa línea choca contra SÍ
+ * MISMA: "Atendí a los clientes" no podría volver como "Atendí a 60 clientes por
+ * turno" —la mejor reescritura posible— y el modelo fuerza un verbo peor para
+ * esquivar un choque que no existe. La línea vieja se va: su verbo queda libre.
  */
 export function releaseOpener(l: Ledger, replacedText: string): Ledger {
   const opener = normalize(replacedText).split(" ")[0]
@@ -171,53 +197,11 @@ export function releaseOpener(l: Ledger, replacedText: string): Ledger {
   return { ...l, verbsUsed: l.verbsUsed.filter((v) => v !== opener) }
 }
 
-export function verbCollides(l: Ledger, verb: string): boolean {
-  const v = normalize(verb).split(" ")[0]
-  return Boolean(v) && l.verbsUsed.includes(v)
-}
-
-export function keywordsOverBudget(l: Ledger, used: string[]): string[] {
-  const over: string[] = []
-  const seen: Record<string, number> = {}
-  for (const k of used) {
-    seen[k] = (seen[k] ?? 0) + 1
-    const slot = l.keywordBudget[k]
-    if (slot && slot.used + seen[k] > slot.max) over.push(k)
-  }
-  return over
-}
-
 /** Los tipos de métrica que convendría evitar: ya se usaron dos veces o más. */
 export function saturatedMetricTypes(l: Ledger): MetricType[] {
   const count = new Map<MetricType, number>()
   for (const t of l.metricTypesUsed) count.set(t, (count.get(t) ?? 0) + 1)
   return [...count.entries()].filter(([, n]) => n >= 2).map(([t]) => t)
-}
-
-/**
- * ¿Este logro ya tiene dueño?
- *
- * No se compara texto exacto: el mismo resultado redactado distinto sigue siendo
- * el mismo resultado. Se comparan los conjuntos de palabras con contenido, y se
- * exige que compartan la mayoría. Es la misma pregunta que "¿son la misma
- * línea?", y no necesita saber de qué oficio hablan.
- */
-export function claimAlreadyMade(l: Ledger, claim: string): string | null {
-  const a = contentWords(claim)
-  if (a.size === 0) return null
-  for (const made of l.claimsMade) {
-    const b = contentWords(made)
-    if (b.size === 0) continue
-    let shared = 0
-    // Por RAÍZ y no por palabra exacta: "reducción de faltantes" y "faltantes
-    // reducidos" son el mismo logro, y compararlos literalmente los deja pasar
-    // como dos. La raíz corta funciona igual en los dos idiomas y no necesita
-    // un diccionario.
-    for (const w of a) if (b.has(w) || [...b].some((x) => shareRoot(w, x))) shared++
-    const overlap = shared / Math.min(a.size, b.size)
-    if (overlap >= 0.6) return made
-  }
-  return null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,8 +236,19 @@ export function spaceBudget(tree: ResumeTree, total: number = BULLETS_PER_PAGE):
 
   let assigned = 0
   roles.forEach((role, i) => {
-    // Al menos una: un puesto sin viñetas es un puesto que no se entiende.
-    const share = Math.max(1, Math.round((weights[i] / sum) * total))
+    /**
+     * ── DOS RESPUESTAS A LA MISMA PREGUNTA, Y SE CONTRADECÍAN ────────────────
+     *
+     * El reparto por antigüedad le daba al puesto más reciente hasta DIEZ de
+     * las quince de la página, mientras `BULLETS_PER_ROLE_MAX` dice que de un
+     * mismo puesto se leen SEIS. Con eso, al modelo se le decía «acá caben
+     * diez» y el motor proponía sacar de la séptima en adelante: el panel
+     * pidiendo agregar y quitar al mismo tiempo.
+     *
+     * El techo manda y el reparto acomoda lo que queda debajo de él. Al menos
+     * una, porque un puesto sin viñetas es un puesto que no se entiende.
+     */
+    const share = Math.min(BULLETS_PER_ROLE_MAX, Math.max(1, Math.round((weights[i] / sum) * total)))
     perRole[role.id] = share
     assigned += share
   })
@@ -293,23 +288,3 @@ function countMentions(texts: string[], canonical: string, raw: string): number 
   return n
 }
 
-/**
- * Palabras con contenido: las que tienen tres letras o más.
- *
- * No hay lista de palabras vacías. Una lista así es por idioma —y por lo tanto
- * siempre incompleta—; el largo funciona parecido en español y en inglés y no
- * deja a nadie afuera.
- */
-/** Dos palabras que comparten una raíz de cuatro letras son la misma idea. */
-function shareRoot(a: string, b: string): boolean {
-  const n = Math.min(a.length, b.length, 5)
-  return n >= 4 && a.slice(0, n) === b.slice(0, n)
-}
-
-function contentWords(s: string): Set<string> {
-  return new Set(
-    normalize(s)
-      .split(" ")
-      .filter((w) => w.length >= 3),
-  )
-}

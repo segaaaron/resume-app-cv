@@ -45,7 +45,6 @@ import {
   type RawResume,
 } from "@/lib/ats3/engine"
 import { buildTermIndex, JobSpecSchema } from "@/lib/ats3/contracts"
-import type { ParseChecks } from "@/lib/ats3/score"
 import { ResolutionLogSchema, type Resolution } from "@/lib/ats3/contracts"
 
 export const maxDuration = 120
@@ -98,6 +97,15 @@ const rewriteSchema = z.object({
   spec: JobSpecSchema,
   /** Lo que la vacante exige y el CV ya demuestra: define dónde conviene gastar. */
   covered: z.array(z.string().max(80)).max(80).default([]),
+  /**
+   * Lo que la tarjeta prometió cerrar sobre esta línea.
+   *
+   * Va al prompt, así que se acota acá: es texto que el cliente elige y que
+   * termina dentro de una petición al modelo. El tope es de presentación —se
+   * recorta, no rechaza—: un foco largo no puede dejar al usuario sin
+   * reescritura con la cuota ya gastada.
+   */
+  focus: z.string().max(400).optional().catch(undefined),
 })
 
 /**
@@ -121,6 +129,13 @@ const resolveSchema = z.object({
         nodeId: z.string().max(64),
         nodeHashAtResolution: z.string().max(64),
         resolvedBy: z.enum(["AI_SUGGESTION", "USER_EDIT", "DISMISSED"]),
+        // Lo que la pantalla necesita para volver a dibujar «Hechas» después de
+        // un F5. Se recortan, no rechazan: perder el registro por un título
+        // largo sería peor que mostrarlo cortado.
+        title: z.string().max(160).optional().catch(undefined),
+        kind: z.enum(["applied", "dropped", "dismissed"]).optional().catch(undefined),
+        before: z.string().max(600).optional().catch(undefined),
+        after: z.string().max(600).optional().catch(undefined),
       }),
     )
     .min(1)
@@ -150,7 +165,6 @@ const analyzeSchema = z.object({
    * vale más que derivarlo— pero mientras no haya quien la cruce, esto es un
    * hueco declarado, no una defensa.
    */
-  checks: z.record(z.string().max(40), z.boolean().nullable()).default({}),
 })
 
 const schema = z.union([rewriteSchema, resolveSchema, analyzeSchema])
@@ -326,6 +340,7 @@ export async function POST(req: Request) {
         language: d.language,
         model,
         jdKey: cacheKey.jd(d.jobDescription, model),
+        focus: d.focus,
         ai,
         store,
       })
@@ -334,14 +349,32 @@ export async function POST(req: Request) {
         if (result.calls === 0) await refundDailyQuota(authResult.userId, "ats3", authResult.user.plan)
         return NextResponse.json({ ok: true, suggestion: result.suggestion, served: result.served })
       }
+      /**
+       * SIN RESULTADO NO SE COBRA LA RANURA (CEO, 2026-09-09).
+       *
+       * ── EL DEFECTO QUE ESTO CIERRA ────────────────────────────────────────
+       * «No quiero bloqueos de nada.» El bloqueo que quedaba no era un guard:
+       * era el PRECIO de un guard. Una reescritura que el motor no puede
+       * entregar —porque repetía otra línea, porque se comía un dato del CV,
+       * porque el modelo declinó— descontaba igual el uso del día. El usuario
+       * apretaba, no recibía nada, y encima quedaba con una consulta menos: eso
+       * es lo que hace que alguien deje de apretar el botón.
+       *
+       * Las llamadas al modelo YA se gastaron y se facturan —`bill()` corre
+       * arriba, y `AIUsageLog` las anota: el costo real no se esconde—. Lo que
+       * se devuelve es la RANURA de su cuota, que existe para medir el trabajo
+       * entregado, no los intentos.
+       *
+       * Es la misma regla que el producto ya tenía escrita para todos sus
+       * endpoints: ninguno entrega un hueco cobrando el uso.
+       */
+      await refundDailyQuota(authResult.userId, "ats3", authResult.user.plan)
       if (result.alreadyGood) {
-        // No es un fallo y no se cobra como tal: la línea ya cumple.
-        if (result.calls === 0) await refundDailyQuota(authResult.userId, "ats3", authResult.user.plan)
+        // No es un fallo: el modelo leyó la línea y dice que ya cumple.
         return NextResponse.json({ ok: false, reason: "already_good", detail: "" })
       }
       // Un rechazo NO es un error del sistema: es el motor haciendo su trabajo.
-      // Se dice CUÁL fue, porque "no se pudo" con el uso ya cobrado es lo que
-      // hace que alguien deje de apretar el botón.
+      // Se dice CUÁL fue, con su frase entera.
       return NextResponse.json(
         { ok: false, reason: result.verdict.ok ? "unknown" : result.verdict.reason, detail: result.verdict.ok ? "" : result.verdict.detail },
         { status: 200 },
@@ -354,7 +387,6 @@ export async function POST(req: Request) {
       language: parsed.data.language,
       resumeId: parsed.data.resumeId,
       model,
-      checks: parsed.data.checks as ParseChecks,
       ai,
       store,
     })

@@ -10,6 +10,7 @@ import {
   writeInto,
   writeBack,
   findingsOf,
+  skillPlan,
   termsOf,
   openLedger,
   type AtsAi,
@@ -18,6 +19,7 @@ import {
   type RawResume,
 } from "@/lib/ats3/engine"
 import { buildTermIndex, type JobSpec, type Suggestion, type AnchoredSuggestion, type TriageDecision } from "@/lib/ats3/contracts"
+import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
 
 /**
@@ -168,7 +170,6 @@ async function analyze(ai: AtsAi, store: AtsStore) {
     language: "es",
     resumeId: "cv1",
     model: "m1",
-    checks: CHECKS,
     ai,
     store,
   })
@@ -289,7 +290,6 @@ describe("cuántas llamadas cuesta cada escenario", () => {
       language: "es",
       resumeId: "cv1",
       model: "m1",
-      checks: CHECKS,
       ai,
       store,
     })
@@ -317,7 +317,6 @@ describe("cuántas llamadas cuesta cada escenario", () => {
       language: "es",
       resumeId: "cv1",
       model: "m1",
-      checks: CHECKS,
       ai,
       store,
     })
@@ -405,6 +404,58 @@ describe("el análisis se entrega en actos", () => {
     expect(missing).toBeDefined()
     expect(missing!.gain).toBeGreaterThan(0)
     expect(missing!.detail).toContain("Inventario")
+  })
+
+  /**
+   * UNA LÍNEA, UNA TARJETA — y esto lo comprueba EJECUTANDO el motor.
+   *
+   * ── EL DEFECTO QUE ESTO CIERRA (CEO, 2026-09-09, con captura) ──────────────
+   * Cada emisor cumplía su parte y aun así la misma viñeta terminaba con dos
+   * tarjetas: los ejes por un lado, el requisito de la vacante por otro, la
+   * blanda por un tercero. Dos órdenes para UNA sola reescritura.
+   *
+   * El único hallazgo que puede abrir tarjeta propia es el que NO toca el texto
+   * de la línea —agregar un término a Habilidades—, porque su botón necesita
+   * saber qué término agregar y no compite con la reescritura.
+   */
+  it("ninguna línea recibe dos tarjetas que se cierren reescribiéndola", () => {
+    const tree = buildTree({
+      summary: "Desarrollador iOS",
+      workExperience: [{
+        jobTitle: "iOS Dev", employer: "Acme", startDate: "2021-03", endDate: "2024-06",
+        description: "• Desarrollé apps con Swift\n• Mantuve la arquitectura del proyecto",
+      }],
+      skills: [{ name: "Swift" }],
+    })
+    const spec = {
+      ...SPEC,
+      mustHave: [{ skill: "Combine", raw: "Combine", years: null, category: null }],
+      softSignals: ["Trabajo en equipo"],
+    }
+    const index = buildTermIndex(termsOf(spec, tree))
+    const audit: AuditFacts = {
+      bullets: tree.roles[0].bullets.map((b) => ({
+        id: b.id, hasActionVerb: true, hasResult: false, hasMethod: false, specificity: 0.5,
+      })),
+      summary: { identity: true, proof: false, fit: false, extra: false },
+      coverage: [{ skill: "Combine", requirement: "MUST", status: "NOT_FOUND", evidenceNodeId: null }],
+      softCoverage: [{ signal: "Trabajo en equipo", status: "DECLARED_ONLY", evidenceNodeId: null }],
+      titleAlignment: 0.5,
+    }
+    const score = scoreResume(tree, spec, audit, {})
+    const hallazgos = findingsOf(tree, audit, score, index)
+
+    const porLinea = new Map<string, number>()
+    for (const f of hallazgos) {
+      porLinea.set(f.nodeId, (porLinea.get(f.nodeId) ?? 0) + 1)
+    }
+    expect([...porLinea.values()].filter((n) => n > 1)).toHaveLength(0)
+
+    // Y el nombre de la tarjeta es el del hallazgo que MÁS mueve el número: un
+    // requisito de la vacante no puede quedar escondido dentro de «no dice qué
+    // cambió», que es lo que pasaba cuando mandaba el orden del archivo.
+    const conRequisito = hallazgos.find((f) => f.merged.includes("missing_requirement"))
+    expect(conRequisito?.type).toBe("missing_requirement")
   })
 
   it("cada requisito que falta aterriza en la línea que MÁS se le parece", () => {
@@ -540,12 +591,13 @@ describe("la reescritura y su reintento", () => {
     const { tree, index, ledger } = setup()
     const ai = new CountingAi()
     const target = tree.roles[0].bullets[0]
-    // Una cifra que el candidato nunca dio: el guard la caza.
+    // Repite una línea que el CV ya tiene: es el único guard que JUZGA, y el
+    // que el CEO pidió conservar.
     ai.nextSuggestion = {
       bulletId: target.id,
       changed: true,
-      text: "Atendí a 300 clientes por turno en la línea de cajas resolviendo consultas",
-      actionVerb: "Atendí",
+      text: "Realicé el arqueo de caja al cierre",
+      actionVerb: "Realicé",
       keywordsUsed: [],
       claim: "atención en caja",
       metricType: null,
@@ -558,7 +610,7 @@ describe("la reescritura y su reintento", () => {
       tree, nodeId: target.id, spec: SPEC, ledger, index, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore(),
     })
     expect(ai.rewrites).toBe(2) // pidió, falló, pidió UNA vez más
-    expect(ai.lastNudge ?? "").toContain("300") // y le dijo qué falló
+    expect(ai.lastNudge ?? "").toMatch(/ya lo dice|already says/) // y le dijo qué falló
     expect(r.ok).toBe(false)
     if (!r.ok && !r.alreadyGood) expect(r.verdict.ok).toBe(false)
   })
@@ -597,8 +649,8 @@ describe("la reescritura y su reintento", () => {
     const target = tree.roles[0].bullets[0]
     ai.nextSuggestion = {
       bulletId: target.id, changed: true,
-      text: "Atendí a 300 clientes por turno en la línea de cajas resolviendo consultas",
-      actionVerb: "Atendí", keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
+      text: "Realicé el arqueo de caja al cierre",
+      actionVerb: "Realicé", keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
     }
     await runRewrite({ tree, nodeId: target.id, spec: SPEC, ledger, index, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
     expect(ai.rewrites).toBe(2)
@@ -758,8 +810,11 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     const arriba = t.roles[0].bullets.map((b) => b.id)
     expect(arriba).toContain(enterrado?.nodeId)
     expect(enterrado?.nodeId).not.toBe(viejo)
-    // Y el remedio lo dice el motor: mencionarlo arriba, no reescribir.
-    expect(enterrado?.remedy).toBe("weave")
+    // UNA LÍNEA, UNA TARJETA, TAMBIÉN PARA ESTO: el término enterrado se cierra
+    // reescribiendo esa línea, así que comparte tarjeta con lo demás que se dice
+    // de ella. Dos tarjetas sobre la misma viñeta eran dos órdenes a la vez.
+    expect(enterrado?.detail).toContain("Arqueo de caja")
+    expect(hallazgos.filter((f) => f.nodeId === enterrado?.nodeId)).toHaveLength(1)
   })
 
   it("lo demostrado en una viñeta y ausente de Habilidades se señala", () => {
@@ -770,13 +825,12 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     const index = buildTermIndex(termsOf(spec, t))
     const audit = facts(t, "Medios de pago", actual)
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, audit, score, index)
-    const sinListar = hallazgos.find((f) => f.merged.includes("skill_not_listed"))
-    expect(sinListar).toBeTruthy()
-    // Lo cierra AGREGARLO A LA LISTA. Reescribir la viñeta que ya lo demuestra
-    // no toca la sección que el filtro lee literalmente.
-    expect(sinListar?.remedy).toBe("add_skill")
-    expect(sinListar?.detail).toBe("Medios de pago")
+    // ── QUIÉN CONTESTA ESTO AHORA ─────────────────────────────────────────
+    // Era un hallazgo por término con su botón. Miraba uno por vez, así que
+    // podía llevar la lista a cien entradas — y el filtro cuenta cada término
+    // UNA vez. La pregunta completa —«cuáles lleva tu CV para esta vacante»— la
+    // contesta `skillPlan`, con el techo de veinte y los pesos del aviso.
+    expect(skillPlan(t.declaredSkills, spec, audit, {}).add).toContain("Medios de pago")
   })
 
   it("lo que YA está en Habilidades no se señala", () => {
@@ -786,36 +840,33 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     const index = buildTermIndex(termsOf(spec, t))
     const audit = facts(t, "Atención al cliente", actual)
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, audit, score, index)
-    expect(hallazgos.some((f) => f.merged.includes("skill_not_listed"))).toBe(false)
+    void findingsOf(t, audit, score, index)
+    // Ya está en la lista: el plan no la mueve de lugar ni la propone otra vez.
+    expect(skillPlan(t.declaredSkills, spec, audit, {}).add).toHaveLength(0)
   })
 
-  it("dos términos sobre la misma línea son DOS tarjetas, no una concatenada", () => {
-    // "Una línea, una tarjeta" vale para lo que se dice DE LA LÍNEA. Un término
-    // que falta en Habilidades habla del TÉRMINO: fusionarlos habría agregado a
-    // Habilidades la concatenación de los dos, que no es habilidad de nadie.
+  it("dos términos sobre la misma línea entran los DOS a la lista", () => {
+    // Antes eran dos tarjetas con sujeto propio, y su motivo era real: un botón
+    // compartido habría agregado a Habilidades la concatenación de los dos, que
+    // no es la habilidad de nadie. Ahora ni siquiera hay dos botones: la lista
+    // es una sola respuesta y entran los dos con su nombre.
     const t = arbol()
     const actual = t.roles[0].bullets[0].id
     const spec = {
       ...SPEC,
       mustHave: [
-        { skill: "Medios de pago", raw: "medios de pago", years: null, category: null },
         { skill: "Facturación", raw: "facturación", years: null, category: null },
+        { skill: "Medios de pago", raw: "medios de pago", years: null, category: null },
       ],
     }
-    const index = buildTermIndex(termsOf(spec, t))
-    const audit = {
-      ...facts(t, "Medios de pago", actual),
+    const audit: AuditFacts = {
+      ...facts(t, "Facturación", actual),
       coverage: [
-        { skill: "Medios de pago", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: actual },
-        { skill: "Facturación", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: actual },
+        { skill: "Facturación", requirement: "MUST", status: "FOUND", evidenceNodeId: actual },
+        { skill: "Medios de pago", requirement: "MUST", status: "FOUND", evidenceNodeId: actual },
       ],
     }
-    const score = scoreResume(t, spec, audit, {})
-    const sinListar = findingsOf(t, audit, score, index).filter((f) => f.merged.includes("skill_not_listed"))
-    expect(sinListar.map((f) => f.detail).sort()).toEqual(["Facturación", "Medios de pago"])
-    // Ids distintos: dos tarjetas con el mismo id se aplican sobre la equivocada.
-    expect(new Set(sinListar.map((f) => f.id)).size).toBe(2)
+    expect(skillPlan(t.declaredSkills, spec, audit, {}).add).toEqual(["Facturación", "Medios de pago"])
   })
 
   it("la blanda que se declara y nada respalda tiene salida: demostrarla", () => {
@@ -831,25 +882,24 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     }
     const score = scoreResume(t, spec, audit, {})
     const blanda = findingsOf(t, audit, score, index).find((f) => f.merged.includes("soft_not_shown"))
-    expect(blanda?.detail).toBe("Trabajo en equipo")
-    expect(blanda?.remedy).toBe("weave")
-    // Las blandas no puntúan: la tarjeta no puede prometer puntos.
-    expect(blanda?.gain).toBe(0)
+    expect(blanda?.detail).toContain("Trabajo en equipo")
+    // Y NO abre tarjeta propia: la blanda se demuestra reescribiendo esa línea,
+    // que es la misma reescritura que cierra lo demás que le falta.
+    expect(findingsOf(t, audit, score, index).filter((f) => f.nodeId === blanda?.nodeId)).toHaveLength(1)
   })
 
-  it("lo que el CV demuestra SIN NOMBRARLO también se ofrece para Habilidades", () => {
-    // Es el caso que más pierde: la persona lo hace, el filtro no lo ve.
+  it("lo que el CV demuestra SIN NOMBRARLO también entra a la lista", () => {
+    // Es el caso que más pierde: la persona lo hace, el filtro no lo ve porque
+    // la sección que lee literalmente no lo nombra. `IMPLIED` cuenta igual que
+    // `FOUND` para entrar.
     const t = arbol()
     const actual = t.roles[0].bullets[0].id
     const spec = { ...SPEC, mustHave: [{ skill: "Medios de pago", raw: "medios de pago", years: null, category: null }] }
-    const index = buildTermIndex(termsOf(spec, t))
-    const audit = {
+    const audit: AuditFacts = {
       ...facts(t, "Medios de pago", actual),
-      coverage: [{ skill: "Medios de pago", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: actual }],
+      coverage: [{ skill: "Medios de pago", requirement: "MUST", status: "IMPLIED", evidenceNodeId: actual }],
     }
-    const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, audit, score, index)
-    expect(hallazgos.find((f) => f.merged.includes("skill_not_listed"))?.remedy).toBe("add_skill")
+    expect(skillPlan(t.declaredSkills, spec, audit, {}).add).toContain("Medios de pago")
   })
 
   it("un requisito que el CV NO tiene nunca se ofrece para Habilidades", () => {
@@ -862,7 +912,57 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
       coverage: [{ skill: "SAP", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null }],
     }
     const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, audit, score, index)
-    expect(hallazgos.some((f) => f.remedy === "add_skill")).toBe(false)
+    void findingsOf(t, audit, score, index)
+    // NO_FOUND: el CV no lo sostiene. Escribir "SAP" en sus habilidades sería
+    // afirmar un hecho sobre esa persona que nadie declaró.
+    expect(skillPlan(t.declaredSkills, spec, audit, {}).add).toHaveLength(0)
+  })
+})
+
+const specSkills = {
+  language: "es", roleTitleRaw: "iOS", seniority: null, metricThatMatters: null,
+  mustHave: [{ skill: "Swift", raw: "Swift", years: null, category: null },
+             { skill: "Combine", raw: "Combine", years: null, category: null }],
+  niceToHave: [{ skill: "TestFlight", raw: "TestFlight", years: null, category: null }],
+  responsibilities: [], softSignals: [],
+} as unknown as JobSpec
+
+const auditSkills = {
+  bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
+  coverage: [{ skill: "Combine", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: "b1" }],
+  softCoverage: [], titleAlignment: 1,
+} as unknown as AuditFacts
+
+describe("las habilidades que entran a la plantilla", () => {
+  /**
+   * ── LO QUE ESTO CIERRA (CEO, 2026-09-09) ──────────────────────────────────
+   * «Según la postulación, que las skills se reemplacen por las necesarias; la
+   * plantilla recibe hasta veinte.» Antes lo contestaban dos cosas a medias: un
+   * hallazgo por término suelto que podía llevar la lista a cien, y dos
+   * plantillas que cortaban en doce por su cuenta sin mirar la vacante.
+   */
+  it("con 100 habilidades entran 20, y las del aviso primero", () => {
+    const cien = Array.from({ length: 100 }, (_, i) => `Skill ${i + 1}`)
+    const p = skillPlan(cien, specSkills, auditSkills, { Swift: 1.75, Combine: 1, TestFlight: 0.5 })
+    console.log("final:", p.final.length, "| primeras 4:", p.final.slice(0, 4).join(", "))
+    console.log("entran:", p.add.join(", "), "| salen:", p.drop.length)
+    expect(p.final).toHaveLength(SKILLS_MAX)
+    expect(p.final[0]).toBe("Combine")
+    expect(p.final).not.toContain("Swift")
+    expect(p.drop).toHaveLength(81)
+  })
+
+  it("una habilidad que el aviso pide NUNCA se cae del corte", () => {
+    const p = skillPlan(["Swift", ...Array.from({ length: 40 }, (_, i) => `X${i}`)], specSkills, auditSkills, {})
+    expect(p.final).toContain("Swift")
+    expect(p.final).toContain("Combine")
+    expect(p.drop).not.toContain("Swift")
+  })
+
+  it("con pocas habilidades no saca ninguna, y respeta TU orden", () => {
+    const p = skillPlan(["Excel", "Swift", "Word"], specSkills, auditSkills, {})
+    console.log("pocas → final:", p.final.join(", "))
+    expect(p.drop).toHaveLength(0)
+    expect(p.final.filter((s) => !["Swift", "Combine"].includes(s))).toEqual(["Excel", "Word"])
   })
 })

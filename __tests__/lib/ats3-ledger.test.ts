@@ -3,11 +3,9 @@ import {
   openLedger,
   afterAccept,
   ledgerSignature,
-  verbCollides,
-  keywordsOverBudget,
   saturatedMetricTypes,
-  claimAlreadyMade,
   spaceBudget,
+  BULLETS_PER_ROLE_MAX,
   KEYWORD_MAX,
   type Ledger,
 } from "@/lib/ats3/ledger"
@@ -91,7 +89,7 @@ describe("el ledger arranca con lo que el CV ya gastó", () => {
   })
 })
 
-describe("las cuatro reglas", () => {
+describe("lo que el ledger le cuenta al modelo", () => {
   const base: Ledger = {
     verbsUsed: ["lidere", "reduje"],
     keywordBudget: {
@@ -103,28 +101,10 @@ describe("las cuatro reglas", () => {
     bulletsRemaining: 5,
   }
 
-  it("un verbo, una vez", () => {
-    expect(verbCollides(base, "Lideré")).toBe(true)
-    expect(verbCollides(base, "Soldé")).toBe(false)
-  })
-
-  it("un término no puede aparecer más de dos veces en todo el CV", () => {
-    expect(keywordsOverBudget(base, ["Soldadura"])).toEqual(["Soldadura"])
-    expect(keywordsOverBudget(base, ["Torno"])).toEqual([])
-  })
-
-  it("dos usos en la MISMA reescritura también se pasan del presupuesto", () => {
-    expect(keywordsOverBudget(base, ["Torno", "Torno", "Torno"])).toContain("Torno")
-  })
-
   it("avisa qué tipo de métrica ya está saturado", () => {
     expect(saturatedMetricTypes(base)).toEqual(["PERCENT_DELTA"])
   })
 
-  it("un logro, un dueño: aunque esté redactado distinto", () => {
-    expect(claimAlreadyMade(base, "mermas del taller reducidas")).not.toBeNull()
-    expect(claimAlreadyMade(base, "capacitación de aprendices")).toBeNull()
-  })
 })
 
 describe("aceptar una sugerencia actualiza la memoria y no muta la vieja", () => {
@@ -171,8 +151,16 @@ describe("el presupuesto de espacio", () => {
     for (const n of Object.values(b.perRole)) expect(n).toBeGreaterThanOrEqual(1)
   })
 
-  it("con un solo puesto, se lleva todo el presupuesto", () => {
-    expect(spaceBudget(tree(["a"], 1), 15).perRole["r0"]).toBe(15)
+  /**
+   * NI CON UN SOLO PUESTO SE PASA DEL TECHO (CEO, 2026-09-09).
+   *
+   * Antes se llevaba las quince de la página, y `BULLETS_PER_ROLE_MAX` dice que
+   * de un mismo puesto se leen seis: al modelo se le decía «acá caben quince» y
+   * el motor proponía sacar de la séptima en adelante. Una pregunta, una
+   * respuesta.
+   */
+  it("un puesto solo tampoco pasa de las que se leen", () => {
+    expect(spaceBudget(tree(["a"], 1), 15).perRole["r0"]).toBe(BULLETS_PER_ROLE_MAX)
   })
 })
 

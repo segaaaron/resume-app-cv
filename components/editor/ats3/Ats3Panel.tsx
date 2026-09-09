@@ -14,12 +14,11 @@
 // Todo lo que decide vive en `lib/ats3/`. Acá no se calcula un puntaje, ni una
 // ganancia, ni si una reescritura es buena.
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Check, Lightbulb, Loader2, Minus, Sparkles, Target } from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
-import { readBullets } from "@/lib/ats3/engine"
 import { statesQuantity } from "@/lib/ats3/score"
 import type { AuditFacts } from "@/lib/ats3/score"
 import type { ResumeSections } from "@/types/resume"
@@ -27,7 +26,7 @@ import type { ResumeSections } from "@/types/resume"
 // aprendió a leer —dial, secciones, filas de chequeo, tabla de términos— no.
 import { ScoreDial, ReportSectionCard, CheckRow, TermTable } from "./report-ui"
 import { Btn, Card, Chip, Note } from "./ui"
-import TailorPanel, { workOf, verdictsToDo, type DoneEntry } from "./TailorPanel"
+import TailorPanel, { pendingCount, type DoneEntry } from "./TailorPanel"
 import { sectionsOf, termsOfSpec, headlineOf } from "./view-model"
 
 
@@ -59,7 +58,23 @@ export default function Ats3Panel() {
 
   /** Los hallazgos, dichos en la forma que la pantalla ya sabía pintar. */
   const todos = useMemo(() => [...a.regressed, ...a.findings], [a.findings, a.regressed])
-  const secciones = useMemo(() => sectionsOf(a.score, todos, a.textOf), [a.score, todos, a.textOf])
+  /**
+   * EL NOMBRE HUMANO DE UN TOKEN DEL MOTOR.
+   *
+   * `t.has` es lo que hace que un token sin clave caiga al token en vez de
+   * pintar el error de next-intl: el motor puede agregar un chequeo mañana y la
+   * pantalla no se rompe por eso. El acento se saca de la CLAVE, no del token —
+   * el motor emite «método» y una clave i18n con acento es una invitación a que
+   * la próxima no coincida por un carácter que no se ve.
+   */
+  const glosa = useCallback(
+    (token: string) => {
+      const clave = `gloss_${token.normalize("NFD").replace(/\p{Diacritic}/gu, "")}`
+      return t.has(clave) ? t(clave) : token
+    },
+    [t],
+  )
+  const secciones = useMemo(() => sectionsOf(a.score, todos, a.textOf, glosa), [a.score, todos, a.textOf, glosa])
   const regresados = useMemo(() => new Set(a.regressed.map((f) => f.id)), [a.regressed])
   /** Las cuatro cifras de la cabecera salen juntas: no pueden discrepar. */
   const cabecera = useMemo(() => headlineOf(a.score, secciones), [a.score, secciones])
@@ -76,7 +91,7 @@ export default function Ats3Panel() {
    * mentira aunque las dos sean ciertas — este panel ya lo pagó dos veces.
    */
   const paraTailor = useMemo(
-    () => workOf(secciones).length + verdictsToDo(a.triage).length,
+    () => pendingCount(secciones, a.triage),
     [secciones, a.triage],
   )
   const [tailorAbierto, setTailorAbierto] = useState(false)
@@ -91,16 +106,38 @@ export default function Ats3Panel() {
     return c ? { points: c.points, max: c.effectiveWeight } : null
   }, [a.score])
 
-  /** Las líneas del CV vivo: la cifra se cuenta con la misma función del puntaje. */
-  const líneas = useMemo(
-    () =>
-      (sectionData.workExperience ?? []).flatMap((r) => readBullets(r.description ?? "")),
-    [sectionData.workExperience],
-  )
   /** El término con el que se entró, para aterrizar en SU tarjeta y no arriba de todo. */
   const [foco, setFoco] = useState<string | null>(null)
   /** Lo resuelto en esta sesión: sobrevive a cerrar y volver a abrir Tailor. */
+  /**
+   * «HECHAS» SOBREVIVE A RECARGAR LA PÁGINA.
+   *
+   * Vivía sólo en este `useState`: un F5 y el registro de todo lo resuelto
+   * desaparecía —reportado por el CEO— junto con la única prueba de que su
+   * trabajo había pasado. Ahora se SIEMBRA con lo que el motor ya guardaba y se
+   * le suma lo de esta sesión, emparejado por id: una entrada, un dueño, y la
+   * de esta sesión gana porque trae el antes/después recién medido.
+   *
+   * Lo guardado con la forma vieja no traía título; esas filas se muestran con
+   * lo que tienen en vez de desaparecer.
+   */
   const [hechas, setHechas] = useState<DoneEntry[]>([])
+  const registro = useMemo(() => {
+    const porId = new Map<string, DoneEntry>()
+    for (const r of a.resolved) {
+      if (!r.title) continue
+      porId.set(r.findingId, {
+        id: r.findingId,
+        title: r.title,
+        weight: 0,
+        kind: r.kind ?? (r.resolvedBy === "DISMISSED" ? "dismissed" : "applied"),
+        before: r.before,
+        after: r.after,
+      })
+    }
+    for (const h of hechas) porId.set(h.id, h)
+    return [...porId.values()]
+  }, [a.resolved, hechas])
 
   /**
    * Un error del análisis se lleva la vista, porque es lo único que la pantalla
@@ -200,14 +237,7 @@ export default function Ats3Panel() {
           ))}
 
           {a.audit && (
-            <Anatomy
-              audit={a.audit}
-              quantified={líneas.filter(statesQuantity).length}
-              total={líneas.length}
-              metric={medidaDeLaCifra}
-              existe={(id) => a.textOf(id).length > 0}
-              t={t}
-            />
+            <Anatomy audit={a.audit} metric={medidaDeLaCifra} textOf={a.textOf} t={t} />
           )}
 
           {/* LA ÚNICA SALIDA DEL INFORME.
@@ -230,7 +260,7 @@ export default function Ats3Panel() {
           findings={todos}
           regressed={regresados}
           focusTerm={foco}
-          done={hechas}
+          done={registro}
           onDone={(e) => setHechas((h) => (h.some((x) => x.id === e.id) ? h : [...h, e]))}
           onClose={() => {
             setTailorAbierto(false)
@@ -345,16 +375,11 @@ function JobBox(props: {
  */
 function Anatomy({
   audit,
-  quantified,
-  total,
   metric,
-  existe,
+  textOf,
   t,
 }: {
   audit: AuditFacts
-  /** Las que declaran una cantidad, contadas por el puntaje. */
-  quantified: number
-  total: number
   /**
    * LA VARA DE LA CIFRA ES EL PUNTAJE, y por eso viene de él.
    *
@@ -369,11 +394,13 @@ function Anatomy({
    * número no pueden discrepar.
    */
   metric: { points: number; max: number } | null
-  /** ¿Esta línea sigue en el CV? La misma pregunta que se hace el puntaje. */
-  existe: (nodeId: string) => boolean
+  /**
+   * QUÉ DICE ESA LÍNEA HOY. Con esto se responden las DOS preguntas del cuadro
+   * —¿sigue en el CV? ¿trae una cifra?— sobre el mismo conjunto de líneas.
+   */
+  textOf: (nodeId: string) => string
   t: (k: string, v?: Record<string, string | number>) => string
 }) {
-  if (total === 0) return null
   /**
    * SÓLO LAS LÍNEAS QUE EL CV TIENE DE VERDAD.
    *
@@ -384,10 +411,26 @@ function Anatomy({
    * descarta por su cuenta. Se descartan con la misma vara: si la línea no está
    * en el CV vivo, no se cuenta.
    */
-  const reales = audit.bullets.filter((b) => existe(b.id))
+  const reales = audit.bullets.filter((b) => textOf(b.id).length > 0)
+  /**
+   * ── UN SOLO DENOMINADOR PARA LAS CUATRO FILAS ─────────────────────────────
+   *
+   * Las cuatro se pintan igual —«n/total»— y hasta hoy no contaban lo mismo:
+   * verbo, resultado y método salían de las líneas que la auditoría JUZGÓ, y la
+   * cifra de TODAS las líneas vivas del CV. Cuando la auditoría no devuelve una
+   * viñeta —un borde que este motor tiene declarado— los tres primeros quedaban
+   * cortos contra un denominador que no era el suyo, y el cuadro decía «te
+   * faltan dos líneas con verbo» sobre dos líneas que nadie leyó.
+   *
+   * Las cuatro cuentan sobre las mismas líneas: las que existen en el CV y la
+   * auditoría juzgó. Es la única población de la que este cuadro puede hablar.
+   */
+  const total = reales.length
+  if (total === 0) return null
   const verb = reales.filter((b) => b.hasActionVerb).length
   const result = reales.filter((b) => b.hasResult).length
   const method = reales.filter((b) => b.hasMethod).length
+  const quantified = reales.filter((b) => statesQuantity(textOf(b.id))).length
   const complete = reales.filter((b) => b.hasActionVerb && b.hasResult && b.hasMethod).length
   /**
    * SIN BANDA, Y NO ES UN OLVIDO.

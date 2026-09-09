@@ -50,18 +50,6 @@ import type { ComponentKey, Score } from "@/lib/ats3/score"
  */
 export type PanelSectionId = "hard" | "soft" | "other" | "format" | "tips"
 
-/**
- * QUIÉN CIERRA EL HALLAZGO — y sólo los dos que el motor emite de verdad.
- *
- * Había un tercero, `"user"`, para lo que sólo puede arreglar la persona. El
- * motor v3 no lo produce NUNCA: cada hallazgo declara su remedio y los dos que
- * existen los cierra el producto. Mantenerlo en el tipo dejaba media pantalla
- * escrita para un caso imposible —un aviso, una condición, una clave de texto—
- * y cualquiera que leyera el código creería que ese camino existe. Si mañana el
- * motor necesita devolverle algo al usuario, se agrega acá y el compilador
- * señala cada lugar que tiene que atenderlo.
- */
-export type PanelOwner = "tailor" | "auto"
 
 export interface PanelCheck {
   id: string
@@ -72,9 +60,15 @@ export interface PanelCheck {
   titleKey: string
   detailKey?: string
   params?: Record<string, string | number>
-  owner: PanelOwner
   /** Qué lo disparó, nombrado: la línea, el requisito, el término. */
   evidence?: string[]
+  /**
+   * LO QUE ESTA TARJETA PROMETE CERRAR, dicho como se lo lee el usuario.
+   *
+   * Viaja con la petición de reescritura: la pantalla y el modelo tienen que
+   * leer la misma frase, o el panel promete una cosa y el pedido pide otra.
+   */
+  focus: string
 }
 
 export interface PanelSection {
@@ -176,6 +170,18 @@ export function checkOf(
    * pantalla que no puede preguntar no debe quedarse muda.
    */
   textoVivo?: (nodeId: string) => string,
+  /**
+   * CÓMO SE DICE EN CASTELLANO LO QUE EL MOTOR NOMBRA CON UN TOKEN.
+   *
+   * `detail` de tres tipos —el chequeo de lectura que falló, el eje que le
+   * falta a la viñeta, la función que el resumen no cumple— es vocabulario del
+   * motor: `trayectoria_continua`, `resultado`, `identity`. Se pintaba CRUDO en
+   * la tarjeta, reportado con captura: «trayectoria_continua, qué mierdas es
+   * eso». El motor no escribe prosa —ni debe—, así que el nombre humano sale
+   * del diccionario, que es su dueño natural. Sin traductor se cae al token: es
+   * lo que había, y una pantalla que no puede preguntar no debe quedarse muda.
+   */
+  glosa?: (token: string) => string,
 ): PanelCheck {
   const linea = textoVivo?.(f.nodeId) || f.nodeText
   return {
@@ -212,37 +218,6 @@ export function checkOf(
      */
     detailKey: `type_${f.type}_detail`,
     /**
-     * LA PUERTA LA DICE EL MOTOR, NO LA PANTALLA.
-     *
-     * Antes acá se decidía la acción a ojo y todo terminaba en "reescribí esta
-     * línea". Con eso, dos hallazgos prometían algo que su botón no hacía:
-     * reescribir la línea de 2015 no la desentierra, y reescribir la viñeta que
-     * ya demuestra un término no lo agrega a Habilidades. El motor es el único
-     * que ve el CV, la vacante y la auditoría a la vez; el remedio viaja con el
-     * hallazgo y acá sólo se traduce a un botón.
-     *
-     *   add_skill → arreglo determinista, sin modelo ni cuota (`owner: "auto"`)
-     *   weave / rewrite → lo escribe el ejecutor (`owner: "tailor"`)
-     *
-     * TODO HALLAZGO TIENE PUERTA, INCLUIDO EL REQUISITO QUE FALTA.
-     *
-     * Estaba como `owner: "user"` y sin botón — un cartel que decía «te falta
-     * esto» y nada más. Pero el motor YA hizo el trabajo difícil: eligió la
-     * viñeta donde ese término encaja mejor y ancló el hallazgo ahí. La puerta
-     * existía y estaba tapiada.
-     *
-     * Se resuelve como todo lo demás: reescribiendo ESA línea, con los guards
-     * en el medio. Si el trabajo descrito no sostiene el término, la reescritura
-     * se rechaza y el usuario ve por qué — que es la respuesta honesta, no un
-     * botón que promete lo que no puede cumplir.
-     *
-     * Lo que NO se hace, y es decisión: agregarlo suelto a la lista de
-     * habilidades. Un término listado sin una línea que lo demuestre es
-     * exactamente lo que la auditoría cuenta como "sólo declarado" y vale menos;
-     * ofrecerlo como arreglo sería vender un punto que el puntaje no da.
-     */
-    owner: f.remedy === "add_skill" ? "auto" : "tailor",
-    /**
      * QUÉ señala el hallazgo, no dónde aterrizó.
      *
      * En un requisito que falta, la evidencia es EL REQUISITO. La línea que el
@@ -251,9 +226,45 @@ export function checkOf(
      * clientes…"» — el texto de una viñeta presentado como si fuera el defecto.
      * En los demás, la línea SÍ es lo señalado.
      */
-    evidence: (f.type === "missing_requirement" ? partesDe(f.detail) : [linea, f.detail])
-      .filter((x) => x.trim().length > 0),
+    ...(() => {
+      const { evidence, focus } = evidenciaDe(f, linea, glosa)
+      return { evidence: evidence.filter((x) => x.trim().length > 0), focus }
+    })(),
   }
+}
+
+/** Los tipos cuyo `detail` es vocabulario del motor y no texto del CV. */
+const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap"])
+
+/**
+ * QUÉ SE MUESTRA COMO «lo que disparó esto».
+ *
+ * `parse_risk` es la excepción y por eso no lleva la línea: los siete chequeos
+ * de lectura se anclan en el resumen porque hay que anclarlos en algún lado,
+ * pero hablan del DOCUMENTO —las fechas, el orden de los puestos—, así que
+ * pintar el resumen debajo era señalar un párrafo que no tiene nada que ver con
+ * el defecto.
+ */
+function evidenciaDe(f: Finding, linea: string, glosa?: (token: string) => string): { evidence: string[]; focus: string } {
+  // El motor une con coma los ejes de la viñeta y las funciones del resumen, y
+  // con el separador compartido lo que fusionó: se aceptan los dos.
+  const dichos = f.detail.split(/\s*[,·]\s*/).map((x) => x.trim()).filter(Boolean)
+  /**
+   * LO QUE HAY QUE ARREGLAR, DICHO UNA VEZ Y EN CASTELLANO — para los dos.
+   *
+   * ── EL DEFECTO QUE ESTO CIERRA ─────────────────────────────────────────────
+   * La pantalla glosaba el token («resultado» → «No dice en qué terminó») y al
+   * MODELO se le mandaba el token crudo: «resultado, método». Dos lecturas del
+   * mismo dato, y la del modelo además en castellano aunque el CV estuviera en
+   * inglés, porque esas palabras las escribe el motor.
+   *
+   * Sale del mismo cálculo que la evidencia: una glosa, dos consumidores.
+   */
+  const glosados = TIPOS_CON_TOKENS.has(f.type) ? dichos.map((x) => glosa?.(x) ?? x) : dichos
+  const focus = glosados.join(" · ")
+  if (f.type === "missing_requirement") return { evidence: partesDe(f.detail), focus }
+  if (!TIPOS_CON_TOKENS.has(f.type)) return { evidence: [linea, f.detail], focus }
+  return { evidence: f.type === "parse_risk" ? glosados : [linea, ...glosados], focus }
 }
 
 /**
@@ -273,9 +284,11 @@ export function sectionsOf(
   findings: readonly Finding[],
   /** El texto vivo de una línea. Se pasa una vez y lo usan todas las filas. */
   textoVivo?: (nodeId: string) => string,
+  /** El nombre humano de un token del motor. Se pasa una vez, igual que arriba. */
+  glosa?: (token: string) => string,
 ): PanelSection[] {
   const ids = Object.keys(COMPONENTS_OF) as PanelSectionId[]
-  const checks = findings.map((f) => checkOf(f, textoVivo))
+  const checks = findings.map((f) => checkOf(f, textoVivo, glosa))
   return ids.map((id) => ({
     id,
     // Puntúa la que tiene componentes: es verdad por construcción, no por
