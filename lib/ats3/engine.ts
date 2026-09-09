@@ -82,6 +82,14 @@ export interface RewriteInput {
   roleContext: string
   /** Las otras viñetas del CV: no puede devolver ninguna calcada. */
   siblings?: string[]
+  /**
+   * LAS DOS LÍNEAS DE UNA FUSIÓN, cuando la hay.
+   *
+   * Va aparte de `original` —que las lleva pegadas para que el guard juzgue
+   * contra las dos— porque el modelo necesita saber que son DOS y que tiene que
+   * devolver UNA. Sin decirlo, lo que devuelve es una de las dos retocada.
+   */
+  mergeOf?: [string, string]
   spec: JobSpec
   ledger: Ledger
   declaredSkills: string[]
@@ -883,6 +891,27 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    * NO PISA AL MODELO: sólo habla de viñetas sobre las que el triage no dijo
    * nada. Si el modelo ya decidió esa línea, manda él.
    */
+  /**
+   * UNA FUSIÓN NO SE PIDE PARA DESPUÉS PEDIR QUE SAQUES ALGO (CEO, 2026-09-09).
+   *
+   * «Si fusionás es porque tiene buen impacto para el currículum; si fusionás
+   * cosas para luego pedir eliminar o sacar, eso no quiero.»
+   *
+   * El modelo puede devolver MERGE sobre una línea y DROP o DEMOTE sobre la
+   * otra del par: leído en pantalla, es el panel pidiendo juntarlas y tirar una
+   * al mismo tiempo. Manda la fusión —es la que el usuario tiene delante con
+   * las dos líneas— y el veredicto que la contradice se retira.
+   *
+   * Las dos salidas SÍ se ofrecen juntas, pero en la MISMA tarjeta y sin
+   * encadenar: fusionar, o sacar una. Elige el usuario, no el motor.
+   */
+  const enFusion = new Set(
+    decisions.filter((d) => d.verdict === "MERGE" && d.mergeWith).flatMap((d) => [d.bulletId, d.mergeWith as NodeId]),
+  )
+  decisions = decisions.filter(
+    (d) => d.verdict === "MERGE" || !enFusion.has(d.bulletId) || d.verdict === "KEEP",
+  )
+
   const conVeredicto = new Set(decisions.map((d) => d.bulletId))
   for (const role of tree.roles) {
     const sobran = role.bullets.length - BULLETS_PER_ROLE_MAX
@@ -902,6 +931,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
         relevance: 0,
         proposedTopic: null,
         needsUserConfirm: null,
+        mergeWith: null,
       })
       conVeredicto.add(b.id)
     }
@@ -1022,6 +1052,15 @@ export interface RewriteRequest {
   jdKey: string
   /** Lo que la tarjeta prometió cerrar. Ver `RewriteInput.focus`. */
   focus?: string
+  /**
+   * LA OTRA LÍNEA DE UNA FUSIÓN. Cambia QUÉ no se puede perder.
+   *
+   * Una fusión escribe UNA línea que tiene que conservar lo que decían LAS DOS.
+   * Sin esto, `drops_content` juzga contra la primera y sola: la mitad de la
+   * información de la segunda se podría caer sin que nada la reclame — y la
+   * segunda se BORRA al aplicar, así que ese dato no vuelve de ningún lado.
+   */
+  mergeWith?: NodeId
   ai: AtsAi
   store: AtsStore
 }
@@ -1050,13 +1089,23 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
 
   const isSummary = req.nodeId === req.tree.summary.id
   const sig = ledgerSignature(req.ledger)
-  const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, sig, req.model, req.focus)
+  const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, sig, req.model, `${req.focus ?? ""}|${req.mergeWith ?? ""}`)
 
   // La línea que se reemplaza suelta su propia apertura: si no, choca consigo
   // misma y el modelo elige un verbo peor para esquivar un conflicto inexistente.
   const ledger = releaseOpener(req.ledger, node.text)
+  /**
+   * EN UNA FUSIÓN, EL ORIGINAL SON LAS DOS LÍNEAS.
+   *
+   * Es lo único que hace segura la fusión: el resultado se juzga contra todo lo
+   * que había, así que si se come un dato de cualquiera de las dos, el guard lo
+   * caza. La que se fusiona se borra al aplicar; lo que se pierda acá no vuelve.
+   */
+  const otra = req.mergeWith ? findNode(req.tree, req.mergeWith) : null
+  const original = otra ? `${node.text} ${otra.text}` : node.text
   const ctx = {
-    original: node.text,
+    original,
+    mergeOf: otra ? ([node.text, otra.text] as [string, string]) : undefined,
     index: req.index,
     ledger,
     isSummary,
@@ -1072,7 +1121,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
      */
     siblings: req.tree.roles
       .flatMap((r) => r.bullets)
-      .filter((b) => b.id !== req.nodeId)
+      .filter((b) => b.id !== req.nodeId && b.id !== req.mergeWith)
       .map((b) => b.text),
   }
 
@@ -1094,7 +1143,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    */
   const cached = (await req.store.read("ats3-fix", key)) as Suggestion | null
   if (cached && checkSuggestion(cached, ctx).ok) {
-    return { ok: true, suggestion: anchor(cached, node.hash, node.text), served: true, calls: 0 }
+    return { ok: true, suggestion: anchor(cached, node.hash, node.text, req.mergeWith), served: true, calls: 0 }
   }
   const ask = (nudge?: string) =>
     isSummary
@@ -1107,7 +1156,8 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           nudge,
         })
       : req.ai.rewriteBullet({
-          original: node.text,
+          original,
+          mergeOf: otra ? [node.text, otra.text] : undefined,
           bulletId: req.nodeId,
           roleContext: roleContextOf(req.tree, req.nodeId),
           spec: req.spec,
@@ -1121,9 +1171,11 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
            * el modelo nunca las había visto: se lo castigaba por repetir algo
            * que nadie le mostró. Prevenir en la fuente cuesta cero tokens.
            */
+          // La otra línea de la fusión NO entra: se va a borrar, así que "repetirla"
+          // es exactamente lo que se le está pidiendo.
           siblings: req.tree.roles
             .flatMap((r) => r.bullets)
-            .filter((b) => b.id !== req.nodeId)
+            .filter((b) => b.id !== req.nodeId && b.id !== req.mergeWith)
             .map((b) => b.text),
           nudge,
         })
@@ -1246,11 +1298,11 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   }
 
   await req.store.write("ats3-fix", key, first)
-  return { ok: true, suggestion: anchor(first, node.hash, node.text), served: false, calls }
+  return { ok: true, suggestion: anchor(first, node.hash, node.text, req.mergeWith), served: false, calls }
 }
 
-function anchor(s: Suggestion, hash: string, originalText: string): AnchoredSuggestion {
-  return { ...s, basedOnHash: hash, originalText }
+function anchor(s: Suggestion, hash: string, originalText: string, mergedFrom?: NodeId): AnchoredSuggestion {
+  return { ...s, basedOnHash: hash, originalText, mergedFrom }
 }
 
 function roleContextOf(tree: ResumeTree, nodeId: NodeId): string {
@@ -1322,7 +1374,16 @@ export function applySuggestion(
   }
 
   const before = scoreResume(tree, spec, audit, checks, termWeights)
-  const copy = writeInto(tree, s.bulletId, s.text)
+  /**
+   * UNA FUSIÓN ES UN SOLO ACTO: se escribe la línea y se va la otra.
+   *
+   * Si se escribiera la fusionada y la absorbida quedara en pie, el CV termina
+   * con el mismo trabajo contado dos veces — justo lo que la fusión venía a
+   * arreglar—, y el puntaje mediría un documento que nadie va a tener. Se hace
+   * sobre la COPIA, como todo acá: si algo falla, el CV del usuario no se tocó.
+   */
+  const conTexto = writeInto(tree, s.bulletId, s.text)
+  const copy = s.mergedFrom ? removeNode(conTexto, s.mergedFrom) : conTexto
   const after = scoreResume(copy, spec, audit, checks, termWeights)
 
   return {
@@ -1331,6 +1392,18 @@ export function applySuggestion(
     ledger: afterAccept(ledger, s),
     delta: deltaOf(before, after),
   }
+}
+
+/**
+ * Saca una viñeta devolviendo un árbol NUEVO. El resumen no se puede sacar.
+ *
+ * Vive acá, al lado de `writeInto`, porque es la otra mitad del mismo acto: la
+ * fusión escribe una línea y retira la otra, y las dos tienen que pasar por la
+ * copia antes de tocar nada.
+ */
+export function removeNode(tree: ResumeTree, nodeId: NodeId): ResumeTree {
+  if (nodeId === tree.summary.id) return tree
+  return { ...tree, roles: tree.roles.map((r) => ({ ...r, bullets: r.bullets.filter((b) => b.id !== nodeId) })) }
 }
 
 /** Escribe un nodo devolviendo un árbol NUEVO. El original no se toca. */

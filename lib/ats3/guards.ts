@@ -65,6 +65,25 @@ export interface GuardContext {
   index: TermIndex
   ledger: Ledger
   /**
+   * LAS DOS LÍNEAS DE UNA FUSIÓN, cuando la hay.
+   *
+   * ── POR QUÉ LA FUSIÓN NECESITA UNA VARA MÁS DURA ─────────────────────────
+   * `drops_content` mira los términos de la VACANTE y las cifras: es la vara
+   * correcta para una reescritura, donde lo demás sigue escrito en el CV aunque
+   * la línea cambie. En una fusión no: la segunda línea SE BORRA, así que
+   * cualquier cosa suya que no entre en el resultado no vuelve de ningún lado.
+   *
+   * Medido con el par que el CEO puso de ejemplo —«Gestioné la agenda» /
+   * «Confirmé los turnos por teléfono»—: no hay ni un término del aviso ni una
+   * cifra, así que el guard general las daba por buenas aunque el resultado se
+   * comiera la mitad. El motor viejo tenía esta comprobación con el nombre
+   * `contentDroppedFrom` y se perdió al construir v3 de cero.
+   *
+   * Sólo corre en una fusión: aplicarla a toda reescritura prohibiría acortar,
+   * que es la mitad del valor del producto.
+   */
+  mergeOf?: [string, string]
+  /**
    * LAS OTRAS VIÑETAS DEL CV. Sin ellas no se puede contestar «¿esto repite?».
    *
    * Orden del CEO (2026-09-09): «lo que sí deberías validar es que una viñeta no
@@ -345,6 +364,22 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
    */
   const gemela = (ctx.siblings ?? []).find((otra) => otra.trim() && addsNothing(otra, text))
   if (gemela) return fail("repeats", gemela)
+
+  /**
+   * UNA FUSIÓN CONSERVA LO QUE DECÍAN LAS DOS. Sin excepción.
+   *
+   * Se mide por palabra con contenido —cuatro letras o más— y por raíz de
+   * cuatro, la misma vara que el resto del archivo: «turnos» sobrevive como
+   * «turno», y «confirmé» como «confirmando». Una fusión no tiene por qué
+   * repetir las palabras exactas; tiene que no perder de qué hablaban.
+   */
+  if (ctx.mergeOf) {
+    const dicho = normalize(text).split(" ").filter(Boolean)
+    const perdidas = ctx.mergeOf
+      .flatMap((linea) => normalize(linea).split(" ").filter((w) => w.length >= 4))
+      .filter((w) => !dicho.some((d) => d === w || (d.length >= 4 && d.slice(0, 4) === w.slice(0, 4))))
+    if (perdidas.length) return fail("drops_content", [...new Set(perdidas)].join(", "))
+  }
 
   return pass
 }

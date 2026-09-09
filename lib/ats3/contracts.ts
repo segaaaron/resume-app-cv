@@ -155,7 +155,11 @@ export const PROMPT_VERSION = {
   P2: "p2-3", // auditoría
   // p3-2: KEEP exige que la línea sea SUYA. Una correcta pero genérica ocupa el
   // lugar de una que distingue.
-  P3: "p3-2", // triage
+  // p3-3 (2026-09-09): sexto veredicto, MERGE — dos viñetas del mismo puesto que
+  // cuentan el mismo trabajo partido en dos. Se pide en el MISMO acto que ya
+  // recibe el bloque entero, así que no cuesta una llamada nueva; y cambia lo
+  // que el modelo devuelve, así que lo guardado con p3-2 ya no es la respuesta.
+  P3: "p3-3", // triage
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -668,7 +672,7 @@ export type Placeholder = z.infer<typeof PlaceholderSchema>
 // TRIAGE Y SUGERENCIAS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const VERDICTS = ["KEEP", "REWRITE", "REPLACE", "DEMOTE", "DROP"] as const
+export const VERDICTS = ["KEEP", "REWRITE", "REPLACE", "DEMOTE", "DROP", "MERGE"] as const
 export type Verdict = (typeof VERDICTS)[number]
 
 export const TriageDecisionSchema = z.object({
@@ -679,6 +683,23 @@ export const TriageDecisionSchema = z.object({
   proposedTopic: z.string().max(200).nullish().transform((v) => v ?? null),
   /** En REPLACE el modelo NUNCA afirma que el candidato hizo algo: pregunta. */
   needsUserConfirm: z.string().max(300).nullish().transform((v) => v ?? null),
+  /**
+   * LA OTRA LÍNEA DEL PAR, cuando dos viñetas cuentan el mismo trabajo.
+   *
+   * ── POR QUÉ VIVE EN EL TRIAGE Y NO EN UNA LLAMADA PROPIA ───────────────────
+   * El triage YA recibe todas las viñetas del puesto en una sola petición: es
+   * el único momento en que el motor tiene el bloque entero delante. Detectar
+   * el par ahí cuesta CERO llamadas nuevas. Un detector léxico aparte no sirve
+   * —este proyecto lo midió: dos líneas que cuentan el mismo trabajo a menudo
+   * no comparten ni una palabra («Gestioné la agenda» / «Confirmé los turnos»),
+   * y ofrecía 0 de 10 fusiones reales—.
+   *
+   * `MERGE` PROPONE, NUNCA IMPONE (CEO, 2026-09-09): «pregunta al usuario si
+   * quiere hacerlo, no se obliga a nadie a nada; y si también hace falta
+   * eliminar, dale esa opción». La tarjeta enseña las DOS líneas y ofrece las
+   * dos salidas; el motor no elige por él.
+   */
+  mergeWith: z.string().max(64).nullish().transform((v) => v ?? null),
 })
 export type TriageDecision = z.infer<typeof TriageDecisionSchema>
 
@@ -781,6 +802,14 @@ export interface AnchoredSuggestion extends Suggestion {
   basedOnHash: string
   /** El texto que reemplaza. Sin esto, "aplicar" escribe sobre la línea de al lado. */
   originalText: string
+  /**
+   * LA LÍNEA QUE SE ABSORBE, en una fusión. Se BORRA al aplicar.
+   *
+   * Viaja con la propuesta y no aparte porque aplicar tiene que ser un solo
+   * acto: escribir la fusionada y dejar la otra en pie deja el CV con el mismo
+   * trabajo contado dos veces, que es justo lo que la fusión venía a arreglar.
+   */
+  mergedFrom?: NodeId
 }
 
 // Acá vivía un `delta`. Su comentario decía «medido recalculando sobre una

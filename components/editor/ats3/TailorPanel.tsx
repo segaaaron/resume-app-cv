@@ -563,7 +563,7 @@ export default function TailorPanel({
                 return quitada
               }}
               onUndo={a.undoDrop}
-              onRewrite={a.requestRewrite}
+              onRewrite={(nodeId, mergeWith) => a.requestRewrite(nodeId, undefined, undefined, mergeWith)}
               textOf={a.textOf}
               busyNode={a.busyNode}
               t={t}
@@ -624,7 +624,7 @@ function TriageBoard({
   decisions: TriageDecision[]
   onDrop: (nodeId: string) => { roleIndex: number; bulletIndex: number; text: string } | null
   onUndo: (roleIndex: number, bulletIndex: number, text: string) => void
-  onRewrite: (nodeId: string) => void
+  onRewrite: (nodeId: string, mergeWith?: string) => void
   /** De qué línea habla cada veredicto. Sin esto el tablero es un acertijo. */
   textOf: (nodeId: string) => string
   busyNode: string | null
@@ -710,7 +710,36 @@ function TriageBoard({
                 </Btn>
               )}
 
-              {d.verdict === "DROP" &&
+              {/* ── UNA FUSIÓN SE PROPONE, NUNCA SE IMPONE (CEO, 2026-09-09) ──
+                  «Preguntá al usuario si quiere hacerlo, no se obliga a nadie a
+                  nada; y si también hace falta eliminar, dale esa opción.»
+
+                  Las DOS líneas a la vista antes de tocar nada: fusionar BORRA
+                  una, y acá no se acepta un borrado que no se vio. Y las dos
+                  salidas se ofrecen JUNTAS, no encadenadas — fusionar para
+                  después pedir que saques algo es lo que el CEO no quiere. */}
+              {d.verdict === "MERGE" && d.mergeWith && (
+                <>
+                  <Note tone="neutral" className="mt-1">{textOf(d.mergeWith)}</Note>
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    <Btn
+                      tone="ai"
+                      disabled={busyNode !== null}
+                      onClick={() => onRewrite(d.bulletId, d.mergeWith ?? undefined)}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      {busyNode === d.bulletId ? t("writing") : t("merge_it")}
+                    </Btn>
+                    {/* La otra salida, ofrecida a la par: si una de las dos no
+                        aporta, sacarla es mejor que juntarlas. */}
+                    <Btn variant="outline" onClick={() => setConfirmando(d)}>
+                      {t("drop_it")}
+                    </Btn>
+                  </span>
+                </>
+              )}
+
+              {(d.verdict === "DROP" || d.verdict === "MERGE") &&
                 (confirmando?.bulletId === d.bulletId ? (
                   <span className="mt-1 flex flex-wrap items-center gap-2">
                     <Btn
@@ -728,9 +757,11 @@ function TriageBoard({
                     </Btn>
                   </span>
                 ) : (
-                  <Btn variant="outline" onClick={() => setConfirmando(d)} className="mt-1">
-                    {t("drop_it")}
-                  </Btn>
+                  d.verdict === "DROP" && (
+                    <Btn variant="outline" onClick={() => setConfirmando(d)} className="mt-1">
+                      {t("drop_it")}
+                    </Btn>
+                  )
                 ))}
             </span>
           </li>
@@ -753,6 +784,7 @@ const VERDICT_TONE: Record<string, Tone> = {
   REPLACE: "ai",
   DEMOTE: "warn",
   DROP: "bad",
+  MERGE: "warn",
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

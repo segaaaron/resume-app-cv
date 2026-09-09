@@ -314,6 +314,7 @@ export function triagePrompt(lang: Lang): string {
     "REPLACE — la vacante exige una responsabilidad que no aparece en el CV, es plausible que la persona la haya ejercido en ESE puesto, y ésta es la viñeta más débil del bloque",
     "DEMOTE  — cierta pero secundaria para esta vacante: se comprime o se fusiona",
     "DROP    — irrelevante para esta vacante, o de un puesto muy viejo, o repite un logro ya contado",
+    "MERGE   — esta línea y OTRA del mismo puesto cuentan el mismo trabajo partido en dos. `mergeWith` lleva el bulletId de la otra. Sólo cuando juntarlas da una línea MEJOR que las dos sueltas; si una de las dos no aporta, es DROP, no MERGE.",
     "",
     "REGLAS",
     "1. KEEP + REWRITE + REPLACE no puede superar el presupuesto de cada puesto.",
@@ -333,6 +334,7 @@ export function triagePrompt(lang: Lang): string {
     "REPLACE — the posting demands a responsibility absent from the CV, it is plausible the person performed it in THAT role, and this is the weakest bullet of the block",
     "DEMOTE  — true but secondary for this posting: compress or merge it",
     "DROP    — irrelevant to this posting, or from a very old role, or repeats an achievement already told",
+    "MERGE   — this line and ANOTHER from the same role tell the same work split in two. `mergeWith` carries the other bulletId. Only when joining them yields a line BETTER than either alone; if one of them adds nothing, that is DROP, not MERGE.",
     "",
     "RULES",
     "1. KEEP + REWRITE + REPLACE cannot exceed each role's budget.",
@@ -601,6 +603,10 @@ export class AIAts3Module implements AtsAi {
       // había prometido cerrar.
       input.focus ? `LO QUE ESTA LÍNEA TIENE QUE RESOLVER / WHAT THIS LINE MUST FIX:\n${input.focus}` : "",
       // Para que no devuelva una calcada: se le muestran, no se le castiga después.
+      // UNA FUSIÓN: son DOS líneas y tiene que devolver UNA.
+      input.mergeOf
+        ? `FUSIONÁ ESTAS DOS EN UNA / MERGE THESE TWO INTO ONE:\n${JSON.stringify(input.mergeOf)}\nLa línea que devolvés REEMPLAZA a las dos: no puede perder nada de ninguna. / The line you return REPLACES both: it cannot lose anything from either.`
+        : "",
       input.siblings?.length
         ? `OTRAS LÍNEAS DEL CV — NINGUNA SE REPITE / OTHER LINES IN THE CV — DO NOT REPEAT ANY:\n${JSON.stringify(input.siblings.slice(0, 20))}`
         : "",

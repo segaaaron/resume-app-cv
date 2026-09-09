@@ -84,3 +84,78 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
     expect(p.drop).toHaveLength(0)
   })
 })
+
+/**
+ * FUSIONAR DOS VIÑETAS (CEO, 2026-09-09).
+ *
+ * «Si existe la manera de fusionar 2 viñetas porque puede ayudar más a tener un
+ * currículum con alto impacto, pues bien. Pero si fusionás cosas para luego
+ * pedir eliminar o sacar, eso no quiero.»
+ *
+ * Lo que este caso protege es lo único que hace SEGURA una fusión: la línea que
+ * se devuelve reemplaza a las DOS, y la otra se BORRA — así que lo que se pierda
+ * ahí no vuelve de ningún lado. Por eso el guard la juzga contra las dos juntas.
+ */
+describe("fusionar dos viñetas en una", () => {
+  const arbol = () =>
+    buildTree({
+      summary: "Secretaria",
+      workExperience: [{
+        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
+        description: "• Gestioné la agenda del consultorio\n• Confirmé los turnos por teléfono",
+      }],
+      skills: [],
+    })
+
+  const motor = (texto: string): AtsAi => ({
+    parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts, triage: async () => [],
+    rewriteSummary: async () => ({}) as Suggestion,
+    rewriteBullet: async (input) => {
+      vistos.push(input.mergeOf)
+      return { bulletId: input.bulletId, changed: true, text: texto, actionVerb: texto.split(" ")[0],
+        keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null,
+        measurableAspect: null, declineBasis: null } as Suggestion
+    },
+  })
+  let vistos: (readonly string[] | undefined)[] = []
+
+  const pedir = async (texto: string) => {
+    vistos = []
+    const tree = arbol()
+    const [a, b] = tree.roles[0].bullets
+    const r = await runRewrite({
+      tree, nodeId: a.id, mergeWith: b.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd",
+      ai: motor(texto), store: new Store(),
+    })
+    return { tree, a, b, r }
+  }
+
+  it("al modelo le llegan las DOS líneas, y tiene que devolver UNA", async () => {
+    const { r } = await pedir("Gestioné la agenda del consultorio confirmando los turnos por teléfono")
+    expect(vistos[0]).toHaveLength(2)
+    expect(r.ok).toBe(true)
+  })
+
+  it("una fusión que se come lo que decía la segunda NO pasa", async () => {
+    // Es el caso peligroso: la segunda se BORRA al aplicar, así que su dato no
+    // vuelve de ningún lado si el guard no lo reclama acá.
+    const { r } = await pedir("Gestioné la agenda del consultorio durante todo el día")
+    expect(r.ok).toBe(false)
+    if (!r.ok && !r.alreadyGood) expect(r.verdict.ok).toBe(false)
+  })
+
+  it("aplicarla escribe UNA línea y la otra se va, en el mismo acto", async () => {
+    const { tree, b, r } = await pedir("Gestioné la agenda del consultorio confirmando los turnos por teléfono")
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.suggestion.mergedFrom).toBe(b.id)
+    const ap = applySuggestion(tree, r.suggestion, SPEC, {
+      bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
+      coverage: [], softCoverage: [], titleAlignment: 1,
+    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
+    expect(ap.ok).toBe(true)
+    expect(ap.tree.roles[0].bullets).toHaveLength(1)
+    expect(ap.tree.roles[0].bullets[0].text).toContain("confirmando los turnos")
+  })
+})

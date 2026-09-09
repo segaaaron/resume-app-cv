@@ -519,7 +519,7 @@ describe("el análisis se entrega en actos", () => {
     const tree = buildTree(RAW)
     // El triage dice "está bien"; el motor determinista ve que le falta cifra.
     ai.triageDecisions = [
-      { bulletId: tree.roles[0].bullets[1].id, verdict: "KEEP", reason: "ya está bien", relevance: 0.9, proposedTopic: null, needsUserConfirm: null },
+      { bulletId: tree.roles[0].bullets[1].id, verdict: "KEEP", reason: "ya está bien", relevance: 0.9, proposedTopic: null, needsUserConfirm: null, mergeWith: null },
     ]
     const { acts } = await analyze(ai, new MemoryStore())
     const f = acts.find((a) => a.act === "findings")
@@ -932,6 +932,49 @@ const auditSkills = {
   coverage: [{ skill: "Combine", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: "b1" }],
   softCoverage: [], titleAlignment: 1,
 } as unknown as AuditFacts
+
+/**
+ * SI SE FUSIONA, NO SE PIDE ADEMÁS QUE SAQUES ALGO (CEO, 2026-09-09).
+ *
+ * «Si fusionás es porque tiene buen impacto para el currículum; si fusionás
+ * cosas para luego pedir eliminar o sacar, eso no quiero.»
+ *
+ * El modelo puede devolver MERGE sobre una línea y DROP sobre la otra del par:
+ * leído en pantalla, es el panel pidiendo juntarlas y tirar una a la vez.
+ */
+describe("una fusión manda sobre lo que la contradice", () => {
+  it("el veredicto que contradice a la fusión se retira", async () => {
+    const tree = buildTree({
+      summary: "Secretaria",
+      workExperience: [{
+        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
+        description: "• Gestioné la agenda del consultorio\n• Confirmé los turnos por teléfono",
+      }],
+      skills: [],
+    })
+    const [a, b] = tree.roles[0].bullets
+    const ai: AtsAi = {
+      parseJob: async () => SPEC,
+      audit: async () => fakeAudit(),
+      triage: async () => [
+        { bulletId: a.id, verdict: "MERGE", reason: "cuentan lo mismo", relevance: 0.5, proposedTopic: null, needsUserConfirm: null, mergeWith: b.id },
+        { bulletId: b.id, verdict: "DROP", reason: "sobra", relevance: 0.1, proposedTopic: null, needsUserConfirm: null, mergeWith: null },
+      ],
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async () => ({}) as Suggestion,
+    }
+    const actos: Record<string, unknown>[] = []
+    for await (const act of runAnalysis({
+      raw: { summary: "Secretaria", workExperience: [{ jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06", description: "• Gestioné la agenda del consultorio\n• Confirmé los turnos por teléfono" }], skills: [] },
+      jdText: "Buscamos secretaria para agenda y turnos de consultorio médico",
+      language: "es", resumeId: "cv1", model: "m", ai, store: new MemoryStore(),
+    })) actos.push(act as Record<string, unknown>)
+
+    const triage = actos.find((x) => x.act === "triage")!.decisions as { bulletId: string; verdict: string }[]
+    expect(triage.filter((d) => d.verdict === "DROP" && d.bulletId === b.id)).toHaveLength(0)
+    expect(triage.find((d) => d.verdict === "MERGE")).toBeTruthy()
+  })
+})
 
 describe("las habilidades que entran a la plantilla", () => {
   /**

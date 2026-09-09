@@ -17,7 +17,7 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAtsPostingStore } from "@/stores/atsPostingStore"
-import { applySuggestion, buildTree, writeBack, writeInto, readBullets, type RawResume } from "@/lib/ats3/engine"
+import { applySuggestion, buildTree, removeNode, writeBack, writeInto, readBullets, type RawResume } from "@/lib/ats3/engine"
 import { openLedger } from "@/lib/ats3/ledger"
 import { findNode } from "@/lib/ats3/guards"
 import { nodeHash, normalize } from "@/lib/ats3/contracts"
@@ -307,7 +307,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      * Trabajo en equipo» y al modelo se le mandaba el CV, la vacante y nada más.
      * Se dice una vez, en un solo lugar, y los dos leen lo mismo.
      */
-    async (nodeId: string, findingId?: string, focus?: string) => {
+    async (nodeId: string, findingId?: string, focus?: string, mergeWith?: string) => {
       if (!state.spec) return
       setBusyNode(nodeId)
       setPendingFinding(findingId ?? null)
@@ -334,6 +334,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
              */
             covered: state.covered,
             focus,
+            mergeWith,
           }),
         })
         // Mismo motivo que en el análisis: un 500 devuelve `{error}` y sin este
@@ -482,7 +483,20 @@ export function useAts3(resumeId: string, language: "es" | "en") {
 
       // Sin los insumos de la medición se escribe igual: el CV del usuario nunca
       // depende de que hayamos podido recalcular su puntaje.
-      const written = writeBack(medido ? medido.tree : writeInto(tree, s.bulletId, finalText), raw)
+      /**
+       * EN UNA FUSIÓN, LA LÍNEA ABSORBIDA SE VA EN EL MISMO ACTO.
+       *
+       * `applySuggestion` ya lo hace sobre su copia; este camino de respaldo
+       * —el que corre cuando no se pudo recalcular el puntaje— tenía que
+       * hacerlo también, o el CV quedaba con la fusionada Y la original: el
+       * mismo trabajo contado dos veces, que es lo que la fusión venía a
+       * arreglar. Dos caminos de escritura que no hacen lo mismo es como este
+       * panel ya se contradijo antes.
+       */
+      const aMano = s.mergedFrom
+        ? removeNode(writeInto(tree, s.bulletId, finalText), s.mergedFrom)
+        : writeInto(tree, s.bulletId, finalText)
+      const written = writeBack(medido ? medido.tree : aMano, raw)
       if (s.bulletId === "summary") updateSectionData("summary", written.summary ?? "")
       else {
         // Sólo los puestos: escribir el CV entero pisaría lo que el usuario
@@ -531,7 +545,13 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * que se dijo sobre él. Lo que siga faltando vuelve en el próximo
        * análisis, medido sobre lo que ahora hay escrito.
        */
-      setState((st) => olvidar(st, { nodeId: s.bulletId }))
+      setState((st) => {
+        const sinLaLinea = olvidar(st, { nodeId: s.bulletId })
+        // La absorbida ya no existe: se va TODO lo que hablaba de ella, incluido
+        // su veredicto. Si no, el tablero sigue ofreciendo fusionar una línea
+        // que el usuario acaba de fusionar.
+        return s.mergedFrom ? olvidar(sinLaLinea, { nodeId: s.mergedFrom }) : sinLaLinea
+      })
     },
     [payloadResume, pendingFinding, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, state.weights, updateSectionData],
   )

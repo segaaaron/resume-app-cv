@@ -1638,7 +1638,9 @@
       "skills_plan_title": "Your skills for this job ({max} fit the template)",
       "skills_plan_sub": "You have {total}. A long list goes unread, and the filter counts each term once: in go the ones this job asks for and your CV backs, then yours in your order until {max} is full.",
       "skills_plan_in": "{count, plural, one {# goes in} other {# go in}}",
-      "skills_plan_out": "{count, plural, one {# leaves the template} other {# leave the template}}"
+      "skills_plan_out": "{count, plural, one {# leaves the template} other {# leave the template}}",
+      "merge_it": "Merge them into one",
+      "verdict_MERGE": "Merge"
     },
     "ats": {
       "tab": "ATS",

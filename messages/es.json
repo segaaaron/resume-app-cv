@@ -1638,7 +1638,9 @@
       "skills_plan_title": "Tus habilidades para esta vacante ({max} entran a la plantilla)",
       "skills_plan_sub": "Tenés {total}. Una lista larga no se lee, y el filtro cuenta cada término una sola vez: entran las que este puesto pide y tu CV sostiene, y después las tuyas en tu orden hasta llenar {max}.",
       "skills_plan_in": "{count, plural, one {Entra #} other {Entran #}}",
-      "skills_plan_out": "{count, plural, one {Sale # de la plantilla} other {Salen # de la plantilla}}"
+      "skills_plan_out": "{count, plural, one {Sale # de la plantilla} other {Salen # de la plantilla}}",
+      "merge_it": "Fusionarlas en una",
+      "verdict_MERGE": "Fusionar"
     },
     "ats": {
       "tab": "ATS",

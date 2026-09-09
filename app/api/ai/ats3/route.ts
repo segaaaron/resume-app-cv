@@ -106,6 +106,8 @@ const rewriteSchema = z.object({
    * reescritura con la cuota ya gastada.
    */
   focus: z.string().max(400).optional().catch(undefined),
+  /** La otra línea de una fusión. El motor la absorbe y la retira. */
+  mergeWith: z.string().max(64).optional().catch(undefined),
 })
 
 /**
@@ -341,6 +343,7 @@ export async function POST(req: Request) {
         model,
         jdKey: cacheKey.jd(d.jobDescription, model),
         focus: d.focus,
+        mergeWith: d.mergeWith,
         ai,
         store,
       })
