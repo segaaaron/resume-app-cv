@@ -133,6 +133,34 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     expect(soft.scored).toBe(true)
   })
 
+  /**
+   * TU LÍNEA Y LOS MOTIVOS SON DOS COSAS (CEO, 2026-09-09, con captura).
+   *
+   * Se pintaban en cajas idénticas: el usuario veía tres rectángulos grises —su
+   * viñeta, un motivo y un verbo suelto— y no podía saber cuál era su texto.
+   * «No se ve qué bullet se quiere cambiar», textual.
+   *
+   * Y el verbo salía CRUDO —«developed»— porque al fusionarse el detalle se
+   * concatena y se pierde de qué tipo vino cada pieza. Por eso el motor lo manda
+   * marcado, `verbo:developed`: la marca sobrevive a la fusión, el tipo no.
+   */
+  it("la línea va aparte de los motivos, y un dato suelto se dice como frase", () => {
+    const c = checkOf(
+      finding({ type: "no_result", merged: ["no_result", "verb_repeated"], detail: "método · verbo:developed" }),
+      () => "Atendí a los clientes en la línea de cajas",
+            // El traductor real normaliza la clave; el doble tiene que hacer lo mismo
+      // o esconde justo el camino que la pantalla usa.
+      (k, p) => {
+        const key = k.normalize("NFD").replace(/\p{Diacritic}/gu, "")
+        return key === "metodo" ? "No dice cómo lo lograste" : key === "motivo_verbo" ? `«${p?.dato}» abre otra viñeta` : k
+      },
+    )
+    expect(c.line).toBe("Atendí a los clientes en la línea de cajas")
+    expect(c.evidence).toEqual(["No dice cómo lo lograste", "«developed» abre otra viñeta"])
+    // Y la línea NO se repite entre los motivos.
+    expect(c.evidence).not.toContain(c.line)
+  })
+
   it("un término demostrado sin decirlo con esas palabras NO se cuenta como escrito", () => {
     // La tabla promete que sus números se comprueban leyendo: forzar la cuenta
     // a 1 porque la auditoría lo dio por probado era escribir un dato que el

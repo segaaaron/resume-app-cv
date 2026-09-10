@@ -752,6 +752,29 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       id: r.id,
       label: [r.title, r.company].filter(Boolean).join(" — "),
     })),
+    /**
+     * DÓNDE CAE ESTE CAMBIO: el puesto y el número de línea.
+     *
+     * ── LO PEDIDO (CEO, 2026-08-27, y repetido el 2026-09-09) ────────────────
+     *
+     *   «Es más verídico si muestras al usuario qué estás aplicando y dónde.»
+     *
+     * Lo mostraba `SuggestionDiffModal` y se borró el 2026-08-29 como colateral
+     * del borrado del motor viejo —tres archivos de UI en el mismo commit—. El
+     * CEO nunca pidió que se quitara: pidió borrar el motor.
+     *
+     * Sin esto, un antes/después obliga a confiar: con varios puestos y muchas
+     * viñetas, el usuario no puede verificar que se va a escribir en la línea
+     * que él cree. El resumen no lo necesita —es uno solo— y devuelve `null`.
+     */
+    dondeCae: (nodeId: string): { puesto: string; linea: number } | null => {
+      const tree = buildTree(payloadResume())
+      for (const r of tree.roles) {
+        const i = r.bullets.findIndex((b) => b.id === nodeId)
+        if (i >= 0) return { puesto: [r.title, r.company].filter(Boolean).join(" — "), linea: i + 1 }
+      }
+      return null
+    },
     /** Una viñeta cualquiera de ese puesto: el ancla del pedido de agregar. */
     anclaDe: (roleId: string) =>
       buildTree(payloadResume()).roles.find((r) => r.id === roleId)?.bullets[0]?.id ?? null,

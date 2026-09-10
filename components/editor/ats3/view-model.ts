@@ -62,6 +62,16 @@ export interface PanelCheck {
   detailKey?: string
   params?: Record<string, string | number>
   /** Qué lo disparó, nombrado: la línea, el requisito, el término. */
+  /**
+   * LA LÍNEA DE TU CV que esta tarjeta va a reescribir. Vacío si no habla de una.
+   *
+   * Separada de los motivos porque son dos cosas distintas y se pintaban en
+   * cajas idénticas: el usuario veía tres rectángulos grises —su viñeta, un
+   * motivo y un verbo suelto— y no podía saber cuál era su texto. Reportado con
+   * captura: «no se ve qué bullet se quiere cambiar».
+   */
+  line?: string
+  /** Por qué se señala. Uno por defecto, ya dicho en castellano. */
   evidence?: string[]
   /**
    * LO QUE ESTA TARJETA PROMETE CERRAR, dicho como se lo lee el usuario.
@@ -192,7 +202,7 @@ export function checkOf(
    * del diccionario, que es su dueño natural. Sin traductor se cae al token: es
    * lo que había, y una pantalla que no puede preguntar no debe quedarse muda.
    */
-  glosa?: (token: string) => string,
+  glosa?: (token: string, params?: Record<string, string>) => string,
 ): PanelCheck {
   const linea = textoVivo?.(f.nodeId) || f.nodeText
   return {
@@ -251,14 +261,24 @@ export function checkOf(
      * En los demás, la línea SÍ es lo señalado.
      */
     ...(() => {
-      const { evidence, focus } = evidenciaDe(f, linea, glosa)
-      return { evidence: evidence.filter((x) => x.trim().length > 0), focus }
+      const { line, evidence, focus } = evidenciaDe(f, linea, glosa)
+      return { line, evidence: evidence.filter((x) => x.trim().length > 0), focus }
     })(),
   }
 }
 
 /** Los tipos cuyo `detail` es vocabulario del motor y no texto del CV. */
 const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap"])
+
+/**
+ * LOS MOTIVOS QUE SON UN DATO SUELTO, DICHOS COMO FRASE.
+ *
+ * `verb_repeated` trae el verbo —«developed»— y `title_mismatch` el cargo. Solos
+ * en la lista de motivos son una palabra en una caja gris: reportado con
+ * captura. El título de la tarjeta ya los nombra bien cuando el hallazgo va
+ * solo; el problema aparece cuando se FUSIONA y el título lo pone otro.
+ */
+const FRASE_DE = new Set(["verb_repeated", "title_mismatch"])
 
 /**
  * QUÉ SE MUESTRA COMO «lo que disparó esto».
@@ -269,7 +289,11 @@ const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap"])
  * pintar el resumen debajo era señalar un párrafo que no tiene nada que ver con
  * el defecto.
  */
-function evidenciaDe(f: Finding, linea: string, glosa?: (token: string) => string): { evidence: string[]; focus: string } {
+function evidenciaDe(
+  f: Finding,
+  linea: string,
+  glosa?: (token: string, params?: Record<string, string>) => string,
+): { line?: string; evidence: string[]; focus: string } {
   // El motor une con coma los ejes de la viñeta y las funciones del resumen, y
   // con el separador compartido lo que fusionó: se aceptan los dos.
   const dichos = f.detail.split(/\s*[,·]\s*/).map((x) => x.trim()).filter(Boolean)
@@ -284,11 +308,29 @@ function evidenciaDe(f: Finding, linea: string, glosa?: (token: string) => strin
    *
    * Sale del mismo cálculo que la evidencia: una glosa, dos consumidores.
    */
-  const glosados = TIPOS_CON_TOKENS.has(f.type) ? dichos.map((x) => glosa?.(x) ?? x) : dichos
+  /**
+   * UN DATO MARCADO SE DICE COMO FRASE, venga solo o fusionado.
+   *
+   * El motor manda `verbo:developed` cuando el motivo es un dato y no un token
+   * del vocabulario. Sin esto, al fusionarse con otra tarjeta el usuario veía
+   * «developed» suelto en una caja gris sin saber qué era — reportado con
+   * captura. La marca sobrevive a la concatenación; el tipo del hallazgo, no.
+   */
+  const decir = (x: string) => {
+    const corte = x.indexOf(":")
+    if (corte > 0) {
+      const marca = x.slice(0, corte)
+      const dato = x.slice(corte + 1)
+      return glosa?.(`motivo_${marca}`, { dato }) ?? dato
+    }
+    return glosa?.(x) ?? x
+  }
+  const glosados = TIPOS_CON_TOKENS.has(f.type) ? dichos.map(decir) : dichos
   const focus = glosados.join(" · ")
-  if (f.type === "missing_requirement") return { evidence: partesDe(f.detail), focus }
-  if (!TIPOS_CON_TOKENS.has(f.type)) return { evidence: [linea, f.detail], focus }
-  return { evidence: f.type === "parse_risk" ? glosados : [linea, ...glosados], focus }
+  if (f.type === "missing_requirement") return { line: linea, evidence: partesDe(f.detail), focus }
+  if (FRASE_DE.has(f.type)) return { line: linea, evidence: [decir(f.detail)], focus }
+  if (!TIPOS_CON_TOKENS.has(f.type)) return { line: linea, evidence: [f.detail], focus }
+  return { line: f.type === "parse_risk" ? undefined : linea, evidence: glosados, focus }
 }
 
 /**
@@ -309,7 +351,7 @@ export function sectionsOf(
   /** El texto vivo de una línea. Se pasa una vez y lo usan todas las filas. */
   textoVivo?: (nodeId: string) => string,
   /** El nombre humano de un token del motor. Se pasa una vez, igual que arriba. */
-  glosa?: (token: string) => string,
+  glosa?: (token: string, params?: Record<string, string>) => string,
 ): PanelSection[] {
   const ids = Object.keys(COMPONENTS_OF) as PanelSectionId[]
   const checks = findings.map((f) => checkOf(f, textoVivo, glosa))

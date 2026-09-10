@@ -68,9 +68,9 @@ export default function Ats3Panel() {
    * la próxima no coincida por un carácter que no se ve.
    */
   const glosa = useCallback(
-    (token: string) => {
+    (token: string, params?: Record<string, string>) => {
       const clave = `gloss_${token.normalize("NFD").replace(/\p{Diacritic}/gu, "")}`
-      return t.has(clave) ? t(clave) : token
+      return t.has(clave) ? t(clave, params) : (params?.dato ?? token)
     },
     [t],
   )
@@ -497,6 +497,77 @@ function Anatomy({
       <p className="mt-1.5 text-[11px]" style={{ color: "var(--a-muted-2)" }}>
         {t("bq_complete", { n: complete, total })}
       </p>
+
+      {/* ── LAS LÍNEAS, UNA POR UNA ──────────────────────────────────────────
+          Se fue con el borrado del motor viejo (`BulletQualityPanel`, commit
+          04d28d4) sin que nadie lo pidiera, y el CEO lo reclamó: los contadores
+          de arriba contestan «¿cuántas de mis líneas dicen algo medible?», pero
+          no CUÁL. Sin esta lista, «te faltan tres con cifra» obliga a ir a
+          buscarlas a mano.
+
+          Los tres chips son los tres ejes que la auditoría YA juzga —el mismo
+          insumo que los contadores— así que no puede decir una cosa acá y otra
+          tres renglones arriba. Y CADA CHIP DICE QUÉ ES en su nombre accesible:
+          «V», «R» y «C» sueltas son crípticas en táctil —donde no hay hover— y
+          un lector de pantalla leería tres letras. */}
+      <h3 className="mt-4 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_lines_title")}</h3>
+      <ul className="mt-2 flex max-h-[280px] flex-col overflow-y-auto rounded-xl border" style={{ borderColor: "var(--a-border)" }}>
+        {reales.map((b) => {
+          const texto = textOf(b.id)
+          const palabras = texto.trim().split(/\s+/).length
+          /* Los términos que ESTA línea demuestra, según la misma auditoría que
+             decide la cobertura. No es una segunda opinión: es el mismo campo
+             con el que el puntaje cuenta el requisito como cubierto. */
+          const términos = audit.coverage
+            .filter((c) => c.evidenceNodeId === b.id && c.status === "FOUND")
+            .map((c) => c.skill)
+          const ejes: [string, boolean, string][] = [
+            ["V", b.hasActionVerb, "bq_verb"],
+            ["R", b.hasResult, "bq_result"],
+            ["C", b.hasMethod, "bq_method"],
+          ]
+          return (
+            <li
+              key={b.id}
+              className="flex items-start gap-2 border-b px-3 py-2 last:border-b-0"
+              style={{ borderColor: "var(--a-border)" }}
+            >
+              <span className="mt-0.5 flex shrink-0 gap-0.5">
+                {ejes.map(([letra, on, clave]) => (
+                  <i
+                    key={letra}
+                    title={t(on ? "bq_axis_on" : "bq_axis_off", { axis: t(clave) })}
+                    aria-label={t(on ? "bq_axis_on" : "bq_axis_off", { axis: t(clave) })}
+                    className="flex h-[15px] w-[15px] items-center justify-center rounded-[3px] text-[8.5px] font-bold not-italic"
+                    style={
+                      on
+                        ? { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
+                        : { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }
+                    }
+                  >
+                    {letra}
+                  </i>
+                ))}
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] leading-snug" style={{ color: "var(--a-ink-2)" }}>
+                  {texto}
+                </span>
+                {términos.length > 0 && (
+                  <span className="mt-0.5 block text-[9.5px]" style={{ color: "var(--a-accent-ink)" }}>
+                    {términos.slice(0, 4).join(" · ")}
+                  </span>
+                )}
+              </span>
+
+              <span className="shrink-0 text-[9.5px] font-bold tabular-nums" style={{ color: "var(--a-muted-2)" }}>
+                {t("bq_words_short", { n: palabras })}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
 
       <h3 className="mt-4 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_summary_title")}</h3>
       <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_summary_caption")}</p>

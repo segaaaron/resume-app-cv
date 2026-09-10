@@ -583,18 +583,23 @@ export function findingsOf(
    */
 
   /**
-   * LA BLANDA QUE SE DECLARA Y NADA RESPALDA.
+   * LA BLANDA QUE LA VACANTE PIDE Y EL CV NO DEMUESTRA — declarada o ausente.
    *
-   * La auditoría ya la juzga: DECLARED_ONLY es "aparece como adjetivo o en una
-   * lista, sin ningún logro detrás" — la lista de adjetivos que todo reclutador
-   * saltea. Hasta ahora se veía en la tabla y no tenía salida.
+   * ── EL DEFECTO QUE ESTO CIERRA (CEO, 2026-09-09, con captura) ──────────────
+   * Sólo salía tarjeta para `DECLARED_ONLY` —«aparece como adjetivo, sin ningún
+   * logro detrás»—. La ausente, que es la que MÁS puntos cuesta, no tenía
+   * ninguna: el usuario veía «Habilidades blandas 0%» y ni una sugerencia
+   * debajo. Un porcentaje en cero sin nada que apretar es un reproche.
    *
-   * Su remedio no es tocar la lista: es DEMOSTRARLA en una línea, y el motor ya
-   * sabe elegir cuál encaja mejor. No suma puntos porque las blandas no entran
-   * al puntaje, y la tarjeta lo dice.
+   * Ahora las dos tienen la misma salida, que es la misma para las dos:
+   * demostrarla en una línea, y el motor elige cuál encaja mejor. `FOUND` no
+   * entra —ya está demostrada— y por eso el bucle no las repite.
+   *
+   * Y SÍ suma puntos: las blandas pesan 0,10 de la relevancia desde que se
+   * recuperó el peso que v3 había perdido. La ganancia sale del puntaje.
    */
   for (const s of audit.softCoverage) {
-    if (s.status !== "DECLARED_ONLY") continue
+    if (s.status === "DEMONSTRATED") continue
     const donde = bestHomeFor(tree, s.signal, index)
     /**
      * SIN SUJETO: se FUSIONA con la tarjeta que esa línea ya tenía.
@@ -673,7 +678,16 @@ export function findingsOf(
   for (const [abre, repetidas] of porApertura) {
     if (repetidas.length < 2) continue
     const masDebil = [...repetidas].sort((a, b) => peso(a.text, index) - peso(b.text, index))[0]
-    push("verb_repeated", "verbs", masDebil.id, masDebil.text, gainOf(score, "verbs"), abre)
+    /**
+     * EL DATO VIAJA MARCADO CON LO QUE ES: `verbo:developed`.
+     *
+     * Al fusionarse con otra tarjeta, el detalle se concatena y se pierde de qué
+     * tipo vino cada pieza: la pantalla mostraba «developed» solo, en una caja
+     * gris, sin decir qué era. Reportado con captura. Con la marca, la pantalla
+     * sabe traducirlo a una frase venga solo o fusionado — y sin la marca cae al
+     * dato, que es lo que había.
+     */
+    push("verb_repeated", "verbs", masDebil.id, masDebil.text, gainOf(score, "verbs"), `verbo:${abre}`)
   }
 
   const summaryGaps = [

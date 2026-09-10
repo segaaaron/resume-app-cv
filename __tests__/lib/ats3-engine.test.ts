@@ -1104,6 +1104,47 @@ describe("una fusión manda sobre lo que la contradice", () => {
  * El filtro compara CADENAS. Decirle a alguien que está cubierto cuando el
  * término no está escrito es mandarlo a una postulación que ya perdió.
  */
+/**
+ * UNA BLANDA QUE LA VACANTE PIDE SIEMPRE TIENE SALIDA (CEO, 2026-09-09).
+ *
+ * Sólo salía tarjeta para la DECLARADA sin demostrar. La AUSENTE —la que más
+ * puntos cuesta— no tenía ninguna: el usuario veía «Habilidades blandas 0%» y ni
+ * una sugerencia debajo. Un porcentaje en cero sin nada que apretar es un
+ * reproche, no un producto.
+ */
+describe("las blandas que faltan tienen tarjeta, declaradas o ausentes", () => {
+  const arbol = () =>
+    buildTree({
+      summary: "Cajera",
+      workExperience: [{ jobTitle: "Cajera", employer: "S", startDate: "2021-03", endDate: "2024-06",
+        description: "• Atendí a los clientes en la línea de cajas" }],
+      skills: [],
+    })
+
+  const conEstado = (estado: "DECLARED_ONLY" | "ABSENT" | "DEMONSTRATED") => {
+    const t = arbol()
+    const spec = { ...SPEC, softSignals: ["Trabajo en equipo"] } as JobSpec
+    const audit: AuditFacts = {
+      ...fakeAudit(),
+      softCoverage: [{ signal: "Trabajo en equipo", status: estado, evidenceNodeId: null }],
+    }
+    const score = scoreResume(t, spec, audit, readableChecks(t))
+    return findingsOf(t, audit, score, buildTermIndex([]), spec)
+  }
+
+  it("la ausente también, que es la que más cuesta", () => {
+    expect(conEstado("ABSENT").some((f) => f.merged.includes("soft_not_shown"))).toBe(true)
+  })
+
+  it("la declarada sin demostrar, como siempre", () => {
+    expect(conEstado("DECLARED_ONLY").some((f) => f.merged.includes("soft_not_shown"))).toBe(true)
+  })
+
+  it("la demostrada NO: ya está, y repetirla es el bucle", () => {
+    expect(conEstado("DEMONSTRATED").some((f) => f.merged.includes("soft_not_shown"))).toBe(false)
+  })
+})
+
 describe("un requisito que el CV no NOMBRA no cuenta como cubierto", () => {
   const raw = {
     summary: "Cajera",
@@ -1244,7 +1285,17 @@ describe("el cargo y los verbos repetidos tienen tarjeta", () => {
     // Se emiten TODAS de una: resolver una y que aparezca la siguiente es el
     // bucle que este panel existe para no tener.
     const f = hallazgos(cv(["• Atendí a los clientes", "• Atendí el teléfono", "• Ordené la góndola", "• Ordené el depósito"].join("\n")), SPEC)
-    expect(f.filter((x) => x.merged.includes("verb_repeated"))).toHaveLength(2)
+    const v = f.filter((x) => x.merged.includes("verb_repeated"))
+    expect(v).toHaveLength(2)
+    /**
+     * EL VERBO VIAJA MARCADO. Al fusionarse con otra tarjeta el detalle se
+     * concatena y se pierde de qué tipo vino cada pieza: sin la marca, la
+     * pantalla mostraba «developed» suelto en una caja gris. Reportado con
+     * captura.
+     */
+    // `includes` y no `startsWith`: si la línea ya tenía tarjeta, el detalle se
+    // concatena y la marca queda en su pieza, no al principio.
+    expect(v.every((x) => x.detail.includes("verbo:"))).toBe(true)
   })
 })
 

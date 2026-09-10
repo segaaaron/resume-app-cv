@@ -69,6 +69,19 @@ const messages: Record<string, string> = {
   no_data: "No tengo ese dato",
   fill_required: "Completá la cifra",
   apply: "Aplicar a mi CV",
+  // La hoja de confirmación es `SuggestionDiffModal`, recuperado del historial:
+  // su copia vive en `editor.cv_review` y el doble tiene que traerla, o la
+  // pantalla se prueba contra claves crudas.
+  diff_title: "Cambio sugerido",
+  diff_before: "Actual",
+  diff_after: "Sugerido",
+  diff_confirm: "Confirmar cambio",
+  diff_cancel: "Cancelar",
+  diff_changes: "Cambios",
+  diff_empty: "— vacío —",
+  diff_where_line: "línea {n}",
+  field_summary: "Resumen",
+  field_work_description: "Experiencia",
   cancel: "Cancelar",
   // Las de la pantalla de siempre: el dial, las secciones y las filas.
   verdict_below: "Todavía no llega al umbral",
@@ -476,19 +489,21 @@ describe("la cifra la escribe el candidato", () => {
     await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
     await click("Escribirla mejor")
-    expect(texto()).toContain("Confirmá antes de escribirlo")
+    // El diálogo es `SuggestionDiffModal`, recuperado del historial: su título
+    // es «Cambio sugerido» y dice DÓNDE cae antes del antes/después.
+    expect(texto()).toContain("Cambio sugerido")
   }
 
   it("el botón de aplicar está APAGADO mientras falte la cifra obligatoria", async () => {
     await openSheet()
-    expect(botón("Completá la cifra").disabled).toBe(true)
+    expect(botón("Confirmar cambio").disabled).toBe(true)
     expect(updateSectionData).not.toHaveBeenCalled()
   })
 
   it("se escribe LO QUE ESTÁ EN LA CAJA, no la propuesta cruda del modelo", async () => {
     await openSheet()
     await escribir("#slot-\\[n\\]", "80")
-    await click("Aplicar a mi CV")
+    await click("Confirmar cambio")
 
     expect(updateSectionData).toHaveBeenCalled()
     const [key, value] = updateSectionData.mock.calls[0]
@@ -502,7 +517,7 @@ describe("la cifra la escribe el candidato", () => {
   it("quien no tiene el dato recibe la versión SIN cifra, nunca un número puesto por el modelo", async () => {
     await openSheet()
     await marcar('input[type="checkbox"]')
-    await click("Aplicar a mi CV")
+    await click("Confirmar cambio")
 
     expect(updateSectionData).toHaveBeenCalled()
     const written = (updateSectionData.mock.calls[0][1] as { description: string }[])[0].description
@@ -538,7 +553,7 @@ describe("la cifra la escribe el candidato", () => {
     })
     await click("Escribirla mejor")
     await escribir("#slot-\\[n\\]", "80")
-    await click("Aplicar a mi CV")
+    await click("Confirmar cambio")
 
     // Un botón que marca "hecho" justo cuando no hace nada es el defecto que
     // este proyecto ya pagó: el usuario descarga un PDF que no cambió.
@@ -638,7 +653,7 @@ describe("el puntaje se mueve mientras trabajás", () => {
     await click("Escribirla mejor")
     await escribir("#slot-\\[n\\]", "120")
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, stored: 1 }) })
-    await click("Aplicar a mi CV")
+    await click("Confirmar cambio")
 
     // La línea aceptada declara una cantidad, y ESE componente lo mide el código
     // sin preguntarle a nadie: la sección sube en el acto, sin gastar llamada.

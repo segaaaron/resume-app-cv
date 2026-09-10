@@ -36,6 +36,8 @@ import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
 import { buildProfileWrites } from "@/lib/editor/apply-profile"
 import MonthYearField from "./MonthYearField"
 import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
+import SuggestionDiffModal from "@/components/editor/SuggestionDiffModal"
+import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 import { useAICall } from "@/hooks/useAICall"
 import { useDeclinedGaps } from "./hooks/useDeclinedGaps"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
@@ -189,6 +191,33 @@ export default function AIProfileInterview() {
   // creates the role on save. No empty placeholder entry is ever written.
   const [addingJob, setAddingJob] = useState(false)
   const [addingBullet, setAddingBullet] = useState<string | null>(null)
+
+  /**
+   * LAS TRES VERSIONES DE UNA VIÑETA, PARA QUE ELIJA EL USUARIO (CEO, 2026-09-09).
+   *
+   * «En AI fill mostrás las 3 para que seleccione el usuario y en Tailor sólo
+   * mostrás una.» Acá el asistente ESCRIBE una línea nueva desde cero, así que
+   * una sola propuesta deja un sí/no: si no gusta, el único camino es volver a
+   * pedir —y eso es el bucle que este producto existe para no tener—. Tailor no
+   * cambia: ahí la reescritura sale de P4, pasa por los guards de v3 y trae los
+   * huecos tipados para la cifra.
+   *
+   * Sólo cuando el dictado produjo UNA línea. Con varias, cada actividad que la
+   * persona nombró es una viñeta distinta —no el mismo trabajo desde otro
+   * ángulo— y convertirlas en opciones tiraría contenido que ella acaba de
+   * contar. El propio prompt de `improve-bullet` lo dice: los ángulos «sólo se
+   * llenan para un pedido de una viñeta».
+   */
+  const [bulletPick, setBulletPick] = useState<
+    | { gap: ProfileGap; options: { text: string; label: string; why: string }[] }
+    | null
+  >(null)
+  const [bulletPickOpen, setBulletPickOpen] = useState(false)
+  /** Se están pidiendo los ángulos. Apaga el botón para que no salgan dos. */
+  const [anglesBusy, setAnglesBusy] = useState(false)
+  /** Ya se pidieron una vez: el botón no vuelve a ofrecerse ni a cobrar. */
+  const [anglesAsked, setAnglesAsked] = useState(false)
+  const [bulletChoice, setBulletChoice] = useState<string>("")
 
   // Memoised against the CV, not the draft: typing an answer re-renders this
   // component on every keystroke, and without this each one re-scored the whole
@@ -473,6 +502,60 @@ export default function AIProfileInterview() {
    * What it must never do is supply the content: a list of role-typical duties
    * is a set of claims about someone's life that they did not make.
    */
+  /**
+   * Los ángulos de UNA línea, con el endpoint que ya existe.
+   *
+   * Devuelve la lista lista para pintar —la recomendada primero y
+   * reseleccionable, porque elegir otro ángulo no puede ser una puerta de una
+   * sola dirección— o vacío si no hay nada que elegir. Falla ABIERTO: cualquier
+   * tropiezo devuelve vacío y quien llama escribe la línea de siempre.
+   */
+  async function bulletAngles(
+    g: ProfileGap,
+    text: string,
+  ): Promise<{ text: string; label: string; why: string }[]> {
+    /* Es una consulta más, de OTRO contador: se anuncia como cualquier otra o
+       el aviso de «última gratis» y el evento de uso quedan atribuidos a
+       `fill-profile`, que no es la que se está gastando. */
+    preCheck("improve-bullet")
+    try {
+      const res = await apiFetch("/api/ai/improve-bullet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          jobTitle: jobLabel(g),
+          language: cvLanguage,
+          postingTerms: posting.terms,
+          sectionData,
+        }),
+      })
+      if (!res.ok) return []
+      const parsed = ImproveBulletResponseSchema.safeParse(await res.json().catch(() => ({})))
+      if (!parsed.success) return []
+      /* LA CONSULTA SE GASTÓ APENAS EL SERVIDOR CONTESTÓ, traiga ángulos o no:
+         el contador se invalida ACÁ. Estaba después del corte por «sin
+         alternativas» —el caso más probable, porque el prompt omite el ángulo
+         que el texto no respalda— así que justo cuando no se mostraba nada, la
+         insignia de cuota seguía diciendo el número viejo. */
+      await onSuccess()
+      const first = parsed.data.improvements[0]
+      if (!first) return []
+      const alts = first.alternatives ?? []
+      if (alts.length === 0) return []
+      return [
+        { text: first.text, label: t("bullet_angle_recommended"), why: first.why ?? "" },
+        ...alts.map((a) => ({
+          text: a.text,
+          label: t(`bullet_angle_${a.angle}` as "bullet_angle_technical"),
+          why: a.why,
+        })),
+      ]
+    } catch {
+      return []
+    }
+  }
+
   async function answerBullets(g: ProfileGap) {
     const told = get(g).trim()
     if (told.length < 10) { toast.info(t("bullets_too_short")); return }
@@ -531,6 +614,30 @@ export default function AIProfileInterview() {
       const lines = (data.bullets ?? []).filter((b) => b.trim())
       if (lines.length === 0) { toast.info(t("bullets_no_result")); return }
       await onSuccess()
+
+      /**
+       * UNA SOLA LÍNEA: SE MUESTRA ANTES DE ESCRIBIRLA, Y LOS ÁNGULOS SE PIDEN
+       * SÓLO SI ÉL LOS QUIERE.
+       *
+       * ── POR QUÉ NO SE PIDEN SOLOS (QA, 2026-09-09) ────────────────────────
+       * La primera versión llamaba a `improve-bullet` apenas llegaba la línea.
+       * Eso gastaba una consulta de otro contador SIEMPRE, y el prompt permite
+       * devolver CERO ángulos cuando el texto no sostiene otro —«un ángulo que
+       * el source no respalda simplemente se omite»—: en ese caso se pagaba una
+       * consulta para no mostrar nada, y el usuario ni se enteraba.
+       *
+       * Ahora la ventana abre con la línea que se escribió y un botón que dice
+       * que ver más versiones usa una consulta. Nadie paga por algo que no
+       * pidió, y si al recargar se pierde, no se pierde nada pagado de más.
+       */
+      if (lines.length === 1) {
+        setBulletPick({ gap: g, options: [] })
+        setBulletPickOpen(true)
+        setAnglesAsked(false)
+        setBulletChoice(lines[0])
+        setAddingBullet(null)
+        return
+      }
       const added = writeBullets(g, lines)
       setAddingBullet(null)
       /**
@@ -826,9 +933,21 @@ export default function AIProfileInterview() {
               />
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] text-muted-foreground">{t("bullets_hint")}</span>
-                <Button size="sm" isLoading={working} onClick={() => answerBullets(g)}
-                  disabled={get(g).trim().length < 10}>
-                  {!working && <Sparkles aria-hidden />} {t("btn_write_bullets")}
+                {/* CON VERSIONES YA PEDIDAS, EL BOTÓN LAS ABRE. Volver a
+                    llamar al modelo por algo que ya está en memoria gasta una
+                    consulta por nada — el selector del resumen ya se arregló
+                    así y este camino lo repetía. */}
+                <Button
+                  size="sm"
+                  isLoading={working}
+                  onClick={() => {
+                    if (bulletPick && keyOf(bulletPick.gap) === keyOf(g)) { setBulletPickOpen(true); return }
+                    void answerBullets(g)
+                  }}
+                  disabled={get(g).trim().length < 10}
+                >
+                  {!working && <Sparkles aria-hidden />}
+                  {bulletPick && keyOf(bulletPick.gap) === keyOf(g) ? t("btn_see_versions") : t("btn_write_bullets")}
                 </Button>
               </div>
             </div>
@@ -1017,6 +1136,87 @@ export default function AIProfileInterview() {
             </Button>
           )}
         </div>
+      )}
+
+      {/* LAS TRES VERSIONES, EN LA MISMA VENTANA QUE CONFIRMA TODO LO DEMÁS.
+          No es una pantalla nueva: es `SuggestionDiffModal`, la que ya muestra
+          el antes/después y pide la confirmación en el resto del editor. Elegir
+          un ángulo cambia el «después»; nada se escribe hasta «Confirmar». */}
+      {bulletPick && bulletPickOpen && (
+        <SuggestionDiffModal
+          open
+          /* CERRAR NO LAS TIRA. Las tres ya se pagaron: si al cerrar se
+             borraran, volver a verlas costaría otra consulta. Mismo trato que
+             el selector de versiones del resumen, que ya lo resolvió así. */
+          onClose={() => setBulletPickOpen(false)}
+          onConfirm={() => {
+            const { gap } = bulletPick
+            const elegido = bulletChoice
+            setBulletPick(null); setBulletPickOpen(false); setBulletChoice("")
+            setAnglesAsked(false)
+            const added = writeBullets(gap, [elegido])
+            toast[added === 0 ? "info" : "success"](t(added === 0 ? "bullets_full" : "bullets_added"))
+          }}
+          suggestion={{
+            field: "workExperience.description",
+            type: "append",
+            preview: bulletChoice,
+            reason: "",
+          }}
+          /* La viñeta es NUEVA: no reemplaza ninguna línea, así que el «antes»
+             va vacío y la ventana lo dice con su propia copia. */
+          currentValue=""
+          afterOverride={bulletChoice}
+          /* NO SE CONFIRMA CON UNA PETICIÓN EN VUELO.
+             Sin esto: apretás «Confirmar» mientras vienen los ángulos, la
+             viñeta se escribe y el estado se limpia — y cuando la respuesta
+             llega, `setBulletPick` lo resucita con las opciones. El botón de la
+             pregunta vuelve a decir «Ver versiones», reabrís, confirmás, y se
+             escribe la MISMA viñeta dos veces. */
+          blocked={anglesBusy}
+          where={jobLabel(bulletPick.gap) ? { jobTitle: jobLabel(bulletPick.gap) } : undefined}
+          /* LA PUERTA A LAS OTRAS VERSIONES, EN LA RANURA QUE EL MODAL YA TIENE.
+             No se toca el componente recuperado: `slotsUI` existe justamente
+             para que quien llama ponga lo suyo. El botón DICE que usa una
+             consulta —nadie gasta sin saberlo— y desaparece cuando ya se
+             pidieron, para que no se pague dos veces por lo mismo. */
+          slotsUI={
+            !anglesAsked ? (
+              <div className="mt-3 border-t border-[#E8EDF6] pt-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isLoading={anglesBusy}
+                  onClick={async () => {
+                    setAnglesBusy(true)
+                    try {
+                      const angles = await bulletAngles(bulletPick.gap, bulletChoice)
+                      setAnglesAsked(true)
+                      if (angles.length > 1) {
+                        setBulletPick({ gap: bulletPick.gap, options: angles })
+                        setBulletChoice(angles[0].text)
+                      } else {
+                        toast.info(t("bullet_angles_none"))
+                      }
+                    } finally {
+                      setAnglesBusy(false)
+                    }
+                  }}
+                >
+                  {!anglesBusy && <Sparkles aria-hidden />} {t("btn_other_versions")}
+                </Button>
+                <p className="mt-1 text-[10.5px] leading-snug text-[#6B7A8C]">{t("other_versions_cost")}</p>
+              </div>
+            ) : undefined
+          }
+          options={bulletPick.options.map((o) => ({
+            text: o.text,
+            label: o.label,
+            why: o.why,
+            active: o.text === bulletChoice,
+            onPick: () => setBulletChoice(o.text),
+          }))}
+        />
       )}
 
       <SummaryVersionModal

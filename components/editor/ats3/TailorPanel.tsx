@@ -31,10 +31,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { createPortal } from "react-dom"
-import BrandLoadingScreen from "@/components/shared/BrandLoadingScreen"
-import { Check, Minus, Sparkles, X } from "lucide-react"
-import { Z_MODAL, Z_MODAL_FOLLOW_UP } from "@/lib/ui/z-layers"
-import { normalize } from "@/lib/ats3/contracts"
+import SuggestionDiffModal from "@/components/editor/SuggestionDiffModal"
+import { Check, Loader2, Minus, Sparkles, X } from "lucide-react"
+import { Z_MODAL } from "@/lib/ui/z-layers"
 import { skillPlan } from "@/lib/ats3/engine"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import type { AnchoredSuggestion, Finding, Placeholder, TriageDecision } from "@/lib/ats3/contracts"
@@ -347,10 +346,38 @@ export default function TailorPanel({
           píxeles evita el defecto opuesto: en una pantalla muy alta, 88vh con
           dos tarjetas es una caja casi vacía.
         */
-        className="flex h-[88vh] max-h-[760px] w-full max-w-[840px] flex-col overflow-hidden rounded-2xl"
+        className="relative flex h-[88vh] max-h-[760px] w-full max-w-[840px] flex-col overflow-hidden rounded-2xl"
         style={{ background: "var(--a-bg)", boxShadow: "var(--a-sh-lg)" }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* LA CARGA CUBRE TAILOR, NO LA PANTALLA (CEO, 2026-09-09).
+            Estaba montada sobre todo el navegador —`fixed inset-0`— y tapaba el
+            editor entero por una reescritura que ocurre dentro de esta ventana.
+            `absolute` dentro de la sección la deja donde pasa el trabajo: se ve
+            qué se está escribiendo y el resto del CV sigue a la vista. Se come
+            el clic para que no se dispare una segunda consulta. */}
+        {a.busyNode !== null && (
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl"
+            /* SEMITRANSPARENTE, pedido del CEO: se sigue viendo la tarjeta que
+               se está reescribiendo detrás. El desenfoque hace legible el texto
+               de encima sin tapar lo de abajo. */
+            style={{
+              background: "color-mix(in srgb, var(--a-bg) 55%, transparent)",
+              backdropFilter: "blur(3px)",
+              WebkitBackdropFilter: "blur(3px)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-7 w-7 animate-spin" style={{ color: "var(--a-ai)" }} />
+            <span className="text-[13px] font-semibold" style={{ color: "var(--a-ink)" }}>
+              {t("writing")}
+            </span>
+          </div>
+        )}
+
         <header
           className="flex items-start gap-3 border-b px-5 py-4"
           style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}
@@ -498,7 +525,8 @@ export default function TailorPanel({
                 marcarPorNodo(a.pending!.bulletId, cambio)
                 a.accept(a.pending!, text, registroDe(a.pending!.bulletId, "applied", cambio))
               }}
-              gainOf={a.previewGain}
+              donde={a.dondeCae(a.pending.bulletId)}
+              esNueva={Boolean(a.pending.addToRole)}
               t={t}
             />
           )}
@@ -606,11 +634,6 @@ export default function TailorPanel({
           él— y se come el clic, así que el fondo no cierra la ventana mientras
           se escribe. El apagado de los botones sigue debajo por lo que siempre
           estuvo: una sola reescritura en vuelo. */}
-      {a.busyNode !== null && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <BrandLoadingScreen label={t("writing")} zIndex={Z_MODAL_FOLLOW_UP} />
-        </div>
-      )}
     </div>,
     document.body,
   )
@@ -863,14 +886,17 @@ function SuggestionSheet({
   suggestion,
   onCancel,
   onAccept,
-  gainOf,
+  donde,
+  esNueva,
   t,
 }: {
   suggestion: AnchoredSuggestion
   onCancel: () => void
   onAccept: (finalText: string) => void
-  /** Los puntos que esto gana, MEDIDOS sobre una copia del CV. */
-  gainOf: (s: AnchoredSuggestion, finalText: string) => number | null
+  /** El puesto y la línea donde cae. `null` en el resumen, que es uno solo. */
+  donde: { puesto: string; linea: number } | null
+  /** Una línea NUEVA no reemplaza a nadie: se dice, para no leerlo como un cambio. */
+  esNueva: boolean
   t: (k: string, v?: Record<string, string | number>) => string
 }) {
   const [values, setValues] = useState<Record<string, string>>({})
@@ -916,115 +942,102 @@ function SuggestionSheet({
    * no ve ninguna cantidad declarada, así que el número queda CORTO y sube al
    * completarlo: se subestima, nunca se promete de más.
    */
-  const gain = useMemo(() => gainOf(suggestion, finalText), [finalText, gainOf, suggestion])
+
 
   /**
-   * Los términos que la vacante pide y esta línea PASA A DECIR.
+   * ── EL MODAL VOLVIÓ, Y ES UNO SOLO PARA MEJORAR Y PARA CREAR ───────────────
    *
-   * Se comprueban contra el texto final en vez de creerle a la lista que
-   * devuelve el modelo: prometer un término que la línea no dice es el defecto
-   * que este panel ya pagó dos veces.
+   * «Antes cuando le presionabas en algún bullet te decía por cuál lo iba a
+   * reemplazar; ese lo quiero como estaba» · «ese componente deberías crearlo
+   * como componente y usarlo cuando mejores o crees bullets» (CEO, 2026-09-09).
+   *
+   * `SuggestionDiffModal` se borró el 2026-08-29 como colateral del borrado del
+   * motor viejo —tres archivos de UI en el mismo commit— y el CEO nunca pidió
+   * que se fuera. Vuelve del historial con su diff por línea, su DÓNDE cae y su
+   * copia intacta; lo único que cambió es que los huecos de la cifra los pone
+   * quien llama, porque el mecanismo de hueco de v3 es el que el CEO fijó hoy.
+   *
+   * Un solo componente para los dos caminos: la reescritura y la línea nueva
+   * pasan por acá, así que ninguna forma de escribir en el CV puede quedarse sin
+   * mostrarle al usuario qué y dónde.
    */
-  const lands = useMemo(() => {
-    const dicho = normalize(finalText)
-    return suggestion.keywordsUsed.filter((k) => k.trim() && dicho.includes(normalize(k))).slice(0, 6)
-  }, [finalText, suggestion.keywordsUsed])
-
   return (
-    <Card radius="2xl" className="overflow-hidden shadow-lg">
-      {/* CABECERA: qué se te pide decidir, y qué ganás con decir que sí. */}
-      <div
-        className="flex items-start justify-between gap-3 px-4 py-3"
-        style={{ background: "var(--a-surface-2)", borderBottom: "1px solid var(--a-border)" }}
-      >
-        <h3 className="text-[13px] font-semibold leading-snug" style={{ color: "var(--a-ink)" }}>
-          {t("confirm_title")}
-        </h3>
-        {/* Un cero no se disfraza: hay reescrituras que arreglan cómo se lee y no
-            mueven el número, y decirlo es lo que hace creíble al resto. */}
-        {gain !== null && (
-          <Chip tone={gain > 0 ? "ok" : "neutral"} className="shrink-0">
-            {gain > 0 ? t("gain_points", { points: gain.toFixed(1) }) : t("gain_none")}
-          </Chip>
-        )}
-      </div>
+    <SuggestionDiffModal
+      open
+      onClose={onCancel}
+      onConfirm={() => onAccept(finalText)}
+      suggestion={{
+        field: suggestion.bulletId === "summary" ? "summary" : "workExperience.description",
+        type: esNueva ? "append" : "replace",
+        preview: suggestion.text,
+        reason: "",
+      }}
+      currentValue={esNueva ? "" : suggestion.originalText}
+      afterOverride={finalText}
+      blocked={blocked}
+      /* Una viñeta NUEVA no lleva número de línea: `donde` es el ancla del
+         pedido, no el lugar donde va a quedar, y numerarla señalaba una línea
+         que el cambio no toca. */
+      where={donde ? { jobTitle: donde.puesto, line: esNueva ? undefined : donde.linea } : undefined}
+      /* SÓLO LOS HUECOS. El modal ya dibuja el título, el antes/después y los
+         botones: pasarle la hoja entera pintaba el mismo diff dos veces, una
+         encima de la otra. Visto en pantalla. */
+      slotsUI={
+        /* SÓLO LOS HUECOS, y con el lenguaje visual de ESTE modal.
+           Acá había además una línea de ganancia que arrastré desde la hoja de
+           v3 al mudarla adentro: el modal original nunca la tuvo —verificado,
+           cero menciones a puntos en sus 378 líneas— y quedaba suelta entre el
+           diff y los campos. El número ya vive en la tarjeta del panel. */
+        <div className="mt-4 border-t border-[#E8EDF6] pt-4">
+          {/* El mismo rótulo micro que «ACTUAL» y «SUGERIDO»: los campos son
+              parte de este diálogo, no un bloque pegado de otra pantalla. */}
+          {!useVariant && suggestion.placeholders.length > 0 && (
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">
+              {t("fill_label")}
+            </p>
+          )}
 
-      <div className="px-4 py-3">
-        {/* EL CAMBIO, con la misma pieza que usa la tarjeta de lo resuelto. */}
-        <Diff beforeLabel={t("before")} before={suggestion.originalText} afterLabel={t("after")} after={finalText} />
-
-        {/* DE DÓNDE SALEN LOS PUNTOS: los términos del aviso que esta línea pasa
-            a decir. Un número sin su motivo se aprende a ignorar. */}
-        {lands.length > 0 && (
-          <ul className="mt-2 flex flex-wrap gap-1.5">
-            {lands.map((k) => (
-              <li key={k}>
-                <Chip>{k}</Chip>
-              </li>
+          {!useVariant &&
+            suggestion.placeholders.map((p: Placeholder) => (
+              <div key={p.token} className="mb-3">
+                <label
+                  className="mb-1.5 block text-[12px] font-semibold text-[#1a2e4a]"
+                  htmlFor={`slot-${p.token}`}
+                >
+                  {p.label} {p.required && <span className="text-[#DC2626]">*</span>}
+                </label>
+                <input
+                  id={`slot-${p.token}`}
+                  value={values[p.token] ?? ""}
+                  onChange={(e) => setValues((v) => ({ ...v, [p.token]: e.target.value }))}
+                  className="w-full rounded-xl border border-emerald-300 bg-white px-3 sm:px-3.5 py-2.5 text-[12.5px] text-[#1a2e4a] outline-none focus:border-emerald-500"
+                  placeholder={p.token}
+                  inputMode="numeric"
+                />
+                <p className="mt-1.5 text-[10.5px] leading-snug text-[#6B7A8C]">{p.hint}</p>
+                {p.evidenceNeeded && (
+                  <p className="text-[10.5px] leading-snug text-[#94A3B8]">{p.evidenceNeeded}</p>
+                )}
+              </div>
             ))}
-          </ul>
-        )}
 
-        {!useVariant &&
-          suggestion.placeholders.map((p: Placeholder) => (
-            <div key={p.token} className="mt-3">
-              <label
-                className="mb-1 block text-[11.5px] font-semibold"
-                htmlFor={`slot-${p.token}`}
-                style={{ color: "var(--a-ink-2)" }}
-              >
-                {p.label} {p.required && <span style={{ color: "var(--a-bad)" }}>*</span>}
-              </label>
+          {suggestion.variantWithoutMetric && suggestion.placeholders.length > 0 && (
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-[11.5px] leading-snug text-[#1a2e4a]">
+              {/* Si no tiene el dato, la salida es una versión sin cifra — nunca un
+                  número que puso el modelo. Y esa versión NO puede llevarse la
+                  cifra que el original ya traía: eso lo hace cumplir el guard. */}
               <input
-                id={`slot-${p.token}`}
-                value={values[p.token] ?? ""}
-                onChange={(e) => setValues((v) => ({ ...v, [p.token]: e.target.value }))}
-                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none transition-colors focus:border-[var(--a-accent)]"
-                style={{ background: "var(--a-surface-2)", border: "1px solid var(--a-border)", color: "var(--a-ink)" }}
-                placeholder={p.token}
-                inputMode="numeric"
+                type="checkbox"
+                checked={useVariant}
+                onChange={(e) => setUseVariant(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600"
               />
-              <p className="mt-1 text-[11px] leading-snug" style={{ color: "var(--a-muted)" }}>{p.hint}</p>
-              <p className="text-[11px] leading-snug" style={{ color: "var(--a-muted-2)" }}>
-                {t("evidence")}: {p.evidenceNeeded}
-              </p>
-            </div>
-          ))}
-
-        {suggestion.variantWithoutMetric && suggestion.placeholders.length > 0 && (
-          <label
-            className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg px-2.5 py-2 text-[11.5px] leading-snug"
-            style={{ background: "var(--a-surface-2)", color: "var(--a-ink-2)" }}
-          >
-            {/* Si no tiene el dato, la salida es una versión sin cifra — nunca un
-                número que puso el modelo. Y esa versión NO puede llevarse la
-                cifra que el original ya traía: eso lo hace cumplir el guard. */}
-            <input
-              type="checkbox"
-              checked={useVariant}
-              onChange={(e) => setUseVariant(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--a-accent)]"
-            />
-            {t("no_data")}
-          </label>
-        )}
-      </div>
-
-      <div
-        className="flex gap-2 px-4 py-3"
-        style={{ background: "var(--a-surface-2)", borderTop: "1px solid var(--a-border)" }}
-      >
-        {/* El de aplicar es el ÚNICO principal de esta pantalla, y queda apagado
-            mientras falte la cifra: no por un `if` del que llama, sino por el
-            estado de acá. */}
-        <Btn disabled={blocked} onClick={() => onAccept(finalText)} className="min-h-[44px] flex-1 !text-[13px]">
-          {blocked ? t("fill_required") : t("apply")}
-        </Btn>
-        <Btn variant="outline" onClick={onCancel} className="min-h-[44px] !text-[13px]">
-          {t("cancel")}
-        </Btn>
-      </div>
-    </Card>
+              {t("no_data")}
+            </label>
+          )}
+        </div>
+      }
+    />
   )
 }
 
@@ -1081,6 +1094,23 @@ function FixCard({
               pintado el nombre crudo de la clave —«type_no_metric»— en la
               tarjeta. No lo caza ningún test porque el doble de next-intl
               resuelve contra un solo diccionario plano. */}
+          {/* GRAVEDAD Y SECCIÓN, ARRIBA DEL TÍTULO.
+              Las dos se perdieron al rehacerse esta pantalla y el CEO lo
+              reportó: una lista donde todas las tarjetas se ven igual obliga a
+              leerlas todas para saber cuál urge. La gravedad sale de
+              `check.state`, que el motor ya emite; la sección, del mismo id con
+              el que se filtra arriba. */}
+          <span className="mb-1.5 flex flex-wrap items-center gap-1.5">
+            <Chip size="xs" tone={check.state === "crit" ? "bad" : "warn"}>
+              {ta(check.state === "crit" ? "sev_critical" : "sev_warning")}
+            </Chip>
+            <span
+              className="text-[9.5px] font-semibold uppercase tracking-[0.06em]"
+              style={{ color: "var(--a-muted-2)" }}
+            >
+              {ta(`section_${check.section}`)}
+            </span>
+          </span>
           <h4 className="text-[13px] font-bold leading-snug" style={{ color: "var(--a-ink)" }}>
             {ta(check.titleKey, check.params)}
           </h4>
@@ -1110,18 +1140,32 @@ function FixCard({
         </p>
       )}
 
-      {/* QUÉ LO DISPARÓ, NOMBRADO. Un aviso que no dice dónde deja al usuario
-          buscándolo. Envuelve y no corta: el dato suele estar al final. */}
+      {/* TU LÍNEA, DICHA COMO TUYA.
+          Antes se pintaba en una caja idéntica a la de los motivos, así que el
+          usuario veía tres rectángulos grises —su viñeta, un motivo y un verbo
+          suelto— sin saber cuál era su texto. Reportado con captura: «no se ve
+          qué bullet se quiere cambiar». */}
+      {check.line && (
+        <div className="mx-3.5 mt-2.5">
+          <Label>{t("card_your_line")}</Label>
+          <Note className="mt-1">{check.line}</Note>
+        </div>
+      )}
+
+      {/* Y LO QUE LE FALTA, bajo su propio rótulo. */}
       {check.evidence && check.evidence.length > 0 && (
-        <ul className="mx-3.5 mt-2.5 flex flex-col gap-1.5">
-          {check.evidence.slice(0, 4).map((e, i) => (
-            /* Marcada con su término: es lo que el informe usa para aterrizar
-               en esta tarjeta cuando se entra desde la fila de ese término. */
-            <li key={`${check.id}-ev-${i}`} data-term={e}>
-              <Note>{e}</Note>
-            </li>
-          ))}
-        </ul>
+        <div className="mx-3.5 mt-2.5">
+          <Label>{t("card_whats_missing")}</Label>
+          <ul className="mt-1 flex flex-col gap-1.5">
+            {check.evidence.slice(0, 4).map((e, i) => (
+              /* Marcada con su término: es lo que el informe usa para aterrizar
+                 en esta tarjeta cuando se entra desde la fila de ese término. */
+              <li key={`${check.id}-ev-${i}`} data-term={e}>
+                <Note>{e}</Note>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
