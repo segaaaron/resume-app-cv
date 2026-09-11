@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { checkOf, sectionsOf, termsOfSpec, headlineOf } from "@/components/editor/ats3/view-model"
-import type { Finding, JobSpec } from "@/lib/ats3/contracts"
+import { encodeDetail, type Finding, type JobSpec } from "@/lib/ats3/contracts"
 import type { Score } from "@/lib/ats3/score"
 
 /**
@@ -159,6 +159,51 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     expect(c.evidence).toEqual(["No dice cómo lo lograste", "«developed» abre otra viñeta"])
     // Y la línea NO se repite entre los motivos.
     expect(c.evidence).not.toContain(c.line)
+  })
+
+  /**
+   * EL DEFECTO REPORTADO CON CAPTURA (2026-09-11): la tarjeta decía «2
+   * requirements the posting asks for are missing» y el segundo era «método»,
+   * que no es un requisito del aviso sino el eje que le falta a la viñeta. Al
+   * fusionarse en una tarjeta el detalle se concatenaba y se perdía de qué tipo
+   * vino cada pieza.
+   */
+  it("una tarjeta que junta un requisito y un eje cuenta UN requisito, y dice el eje en castellano", () => {
+    const f = finding({
+      type: "missing_requirement",
+      component: "must",
+      merged: ["no_result", "missing_requirement"],
+      detail: encodeDetail([
+        { type: "missing_requirement", detail: "first or early mobile hire at a startup" },
+        { type: "no_result", detail: "método" },
+      ]),
+    })
+    const c = checkOf(f, () => "Designed user-friendly interfaces", (k) =>
+      k.normalize("NFD").replace(/\p{Diacritic}/gu, "") === "metodo" ? "No dice cómo lo lograste" : k)
+    expect(c.params).toEqual({ count: 1 })
+    expect(c.evidence).toEqual(["first or early mobile hire at a startup", "No dice cómo lo lograste"])
+  })
+
+  /**
+   * MISMA FAMILIA QUE EL DEFECTO DE ARRIBA: el TÍTULO nombra un dato del
+   * hallazgo y leía el detalle crudo, así que pintaba el token del motor
+   * —«verbo:developed»— y, con la tarjeta fusionada, el detalle de las dos
+   * piezas juntas.
+   */
+  it("el título nombra el verbo, no el token del motor, aunque la tarjeta esté fusionada", () => {
+    const solo = checkOf(finding({ type: "verb_repeated", component: "verbs", detail: "verbo:developed" }))
+    expect(solo.params).toEqual({ verbo: "developed" })
+
+    const fusionada = checkOf(finding({
+      type: "verb_repeated",
+      component: "verbs",
+      merged: ["no_result", "verb_repeated"],
+      detail: encodeDetail([
+        { type: "no_result", detail: "método" },
+        { type: "verb_repeated", detail: "verbo:developed" },
+      ]),
+    }))
+    expect(fusionada.params).toEqual({ verbo: "developed" })
   })
 
   it("un término demostrado sin decirlo con esas palabras NO se cuenta como escrito", () => {

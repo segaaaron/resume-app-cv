@@ -224,10 +224,10 @@ describe("improveCoverLetter — la misma vara que la carta nueva", () => {
   })
 
   /**
-   * Nunca dejar al usuario sin nada: si TODAS se caen, vuelve su propia carta
-   * con "ya está bien". Un filtro más estricto no puede convertirse en un hueco.
+   * Nunca bloquear (CEO, 2026-09-11): si TODAS traen un dato quemado, llegan
+   * igual y se ven enteras. Antes volvía «ya está optimizada» sin cambiar nada.
    */
-  it("devuelve la carta del usuario cuando ninguna versión sobrevive", async () => {
+  it("entrega las versiones aunque todas traigan un dato quemado", async () => {
     const chat = vi.fn(async () => versionsReply([
       "Una versión con 250 palabras exactas y 3 párrafos pedidos.",
       "Otra con 999 clientes atendidos por semana.",
@@ -235,8 +235,8 @@ describe("improveCoverLetter — la misma vara que la carta nueva", () => {
     const mod = new AICoverLetterModule({ chat } as never, logger as never)
     const r = await mod.improveCoverLetter("u1", { body: BODY, language: "es" } as never, "PRO")
 
-    expect(r.status).toBe("already_optimized")
-    expect(r.versions).toEqual([BODY])
+    expect(r.status).not.toBe("already_optimized")
+    expect(r.versions).toHaveLength(2)
   })
 })
 

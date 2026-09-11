@@ -6,12 +6,11 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
+import { hardCodedFactKind, parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
 import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
-import { reportGuardDrops } from "../shared/guard-metrics"
+import { isTrivialEdit } from "../shared/text-similarity"
 import { isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
 import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 import { readChat } from "@/lib/services/ai/shared/chat-result"
@@ -27,43 +26,6 @@ import {
 
 
 
-/**
- * LO QUE ESTE ESCRITOR DECLARA. Su lista, no una línea perdida en el cuerpo.
- *
- * `no_lateral_loss` corre DESPUÉS de `adds_value` y antes de la cifra, como
- * corría acá: una reescritura lateral sobre una línea ya fuerte es distinta, no
- * mejor, y una línea que el panel diagnosticó no cuenta como «ya fuerte».
- */
-const BULLET_RULES: readonly GateRule[] = [
-  "only_declared_facts",
-  "figure_policy",
-  "adds_value",
-  "figure_intact",
-  "keeps_terms",
-  /**
-   * ── POR QUÉ ESTE ESCRITOR NO DECLARA `output_floor` (medido, 2026-08-27) ──
-   *
-   * El plan de F1.5 pedía el piso en «ejecutor, viñeta y habilidad», y la matriz
-   * del motor lo muestra ausente sólo acá. Parece un olvido; se intentó cerrarlo
-   * y la medición dijo que no.
-   *
-   * El piso exige `MIN_BULLET_WORDS` (12). El ejecutor reescribe con la vacante
-   * en la mano y produce líneas largas, así que ahí no molesta. Este endpoint
-   * mejora UNA línea que puede ser corta por naturaleza: con el piso puesto,
-   * «Led the team that delivered every project on schedule» —diez palabras, una
-   * reescritura perfectamente buena— se rechaza, y el usuario recibe
-   * `already_optimized` habiendo gastado el uso y el cooldown. Eso es
-   * exactamente lo que `never-empty` existe para impedir.
-   *
-   * Medido en las dos direcciones: sobre las cuatro reescrituras reales que la
-   * API devolvió hoy, el piso no rechaza ninguna (son largas); sobre la suite,
-   * rechaza nueve casos de líneas cortas legítimas.
-   *
-   * Lo que el piso protege y sí importa acá —que la salida no abra con una frase
-   * de tarea— ya lo cubre `opensWeakly`, que desde hoy ve también las aperturas
-   * nominales y alimenta el ranking y el diagnóstico de esta misma línea.
-   */
-]
 export class AIBulletModule {
   constructor(
     private readonly aiClient: IAIClient,
@@ -303,7 +265,8 @@ TRANSFORMATION RULES:
 5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never supply one yourself.
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
 7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. Either end on a concrete result the source states (a number, a named system, a real outcome) or end on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
-8. LEAVE STRONG BULLETS ALONE. If a bullet already opens with a strong action verb AND names specific work (real tools, systems, or outcomes), it is already good — OMIT it. Do NOT reword it just to phrase it differently or "tighten" it: swapping "enhance"→"expand" or dropping "strengthen team performance" makes it DIFFERENT, not better, and quietly loses detail the candidate stated. Only rewrite such a bullet if you can ADD a concrete result, number, or keyword the source supports. When in doubt, leave it.
+8. FIGURES: write the number the source states, exactly as it states it. When the source gives no number, write the sentence without one — it still reads as a finished line. What you return is printed on someone's résumé as-is, so every character of it has to be something they can hand to a recruiter.
+9. LEAVE STRONG BULLETS ALONE. If a bullet already opens with a strong action verb AND names specific work (real tools, systems, or outcomes), it is already good — OMIT it. Do NOT reword it just to phrase it differently or "tighten" it: swapping "enhance"→"expand" or dropping "strengthen team performance" makes it DIFFERENT, not better, and quietly loses detail the candidate stated. Only rewrite such a bullet if you can ADD a concrete result, number, or keyword the source supports. When in doubt, leave it.
 
 WHAT TO RETURN — read this last and follow it exactly:
 Include an entry in "improvements" ONLY for a bullet you can MATERIALLY improve using facts already in the source. Omit every other bullet. A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. A bullet with no number can still be improved by wording (stronger verb, clearer action/outcome) — improve it; never demand a figure.
@@ -418,18 +381,22 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
       const improvements: BulletImprovement[] = []
       const seenIndices = new Set<number>()
-      let droppedHardCoded = 0
-      let droppedTrivial = 0
-      let droppedDuplicate = 0
-      // Separados del "trivial" a propósito: son los dos motivos CAROS. Meterlos
-      // en la misma bolsa hacía imposible ver si el prompt empezó a comerse
-      // cifras o términos de la vacante, que es lo que baja el puntaje.
-      let droppedFigure = 0
-      let droppedTerm = 0
 
-      // Every entry is addressed by index, so a rejected entry is simply absent —
-      // no "" padding to keep positions aligned, and no way for a drop to shift
-      // another bullet onto the wrong original.
+      /**
+       * ── NINGÚN GUARD TIRA UNA PROPUESTA (CEO, 2026-09-11) ──────────────────
+       *
+       * Acá corría `runWriteGate` y descartaba la reescritura —y cada ángulo—
+       * si nombraba algo que el CV no dice, traía una cifra nueva, perdía una
+       * del candidato o un término de la vacante, o cambiaba poco. Si no quedaba
+       * nada, el usuario leía «no hay otro ángulo honesto para esta línea» con
+       * la consulta gastada: un bloqueo con forma de respuesta.
+       *
+       * Ahora TODO lo que el modelo escribió llega al selector, donde se ve
+       * entero antes de elegir. La regla sigue en el prompt (`cvValueBar`,
+       * `noHardCodedFactsRule`); la decisión, en la persona que firma el CV.
+       * Lo único que se aparta es lo que no es una propuesta: la misma línea
+       * devuelta, un índice que no existe o repetido.
+       */
       for (const entry of (parsed.improvements as unknown[]).slice(0, 15)) {
         const candidate = BulletImprovementSchema.safeParse(entry)
         if (!candidate.success) continue
@@ -441,114 +408,26 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         // One suggestion per bullet. A repeated index would render as two rows
         // both labelled with the same bullet number, inflate the "N improvements"
         // count, and let apply-all silently pick whichever came last.
-        if (seenIndices.has(index)) { droppedDuplicate++; continue }
-
-        /**
-         * POSTURA A (ver «LA POLÍTICA DE LA CIFRA» en `ai-helpers`).
-         *
-         * Esto reescribe una viñeta que ESCRIBIÓ EL CANDIDATO, así que hay un
-         * relato detrás y la doctrina autoriza proponer el tamaño como rango que
-         * él confirma. Antes esto devolvía un booleano y tiraba la reescritura
-         * entera: le pedíamos el rango en el prompt y le borrábamos la respuesta.
-         *
-         * Placeholder y marca no declarada se siguen descartando sin preguntar:
-         * ésos no son una propuesta, son un dato falso sobre él.
-         */
-        /**
-         * EL MOTOR — este escritor DECLARA su lista (F0).
-         *
-         * El orden es el que este módulo ya corría; se conserva para que la
-         * mudanza no pueda cambiar una salida. `figurePolicy: "confirm"` es la
-         * POSTURA A: reescribe la viñeta que el candidato escribió, así que una
-         * cifra propuesta viaja a confirmar en vez de descartarse.
-         *
-         * `diagnosed` sigue viajando: si el panel señaló la línea, un cambio
-         * chico ES el arreglo, y descartarlo era lo que hacía que el panel
-         * marcara una viñeta floja y después se negara a arreglarla.
-         */
-        const veredicto = runWriteGate({
-          text: suggested,
-          original,
-          source,
-          postingTerms,
-          diagnosed,
-          figurePolicy: "confirm",
-          language,
-        }, BULLET_RULES)
-
-        if (!veredicto.ok) {
-          switch (veredicto.rule) {
-            case "only_declared_facts": droppedHardCoded++; break
-            case "figure_intact": droppedFigure++; break
-            case "keeps_terms": droppedTerm++; break
-            default: droppedTrivial++
-          }
-          continue
-        }
-        const needsConfirm = veredicto.needsFigureConfirm
-
+        if (seenIndices.has(index)) continue
+        // La misma línea devuelta —90% idéntica, la vara del CEO— no es una
+        // propuesta: no hay nada que elegir.
+        if (isTrivialEdit(original, suggested)) continue
         seenIndices.add(index)
 
-        // Alternatives face the SAME gauntlet as the main rewrite. Offering a
-        // second angle must not become a side door for a hard-coded figure or a
-        // lossy reword: the user picks one of these with a click, so a variant
-        // that fails a guard is worse than having no choice at all. Anything that
-        // does not survive is simply not offered — fewer honest options beat more.
         const alternatives = (rawAlts ?? [])
           .map((a) => ({ ...a, text: a.text.trim() }))
-          .filter((a) => a.text
-            && a.text !== suggested
-            // En las alternativas sí se descarta la cifra propuesta: el usuario
-            // elige una de tres con un clic, y confirmar un rango por cada opción
-            // convierte una decisión en tres. La recomendada ya trae esa puerta.
-            // Misma puerta que la principal, con una sola diferencia declarada:
-            // acá la cifra propuesta SÍ se descarta (postura B), porque el usuario
-            // elige una de tres con un clic y confirmar un rango por cada opción
-            // convierte una decisión en tres. La recomendada ya trae esa puerta.
-            && runWriteGate({
-              text: a.text,
-              original,
-              source,
-              postingTerms,
-              diagnosed,
-              figurePolicy: "drop",
-              language,
-            }, BULLET_RULES).ok)
+          .filter((a) => a.text && a.text !== suggested && !isTrivialEdit(original, a.text))
           .slice(0, 2)
 
         improvements.push({
-          ...(needsConfirm ? { needsFigureConfirm: true } : {}),
+          // Una cifra que el CV no dice viaja marcada para que la confirme.
+          ...(hardCodedFactKind(suggested, source) === "figure" ? { needsFigureConfirm: true } : {}),
           index,
           text: suggested,
           why: why?.trim() || undefined,
           alternatives: alternatives.length > 0 ? alternatives : undefined,
         })
       }
-
-      /**
-       * LO QUE LOS GUARDS TIRAN, VISIBLE.
-       *
-       * ── EL HUECO (pase de QA, 2026-08-22) ────────────────────────────────
-       *
-       * Esto salía por `logger.warn`, que va a la consola del contenedor. El
-       * propio comentario de `guard-metrics` lo dice: nadie los leyó nunca. El
-       * instrumento que los pone en el panel de admin existe desde la sesión
-       * pasada y estaba cableado a UNO de los cuatro endpoints que filtran.
-       *
-       * Sin esto, «el usuario ve menos sugerencias» y no hay forma de saber si
-       * es porque su CV ya está bien o porque nos estamos comiendo su trabajo —
-       * que es exactamente la pregunta que el CEO hizo.
-       */
-      reportGuardDrops({
-        endpoint: "improve-bullet",
-        offered: (parsed.improvements as unknown[]).length,
-        kept: improvements.length,
-        hardCoded: droppedHardCoded,
-        figureLoss: droppedFigure,
-        trivial: droppedTrivial + droppedDuplicate,
-        termLoss: droppedTerm,
-        weak: 0,
-      })
       return improvements
     }
 

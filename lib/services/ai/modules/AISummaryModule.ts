@@ -117,7 +117,7 @@ ${cvValueBar("en")}
 ${noHardCodedFactsRule("en")}
 
 ABSOLUTE RULES:
-• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: ${clicheBanList("en")}. Every one of them is checked and rejected — a version carrying any is thrown away.
+• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: ${clicheBanList("en")}. They are checked, and a summary that leads with one is asked for again.
 • No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
 • Never leave a bracket like [X%]: unfilled, in a CV it reads as unfinished.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
@@ -160,7 +160,7 @@ ${cvValueBar("es")}
 ${noHardCodedFactsRule("es")}
 
 REGLAS ABSOLUTAS:
-• Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó, Diseñó. NUNCA estas frases, se comprueban y se rechazan: ${clicheBanList("es")}.
+• Acciones de impacto, nombradas sin sujeto y nunca conjugadas en tercera persona: liderazgo de, desarrollo de, transformación de, escalado de, optimización de, implementación de, diseño de. NUNCA estas frases —se comprueban, y un resumen que abra con una se vuelve a pedir—: ${clicheBanList("es")}.
 • Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
 • Nunca dejes un corchete tipo [X%]: sin rellenar, en un CV se lee como algo sin terminar.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.

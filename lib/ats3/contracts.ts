@@ -146,7 +146,11 @@ export const PROMPT_VERSION = {
   // auditoría tenía que juzgar si un logro las demuestra — imposible: no hablan
   // de la persona. Un campo declarado sin regla no lo llena nadie, lo llena el
   // azar. Reportado en producción con captura.
-  P1: "p1-8", // parser de vacante
+  // p1-9 (2026-09-11): `noScoreRule` decía «si devolvés un puntaje, la respuesta
+  // entera se descarta», y el motor no descarta nada por eso: el esquema ni
+  // tiene el campo. Un prompt que amenaza con algo que el código no hace es una
+  // contradicción, y GPT-5 gasta razonamiento en reconciliarlas (guía oficial).
+  P1: "p1-9", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -157,7 +161,8 @@ export const PROMPT_VERSION = {
   // compara— con la misma función que emite el hallazgo. El número del modelo no
   // lo leía nadie y contradecía a la tarjeta: con alineación 1 la tarjeta salía
   // prometiendo 0 puntos.
-  P2: "p2-4", // auditoría
+  // p2-5 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
+  P2: "p2-5", // auditoría
   // p3-2: KEEP exige que la línea sea SUYA. Una correcta pero genérica ocupa el
   // lugar de una que distingue.
   // p3-3 (2026-09-09): sexto veredicto, MERGE — dos viñetas del mismo puesto que
@@ -168,7 +173,8 @@ export const PROMPT_VERSION = {
   // viñetas no dice qué hizo la persona ahí, y hasta ahora el motor sólo sabía
   // señalar lo que sobra. El hecho lo pone el usuario: el modelo propone el tema
   // y la pregunta, nunca afirma.
-  P3: "p3-4", // triage
+  // p3-5 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
+  P3: "p3-5", // triage
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -188,10 +194,17 @@ export const PROMPT_VERSION = {
   // que la tarjeta prometió cerrar sobre esa línea, y las otras viñetas del CV
   // con la orden de no repetir ninguna—. Antes el modelo reescribía a ciegas y
   // el guard lo castigaba por repetir algo que nadie le había mostrado.
-  P4: "p4-9", // reescritura de viñeta
+  // p4-10 (2026-09-11): sin las dos amenazas falsas —«la reescritura entera se
+  // descarta», «la respuesta entera se descarta»— que el código ya no cumple.
+  // Y la cifra que la línea ya dice se copia tal cual y no se
+  // vuelve hueco, y `variantWithoutMetric` tiene su regla. La regla vieja —«si
+  // declarás un tamaño, la línea LLEVA su hueco»— hacía que el modelo cambiara
+  // el «30%» del candidato por «[x%]». Reportado con captura.
+  P4: "p4-10", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
-  P5: "p5-2", // resumen
+  // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
+  P5: "p5-3", // resumen
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -554,6 +567,48 @@ export type FindingType = (typeof FINDING_TYPES)[number]
 export const DETAIL_SEPARATOR = " · "
 
 /**
+ * DE QUÉ TIPO VINO CADA PIEZA DE UN DETALLE FUSIONADO.
+ *
+ * ── EL DEFECTO QUE ESTO CIERRA (captura del CEO, 2026-09-11) ───────────────
+ * La tarjeta decía «2 requirements the posting asks for are missing» y listaba
+ * «first or early mobile hire at a startup» y «método». El segundo no era un
+ * requisito: era el eje que le faltaba a la viñeta (`no_result`). Al fusionarse
+ * en una tarjeta, el detalle se concatenaba y se perdía de qué tipo vino cada
+ * pieza, así que la pantalla contó las dos como requisitos y pintó el token
+ * crudo, en castellano, dentro de un CV en inglés.
+ *
+ * Ahora cada pieza fusionada viaja con su tipo, y quien la lee sabe qué es.
+ * La marca es un carácter de control: nunca aparece en un CV ni en un aviso.
+ */
+const TYPE_MARK = "\u001F"
+
+export interface DetailPart {
+  type: FindingType
+  detail: string
+}
+
+/** Las piezas de un detalle. Una sin marca es del tipo del hallazgo. */
+export function detailParts(f: { type: FindingType; detail: string }): DetailPart[] {
+  return f.detail
+    .split(DETAIL_SEPARATOR)
+    .map((pieza) => pieza.trim())
+    .filter(Boolean)
+    .map((pieza) => {
+      const corte = pieza.indexOf(TYPE_MARK)
+      return corte > 0
+        ? { type: pieza.slice(0, corte) as FindingType, detail: pieza.slice(corte + 1) }
+        : { type: f.type, detail: pieza }
+    })
+}
+
+/** El detalle de una tarjeta fusionada, con cada pieza marcada con su tipo. */
+export function encodeDetail(parts: DetailPart[]): string {
+  const llenas = parts.filter((p) => p.detail.trim())
+  if (llenas.length <= 1) return llenas[0]?.detail ?? ""
+  return llenas.map((p) => `${p.type}${TYPE_MARK}${p.detail}`).join(DETAIL_SEPARATOR)
+}
+
+/**
  * LA IDENTIDAD DE UN HALLAZGO.
  *
  * Nodo más tipo alcanza mientras un emisor produzca UN hallazgo por nodo y tipo,
@@ -840,6 +895,14 @@ export interface AnchoredSuggestion extends Suggestion {
    * trabajo contado dos veces, que es justo lo que la fusión venía a arreglar.
    */
   mergedFrom?: NodeId
+  /**
+   * LA LÍNEA DEL CV A LA QUE ESTA PROPUESTA SE PARECE, si se parece.
+   *
+   * Era un rechazo —«ya lo dice otra línea, no se escribió»— y pasó a aviso
+   * (CEO, 2026-09-11): la propuesta llega igual y la ventana nombra la línea
+   * parecida, para que el usuario decida con las dos a la vista.
+   */
+  similarTo?: string
 }
 
 // Acá vivía un `delta`. Su comentario decía «medido recalculando sobre una

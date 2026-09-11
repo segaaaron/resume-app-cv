@@ -567,7 +567,7 @@ describe("la cifra la escribe el candidato", () => {
     await click("Arreglar con Tailor")
     apiFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ ok: false, reason: "drops_content", detail: "Atendí" }),
+      json: async () => ({ ok: false, reason: "unknown", detail: "" }),
     })
     await click("Escribirla mejor")
     // "No se pudo" con el uso ya cobrado es lo que hace que alguien deje de

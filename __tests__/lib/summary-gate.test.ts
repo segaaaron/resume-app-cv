@@ -99,17 +99,19 @@ describe("gateSummaryVersions", () => {
     expect(r.versions.map((v) => v.text).join(" ")).not.toMatch(/\[/)
   })
 
-  it("drops a version that invents a figure the source never stated", async () => {
+  it("keeps a version with a figure the source never stated, but reads it last", async () => {
+    // Ningún guard tira una versión (CEO, 2026-09-11): se ordena y el usuario elige.
     const r = await gateSummaryVersions(clientReturning({ versions: [CLEAN] }).client, logger,
-      input({ rawVersions: [CLEAN, "Drove 300% revenue growth across 12 countries at Acme."] }))
-    expect(r.versions.map((v) => v.text).join(" ")).not.toContain("300%")
+      input({ rawVersions: ["Drove 300% revenue growth across 12 countries at Acme.", CLEAN] }))
+    expect(r.versions.map((v) => v.text)).toEqual([CLEAN, "Drove 300% revenue growth across 12 countries at Acme."])
   })
 
-  it("reports empty rather than inventing when every version is dropped", async () => {
-    const { client, calls } = clientReturning({ versions: [CLEAN] })
+  it("never answers with nothing: a version the CV does not back still reaches the picker", async () => {
+    // El perfil tiene cifras y esa versión no: corre el reintento de calidad de
+    // siempre, y lo que llega es una versión, nunca un vacío.
+    const { client } = clientReturning({ versions: [CLEAN] })
     const r = await gateSummaryVersions(client, logger, input({ rawVersions: ["Certified AWS Solutions Architect with a PhD in Robotics."] }))
-    expect(r.versions).toEqual([])
-    expect(calls()).toBe(0)
+    expect(r.versions).toHaveLength(1)
   })
 
   // The retry's tokens were charged whether or not its answer was used. The
@@ -165,12 +167,15 @@ describe("gateSummaryVersions", () => {
     expect(r.versions[0]).toEqual({ text: CLEAN, sourceIndex: 1 })
   })
 
-  it("does not let a dropped version shift the ones after it", async () => {
+  it("keeps each version's own position when ranking moves it", async () => {
     const { client } = clientReturning({ versions: [CLEAN] })
     const r = await gateSummaryVersions(client, logger, input({
       rawVersions: ["Drove 300% revenue growth across 12 countries at Acme.", CLEAN],
     }))
-    expect(r.versions).toEqual([{ text: CLEAN, sourceIndex: 1 }])
+    expect(r.versions).toEqual([
+      { text: CLEAN, sourceIndex: 1 },
+      { text: "Drove 300% revenue growth across 12 countries at Acme.", sourceIndex: 0 },
+    ])
   })
 
   it("ignores junk in the versions array instead of throwing", async () => {

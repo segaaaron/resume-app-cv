@@ -36,6 +36,7 @@ import { Check, Loader2, Minus, Sparkles, X } from "lucide-react"
 import { Z_MODAL } from "@/lib/ui/z-layers"
 import { skillPlan } from "@/lib/ats3/engine"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
+import { figureSlots } from "@/lib/ats3/guards"
 import type { AnchoredSuggestion, Finding, Placeholder, TriageDecision } from "@/lib/ats3/contracts"
 import { Btn, Card, Chip, Diff, Label, Note, PRESSABLE } from "./ui"
 import type { PanelCheck, PanelSection, PanelSectionId } from "./view-model"
@@ -518,6 +519,9 @@ export default function TailorPanel({
 
           {a.pending && (
             <SuggestionSheet
+              /* Una propuesta nueva abre una hoja nueva: sin esto los campos
+                 precargados de la anterior quedaban pegados. */
+              key={`${a.pending.bulletId}:${a.pending.basedOnHash}:${a.pending.text}`}
               suggestion={a.pending}
               onCancel={() => a.setPending(null)}
               onAccept={(text) => {
@@ -899,7 +903,13 @@ function SuggestionSheet({
   esNueva: boolean
   t: (k: string, v?: Record<string, string | number>) => string
 }) {
-  const [values, setValues] = useState<Record<string, string>>({})
+  /**
+   * LA CIFRA QUE EL CANDIDATO YA DIO LLEGA ESCRITA EN SU CAMPO (CEO, 2026-09-11).
+   *
+   * Si la propuesta cambió «30%» por «[x%]», el campo abre con «30%»: se ve, se
+   * puede cambiar, y no se le pide dos veces un dato que ya está en su CV.
+   */
+  const [values, setValues] = useState<Record<string, string>>(() => figureSlots(suggestion.originalText, suggestion))
   const [useVariant, setUseVariant] = useState(false)
 
   /**
@@ -989,6 +999,13 @@ function SuggestionSheet({
            cero menciones a puntos en sus 378 líneas— y quedaba suelta entre el
            diff y los campos. El número ya vive en la tarjeta del panel. */
         <div className="mt-4 border-t border-[#E8EDF6] pt-4">
+          {/* SE PARECE A OTRA LÍNEA: antes era un rechazo; ahora llega y se avisa
+              acá, pegado al antes/después, con la línea parecida nombrada. */}
+          {suggestion.similarTo && (
+            <Note tone="warn" className="mb-4">
+              {t("similar_to", { line: suggestion.similarTo })}
+            </Note>
+          )}
           {/* El mismo rótulo micro que «ACTUAL» y «SUGERIDO»: los campos son
               parte de este diálogo, no un bloque pegado de otra pantalla. */}
           {!useVariant && suggestion.placeholders.length > 0 && (
@@ -1024,8 +1041,8 @@ function SuggestionSheet({
           {suggestion.variantWithoutMetric && suggestion.placeholders.length > 0 && (
             <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-[11.5px] leading-snug text-[#1a2e4a]">
               {/* Si no tiene el dato, la salida es una versión sin cifra — nunca un
-                  número que puso el modelo. Y esa versión NO puede llevarse la
-                  cifra que el original ya traía: eso lo hace cumplir el guard. */}
+                  número que puso el modelo. Lo que esa versión escribe se ve en
+                  el antes/después antes de confirmar. */}
               <input
                 type="checkbox"
                 checked={useVariant}

@@ -136,12 +136,13 @@ describe("fusionar dos viñetas en una", () => {
     expect(r.ok).toBe(true)
   })
 
-  it("una fusión que se come lo que decía la segunda NO pasa", async () => {
-    // Es el caso peligroso: la segunda se BORRA al aplicar, así que su dato no
-    // vuelve de ningún lado si el guard no lo reclama acá.
+  it("una fusión que se come lo que decía la segunda se pide UNA vez más, y llega igual", async () => {
+    // La segunda se BORRA al aplicar, así que lo que se pierda no vuelve de ningún
+    // lado: se le reclama al modelo. Pero no bloquea (CEO, 2026-09-11): lo
+    // perdido se ve tachado en el antes/después y el usuario confirma.
     const { r } = await pedir("Gestioné la agenda del consultorio durante todo el día")
-    expect(r.ok).toBe(false)
-    if (!r.ok && !r.alreadyGood) expect(r.verdict.ok).toBe(false)
+    expect(vistos).toHaveLength(2)
+    expect(r.ok).toBe(true)
   })
 
   it("aplicarla escribe UNA línea y la otra se va, en el mismo acto", async () => {
@@ -211,9 +212,23 @@ describe("agregar una viñeta a un puesto que tiene pocas", () => {
     if (!r.ok) expect(r.calls).toBe(0)
   })
 
-  it("la redacción no puede irse del tema que él confirmó", async () => {
-    const { r } = await pedir("Coordiné reuniones con proveedores internacionales")
-    expect(r.ok).toBe(false)
+  it("si la redacción se va del tema que él confirmó, se pide UNA vez más y llega igual", async () => {
+    const tree = arbol()
+    const ai = motor("Coordiné reuniones con proveedores internacionales")
+    const nudges: string[] = []
+    const base = ai.rewriteBullet
+    ai.rewriteBullet = async (input) => {
+      nudges.push(input.nudge ?? "")
+      return base(input)
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, addToRole: tree.roles[0].id, focus: "Atendí el teléfono y derivé las consultas",
+      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(nudges).toHaveLength(2)
+    expect(nudges[1]).toMatch(/tel[eé]fono/)
+    expect(r.ok).toBe(true)
   })
 
   it("se AGREGA al final, sin tocar la que ya estaba", async () => {

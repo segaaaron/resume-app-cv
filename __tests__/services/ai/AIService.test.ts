@@ -145,10 +145,9 @@ describe("AIService", () => {
       expect(result.improvements).toEqual([])
     })
 
-    // The reported bug: the model bolts "[N users]" onto the original and calls
-    // it an improvement. Placeholders are banned outright now, so the suggestion
-    // is dropped as a hallucination and never reaches the user's CV.
-    it("drops a suggestion whose only addition is a bracket placeholder", async () => {
+    // Ningún guard tira una propuesta (CEO, 2026-09-11): el corchete llega al
+    // selector y se ve entero antes de elegir. El prompt lo sigue prohibiendo.
+    it("delivers a suggestion carrying a bracket placeholder instead of blocking", async () => {
       const original = "• Managed the support queue\n• Trained new hires"
       const aiClient = makeMockAIClient(JSON.stringify({
         status: "improved",
@@ -161,8 +160,8 @@ describe("AIService", () => {
 
       const result = await service.improveBullet("user-1", { text: original }, "PRO")
 
-      expect(result.status).toBe("already_optimized")
-      expect(result.improvements).toEqual([])
+      expect(result.status).toBe("improved")
+      expect(result.improvements).toHaveLength(2)
     })
 
     it("improves a numberless bullet by wording instead of asking for a metric", async () => {

@@ -120,22 +120,29 @@ línea de 2015 no la desentierra.
 
 ## 6 · Ningún camino escribe en el CV sin pasar por los guards
 
-Dueño: `checkSuggestion` en `guards.ts`, con sus 12 razones: `invented_term` ·
-`invented_figure` · `wrong_person` · `verb_collision` · `keyword_over_budget` ·
-`duplicate_claim` · `drops_content` · `adds_nothing` · `too_many_placeholders` ·
-`placeholder_in_summary` · `stale` · `empty`.
+Dueño: `checkSuggestion` en `guards.ts`, con **dos** razones que no entregan, y
+ninguna juzga lo que escribió el modelo: `stale` (no se sabe sobre qué línea
+escribir, o el usuario la editó) · `empty` (no volvió texto). Nada más rechaza
+una propuesta (CEO, 2026-09-11: «lo que me das es un bloqueo, no una solución»).
 
-- La **variante sin cifra** —lo que se escribe al pulsar «no tengo ese dato»—
-  pasa por los mismos chequeos: es la puerta que más tienta a borrar la cifra que
-  el candidato sí dio.
-- Un rechazo **dice cuál fue**: «no se pudo» con el uso ya cobrado es lo que hace
-  que alguien deje de apretar el botón.
+- **Parecerse a otra línea avisa, no rechaza** (`similarTo`): se pide una vez más
+  nombrando la línea y, si igual se parece, la propuesta llega con esa línea
+  nombrada en un aviso dentro de la ventana de confirmación.
+
+- **Lo que se puede arreglar se arregla, no se rechaza** (`repairSuggestion`): la
+  ficha del hueco derramada al texto se limpia, un corchete sin declarar se vuelve
+  un campo que el usuario llena, y la variante sin cifra que no se puede escribir
+  tal cual se suelta.
+- **La cifra del candidato no se pide dos veces** (`figureSlots`): si la propuesta
+  la cambió por un hueco, la hoja de confirmación la trae precargada en ese campo.
+- **Lo perdido se pide una vez, y la propuesta llega igual** (`lostContent`):
+  términos de la vacante, cifras, y en una fusión o línea nueva toda palabra con
+  contenido. Gana la versión que menos pierde, y lo perdido se ve tachado en el
+  antes/después — el usuario confirma.
 - **Un reintento, nunca dos** por motivo. Dos esconden un prompt que dejó de
-  funcionar. El techo del camino completo son seis llamadas y está contado en
-  `runRewrite`.
-- **El prompt y el guard dicen lo mismo.** P4 le exige al modelo que alguna
-  palabra del término ya esté en la línea; `inventedTerms` lo hace cumplir. Si
-  discrepan, gana el código.
+  funcionar.
+- **El prompt y el código dicen lo mismo.** P4 ordena copiar tal cual la cifra que
+  la línea ya dice; el código la precarga si el modelo igual la volvió hueco.
 
 ## 7 · La cuota se cobra por petición, y lo que no se gastó se devuelve
 

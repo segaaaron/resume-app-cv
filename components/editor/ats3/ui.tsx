@@ -27,6 +27,7 @@
 // Es cómo se ve lo que otros ya midieron.
 
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react"
+import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react"
 
 /**
  * EL LENGUAJE DE PULSACIÓN, y vive acá porque lo usan las tres pantallas.
@@ -166,6 +167,8 @@ export function Label({ tone = "neutral", children }: { tone?: Tone; children: R
   )
 }
 
+const AVISO: Partial<Record<Tone, typeof AlertTriangle>> = { warn: AlertTriangle, bad: XCircle, ok: CheckCircle2 }
+
 /**
  * LA FICHA / EL AVISO: un texto con fondo propio.
  *
@@ -204,6 +207,33 @@ export function Note({
    */
 } & Omit<ComponentPropsWithRef<"p">, "children" | "className">) {
   const t = TONE[tone]
+  /**
+   * UN AVISO SE TIENE QUE VER (CEO, 2026-09-11: «ese mensaje casi ni se nota»).
+   *
+   * Aviso, error y «ya está bien» se pintaban igual que una ficha de evidencia:
+   * fondo beige y texto chico, y el usuario no se enteraba de qué pasó con su
+   * pedido. En tamaño normal y sin tachar llevan ícono, borde, franja de color
+   * y más cuerpo. Las fichas (`neutral`), el texto que entra al CV (`md`) y la
+   * línea que se va (`strike`) no cambian.
+   */
+  const Icono = size === "sm" && !strike ? AVISO[tone] : undefined
+  if (Icono) {
+    return (
+      <p
+        {...resto}
+        className={`flex items-start gap-2.5 rounded-xl px-3.5 py-3 text-[12.5px] font-semibold leading-relaxed [overflow-wrap:anywhere] ${className}`}
+        style={{
+          background: t.soft,
+          color: t.ink,
+          border: `1px solid color-mix(in srgb, ${t.solid} 45%, transparent)`,
+          boxShadow: `inset 4px 0 0 ${t.solid}, 0 8px 20px -12px color-mix(in srgb, ${t.solid} 60%, transparent)`,
+        }}
+      >
+        <Icono aria-hidden className="mt-px h-[18px] w-[18px] shrink-0" style={{ color: t.solid }} />
+        <span className="min-w-0 flex-1">{children}</span>
+      </p>
+    )
+  }
   return (
     <p
       {...resto}

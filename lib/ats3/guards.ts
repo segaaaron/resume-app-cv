@@ -36,22 +36,34 @@ import {
 } from "@/lib/ats3/contracts"
 import { type Ledger } from "@/lib/ats3/ledger"
 
+/**
+ * LO ÚNICO QUE NO SE ENTREGA: cuando no hay nada honesto que entregar.
+ *
+ * Ninguna de las dos es un juicio sobre lo que escribió el modelo: una dice que
+ * no volvió texto, la otra que no se sabe sobre qué línea escribirlo —y escribir
+ * igual pisaría una edición del usuario o la línea de al lado—.
+ */
 export type GuardReason =
-  /**
-   * REPITE ALGO QUE EL CV YA DICE — el único guard que JUZGA (CEO, 2026-09-09).
-   *
-   * «Los guards que tengas tienen que cumplir sólo que no se cree viñetas
-   * similares.» Eran dos razones para la misma pregunta: `adds_nothing`
-   * comparaba contra la línea original y `duplicate_claim` contra las otras
-   * viñetas. Es una sola cosa —¿esto ya está dicho?— y ahora se contesta una
-   * sola vez, con una sola vara: el 90% del CEO.
-   */
-  | "repeats"
-  | "drops_content" // se perdió información que el original tenía
-  | "too_many_placeholders" // más de dos huecos, o más de uno obligatorio
-  | "placeholder_in_summary" // el resumen se exporta con un corchete a la vista
   | "stale" // se pensó sobre una versión que ya no existe
   | "empty" // no hay texto que entregar
+  /**
+   * ── ACÁ VIVÍAN CUATRO RECHAZOS MÁS (CEO, 2026-09-11) ───────────────────────
+   *
+   * `repeats` —«se parece a otra línea»— pasó a aviso: `similarTo` la nombra, el
+   * motor pide una vez más, y la propuesta llega con el aviso a la vista.
+   *
+   * `drops_content`, `too_many_placeholders` y `placeholder_in_summary`. Los tres
+   * tiraban una propuesta ENTERA por algo que el código sabe arreglar o que el
+   * usuario ve en el antes/después. Reportado con captura: «The rewrite dropped
+   * something your line already says (30%). It was not written.» — el modelo
+   * había cambiado el «30%» del candidato por «[x%]», que es lo que P4 le ordenaba
+   * («si declarás un tamaño, la línea LLEVA su hueco»), y el guard lo castigaba.
+   * «Lo que me das es un bloqueo, no una solución.»
+   *
+   * Cambiaron de herramienta, no desaparecieron: la cifra del candidato vuelve a
+   * su lugar y el hueco sin declarar se vuelve un campo (`repairSuggestion`), lo
+   * perdido se pide una vez más (`lostContent`), y P4 ya no ordena lo contrario.
+   */
 
 export type GuardVerdict = { ok: true } | { ok: false; reason: GuardReason; detail: string }
 
@@ -68,7 +80,7 @@ export interface GuardContext {
    * TEXTOS QUE DESAPARECEN SI NO ENTRAN EN EL RESULTADO.
    *
    * ── POR QUÉ ESTOS DOS CASOS NECESITAN UNA VARA MÁS DURA ───────────────────
-   * `drops_content` mira los términos de la VACANTE y las cifras: es la vara
+   * `lostContent` mira los términos de la VACANTE y las cifras: es la vara
    * correcta para una reescritura, donde lo demás sigue escrito en el CV aunque
    * la línea cambie. Hay dos casos donde no:
    *
@@ -97,8 +109,6 @@ export interface GuardContext {
    * de las líneas vecinas.
    */
   siblings?: string[]
-  /** El resumen no admite huecos: es la primera línea que se lee. */
-  isSummary?: boolean
   /**
    * EL IDIOMA DEL CV. `wrongPerson` es una regla del español y sólo del español.
    *
@@ -125,122 +135,17 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
   // botón que marcaba "hecho" justo cuando no hacía nada.
   if (!ctx.original.trim()) return fail("stale", "no se sabe qué línea reemplaza esta reescritura")
 
-  if (ctx.isSummary && (s.placeholders.length > 0 || /\[[^\]]+\]/.test(text))) {
-    return fail("placeholder_in_summary", "el resumen no puede exportarse con un hueco sin llenar")
-  }
-
   /**
-   * LA VARIANTE SE JUZGA IGUAL QUE EL TEXTO PRINCIPAL.
+   * ── LOS HUECOS YA NO RECHAZAN: SE ARREGLAN ANTES DE LLEGAR ACÁ ─────────────
    *
-   * Es lo que se escribe cuando el usuario dice "no tengo ese dato", así que
-   * entra al CV con exactamente el mismo peso — y durante un rato no la miraba
-   * nadie: una cifra ahí, o un corchete olvidado, pasaba de largo. El botón que
-   * existe para NO poner un número inventado era la puerta por la que entraba.
+   * Vivían aquí cuatro rechazos sobre los huecos: el resumen con un corchete, la
+   * variante sin cifra con un corchete o comiéndose un dato, la ficha del hueco
+   * derramada al texto, y más de dos huecos. Ninguno protegía al CV de algo que
+   * el código no pudiera resolver solo: `repairSuggestion` limpia la ficha,
+   * vuelve el corchete sin declarar un campo que el usuario llena, y suelta la
+   * variante que no se puede escribir tal cual. Lo que queda —tres huecos, una
+   * variante que dice menos— lo ve el usuario en el antes/después y decide él.
    */
-  const variante = s.variantWithoutMetric?.trim()
-  if (variante) {
-    if (/\[[^\]]+\]/.test(variante)) {
-      return fail("too_many_placeholders", "la variante sin cifra conserva un hueco sin llenar")
-    }
-    // «Igual que el texto principal» era una promesa a medias: se le miraban los
-    // huecos, la cifra y las herramientas, y NO la persona ni el contenido. Una
-    // variante en tercera persona —o que se come el dato que la línea traía—
-    // entra al CV por la puerta que existe para no poner un número inventado.
-    const perdidoEnVariante = droppedTerms(ctx.original, variante, ctx.index)
-    if (perdidoEnVariante.length) return fail("drops_content", perdidoEnVariante.join(", "))
-    /**
-     * Y LA VARIANTE ES JUSTO LA QUE MÁS TIENTA A BORRARLA.
-     *
-     * Se escribe para el candidato que NO tiene el dato, así que el modelo la
-     * redacta sin números — y si el original ya traía uno, se lo lleva puesto.
-     * El botón que existe para no poner una cifra que nadie dio no puede ser el
-     * que borra la que el candidato sí dio.
-     */
-    const cifrasEnVariante = droppedFigures(ctx.original, variante)
-    if (cifrasEnVariante.length) return fail("drops_content", cifrasEnVariante.join(", "))
-  }
-
-  /**
-   * EL HUECO ES UN HUECO, NO LA FICHA DEL HUECO.
-   *
-   * ── MEDIDO CONTRA LA API (2026-08-29) ──────────────────────────────────────
-   * El motor entregó esta línea, y es lo que se habría escrito en el CV:
-   *
-   *   "…brindando atención al público durante el cobro y pago en caja
-   *    [n personas; escala de flujo de caja; evidencia: cantidad aproximada de
-   *    clientes atendidos por turno o por día]."
-   *
-   * El modelo volcó DENTRO del texto la etiqueta, la pista y la evidencia, que
-   * son campos del hueco y viven en la pantalla de confirmación. El candidato
-   * habría visto ese bloque en su currículum. El texto lleva el token y nada
-   * más; lo demás se muestra al lado.
-   *
-   * Se rechaza en vez de recortarse porque recortar un corchete a la mitad
-   * escribe una frase partida en el CV de alguien, y el reintento le dice al
-   * modelo exactamente qué hizo mal.
-   */
-  /**
-   * La vara: el punto y coma —que es como el modelo encadena los campos— o un
-   * corchete larguísimo. NO un tope corto: medido, con 25 caracteres rechazaba
-   * "[n camiones descargados por semana]", que es un hueco perfectamente bueno.
-   * El derrame real que se midió tenía ciento diez caracteres y dos puntos y
-   * coma; un hueco honesto no llega a sesenta.
-   */
-  const huecoSucio = text.match(/\[[^\]]{60,}\]|\[[^\]]*;[^\]]*\]/)
-  if (huecoSucio) {
-    return fail("too_many_placeholders", `el hueco lleva su ficha adentro del texto: ${huecoSucio[0].slice(0, 60)}`)
-  }
-  /**
-   * NI LA FICHA AL LADO DEL HUECO.
-   *
-   * Medido en la corrida siguiente: el modelo sacó los campos del corchete y los
-   * pegó afuera —"[n] (SCALE; label: pallet volume; hint: …)"—, así que el
-   * chequeo de arriba, que mira DENTRO del corchete, ya no los veía.
-   *
-   * Lo que se busca son NUESTROS propios nombres de campo y de tipo: no es una
-   * lista de vocabulario del oficio, es el contrato de este motor apareciendo
-   * donde no va. Si el texto lo nombra, el modelo volcó la ficha en el CV.
-   */
-  /**
-   * ── Y POR QUÉ ESTA VARA ES EXACTA, MEDIDO ──────────────────────────────────
-   * La primera versión buscaba los tipos SIN distinguir mayúsculas, y con eso
-   * rechazaba trabajo legítimo: "Weighed products on the floor scale",
-   * "deployment frequency", "handled money transfers" — tres oficios distintos,
-   * tres líneas buenas tiradas. Un guard demasiado estricto no es seguro: borra
-   * el producto.
-   *
-   * El derrame se reconoce por la FORMA de nuestro contrato, no por la palabra:
-   * los tipos viajan en MAYÚSCULAS (son el enum) y los campos siempre con sus
-   * dos puntos. Una persona que escribe "scale" en su currículum no escribe
-   * "SCALE".
-   */
-  const fichaAfuera = new RegExp(`\\b(${METRIC_TYPES.join("|")})\\b|\\b(label|hint|evidenceNeeded)\\s*:`)
-  const derrame = text.match(fichaAfuera)
-  if (derrame) {
-    return fail("too_many_placeholders", `la ficha del hueco se derramó al texto: ${derrame[0]}`)
-  }
-
-  /**
-   * DOS HUECOS, Y LOS DOS PUEDEN SER OBLIGATORIOS (CEO, 2026-09-09).
-   *
-   * Acá vivía un segundo techo —"máximo UN hueco obligatorio"— que yo escribí y
-   * nadie pidió. Rechazaba exactamente la forma que el CEO especificó:
-   *
-   *   "…mejor experiencia de usuario de [x usuarios] mejorando también los
-   *    servicios en un [x%]"
-   *
-   * Dos cifras, las dos del candidato, las dos necesarias para que la línea
-   * diga algo. Con el techo viejo una de las dos tenía que declararse opcional
-   * — y un hueco opcional sin llenar se ESCRIBÍA EN EL CV con el corchete a la
-   * vista, porque la hoja de confirmación sólo frenaba por los obligatorios.
-   * El techo no protegía nada: empujaba el defecto de una puerta a la otra.
-   *
-   * El tope de dos huecos por línea se queda: tres cifras en una viñeta es un
-   * formulario, no una línea de currículum. La salida para quien no tiene el
-   * dato sigue siendo la versión sin cifra, que es una decisión suya y no un
-   * corchete olvidado.
-   */
-  if (s.placeholders.length > 2) return fail("too_many_placeholders", `${s.placeholders.length} huecos`)
 
   /**
    * ── ACÁ VIVÍA `wrong_person` COMO RECHAZO (CEO, 2026-09-09) ────────────────
@@ -336,54 +241,10 @@ export function checkSuggestion(s: Suggestion, ctx: GuardContext): GuardVerdict 
    * Queda la comparación de texto contra texto, más abajo.
    */
 
-  const lost = droppedTerms(ctx.original, text, ctx.index)
-  if (lost.length) return fail("drops_content", lost.join(", "))
+  // Lo perdido ya no rechaza: lo cuenta `lostContent` y el motor lo pide una vez más.
 
-  // El texto de los huecos no cuenta: "[n%]" no conserva la cifra, la pide.
-  const cifras = droppedFigures(ctx.original, text.replace(/\[[^\]]*\]/g, " "))
-  if (cifras.length) return fail("drops_content", cifras.join(", "))
+  // «¿Esto ya está dicho?» no rechaza: lo contesta `similarTo` y se avisa.
 
-  /**
-   * ¿ESTO YA ESTÁ DICHO? Contra la línea que reemplaza y contra las demás.
-   *
-   * Las dos superficies, una sola vara —el 90% del CEO, `TRIVIAL_EDIT_SIMILARITY`—
-   * y una sola razón. Contra el original: cambiar tres palabras no es una mejora
-   * y no vale gastarte una consulta. Contra las vecinas: dos viñetas que cuentan
-   * el mismo trabajo gastan dos renglones en un solo dato.
-   */
-  if (addsNothing(ctx.original, text)) return fail("repeats", ctx.original)
-
-  /**
-   * UNA VIÑETA NO PUEDE SALIR IGUAL A OTRA DEL CV (CEO, 2026-09-09).
-   *
-   * `duplicate_claim` preguntaba por el `claim` que el modelo DECLARA, y
-   * `addsNothing` compara la reescritura contra SU PROPIO original. Entre las
-   * dos quedaba el hueco: nada miraba el TEXTO de las líneas vecinas, así que
-   * una reescritura podía volver prácticamente calcada a otra viñeta del mismo
-   * CV y pasar los doce chequeos.
-   *
-   * Se mide con la misma función y la misma vara que ya usa este archivo —el
-   * 90% del CEO, `TRIVIAL_EDIT_SIMILARITY`—: dos varas para «¿esto es lo
-   * mismo?» terminan discrepando, y este proyecto ya pagó esa clase de defecto.
-   */
-  const gemela = (ctx.siblings ?? []).find((otra) => otra.trim() && addsNothing(otra, text))
-  if (gemela) return fail("repeats", gemela)
-
-  /**
-   * LO QUE DESAPARECE TIENE QUE SOBREVIVIR EN EL RESULTADO. Sin excepción.
-   *
-   * Se mide por palabra con contenido —cuatro letras o más— y por raíz de
-   * cuatro, la misma vara que el resto del archivo: «turnos» sobrevive como
-   * «turno», y «confirmé» como «confirmando». No hace falta repetir las palabras
-   * exactas; hace falta no perder de qué hablaban.
-   */
-  if (ctx.mustKeep?.length) {
-    const dicho = normalize(text).split(" ").filter(Boolean)
-    const perdidas = ctx.mustKeep
-      .flatMap((linea) => normalize(linea).split(" ").filter((w) => w.length >= 4))
-      .filter((w) => !dicho.some((d) => d === w || (d.length >= 4 && d.slice(0, 4) === w.slice(0, 4))))
-    if (perdidas.length) return fail("drops_content", [...new Set(perdidas)].join(", "))
-  }
 
   return pass
 }
@@ -671,22 +532,223 @@ export function loyalty(findings: Finding[], log: Resolution[]): LoyaltyResult {
 export function retryNudge(v: GuardVerdict, language: "es" | "en"): string {
   if (v.ok) return ""
   const es: Record<GuardReason, string> = {
-    drops_content: `Perdiste información que el original tenía: ${v.detail}. Conservala.`,
-    repeats: `Eso ya lo dice esta línea del CV: "${v.detail}". Tu reescritura tiene que aportar algo distinto, o devolvé changed: false.`,
-    too_many_placeholders: `Demasiados huecos (${v.detail}). Máximo dos, y sólo uno obligatorio.`,
-    placeholder_in_summary: `El resumen no lleva huecos: se exporta tal cual.`,
     stale: `La línea cambió desde que la leíste.`,
     empty: `Devolviste una reescritura vacía.`,
   }
   const en: Record<GuardReason, string> = {
-    drops_content: `You dropped information the original had: ${v.detail}. Keep it.`,
-    repeats: `This line of the CV already says it: "${v.detail}". Your rewrite must add something different, or return changed: false.`,
-    too_many_placeholders: `Too many slots (${v.detail}). At most two, and only one required.`,
-    placeholder_in_summary: `The summary carries no slots: it is exported as-is.`,
     stale: `The line changed since you read it.`,
     empty: `You returned an empty rewrite.`,
   }
   return (language === "en" ? en : es)[v.reason]
+}
+
+/**
+ * ¿ESTO YA ESTÁ DICHO? La línea del CV a la que la propuesta se parece, o null.
+ *
+ * Contra la que reemplaza —cambiar tres palabras no es una mejora— y contra las
+ * vecinas —dos viñetas que cuentan lo mismo gastan dos renglones en un dato—.
+ * Una sola vara: el 90% del CEO (`addsNothing`).
+ *
+ * ── SON DOS PREGUNTAS Y SE RESPONDEN DISTINTO (medido contra la API, 2026-09-11)
+ * Parecerse a OTRA viñeta es una decisión del usuario: la propuesta llega con
+ * esa línea nombrada en un aviso y él elige. Parecerse a LA LÍNEA QUE REEMPLAZA
+ * no es una decisión: es que no hay mejora, y eso ya tiene su respuesta honesta
+ * —«ya está bien»—, que el panel pinta en verde. Medido sobre 15 líneas reales:
+ * 3 volvían con el MISMO texto del usuario y un cartel de aviso encima, una de
+ * ellas tras gastar cuatro llamadas.
+ *
+ * `contraElOriginal` es false donde no hay línea que reemplazar: al AGREGAR, el
+ * «original» es el tema que el usuario confirmó, y que la redacción se le
+ * parezca es exactamente lo que se le pidió.
+ */
+export function similarTo(s: Suggestion, ctx: GuardContext, contraElOriginal = true): string | null {
+  const text = s.text.trim()
+  if (!s.changed || !text) return null
+  if (contraElOriginal && addsNothing(ctx.original, text)) return ctx.original
+  return (ctx.siblings ?? []).find((otra) => otra.trim() && addsNothing(otra, text)) ?? null
+}
+
+/** Lo que se le dice al modelo cuando su propuesta se parece a una línea del CV. */
+export function similarNudge(line: string, language: "es" | "en"): string {
+  return language === "en"
+    ? `This line of the CV already says it: "${line}". Your rewrite must add something different.`
+    : `Eso ya lo dice esta línea del CV: "${line}". Tu reescritura tiene que aportar algo distinto.`
+}
+
+/** Lo que se le dice al modelo cuando su propuesta perdió algo de la línea. */
+export function lossNudge(lost: string[], language: "es" | "en"): string {
+  return language === "en"
+    ? `You dropped information the original had: ${lost.join(", ")}. Keep it — a figure the original states is copied exactly, never turned into a slot.`
+    : `Perdiste información que el original tenía: ${lost.join(", ")}. Conservala — una cifra que el original ya dice se copia tal cual, nunca se vuelve un hueco.`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LO QUE SE ARREGLA EN VEZ DE RECHAZARSE (CEO, 2026-09-11)
+//
+// «Si vas a solicitar métricas, está bien que las des en [%] y el usuario llene
+// esa información — pero que la des. Lo que me das es un bloqueo, no una
+// solución.» Estas tres funciones son lo que reemplazó a los rechazos por huecos
+// y por contenido perdido: la propuesta llega siempre, arreglada donde el código
+// puede probar cómo, y lo que no, a la vista en el antes/después.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HUECO = /\[[^\]]+\]/g
+
+/**
+ * LA CIFRA DEL CANDIDATO, PUESTA EN EL HUECO QUE LA REEMPLAZÓ.
+ *
+ * El modelo cambiaba «by 30%» por «by [x%]»: el dato era del candidato y se le
+ * pedía otra vez. Cada cifra del original que la propuesta ya no dice se asigna
+ * al primer hueco libre del mismo tipo —porcentaje con porcentaje, cantidad con
+ * cantidad— y la hoja de confirmación lo muestra YA ESCRITO en ese campo.
+ *
+ * ── POR QUÉ NO ALCANZA CON EMPAREJAR POR TIPO (QA, 2026-09-11) ─────────────
+ * La primera versión emparejaba porcentaje con porcentaje y en orden. Medido
+ * ejecutándola: con el original «…user engagement by 30%» y la propuesta
+ * «…cutting the crash rate by [x%]», precargaba 30% en la tasa de crashes —un
+ * hecho que el candidato nunca dijo, a un clic de entrar al CV— y además
+ * `lostContent` lo daba por conservado, así que NO se pedía el reintento que lo
+ * habría corregido. La precarga apagaba su propia red.
+ *
+ * Ahora la cifra sólo se precarga si el hueco mide LO MISMO: las palabras con
+ * contenido alrededor de la cifra en el original y alrededor del hueco en la
+ * propuesta tienen que compartir una raíz de cuatro —la misma vara del resto
+ * del archivo—. Si no la comparten, el campo queda vacío y la cifra cuenta como
+ * perdida, así que el motor la reclama.
+ *
+ * ponytail: mira las cuatro palabras de cada lado, no el significado. En «de 40
+ * a 6 minutos» precarga 40 donde la línea pide el valor final; la otra cifra
+ * queda reclamada y el usuario ve el campo con su etiqueta antes de confirmar.
+ */
+export function figureSlots(original: string, s: Pick<Suggestion, "text" | "placeholders">): Record<string, string> {
+  const perdidas = new Set(droppedFigures(original, s.text.replace(HUECO, " ")))
+  if (perdidas.size === 0) return {}
+  const out: Record<string, string> = {}
+  for (const m of original.matchAll(/\d[\d.,]*\s*%?/g)) {
+    const cifra = m[0].trim()
+    if (!perdidas.has(cifra)) continue
+    const pct = cifra.includes("%")
+    const cerca = vecinas(original, m.index ?? 0, m[0].length)
+    for (const p of s.placeholders) {
+      const at = s.text.indexOf(p.token)
+      if (p.token in out || at < 0 || p.token.includes("%") !== pct) continue
+      // MIDE LO MISMO, o no se precarga: ver el comentario de arriba.
+      if (!compartenRaiz(cerca, vecinas(s.text, at, p.token.length))) continue
+      out[p.token] = p.token.startsWith("[$") && !cifra.startsWith("$") ? `$${cifra}` : cifra
+      break
+    }
+  }
+  return out
+}
+
+/** Las palabras con contenido pegadas a una posición: QUÉ se mide ahí. */
+function vecinas(text: string, at: number, largo: number): string[] {
+  const antes = normalize(text.slice(0, at)).split(" ").filter(Boolean).slice(-4)
+  const despues = normalize(text.slice(at + largo)).split(" ").filter(Boolean).slice(0, 4)
+  return [...antes, ...despues].filter((w) => w.length >= 4)
+}
+
+/** La misma raíz de cuatro que usa el resto del archivo. */
+function compartenRaiz(a: string[], b: string[]): boolean {
+  return a.some((x) => b.some((y) => x.slice(0, 4) === y.slice(0, 4)))
+}
+
+/**
+ * ARREGLA LA FORMA DE LA PROPUESTA ANTES DE JUZGARLA.
+ *
+ * Tres cosas que rechazaban la propuesta entera y que el código puede resolver:
+ *
+ *   la ficha derramada      "[n personas; escala; evidencia: …]" → "[n personas]",
+ *                           y "(SCALE; label: …)" pegado al lado, afuera.
+ *                           Medido contra la API: las dos formas salieron.
+ *   el hueco sin declarar   un corchete en el texto sin su campo se imprimía
+ *                           tal cual —el resumen llega siempre así, porque su
+ *                           módulo vacía `placeholders`—. Ahora es un campo que
+ *                           el usuario llena antes de que se escriba nada.
+ *   la variante inservible  sin huecos no hay «no tengo ese dato» que ofrecer, y
+ *                           con un corchete adentro se imprimiría: se suelta.
+ *
+ * ponytail: la ficha derramada FUERA de un paréntesis no se toca —no se midió
+ * esa forma—; si aparece, se ve en el antes/después.
+ */
+export function repairSuggestion(s: Suggestion): Suggestion {
+  if (!s.changed) return s
+  const ficha = new RegExp(`\\s*\\([^()]*(?:\\b(?:${METRIC_TYPES.join("|")})\\b|\\b(?:label|hint|evidenceNeeded)\\s*:)[^()]*\\)`, "g")
+  const text = s.text
+    .replace(HUECO, (hueco) => (hueco.includes(";") || hueco.length > 62 ? `[${hueco.slice(1, -1).split(";")[0].trim().slice(0, 40)}]` : hueco))
+    .replace(ficha, "")
+
+  /**
+   * ── DOS HUECOS CON EL MISMO NOMBRE SON DOS DATOS DISTINTOS ─────────────────
+   *    Blocker, medido contra la API el 2026-09-11.
+   *
+   * El modelo devolvió «Reduje los errores de medicación de [n] a [n] por mes»
+   * sobre una línea que decía «de 12 a 3». El reemplazo es POR NOMBRE de token,
+   * así que el valor del primer campo se escribía en los DOS y el CV terminaba
+   * diciendo «de 12 a 12»: un dato que la persona nunca dio, con forma creíble y
+   * a un clic de entrar al documento.
+   *
+   * Se separan acá, que es donde se arregla la forma: cada aparición es su
+   * propio hueco y su propio campo. Con nombres únicos, un reemplazo no puede
+   * pisar al de al lado.
+   */
+  const separados = separarRepetidos(text)
+  const declarados = new Map(s.placeholders.map((p) => [p.token, p]))
+  const placeholders = [...new Set(separados.match(HUECO) ?? [])].map((token) => {
+    // Una aparición renombrada hereda la ficha del hueco que el modelo declaró.
+    const base = declarados.get(token) ?? declarados.get(token.replace(/ \d+\]$/, "]"))
+    return base
+      ? { ...base, token }
+      // El token tal cual: es lo que el usuario ve en el «después», así que el
+      // campo se reconoce sin traducir nada. «x%» suelto no dice qué escribir.
+      : { token, type: "SCALE" as const, label: token, hint: "", evidenceNeeded: "", required: true }
+  })
+
+  const variante = s.variantWithoutMetric?.trim()
+  const variantWithoutMetric = variante && placeholders.length > 0 && !/\[[^\]]+\]/.test(variante) ? variante : null
+  return { ...s, text: separados, placeholders, variantWithoutMetric }
+}
+
+/** «de [n] a [n]» → «de [n] a [n 2]»: cada aparición, su propio campo. */
+function separarRepetidos(text: string): string {
+  const vistos = new Set<string>()
+  return text.replace(HUECO, (tok) => {
+    if (!vistos.has(tok)) {
+      vistos.add(tok)
+      return tok
+    }
+    let n = 2
+    let nuevo = `${tok.slice(0, -1)} ${n}]`
+    while (vistos.has(nuevo)) nuevo = `${tok.slice(0, -1)} ${++n}]`
+    vistos.add(nuevo)
+    return nuevo
+  })
+}
+
+/**
+ * LO QUE LA PROPUESTA DEJÓ DE DECIR. No rechaza: el motor lo pide una vez más.
+ *
+ * Es la pregunta que `drops_content` contestaba con un rechazo, con la misma
+ * vara: los términos de la vacante que la línea demostraba, las cifras del
+ * candidato, y —en una fusión o una línea nueva— toda palabra con contenido de
+ * lo que se borra o del tema confirmado. Una cifra que quedó precargada en su
+ * hueco (`figureSlots`) NO cuenta como perdida: el usuario la ve escrita.
+ */
+export function lostContent(s: Suggestion, ctx: GuardContext): string[] {
+  if (!s.changed || !s.text.trim()) return []
+  const lost = droppedTerms(ctx.original, s.text, ctx.index)
+  const precargadas = new Set(Object.values(figureSlots(ctx.original, s)).map((c) => c.replace(/^\$/, "")))
+  lost.push(...droppedFigures(ctx.original, s.text.replace(HUECO, " ")).filter((c) => !precargadas.has(c)))
+  if (ctx.mustKeep?.length) {
+    // Por raíz de cuatro: «turnos» sobrevive como «turno», «confirmé» como «confirmando».
+    const dicho = normalize(s.text).split(" ").filter(Boolean)
+    lost.push(
+      ...ctx.mustKeep
+        .flatMap((linea) => normalize(linea).split(" ").filter((w) => w.length >= 4))
+        .filter((w) => !dicho.some((d) => d === w || (d.length >= 4 && d.slice(0, 4) === w.slice(0, 4)))),
+    )
+  }
+  return [...new Set(lost)]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@
 // nada.
 
 import type { Finding, JobSpec } from "@/lib/ats3/contracts"
-import { DETAIL_SEPARATOR, normalize, termKey } from "@/lib/ats3/contracts"
+import { detailParts, normalize, termKey } from "@/lib/ats3/contracts"
 import { SCORED_COMPONENTS } from "@/lib/ats3/score"
 import type { ComponentKey, Score } from "@/lib/ats3/score"
 
@@ -234,11 +234,11 @@ export function checkOf(
      */
     params:
       f.type === "missing_requirement"
-        ? { count: partesDe(f.detail).length }
+        ? { count: detailParts(f).filter((p) => p.type === "missing_requirement").length }
         : f.type === "title_mismatch"
-          ? { cargo: f.detail }
+          ? { cargo: marcaYDato(detalleDe(f, "title_mismatch")).dato }
           : f.type === "verb_repeated"
-            ? { verbo: f.detail }
+            ? { verbo: marcaYDato(detalleDe(f, "verb_repeated")).dato }
             : undefined,
     /**
      * POR QUÉ IMPORTA, y sale del TIPO del hallazgo.
@@ -281,6 +281,30 @@ const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap"])
 const FRASE_DE = new Set(["verb_repeated", "title_mismatch"])
 
 /**
+ * UN MOTIVO MARCADO SE PARTE EN MARCA Y DATO. «verbo:developed» → «developed».
+ *
+ * El motor marca lo que es un DATO y no un token de su vocabulario. Una sola
+ * lectura de esa marca, para los dos consumidores: la evidencia de la tarjeta y
+ * el título, que pintaba el token entero —«verbo:developed» abre más de una
+ * viñeta— porque leía el detalle crudo.
+ */
+function marcaYDato(x: string): { marca?: string; dato: string } {
+  const corte = x.indexOf(":")
+  return corte > 0 ? { marca: x.slice(0, corte), dato: x.slice(corte + 1) } : { dato: x }
+}
+
+/**
+ * LO QUE DIJO ESTE TIPO, y no lo que diga la tarjeta que lo absorbió.
+ *
+ * El título nombra un dato del hallazgo —el cargo, el verbo—, así que tiene que
+ * leer la pieza de SU tipo: con la tarjeta fusionada, `detail` es el detalle de
+ * todos y pintarlo entero mete ahí el eje de otra pieza.
+ */
+function detalleDe(f: Finding, type: Finding["type"]): string {
+  return detailParts(f).find((p) => p.type === type)?.detail ?? f.detail
+}
+
+/**
  * QUÉ SE MUESTRA COMO «lo que disparó esto».
  *
  * `parse_risk` es la excepción y por eso no lleva la línea: los siete chequeos
@@ -294,9 +318,6 @@ function evidenciaDe(
   linea: string,
   glosa?: (token: string, params?: Record<string, string>) => string,
 ): { line?: string; evidence: string[]; focus: string } {
-  // El motor une con coma los ejes de la viñeta y las funciones del resumen, y
-  // con el separador compartido lo que fusionó: se aceptan los dos.
-  const dichos = f.detail.split(/\s*[,·]\s*/).map((x) => x.trim()).filter(Boolean)
   /**
    * LO QUE HAY QUE ARREGLAR, DICHO UNA VEZ Y EN CASTELLANO — para los dos.
    *
@@ -317,32 +338,24 @@ function evidenciaDe(
    * captura. La marca sobrevive a la concatenación; el tipo del hallazgo, no.
    */
   const decir = (x: string) => {
-    const corte = x.indexOf(":")
-    if (corte > 0) {
-      const marca = x.slice(0, corte)
-      const dato = x.slice(corte + 1)
-      return glosa?.(`motivo_${marca}`, { dato }) ?? dato
-    }
-    return glosa?.(x) ?? x
+    const { marca, dato } = marcaYDato(x)
+    return marca ? (glosa?.(`motivo_${marca}`, { dato }) ?? dato) : (glosa?.(dato) ?? dato)
   }
-  const glosados = TIPOS_CON_TOKENS.has(f.type) ? dichos.map(decir) : dichos
+  // CADA PIEZA SE DICE SEGÚN EL TIPO QUE LA DIJO (`detailParts`), no según el
+  // tipo que ganó la tarjeta: fusionada con un requisito, el eje «método»
+  // salía crudo porque la tarjeta ya no era de un tipo con tokens.
+  // El motor une con coma los ejes de la viñeta y las funciones del resumen.
+  const glosados = detailParts(f).flatMap((p) =>
+    TIPOS_CON_TOKENS.has(p.type)
+      ? p.detail.split(/\s*,\s*/).filter(Boolean).map(decir)
+      : FRASE_DE.has(p.type)
+        ? [decir(p.detail)]
+        : [p.detail],
+  )
   const focus = glosados.join(" · ")
-  if (f.type === "missing_requirement") return { line: linea, evidence: partesDe(f.detail), focus }
-  if (FRASE_DE.has(f.type)) return { line: linea, evidence: [decir(f.detail)], focus }
-  if (!TIPOS_CON_TOKENS.has(f.type)) return { line: linea, evidence: [f.detail], focus }
   return { line: f.type === "parse_risk" ? undefined : linea, evidence: glosados, focus }
 }
 
-/**
- * Los detalles que el motor fusionó, otra vez de a uno.
- *
- * Se separan con la MISMA constante con la que se unieron: leer el formato del
- * productor adivinando el separador es como una ficha termina diciendo
- * «Combine · async/await» como si fuera el nombre de una sola habilidad.
- */
-function partesDe(detail: string): string[] {
-  return detail.split(DETAIL_SEPARATOR).map((x) => x.trim()).filter(Boolean)
-}
 
 /** Las seis secciones, con sus hallazgos adentro y su cobertura medida. */
 export function sectionsOf(

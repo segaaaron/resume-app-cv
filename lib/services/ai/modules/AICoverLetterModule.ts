@@ -825,7 +825,7 @@ ${plainBody}
 
 GOLDEN RULES (apply all):
 1. Keep the 3-4 paragraph structure: hook → relevant achievements → value proposition → closing CTA. Separate every paragraph with a blank line (\\n\\n) — the app renders each as its own paragraph, so a letter returned as one block loses the structure the recruiter skims.
-2. Eliminate every one of these — they are checked and a version carrying any is rejected: ${clicheBanList("en")}. Replace each with a concrete achievement the letter already states.
+2. Eliminate every one of these — they are checked, and a letter carrying any is asked for again: ${clicheBanList("en")}. Replace each with a concrete achievement the letter already states.
 3. Impact verbs: Led, Developed, Optimized, Implemented, Grew, Drove. NEVER use "Responsible for".
 3a. The closing invites next steps without any adjective about the candidate's own feelings. "I would welcome the chance to walk you through the migration plan", "I would be glad to talk about how this maps to your platform work" — warmth comes from the specific thing being offered, not from naming an emotion. The banned list above removes the usual closing; this is what replaces it.
 3b. Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text.
@@ -838,7 +838,7 @@ GOLDEN RULES (apply all):
 7. If the letter is already strong — concrete, specific, free of clichés, and aligned to the role — return {"status": "already_optimized", "versions": []}. That is a correct and expected answer. Never pad the response with three cosmetic rewordings of a letter that did not need them.
 
 ON NUMBERS — read this last and follow it exactly:
-The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the letter or context above will be rejected and the candidate will get nothing back. Write the strongest letter you can using only what is there.
+The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: a figure that is not in the letter or the context above is a claim the candidate never made, and they would have to find it and delete it. Write the strongest letter you can using only what is there.
 
 Respond ONLY with valid JSON, shaped: a "status" key set to "improved", and a "versions" key holding an array of exactly three strings. Each string is one entire rewritten letter — every paragraph of it, separated by \\n\\n. Write all three in full. Nothing else in the response.`
       : `${noHardCodedFactsRule("es", { allowProposedFigure: false })}
@@ -856,7 +856,7 @@ ${plainBody}
 
 REGLAS DE ORO (aplica todas):
 1. Mantén la estructura en 3-4 párrafos: interés → logros relevantes → valor aportado → cierre. Separa cada párrafo con una línea en blanco (\\n\\n) — la app renderiza cada uno como párrafo propio, así que una carta devuelta en bloque pierde la estructura que el recruiter escanea.
-2. Elimina todas estas — se comprueban y una versión que lleve cualquiera se rechaza: ${clicheBanList("es")}. Sustituye cada una por un logro concreto que la carta ya declara.
+2. Elimina todas estas — se comprueban, y una carta que lleve alguna se vuelve a pedir: ${clicheBanList("es")}. Sustituye cada una por un logro concreto que la carta ya declara.
 3. Verbos de impacto: Lideré, Desarrollé, Optimicé, Implementé, Incrementé. NUNCA uses "Responsable de".
 3a. El cierre invita a los siguientes pasos sin ningún adjetivo sobre lo que el candidato siente. "Me gustaría explicarles cómo planteé la migración", "Estaría encantado de comentar cómo encaja esto con su plataforma" — la cercanía viene de lo concreto que se ofrece, no de nombrar una emoción. La lista prohibida de arriba quita el cierre habitual; esto es lo que lo sustituye.
 3b. NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto.
@@ -869,7 +869,7 @@ REGLAS DE ORO (aplica todas):
 7. Si la carta ya está fuerte — concreta, específica, sin clichés y alineada al puesto — devuelve {"status": "already_optimized", "versions": []}. Es una respuesta correcta y esperada. Nunca rellenes con tres reescrituras cosméticas de una carta que no las necesitaba.
 
 SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
-La carta de arriba puede no tener ninguna cifra. Eso está BIEN y es muy común. Una carta con cero números, construida sobre datos concretos que el candidato sí declaró (el producto, el stack, el equipo, el rol), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en la carta o el contexto de arriba será rechazada y el candidato no recibirá nada. Escribe la carta más fuerte que puedas usando solo lo que hay.
+La carta de arriba puede no tener ninguna cifra. Eso está BIEN y es muy común. Una carta con cero números, construida sobre datos concretos que el candidato sí declaró (el producto, el stack, el equipo, el rol), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: una cifra que no está en la carta ni en el contexto de arriba es algo que el candidato nunca dijo, y él tendría que encontrarla y borrarla. Escribe la carta más fuerte que puedas usando solo lo que hay.
 
 Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el valor "improved", y una clave "versions" con un array de exactamente tres cadenas. Cada cadena es una carta reescrita entera — todos sus párrafos, separados por \\n\\n. Escribe las tres completas. Nada más en la respuesta.`
 
@@ -946,13 +946,24 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     // again inside the retry helper, which is how the prefix substitution
     // landed on the retry only — the first attempt, the one that answers most
     // requests, would have kept the filler.
-    const rewritten = this.usableVersions(parsed.versions, source, plainBody)
+    // Una versión con un dato quemado —o con nuestra propia instrucción filtrada:
+    // «3 párrafos, 250-350 palabras»— sólo se aparta si quedan limpias. Mejora la
+    // elección; nunca deja al usuario sin ninguna.
+    //
+    // Y LOS DOS INTENTOS PASAN POR LA MISMA CRIBA. Con el primero filtrado y el
+    // reintento sin filtrar, la ranura i de uno y la del otro dejaban de ser el
+    // mismo tono, y el pareo de abajo —que promete «cada ranura sólo mejora»—
+    // podía cambiar la versión formal por la dinámica.
+    const conLimpiasPrimero = (vs: string[]) => {
+      const limpias = vs.filter((v) => !this.letterHardCodesContent(v, source))
+      return limpias.length > 0 ? limpias : vs
+    }
+    const rewritten = conLimpiasPrimero(this.usableVersions(parsed.versions, plainBody))
 
-    // Nothing survived: every version either hard-coded something or just echoed
-    // the letter back. Both mean the same to the user, and both must return the
-    // original rather than dress a non-improvement up as a choice.
+    // Nothing survived: every version just echoed the letter back. The user keeps
+    // what they wrote rather than a non-improvement dressed up as a choice.
     if (rewritten.length === 0) {
-      this.logger.warn("[AIService.improveCoverLetter] no version was both grounded and a real rewrite")
+      this.logger.warn("[AIService.improveCoverLetter] every version echoed the letter back")
       this.logSummaryUsage(userId, plan, response.usage, undefined)
       return { versions: [body.trim()], status: "already_optimized" }  // the original, still HTML
     }
@@ -995,7 +1006,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     })
     const retry = await this.retryLetterForQuality(prompt, langInstruction, language, noneFits)
     if (retry) {
-      const retryClean = this.usableVersions(retry.versions, source, plainBody)
+      const retryClean = conLimpiasPrimero(this.usableVersions(retry.versions, plainBody))
 
       // Slot by slot, not all-or-nothing. Both attempts answer in the same
       // order — version 1 formal, 2 balanced, 3 dynamic — so slot i is the same
@@ -1012,6 +1023,12 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
         const alt = retryClean[i]
         if (!alt) return first
         if (losesStatedFigure(first, alt)) return first
+        // Una ranura sólo mejora: no se cambia una limpia por una con un dato
+        // quemado, y sí una con dato quemado por una limpia.
+        const firstQuema = this.letterHardCodesContent(first, source)
+        const altQuema = this.letterHardCodesContent(alt, source)
+        if (altQuema && !firstQuema) return first
+        if (firstQuema && !altQuema) return alt
         if (hasCliche(first) && !hasCliche(alt)) return alt
         const firstFits = this.letterWordCount(first) <= LETTER_ONE_PAGE_WORDS
         const altFits = this.letterWordCount(alt) <= LETTER_ONE_PAGE_WORDS
@@ -1039,7 +1056,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
 
   /** Model output → the versions that may reach the user. One owner, so the
    *  retry goes through every check the first attempt did. */
-  private usableVersions(raw: unknown, source: string, plainBody: string): string[] {
+  private usableVersions(raw: unknown, plainBody: string): string[] {
     return (Array.isArray(raw) ? raw : [])
       .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
       .map(stripVersionLabel)
@@ -1050,13 +1067,14 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       // not a rewrite. Doing it here means every reader below — the cliché gate,
       // the retry decision — sees the text the user would actually get.
       .map(substituteCliches)
-      // La MISMA definición de "quemado" que usa la carta nueva. Estaban
-      // divididas: generate pasaba por `letterHardCodesContent` y esto sólo por
-      // `hasHardCodedFact`, así que la fuga medida ahí —el modelo hablándole
-      // al operador con nuestra propia instrucción, "3 párrafos, 250-350
-      // palabras"— entraba igual por el camino de mejorar. Dos caminos escriben
-      // la carta del usuario; no pueden tener dos varas.
-      .filter((v) => !this.letterHardCodesContent(v, source))
+      // ── ACÁ SE TIRABA LA VERSIÓN CON UN DATO QUEMADO (CEO, 2026-09-11) ──
+      // Si caían las tres, el usuario leía «tu carta ya está optimizada» con la
+      // consulta gastada: un bloqueo. Ahora el dato quemado se aparta en
+      // `improveCoverLetter` SÓLO si quedan versiones limpias; si no, llegan
+      // igual y se ven enteras en el selector.
+      //
+      // Lo que sí se aparta no es un juicio: una versión casi idéntica a la
+      // carta que el usuario ya tiene no es otra opción, es la misma.
       .filter((v) => !isTrivialEdit(plainBody, v))
   }
 

@@ -12,10 +12,9 @@
 import { AI_MODEL } from "@/lib/ai-client"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
-import { parseAIJson, stripVersionLabel, ANY_METRIC_REGEX } from "./ai-helpers"
+import { hardCodedFactKind, parseAIJson, stripVersionLabel, ANY_METRIC_REGEX } from "./ai-helpers"
 import { assessSummary } from "./summary-quality"
 import { isTrivialEdit } from "./text-similarity"
-import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 
 export interface SummaryGateUsage {
   promptTokens: number
@@ -94,43 +93,40 @@ export function buildMetricGuidance(
       block: metrics.length ? `\n=== THE CANDIDATE'S REAL NUMBERS ===\n${metrics.map((m) => `• ${m}`).join("\n")}` : "",
       rule: metrics.length
         ? `ON NUMBERS — read this last and follow it exactly:\nThe candidate's real figures are listed above. At least one of them MUST appear, as a figure, in EVERY version. "Cut crash rate 20%" is worth more to a recruiter than "significantly improved stability" — the number IS the point, and vaguing it out throws away the strongest thing this candidate has. Never round it, never hard-code one that is not on that list, and never leave a bracket.`
-        : `ON NUMBERS — read this last and follow it exactly:\nThis profile states no figures at all. That is FINE and very common. A summary with zero numbers, built on concrete specifics the candidate actually has (sector, stack, scope, real achievement), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not in the profile will be rejected and the candidate will get nothing back.`,
+        : `ON NUMBERS — read this last and follow it exactly:\nThis profile states no figures at all. That is FINE and very common. A summary with zero numbers, built on concrete specifics the candidate actually has (sector, stack, scope, real achievement), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: a figure that is not in the profile states something false about the candidate, and they would have to find it and delete it.`,
     }
   }
   return {
     block: metrics.length ? `\n=== LAS CIFRAS REALES DEL CANDIDATO ===\n${metrics.map((m) => `• ${m}`).join("\n")}` : "",
     rule: metrics.length
       ? `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nLas cifras reales del candidato están listadas arriba. Al menos una DEBE aparecer, como cifra, en CADA versión. "Redujo los crashes un 20%" vale más para un recruiter que "mejoró significativamente la estabilidad" — el número ES el punto, y difuminarlo tira lo más fuerte que tiene este candidato. Nunca la redondees, nunca uses una que no esté en esa lista —esa saldría de vos, no de él— y nunca dejes un corchete.`
-      : `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nEste perfil no declara ninguna cifra. Eso está BIEN y es muy común. Un resumen con cero números, construido sobre datos concretos que el candidato sí tiene (sector, stack, alcance, logro real), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en el perfil será rechazada y el candidato no recibirá nada.`,
+      : `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nEste perfil no declara ninguna cifra. Eso está BIEN y es muy común. Un resumen con cero números, construido sobre datos concretos que el candidato sí tiene (sector, stack, alcance, logro real), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: una cifra que no está en el perfil afirma algo falso del candidato, y él tendría que encontrarla y borrarla.`,
   }
 }
 
-/** Model output → what the user gets. Ranked, checked, retried once if needed. */
 /**
- * EL RESUMEN DECLARA SU LISTA; EL MOTOR LA CORRE.
+ * CUÁNTO DE LO QUE DICE ESTA VERSIÓN NO SALE DEL CV — ordena, no descarta.
  *
- * Eran dos llamadas sueltas a `hasHardCodedFact` —una para la primera respuesta
- * y otra para el reintento—, que es la misma pregunta escrita dos veces en el
- * mismo archivo. `figurePolicy: "drop"` conserva la postura que este endpoint
- * siempre tuvo: un resumen no propone una cifra, porque no nace de un relato
- * nuevo del candidato sino de lo que su CV ya dice.
- *
- * Las reglas que comparan contra un original no se declaran: acá se juzgan tres
- * versiones nuevas, no la reescritura de una línea. La calidad del resumen la
- * sigue midiendo `assessSummary`, que es su propia vara y no la de una viñeta.
+ * ── ACÁ VIVÍA UN FILTRO (CEO, 2026-09-11) ─────────────────────────────────
+ * `runWriteGate` tiraba toda versión que nombrara algo o trajera una cifra que
+ * el CV no dice, y un corchete. Si caían las tres, el asistente decía «no hubo
+ * resultado» con la consulta gastada: un bloqueo. Ahora las tres llegan al
+ * selector, y ésta es la vara que decide cuál se lee primero: una limpia, antes
+ * que una con un dato que el CV no respalda, antes que una con un corchete.
  */
-const SUMMARY_RULES: readonly GateRule[] = ["only_declared_facts", "figure_policy"]
-
-function pasaElMotor(text: string, source: string, language: string): boolean {
-  return runWriteGate({ text, source, figurePolicy: "drop", language }, SUMMARY_RULES).ok
+function unsourced(text: string, source: string): number {
+  const kind = hardCodedFactKind(text, source)
+  return kind === "placeholder" ? 2 : kind ? 1 : 0
 }
+
+/** Model output → what the user gets. Ranked, checked, retried once if needed. */
 
 export async function gateSummaryVersions(
   aiClient: IAIClient,
   logger: ILogger,
   input: SummaryGateInput,
 ): Promise<SummaryGateResult> {
-  const { rawVersions, source, metrics, endpoint, language } = input
+  const { rawVersions, source, metrics, endpoint } = input
   const profileHasMetrics = metrics.length > 0
 
   // Cap AFTER filtering, not before. Slicing first spends the three slots on
@@ -144,21 +140,12 @@ export async function gateSummaryVersions(
     .filter((e) => e.text.trim().length > 0)
     .slice(0, 3)
 
-  // Anything the candidate did not state — hard-coded tech, hard-coded figures, or a
-  // "[X%]" placeholder — never reaches the CV. hasHardCodedFact has no
-  // opt-out: allowPlaceholders was removed in F1 once a bracket shipped into a
-  // real summary.
-  let dropped = 0
-  const clean = candidates.filter((v) => {
-    if (!pasaElMotor(v.text, source, language)) {
-      dropped++
-      return false
-    }
-    return true
-  })
-  if (dropped > 0) logger.warn(`[${endpoint}] dropped versions with a hard-coded fact`, { dropped, kept: clean.length })
+  // Nada se tira por lo que dice: se ordena (`unsourced`) y el usuario elige.
+  const clean = candidates
+  const conDatoAjeno = clean.filter((v) => unsourced(v.text, source) > 0).length
+  if (conDatoAjeno > 0) logger.warn(`[${endpoint}] versions with a fact the CV does not state`, { count: conDatoAjeno, total: clean.length })
 
-  const ranked = dropNearDuplicates(rank(clean, profileHasMetrics))
+  const ranked = dropNearDuplicates(rank(clean, profileHasMetrics, source))
 
   const flawed = ranked.filter((v) => !assessSummary(v.text, profileHasMetrics).alreadyGood)
   if (flawed.length > 0) {
@@ -200,10 +187,8 @@ export async function gateSummaryVersions(
   const retry = await retryForQuality(aiClient, input, { missingMetrics, hasCliche })
   if (!retry) return { versions: ranked, retryUsage: null }
 
-  // The retry is model output too — it gets the same hard-coded fact check the
-  // first attempt got. Skipping it here would make "retry" a way in.
-  const retryClean = retry.versions.filter((v) => pasaElMotor(v.text, source, language))
-  const retryRanked = dropNearDuplicates(rank(retryClean, profileHasMetrics))
+  // The retry is ranked by the same yardstick the first attempt was.
+  const retryRanked = dropNearDuplicates(rank(retry.versions, profileHasMetrics, source))
   if (retryRanked.length === 0) {
     logger.warn(`[${endpoint}] retry produced nothing usable — keeping the first result`)
     return { versions: ranked, retryUsage: retry.usage }
@@ -222,7 +207,9 @@ export async function gateSummaryVersions(
   const retryHasMetrics = !profileHasMetrics || ANY_METRIC_REGEX.test(retryRanked[0].text)
   const retryTopClean = !assessSummary(retryRanked[0].text, profileHasMetrics).issues.includes("cliche")
   const fixedWhatFailed = (!missingMetrics || retryHasMetrics) && (!hasCliche || retryTopClean)
-  const brokeNothing = retryHasMetrics && (!hasCliche || retryTopClean)
+  // Y no cambia una versión limpia por una con un dato que el CV no dice.
+  const brokeNothing =
+    retryHasMetrics && (!hasCliche || retryTopClean) && unsourced(retryRanked[0].text, source) <= unsourced(best.text, source)
 
   if (!fixedWhatFailed || !brokeNothing) {
     logger.warn(`[${endpoint}] retry did not improve — keeping the first result`)
@@ -232,12 +219,13 @@ export async function gateSummaryVersions(
   return { versions: retryRanked, retryUsage: retry.usage }
 }
 
-/** Fewest quality issues first. Ranked, never filtered: a summary with a weak
- *  phrase still beats no summary, and the clean ones surface where the user
- *  reads. */
-function rank(versions: GatedVersion[], profileHasMetrics: boolean): GatedVersion[] {
+/** What the CV backs first, then fewest quality issues. Ranked, never filtered:
+ *  a summary with a weak phrase still beats no summary, and the clean ones
+ *  surface where the user reads. */
+function rank(versions: GatedVersion[], profileHasMetrics: boolean, source: string): GatedVersion[] {
   return [...versions].sort(
     (a, b) =>
+      unsourced(a.text, source) - unsourced(b.text, source) ||
       assessSummary(a.text, profileHasMetrics).issues.length - assessSummary(b.text, profileHasMetrics).issues.length,
   )
 }

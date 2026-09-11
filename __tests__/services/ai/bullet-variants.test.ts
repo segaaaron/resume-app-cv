@@ -59,8 +59,9 @@ describe("improve-bullet — a choice, not another round", () => {
     expect(first.alternatives?.map((a) => a.angle)).toEqual(["business", "leadership"])
   })
 
-  it("drops an alternative that invents a figure the CV never stated", async () => {
-    // The whole reason a second option is safe: it must clear the same gauntlet.
+  it("delivers every alternative the model wrote — the user sees it before choosing", async () => {
+    // Ningún guard tira un ángulo (CEO, 2026-09-11): antes esto terminaba en
+    // «no hay otro ángulo honesto» con la consulta gastada.
     const out = await svc(JSON.stringify({ status: "improved", improvements: [{
       index: 0,
       text: "Maintained the checkout service in Swift and resolved production bugs",
@@ -71,8 +72,7 @@ describe("improve-bullet — a choice, not another round", () => {
     }] }), logger).improveBullet("u1", { text: WEAK, language: "en", focus: ["weak_verb"] }, "PRO")
 
     const alts = out.improvements[0].alternatives ?? []
-    expect(alts.every((a) => !/47%|12k/.test(a.text))).toBe(true)
-    expect(alts).toHaveLength(1)
+    expect(alts).toHaveLength(2)
   })
 
   it("keeps working when the model returns no alternatives at all", async () => {

@@ -22,7 +22,8 @@
 
 import {
   PROMPT_VERSION,
-  DETAIL_SEPARATOR,
+  detailParts,
+  encodeDetail,
   RUBRIC_VERSION,
   bulletIdFor,
   buildTermIndex,
@@ -46,7 +47,7 @@ import {
   type TriageDecision,
 } from "@/lib/ats3/contracts"
 import { afterAccept, BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
-import { checkSuggestion, findNode, isStale, loyalty, retryNudge, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
+import { checkSuggestion, findNode, isStale, lossNudge, lostContent, loyalty, repairSuggestion, retryNudge, similarNudge, similarTo, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
 import { deltaOf, gainOf, postingWeights, scoreResume, statesQuantity, titleWritten, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -445,13 +446,17 @@ export function findingsOf(
        * id se moviera, cerrar el hallazgo hoy y volver mañana no encontraría la
        * anotación, y el motor volvería a señalar lo ya resuelto.
        */
+      // Cada pieza viaja con el tipo que la dijo (`encodeDetail`): sin eso la
+      // tarjeta contaba el eje «método» como un requisito de la vacante.
+      const previas = detailParts(existing)
+      const nueva = { type, detail }
       if (gain > existing.gain) {
         existing.type = type
         existing.component = component
         existing.remedy = remedy
-        existing.detail = detail ? `${detail}${existing.detail ? DETAIL_SEPARATOR + existing.detail : ""}` : existing.detail
+        existing.detail = encodeDetail([nueva, ...previas])
       } else {
-        existing.detail = existing.detail ? `${existing.detail}${DETAIL_SEPARATOR}${detail}` : detail
+        existing.detail = encodeDetail([...previas, nueva])
       }
       existing.gain += gain
       if (!existing.merged.includes(type)) existing.merged.push(type)
@@ -1288,7 +1293,7 @@ export interface RewriteRequest {
    * LA OTRA LÍNEA DE UNA FUSIÓN. Cambia QUÉ no se puede perder.
    *
    * Una fusión escribe UNA línea que tiene que conservar lo que decían LAS DOS.
-   * Sin esto, `drops_content` juzga contra la primera y sola: la mitad de la
+   * Sin esto, `lostContent` juzga contra la primera y sola: la mitad de la
    * información de la segunda se podría caer sin que nada la reclame — y la
    * segunda se BORRA al aplicar, así que ese dato no vuelve de ningún lado.
    */
@@ -1360,6 +1365,14 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    *                 que hay: la línea todavía no existe.
    */
   const original = agregando ? (req.focus as string) : otra ? `${node!.text} ${otra.text}` : node!.text
+  /**
+   * ¿HAY UNA LÍNEA QUE ESTA PROPUESTA REEMPLAZA?
+   *
+   * Al agregar, el «original» es el tema que el usuario confirmó; al fusionar,
+   * son las dos líneas juntas. En los dos casos, parecerse a eso no significa
+   * «no aporta». Sólo una reescritura tiene una línea a la que superar.
+   */
+  const esReescritura = !agregando && !otra
   const ctx = {
     original,
     /**
@@ -1370,7 +1383,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     mustKeep: agregando ? [original] : otra ? [node!.text, otra.text] : undefined,
     index: req.index,
     ledger,
-    isSummary,
     language: req.language,
     /**
      * LAS OTRAS LÍNEAS DEL CV, para que una reescritura no vuelva calcada a una
@@ -1403,9 +1415,11 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * gasta una llamada —sólo la primera vez, porque lo bueno se vuelve a
    * guardar— en vez de entregar algo que hoy sabemos que está mal.
    */
-  const cached = (await req.store.read("ats3-fix", key)) as Suggestion | null
+  const guardada = (await req.store.read("ats3-fix", key)) as Suggestion | null
+  const parecidaA = (s: Suggestion) => similarTo(s, ctx, esReescritura)
+  const cached = guardada ? repairSuggestion(guardada) : null
   if (cached && checkSuggestion(cached, ctx).ok) {
-    return { ok: true, suggestion: anchor(cached, hashBase, original, req.mergeWith, req.addToRole), served: true, calls: 0 }
+    return { ok: true, suggestion: anchor(cached, hashBase, original, req.mergeWith, req.addToRole, parecidaA(cached)), served: true, calls: 0 }
   }
   const ask = (nudge?: string) =>
     isSummary
@@ -1443,12 +1457,16 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
         })
 
   /**
-   * EL TECHO DE ESTE CAMINO SON TRES LLAMADAS, Y LA CUOTA SE COBRA UNA.
+   * EL TECHO DE ESTE CAMINO SON CUATRO LLAMADAS, Y LA CUOTA SE COBRA UNA.
    *
    * La propuesta (1), el reintento por declinar contradiciendo lo que el propio
-   * modelo declaró (2), y el reintento por prometer una cifra y no ofrecer el
-   * hueco (3). El reintento por guard comparte ranura con el primero de esos
-   * dos, así que ninguna corrida los suma todos.
+   * modelo declaró (2), el reintento por lo perdido o el parecido (3) y el
+   * reintento por prometer una cifra y no ofrecer el hueco (4). Los cuatro son
+   * secuenciales e independientes: nada impide que una misma corrida los sume.
+   *
+   * Acá decía TRES, afirmando que dos de esos reintentos «comparten ranura».
+   * Medido contra la API el 2026-09-11: una línea real gastó CUATRO. El número
+   * era una suposición escrita como hecho.
    *
    * Eran SEIS hasta el 2026-09-09. Bajaron solas al sacar lo que el CEO mandó
    * sacar: el reintento por verbo repetido, la verificación de P6 y su segunda
@@ -1498,20 +1516,69 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * lo que el código NO puede probar —un irregular, un sustantivo— sigue cayendo
    * en el guard, que es la respuesta honesta.
    */
-  if (req.language !== "en") {
-    const enPrimera = toFirstPerson(first.text)
-    if (enPrimera) first = { ...first, text: enPrimera }
+  const preparar = (s: Suggestion): Suggestion => {
+    const enPrimera = req.language !== "en" ? toFirstPerson(s.text) : null
+    return repairSuggestion(enPrimera ? { ...s, text: enPrimera } : s)
   }
+  first = preparar(first)
 
   let verdict = checkSuggestion(first, ctx)
+  // Menos es mejor: parecerse a otra línea pesa más que cualquier palabra perdida.
+  const costo = (s: Suggestion) => (parecidaA(s) ? 1000 : 0) + lostContent(s, ctx).length
+  const parecida = verdict.ok ? parecidaA(first) : null
+  const perdido = verdict.ok ? lostContent(first, ctx) : []
 
-  if (!verdict.ok) {
-    first = await ask(retryNudge(verdict, req.language))
+  /**
+   * UN REINTENTO, Y NADA DE LO QUE ESCRIBIÓ EL MODELO BLOQUEA (CEO, 2026-09-11).
+   *
+   * Vacía o sin línea donde escribir: se pide una vez más y, si vuelve igual, no
+   * hay nada honesto que entregar. Parecida a otra línea, o que dejó de decir
+   * algo —un término, una cifra, una palabra de la línea que se borra—: también
+   * se pide una vez más diciendo QUÉ, pero la respuesta llega SIEMPRE. Gana la
+   * que menos cuesta; lo perdido se ve tachado en el antes/después y el parecido
+   * se avisa con la línea nombrada. Antes eso era «It was not written» con la
+   * consulta gastada.
+   */
+  if (!verdict.ok || parecida || perdido.length > 0) {
+    const nudge = !verdict.ok
+      ? retryNudge(verdict, req.language)
+      : [parecida ? similarNudge(parecida, req.language) : "", perdido.length > 0 ? lossNudge(perdido, req.language) : ""]
+          .filter(Boolean)
+          .join("\n")
+    const segundo = await ask(nudge)
     calls++
-    if (!first.changed) return { ok: false, alreadyGood: true, calls }
-    verdict = checkSuggestion(first, ctx)
+    if (!segundo.changed) {
+      if (!verdict.ok) return { ok: false, alreadyGood: true, calls }
+    } else {
+      const reparado = preparar(segundo)
+      const v2 = checkSuggestion(reparado, ctx)
+      if (!verdict.ok) {
+        first = reparado
+        verdict = v2
+      } else if (v2.ok && costo(reparado) < costo(first)) {
+        first = reparado
+      }
+    }
   }
   if (!verdict.ok) return { ok: false, verdict, calls }
+
+  /**
+   * LA MISMA LÍNEA DEVUELTA NO ES UNA PROPUESTA: ES «YA ESTÁ BIEN».
+   *
+   * ── MEDIDO CONTRA LA API (2026-09-11) ──────────────────────────────────────
+   * De 15 líneas reales, 3 volvieron —también tras el reintento— con el texto
+   * del usuario intacto, y el panel las mostraba como propuesta con un cartel
+   * amarillo encima: «se parece a una línea que ya tenés». El usuario apretaba,
+   * esperaba, gastaba una consulta y recibía su propia línea. Una de ellas
+   * costó cuatro llamadas.
+   *
+   * No es un bloqueo: es la respuesta que el producto ya tiene para este caso, y
+   * el panel la pinta en verde. La vara es la del CEO —90% idéntico no es
+   * mejora—, la misma que ya usa `similarTo`.
+   */
+  if (esReescritura && parecidaA(first) === original) {
+    return { ok: false, alreadyGood: true, calls }
+  }
 
   /**
    * ── ACÁ CORRÍA P6, EL VALIDADOR (CEO, 2026-09-09) ──────────────────────────
@@ -1554,17 +1621,30 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
         : `Escribiste que este trabajo se mide en "${first.measurableAspect}" y después no ofreciste el hueco. Agregá el hueco tipado con su rango creíble para este oficio — o poné measurableAspect en null si de verdad no hay nada que medir.`,
     )
     calls++
-    if (segunda.changed && segunda.placeholders.length > 0 && checkSuggestion(segunda, ctx).ok) {
-      first = segunda
+    const conHueco = preparar(segunda)
+    if (
+      conHueco.changed &&
+      conHueco.placeholders.length > 0 &&
+      checkSuggestion(conHueco, ctx).ok &&
+      costo(conHueco) <= costo(first)
+    ) {
+      first = conHueco
     }
   }
 
   await req.store.write("ats3-fix", key, first)
-  return { ok: true, suggestion: anchor(first, hashBase, original, req.mergeWith, req.addToRole), served: false, calls }
+  return { ok: true, suggestion: anchor(first, hashBase, original, req.mergeWith, req.addToRole, parecidaA(first)), served: false, calls }
 }
 
-function anchor(s: Suggestion, hash: string, originalText: string, mergedFrom?: NodeId, addToRole?: string): AnchoredSuggestion {
-  return { ...s, basedOnHash: hash, originalText, mergedFrom, addToRole }
+function anchor(
+  s: Suggestion,
+  hash: string,
+  originalText: string,
+  mergedFrom?: NodeId,
+  addToRole?: string,
+  similar?: string | null,
+): AnchoredSuggestion {
+  return { ...s, basedOnHash: hash, originalText, mergedFrom, addToRole, ...(similar ? { similarTo: similar } : {}) }
 }
 
 function roleContextOf(tree: ResumeTree, nodeId: NodeId): string {

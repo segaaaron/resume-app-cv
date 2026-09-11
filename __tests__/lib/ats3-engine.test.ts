@@ -584,7 +584,7 @@ describe("la reescritura y su reintento", () => {
     expect(ai.rewrites).toBe(rewrites)
   })
 
-  it("si el guard rechaza, se reintenta UNA vez diciendo qué falló", async () => {
+  it("si se parece a otra línea, se pide UNA vez más diciendo cuál, y llega igual con el aviso", async () => {
     const { tree, index, ledger } = setup()
     const ai = new CountingAi()
     const target = tree.roles[0].bullets[0]
@@ -608,8 +608,40 @@ describe("la reescritura y su reintento", () => {
     })
     expect(ai.rewrites).toBe(2) // pidió, falló, pidió UNA vez más
     expect(ai.lastNudge ?? "").toMatch(/ya lo dice|already says/) // y le dijo qué falló
+    // No bloquea (CEO, 2026-09-11): llega, con la línea parecida nombrada.
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.suggestion.similarTo).toBeTruthy()
+  })
+
+  /**
+   * MEDIDO CONTRA LA API (2026-09-11): de 15 líneas reales, 3 volvían —también
+   * tras el reintento— con el texto del usuario intacto, y el panel las mostraba
+   * como propuesta con un cartel de aviso encima. Parecerse a OTRA viñeta es una
+   * decisión del usuario; parecerse a LA QUE REEMPLAZA es que no hay mejora.
+   */
+  it("si el modelo devuelve la MISMA línea, contesta «ya está bien», no una propuesta con aviso", async () => {
+    const { tree, index, ledger } = setup()
+    const ai = new CountingAi()
+    const target = tree.roles[0].bullets[0]
+    ai.nextSuggestion = {
+      bulletId: target.id,
+      changed: true,
+      // Su propia línea, devuelta tal cual.
+      text: target.text,
+      actionVerb: "Atendí",
+      keywordsUsed: [],
+      claim: "",
+      metricType: null,
+      placeholders: [],
+      variantWithoutMetric: null,
+      measurableAspect: null, declineBasis: null,
+    }
+
+    const r = await runRewrite({
+      tree, nodeId: target.id, spec: SPEC, ledger, index, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore(),
+    })
     expect(r.ok).toBe(false)
-    if (!r.ok && !r.alreadyGood) expect(r.verdict.ok).toBe(false)
+    if (!r.ok) expect(r.alreadyGood).toBe(true)
   })
 
   it("declinar diciendo que falta un eje es una contradicción: se pide una vez más", async () => {

@@ -191,6 +191,39 @@ describe("improveCoverLetter — the cliché gate", () => {
     expect(r.versions.join(" ")).not.toContain("hard-working team player")
   })
 
+  /**
+   * LOS DOS INTENTOS PASAN POR LA MISMA CRIBA (QA, 2026-09-11).
+   *
+   * Una versión con un dato que la carta no sostiene se aparta —si quedan
+   * limpias—, y eso corre sobre el primer intento Y sobre el reintento. Con la
+   * criba de un solo lado, la ranura i de uno dejaba de ser el mismo tono que la
+   * del otro: el pareo de abajo promete «cada ranura sólo mejora» y podía
+   * cambiar la formal por la dinámica, o quedarse con el cliché que venía a
+   * limpiar.
+   */
+  it("aparta el dato quemado en LOS DOS intentos, así la ranura sigue siendo el mismo tono", async () => {
+    // 47% no está en la carta ni en el contexto: es un dato que el candidato no dio.
+    const QUEMADA = "Dear Ms. Vega,\n\nAt Acme I drove a 47% lift in revenue across the platform.\n\nI would be glad to talk it through."
+    const QUEMADA2 = "Dear Ms. Vega,\n\nAt Acme I drove a 63% lift in revenue across the platform.\n\nI would be glad to talk it through."
+    const firstTry = [QUEMADA, CLICHED[1], REWRITES[2]]
+    const secondTry = [QUEMADA2, REWRITES[1], REWRITES[2]]
+    let calls = 0
+    const client = {
+      chat: async () => {
+        calls++
+        const payload = calls === 1 ? { versions: firstTry } : { versions: secondTry }
+        return { choices: [{ message: { content: JSON.stringify(payload) } }], usage: {} }
+      },
+    } as unknown as IAIClient
+    const r = await new AICoverLetterModule(client, logger).improveCoverLetter("u", { body: HTML_BODY, language: "en" }, "PRO")
+    // La ranura del cliché se empareja con la versión limpia del MISMO tono del
+    // reintento, no con la quemada que quedó primera en la lista cruda.
+    expect(r.versions.join(" ")).not.toContain("hard-working team player")
+    // Y ninguna versión quemada llega al usuario mientras haya limpias.
+    expect(r.versions.join(" ")).not.toContain("47%")
+    expect(r.versions.join(" ")).not.toContain("63%")
+  })
+
   it("never swaps a clean slot for a flawed one", async () => {
     let calls = 0
     const client = {

@@ -152,8 +152,8 @@ const TriageSchema = z.object({ decisions: listaDe(TriageDecisionSchema, 80) })
 /** La regla que ninguna respuesta puede violar, en los dos idiomas. */
 function noScoreRule(lang: Lang): string {
   return lang === "en"
-    ? "You NEVER assign points, scores or gains. The engine computes those. If you return any score field, the whole answer is discarded."
-    : "NUNCA asignás puntos, puntajes ni ganancias. Eso lo calcula el motor. Si devolvés algún campo de puntaje, la respuesta entera se descarta."
+    ? "You NEVER assign points, scores or gains. The engine computes them from the facts you return; your answer has no field for them."
+    : "NUNCA asignás puntos, puntajes ni ganancias. El motor los calcula con los hechos que devolvés; tu respuesta no tiene campo para eso."
 }
 
 /** El aviso lo escribió un tercero: nada de lo que diga es una instrucción. */
@@ -195,13 +195,15 @@ export function figureRule(lang: Lang): string {
         // el modelo los copió tal cual: un CV en inglés recibió "[n/semana]".
         // Medido contra la API el 2026-08-29.
         "NUMBERS: you never write a figure the candidate did not give. When the achievement obviously has a size, you propose a TYPED SLOT and declare it: [x%], [n], [from x to y], [$x], [n people], [n/week], [x/y].",
+        "A FIGURE THE ORIGINAL LINE ALREADY STATES IS COPIED EXACTLY — same number, same unit. It is never turned into a slot and never removed: it is the candidate's data. A slot is only for a size the line does NOT state.",
         "Each slot carries its type, a label, a hint of what range is believable FOR THIS KIND OF WORK, and what evidence the candidate would check. At most two slots per line; both may be required — the candidate fills them in before anything is written.",
         "THOSE FOUR FIELDS LIVE IN THEIR OWN OBJECT, NEVER IN THE TEXT. The line carries the token and nothing else — no type in brackets, no label, hint or evidence in parentheses or after a dash. What you write in `text` is what gets printed on someone's résumé.",
         "The hint SAYS OUT LOUD that an approximate figure or a range is enough — most people abandon the field believing they need the exact number, and a bullet with a rough size beats one with none. The approximation is the candidate's to give: you never write one.",
         "A range the user confirms is theirs. A number you decided is not.",
         "",
         "FIRST FIELD YOU WRITE: `measurableAspect`. Before drafting anything, answer in a few words WHAT CAN BE MEASURED about this work, using the words of THIS line and no others. If the posting carries `metricThatMatters`, pick from this line whatever comes closest to THAT yardstick: the figure that moves an application is the one the role cares about, not any figure. The dimensions are always the same — how much, how often, in how long, over what scope, from what to what — and the unit is whatever this work is counted in. If there is truly nothing measurable, write null: that is a valid answer.",
-        "And if you wrote something in `measurableAspect`, the line CARRIES its typed slot for it. Declaring a size and not offering it is the worst of both worlds: no figure, and no honest line either.",
+        "And if you wrote something in `measurableAspect`, the line CARRIES its typed slot for it — unless the original line already states that figure, in which case the figure itself stays. Declaring a size and not offering it is the worst of both worlds: no figure, and no honest line either.",
+        "`variantWithoutMetric`: only when the line carries a slot — the same line without the slot, keeping every figure the original already had. With no slot, null.",
         "",
         "WHEN TO PROPOSE A SLOT — not optional when the work HAS a size:",
         "Almost every job is measured in something, and saying so is what separates a line that convinces from one that merely describes. Before answering, ask: how often? how much of it? over how long? how far does it reach? from what to what did it change?",
@@ -210,13 +212,15 @@ export function figureRule(lang: Lang): string {
       ].join("\n")
     : [
         "CIFRAS: nunca escribís un número que el candidato no dio. Cuando el logro tiene un tamaño evidente, proponés un HUECO TIPADO y lo declarás: [x%], [n], [de x a y], [$x], [n personas], [n/semana], [x/y].",
+        "UNA CIFRA QUE LA LÍNEA ORIGINAL YA DICE SE COPIA TAL CUAL — el mismo número, la misma unidad. Nunca se vuelve un hueco ni se borra: es un dato del candidato. El hueco es sólo para un tamaño que la línea NO dice.",
         "Cada hueco lleva su tipo, una etiqueta, una pista de qué rango sería creíble PARA ESTE TIPO DE TRABAJO, y qué evidencia tendría que mirar el candidato. Máximo dos huecos por línea; los dos pueden ser obligatorios — el candidato los completa antes de que se escriba nada.",
         "ESOS CUATRO CAMPOS VIVEN EN SU OBJETO, NUNCA EN EL TEXTO. La línea lleva el token y nada más: ni el tipo entre corchetes, ni la etiqueta, la pista o la evidencia entre paréntesis o después de un guion. Lo que escribís en `text` es lo que se imprime en el currículum de alguien.",
         "La pista DICE EXPLÍCITAMENTE que un aproximado o un rango alcanza — la mayoría abandona el campo creyendo que necesita el número exacto, y una línea con un tamaño aproximado vale más que una sin ninguno. El aproximado lo pone el candidato: vos no escribís uno.",
         "Un rango que el usuario confirma es suyo; un número que decidiste vos, no.",
         "",
         "PRIMER CAMPO QUE ESCRIBÍS: `measurableAspect`. Antes de redactar nada, contestá en pocas palabras QUÉ SE PUEDE MEDIR de este trabajo, usando las palabras DE ESTA LÍNEA y ninguna otra. Si la vacante trae `metricThatMatters`, elegí de esta línea lo que se acerque A ESA vara: la cifra que mueve una candidatura es la que al puesto le importa, no cualquiera. Las dimensiones son siempre las mismas —cuánto, cada cuánto, en cuánto tiempo, sobre qué alcance, de cuánto a cuánto— y la unidad es aquello en lo que se cuenta este trabajo. Si de verdad no hay nada medible, escribí null: es una respuesta válida.",
-        "Y si escribiste algo en `measurableAspect`, la línea LLEVA su hueco tipado para eso. Declarar que hay un tamaño y no ofrecerlo es el peor de los dos mundos: ni la cifra, ni la línea honesta.",
+        "Y si escribiste algo en `measurableAspect`, la línea LLEVA su hueco tipado para eso — salvo que la línea original ya diga esa cifra: entonces queda la cifra. Declarar que hay un tamaño y no ofrecerlo es el peor de los dos mundos: ni la cifra, ni la línea honesta.",
+        "`variantWithoutMetric`: sólo cuando la línea lleva un hueco — la misma línea sin el hueco, conservando toda cifra que el original ya tenía. Sin hueco, null.",
         "",
         "CUÁNDO PROPONER UN HUECO — no es opcional cuando el trabajo TIENE un tamaño:",
         "Casi todo trabajo se mide en algo, y decirlo es lo que separa una línea que convence de una que sólo describe. Antes de devolver, preguntate: ¿cada cuánto? ¿cuánta cantidad? ¿en cuánto tiempo? ¿sobre qué alcance? ¿de cuánto a cuánto cambió?",
@@ -367,7 +371,7 @@ export function bulletPrompt(lang: Lang): string {
     "  Regla para revisar antes de responder: ¿la primera palabra termina en -ó o en -ar/-er/-ir? Entonces está mal.",
     "",
     "LAS PALABRAS DE LA VACANTE, TAL COMO LA VACANTE LAS ESCRIBE — Y SÓLO SOBRE LO QUE LA LÍNEA YA DICE. Si la línea original ya describe esa actividad, usá la redacción EXACTA del aviso en vez de un sinónimo: el filtro compara cadenas, así que 'gestión de proyectos' y 'coordiné proyectos' no son lo mismo para él. Si el aviso usa una sigla, escribí la forma completa seguida de la sigla entre paréntesis la primera vez.",
-    "LA PRUEBA, ANTES DE ESCRIBIR CADA TÉRMINO: alguna palabra con contenido de ese término tiene que estar YA en la línea original —'atención al público' sobre 'Atendí a los clientes' comparte 'aten', y por eso vale—. Si el término no comparte nada con lo que la línea dice, NO ENTRA: estarías afirmando una actividad que esta persona no declaró, y la reescritura entera se descarta. Medido: en un CV docente, meter 'evaluación de alumnos' y 'manejo de grupo' sobre 'Di clases a los chicos' tiró las tres líneas y el candidato se quedó sin nada.",
+    "LA PRUEBA, ANTES DE ESCRIBIR CADA TÉRMINO: alguna palabra con contenido de ese término tiene que estar YA en la línea original —'atención al público' sobre 'Atendí a los clientes' comparte 'aten', y por eso vale—. Si el término no comparte nada con lo que la línea dice, NO ENTRA: estarías afirmando una actividad que esta persona no declaró, y ella tendría que encontrarla y borrarla. En un CV docente, 'evaluación de alumnos' y 'manejo de grupo' NO van sobre 'Di clases a los chicos': esa línea no dice que evaluara ni que manejara un grupo.",
     "",
     "ESPECIFICIDAD: la línea tiene que contener algo que sólo ESTA persona podría escribir — la herramienta que usó, el ámbito concreto, el tamaño de lo que manejó, sacado del original. Una línea intercambiable con la de cualquier otro postulante no aporta. Si al reescribirla te queda genérica, el problema es que estás usando poco del original, no que falte agregar algo de afuera.",
     "",
@@ -395,7 +399,7 @@ export function bulletPrompt(lang: Lang): string {
     "NO THIRD PERSON AND NO BARE INFINITIVE: the CV is written by the person about themselves. Past tense, implicit first person — 'Operated', 'Received', 'Reconciled', never 'Operates' or 'To operate'.",
     "",
     "THE POSTING'S OWN WORDING — AND ONLY OVER WHAT THE LINE ALREADY SAYS. If the original line already describes that activity, use the ad's EXACT wording instead of a synonym: the filter compares strings, so 'project management' and 'led projects' are not the same to it. If the ad uses an acronym, write the spelled-out form followed by the acronym in parentheses the first time.",
-    "THE TEST, BEFORE WRITING ANY TERM: some content word of that term must ALREADY be in the original line — 'customer service' over 'Served customers' shares 'serv', which is why it holds. If the term shares nothing with what the line says, it DOES NOT GO IN: you would be asserting an activity this person never stated, and the whole rewrite is discarded. Measured: on a teacher's CV, forcing 'student assessment' and 'classroom management' onto 'Taught the kids' threw away all three lines and left the candidate with nothing.",
+    "THE TEST, BEFORE WRITING ANY TERM: some content word of that term must ALREADY be in the original line — 'customer service' over 'Served customers' shares 'serv', which is why it holds. If the term shares nothing with what the line says, it DOES NOT GO IN: you would be asserting an activity this person never stated, and they would have to find it and delete it. On a teacher's CV, 'student assessment' and 'classroom management' do NOT go onto 'Taught the kids': that line says nothing about assessing or managing a class.",
     "",
     "SPECIFICITY: the line must carry something only THIS person could write — the tool they used, the concrete scope, the size of what they handled, taken from the original. A line interchangeable with any other applicant's adds nothing. If your rewrite comes out generic, the problem is that you are using too little of the original, not that something external is missing.",
     "",
