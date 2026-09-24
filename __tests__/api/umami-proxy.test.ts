@@ -30,6 +30,25 @@ describe("proxy del recolector de Umami", () => {
     expect(headers["X-Real-IP"]).toBe("190.129.1.10")
   })
 
+  it("mete la IP en payload.ip — Traefik pisa las cabeceras antes de llegar a Umami", async () => {
+    await POST(send({ "x-forwarded-for": "190.129.1.10, 10.0.0.5", "user-agent": "Mozilla/5.0 (iPhone)" }))
+    const body = JSON.parse((vi.mocked(global.fetch).mock.calls[0][1] as RequestInit).body as string)
+    expect(body.payload.ip).toBe("190.129.1.10")
+    expect(body.payload.userAgent).toBe("Mozilla/5.0 (iPhone)")
+    expect(body).toMatchObject({ type: "event", payload: { website: "w1" } })
+  })
+
+  it("un cuerpo que no es JSON pasa intacto", async () => {
+    await POST(
+      new Request("https://app.test/api/send", {
+        method: "POST",
+        body: "no-es-json",
+        headers: { "content-type": "text/plain", "x-forwarded-for": "190.129.1.10" },
+      }),
+    )
+    expect((vi.mocked(global.fetch).mock.calls[0][1] as RequestInit).body).toBe("no-es-json")
+  })
+
   it("cae a x-real-ip cuando no hay cadena", async () => {
     await POST(send({ "x-real-ip": "8.8.8.8" }))
     const headers = (vi.mocked(global.fetch).mock.calls[0][1] as RequestInit).headers as Record<string, string>

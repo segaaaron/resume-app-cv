@@ -16,8 +16,16 @@ const logger = createLogger("umami-proxy")
  * la CSP queda en 'self' y los bloqueadores que filtran por hosts `analytics.*` no lo
  * ven — las dos razones por las que el proxy existe.
  *
+ * PERO LAS CABECERAS NO LLEGAN: Umami también vive detrás de Traefik, que pisa
+ * `X-Forwarded-For` / `X-Real-IP` con la IP de NUESTRO servidor. Resultado medido en la
+ * base: 0 de 117 sesiones con país. Por eso la IP va DENTRO del cuerpo, en `payload.ip`
+ * (y `payload.userAgent`): es el camino oficial de Umami para eventos del lado servidor,
+ * lo mira antes que cualquier cabecera y con él hace la geolocalización local. Las
+ * cabeceras se siguen mandando: no estorban.
+ *
  * NO se inventa el país acá: sólo se le pasa a Umami el dato que ya tenía Traefik.
- * Si la cabecera no viene, se manda igual sin ella y el evento cuenta como antes.
+ * Si la IP no viene, o el cuerpo no es un JSON con `payload`, se manda tal cual y el
+ * evento cuenta como antes.
  */
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -63,12 +71,29 @@ export async function POST(req: Request) {
   if (Buffer.byteLength(body, "utf8") > MAX_BODY_BYTES) return oversize()
 
   const ip = clientIp(req)
+  const ua = req.headers.get("user-agent") ?? ""
+
+  // La IP va en el cuerpo porque las cabeceras las pisa el Traefik de Umami (ver arriba).
+  // Se re-serializa sólo si es un JSON con `payload`; cualquier otra cosa pasa intacta.
+  let forwarded = body
+  if (ip) {
+    try {
+      const parsed = JSON.parse(body)
+      if (parsed?.payload && typeof parsed.payload === "object" && !Array.isArray(parsed.payload)) {
+        parsed.payload.ip = ip
+        if (ua) parsed.payload.userAgent = ua
+        forwarded = JSON.stringify(parsed)
+      }
+    } catch {
+      // No es JSON: se reenvía tal cual.
+    }
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": req.headers.get("content-type") ?? "application/json",
     // Umami lee el user-agent para navegador y sistema operativo: sin esto, el mismo
     // agujero que el de los países pero en la columna de dispositivos.
-    "User-Agent": req.headers.get("user-agent") ?? "",
+    "User-Agent": ua,
   }
   if (ip) {
     headers["X-Forwarded-For"] = ip
@@ -76,7 +101,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const res = await fetch(`${UPSTREAM}/api/send`, { method: "POST", headers, body })
+    const res = await fetch(`${UPSTREAM}/api/send`, { method: "POST", headers, body: forwarded })
     return new Response(await res.text(), {
       status: res.status,
       headers: { "Content-Type": res.headers.get("content-type") ?? "text/plain", "Cache-Control": "no-store" },
