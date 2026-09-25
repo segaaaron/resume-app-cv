@@ -3,8 +3,9 @@ import {
   Plus_Jakarta_Sans, Playfair_Display,
   Space_Grotesk, Cormorant_Garamond, Archivo, DM_Serif_Display, Instrument_Serif,
   Merriweather, Lato, Source_Sans_3, IBM_Plex_Sans, Work_Sans,
-  EB_Garamond, PT_Serif, Karla, Libre_Franklin, Nunito_Sans, Roboto_Slab, Cabin, Figtree, Spectral, Asap,
+  EB_Garamond, PT_Serif, Karla, Libre_Franklin, Nunito_Sans, Roboto_Slab, Cabin, Spectral, Asap,
 } from "next/font/google"
+import localFont from "next/font/local"
 import { GeistSans } from "geist/font/sans"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
@@ -68,7 +69,10 @@ const libreFranklin = Libre_Franklin({ variable: "--font-libre-franklin", subset
 const nunitoSans = Nunito_Sans({ variable: "--font-nunito-sans", subsets: ["latin"], weight: ["400", "700", "800", "900"], display: "swap" })
 const robotoSlab = Roboto_Slab({ variable: "--font-roboto-slab", subsets: ["latin"], weight: ["400", "700"], display: "swap" })
 const cabin = Cabin({ variable: "--font-cabin", subsets: ["latin"], weight: ["400", "600", "700"], display: "swap" })
-const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"], weight: ["400", "500", "700", "800"], display: "swap" })
+// Figtree local: a ciertas IPs (la del VPS) Google le sirve Figtree como
+// `fonts.gstatic.com/l/font?kit=…&skey=…`, y el `&` rompe next/font/google en
+// Turbopack («queries have exactly one entry»). Archivo variable, subset latin.
+const figtree = localFont({ variable: "--font-figtree", src: "../public/fonts/figtree-latin.woff2", weight: "400 800", display: "swap" })
 const spectral = Spectral({ variable: "--font-spectral", subsets: ["latin"], weight: ["400", "600"], display: "swap" })
 const asap = Asap({ variable: "--font-asap", subsets: ["latin"], weight: ["400", "600", "700"], display: "swap" })
 
