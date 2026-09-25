@@ -186,12 +186,27 @@ export class AIBulletModule {
         es: "no tiene un defecto formal — esto es un pulido, no una reparación. Afilá el verbo, nombrá el objeto concreto del trabajo y el alcance que el source ya implica, y sacá cualquier palabra que no aporte información. Si no podés hacerlo genuinamente más filoso sin agregar datos, decilo en vez de rellenarlo",
       },
     }
-    const focusLines = focus.map((f) => FOCUS_TEXT[f]).filter(Boolean)
+    /**
+     * «VER OTRAS VERSIONES» ES OTRA PREGUNTA, NO UNA MEJORA.
+     *
+     * Medido en local el 2026-09-24: el asistente escribía una viñeta buena, la
+     * persona pedía otras versiones y esto contestaba «already_optimized» —la
+     * pregunta que se le hacía era «¿se puede mejorar?», y una línea buena no
+     * se mejora—. La consulta se gastaba y la pantalla decía «no hay otro
+     * ángulo honesto». Lo que se pide es el MISMO trabajo contado desde otro
+     * lado; la línea de la persona queda como la recomendada.
+     */
+    const pideAngulos = focus.includes("angles")
+    const focusLines = focus.filter((f) => f !== "angles").map((f) => FOCUS_TEXT[f]).filter(Boolean)
     // A polish is not a diagnosis, so it does not get the "you MUST rewrite it"
     // block: ordering a rewrite of a bullet with nothing wrong is how a model
     // ends up padding a clean line to obey.
     const isPolishOnly = focus.length === 1 && focus[0] === "polish"
-    const focusBlock = focusLines.length === 0
+    const focusBlock = pideAngulos
+      ? language === "en"
+        ? `\n=== WHAT IS BEING ASKED ===\nThe person already accepted this bullet and wants to see the SAME work told from other angles. Return it as "text" (it may stay exactly as it is) and 2 "alternatives" from different angles. "already_optimized" is not an answer here: the question is not whether it can be improved. Keep every fact, tool and number the original states, and add none.\n`
+        : `\n=== QUÉ SE ESTÁ PIDIENDO ===\nLa persona ya aceptó esta viñeta y quiere ver el MISMO trabajo contado desde otros ángulos. Devolvela como "text" (puede quedar tal cual) y 2 "alternatives" desde ángulos distintos. "already_optimized" no es una respuesta acá: la pregunta no es si se puede mejorar. Conservá todos los datos, herramientas y cifras del original, y no agregues ninguno.\n`
+      : focusLines.length === 0
       ? ""
       : isPolishOnly
       ? language === "en"
@@ -411,7 +426,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         if (seenIndices.has(index)) continue
         // La misma línea devuelta —90% idéntica, la vara del CEO— no es una
         // propuesta: no hay nada que elegir.
-        if (isTrivialEdit(original, suggested)) continue
+        // Salvo cuando se piden ÁNGULOS: ahí la línea de la persona ES la
+        // recomendada, y tirarla se llevaba sus alternativas con ella.
+        if (!pideAngulos && isTrivialEdit(original, suggested)) continue
         seenIndices.add(index)
 
         const alternatives = (rawAlts ?? [])
@@ -506,6 +523,28 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         this.logger.warn("[AIService.improveBullet] retry truncated by token ceiling")
       }
       improvements = harvest(leidoRetry.text)
+    }
+
+    /**
+     * SE PIDIERON ÁNGULOS Y NO VINO NINGUNO: es una respuesta vacía para lo
+     * que se preguntó, y lleva el mismo UN reintento que cualquier vacía
+     * (`never-empty`), diciendo qué faltó. Si tampoco vienen, la pantalla dice
+     * con verdad que esta línea no tiene otro ángulo.
+     */
+    if (pideAngulos && improvements.length > 0 && improvements.every((i) => !i.alternatives?.length)) {
+      const falta = language === "en"
+        ? `\n\nYour previous answer had no "alternatives". The person asked for other angles of this same work: return 2 "alternatives", each from a different angle, keeping every fact and adding none.`
+        : `\n\nTu respuesta anterior no traía "alternatives". La persona pidió otros ángulos de este mismo trabajo: devolvé 2 "alternatives", cada una desde un ángulo distinto, conservando todos los datos y sin agregar ninguno.`
+      const otra = await callModel(prompt + falta)
+      logAIUsage(userId, "improve-bullet", {
+        model: AI_MODEL_PROSE,
+        plan,
+        promptTokens: otra.usage?.prompt_tokens ?? 0,
+        completionTokens: otra.usage?.completion_tokens ?? 0,
+        costUsd: costOfChat(AI_MODEL_PROSE, otra.usage),
+      })
+      const conAngulos = harvest(readChat(otra).text)
+      if (conAngulos.some((i) => i.alternatives?.length)) improvements = conAngulos
     }
 
     // Nothing survived — or the model itself declined. Both mean the same thing

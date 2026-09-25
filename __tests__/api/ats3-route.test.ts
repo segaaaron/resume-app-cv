@@ -52,11 +52,14 @@ vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
         niceToHave: [], responsibilities: [], softSignals: [],
       }
     }
-    async audit() {
+    // Juzga las líneas que RECIBE, como el modelo real: un doble que no juzga
+    // ninguna hace que el motor pida la segunda vuelta por las que faltan.
+    async audit(tree: { roles: { bullets: { id: string }[] }[] }) {
       this.deps.onUsage?.({ promptTokens: 500, completionTokens: 50, cachedTokens: 0 })
       llamadas.audit++
       return {
-        bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
+        bullets: tree.roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true }))),
+        summary: { identity: true, proof: true, fit: true, extra: true },
         coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [],      }
     }
     async triage() {

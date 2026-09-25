@@ -70,7 +70,23 @@ function makeSpec(must: number, nice: number): JobSpec {
   }
 }
 
+/**
+ * Lo que el CV cubre tiene que estar ESCRITO en él.
+ *
+ * Desde el 2026-09-24 la cobertura la mide el texto (`coverageOf`), no el
+ * estado que traiga la auditoría: el filtro compara cadenas. Por eso el
+ * generador escribe en el CV los términos que cuenta como cubiertos.
+ */
+function escribir(tree: ResumeTree, terminos: string[]): void {
+  tree.otherText = terminos.join(" . ")
+}
+
+function cubiertos(spec: JobSpec, mustFound: number, niceFound: number): string[] {
+  return [...spec.mustHave.slice(0, mustFound), ...spec.niceToHave.slice(0, niceFound)].map((r) => r.skill)
+}
+
 function makeAudit(tree: ResumeTree, spec: JobSpec, mustFound: number, niceFound: number): AuditFacts {
+  escribir(tree, cubiertos(spec, mustFound, niceFound))
   const cov: AuditFacts["coverage"] = [
     ...spec.mustHave.map((m, i) => ({
       skill: m.skill,
@@ -151,6 +167,7 @@ describe("el total cae en [0,100] por construcción", () => {
         },
       ],
     }
+    escribir(tree2, spec.mustHave.map((m) => m.skill))
     const s = scoreResume(tree2, spec, audit, { a: true, b: true })
     expect(s.total).toBeCloseTo(100, 6)
   })
@@ -171,7 +188,10 @@ describe("la ganancia prometida ES el delta medido", () => {
       const before = scoreResume(tree, spec, audit, CHECKS)
       const promised = gainOf(before, "must")
 
-      const after = scoreResume(tree, spec, makeAuditSameBut(audit, found + 1, "MUST"), CHECKS)
+      // Cerrar el requisito es ESCRIBIRLO: la cobertura la mide el texto.
+      const conUnoMas = { ...tree }
+      escribir(conUnoMas, cubiertos(spec, found + 1, 0))
+      const after = scoreResume(conUnoMas, spec, audit, CHECKS)
       expect(deltaOf(before, after)).toBeCloseTo(promised, 10)
     }
   })
@@ -187,7 +207,9 @@ describe("la ganancia prometida ES el delta medido", () => {
 
       const before = scoreResume(tree, spec, audit, CHECKS)
       const promised = gainOf(before, "nice")
-      const after = scoreResume(tree, spec, makeAuditSameBut(audit, found + 1, "NICE"), CHECKS)
+      const conUnoMas = { ...tree }
+      escribir(conUnoMas, cubiertos(spec, 0, found + 1))
+      const after = scoreResume(conUnoMas, spec, audit, CHECKS)
       expect(deltaOf(before, after)).toBeCloseTo(promised, 10)
     }
   })
@@ -220,17 +242,6 @@ describe("la ganancia prometida ES el delta medido", () => {
   })
 })
 
-function makeAuditSameBut(audit: AuditFacts, found: number, kind: "MUST" | "NICE"): AuditFacts {
-  let seen = 0
-  return {
-    ...audit,
-    coverage: audit.coverage.map((c) => {
-      if (c.requirement !== kind) return c
-      seen++
-      return { ...c, status: seen <= found ? ("FOUND" as const) : ("NOT_FOUND" as const) }
-    }),
-  }
-}
 
 // ── el peso muerto que castigaba por cómo escribieron el aviso ──────────────
 
@@ -302,6 +313,8 @@ describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => 
    * NO son comparables: la primera versión de este caso medía ese ruido y daba
    * rojo con el código correcto. Acá se fija.
    */
+  /** El CV con esos términos escritos: la cobertura la mide el texto. */
+  const escrito = (skills: string[]): ResumeTree => ({ ...tree, otherText: skills.join(" . ") })
   const cubre = (skills: string[]) => ({
     ...makeAudit(tree, spec, 0, 0),
     coverage: spec.mustHave.map((m) => ({
@@ -317,8 +330,8 @@ describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => 
     // más que lo listado al final». Contarlos por cabeza le dice al candidato
     // que las dos coberturas valen lo mismo, y no valen lo mismo.
     const w = postingWeights(spec, jd)
-    const conM0 = scoreResume(tree, spec, cubre([spec.mustHave[0].skill]), CHECKS, w)
-    const conM2 = scoreResume(tree, spec, cubre([spec.mustHave[2].skill]), CHECKS, w)
+    const conM0 = scoreResume(escrito([spec.mustHave[0].skill]), spec, cubre([spec.mustHave[0].skill]), CHECKS, w)
+    const conM2 = scoreResume(escrito([spec.mustHave[2].skill]), spec, cubre([spec.mustHave[2].skill]), CHECKS, w)
     const must = (s: typeof conM0) => s.components.find((c) => c.key === "must")!
     expect(must(conM0).numerator).toBeGreaterThan(must(conM2).numerator)
     expect(conM0.total).toBeGreaterThan(conM2.total)
@@ -328,9 +341,8 @@ describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => 
     // El re-cálculo instantáneo de la pantalla no recibe el aviso. Un puntaje
     // que cambia según quién lo calcula es peor que uno más grueso.
     const cobertura = cubre([spec.mustHave[0].skill])
-    expect(scoreResume(tree, spec, cobertura, CHECKS, {}).total).toBe(
-      scoreResume(tree, spec, cobertura, CHECKS).total,
-    )
+    const cv = escrito([spec.mustHave[0].skill])
+    expect(scoreResume(cv, spec, cobertura, CHECKS, {}).total).toBe(scoreResume(cv, spec, cobertura, CHECKS).total)
   })
 
   it("el peso sale del TEXTO, así que la misma vacante da siempre lo mismo", () => {

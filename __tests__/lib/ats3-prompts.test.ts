@@ -399,3 +399,56 @@ describe("tampoco mueren los esquemas del módulo", () => {
     expect(auditPrompt("en")).toMatch(/With no line id, it is never DEMONSTRATED/)
   })
 })
+
+/**
+ * LA AUDITORÍA CONTESTA POR REFERENCIA (2026-09-24).
+ *
+ * Medido en producción: la vacante pedía tres blandas —que no se le mandaban al
+ * modelo— y volvieron cinco con otros nombres, «crash rate» entre ellas. El
+ * puntaje daba 5/3 = 100% y la tabla pintaba las tres pedidas como faltantes.
+ */
+describe("la auditoría habla de la lista de la vacante, y de nada más", () => {
+  const tree: ResumeTree = {
+    roles: [],
+    summary: { id: "summary", text: "Cajera", hash: "h", origin: "USER" },
+    declaredSkills: [],
+    otherText: "",
+  }
+  const spec = {
+    ...JSON.parse(SPEC_JSON),
+    niceToHave: [{ skill: "Excel", raw: "Excel", years: null, category: null }],
+    softSignals: ["trabajo en equipo", "comunicación"],
+  } as JobSpec
+  const respuesta = JSON.stringify({
+    bullets: [],
+    summary: { identity: true, proof: false, fit: false, extra: false },
+    coverage: [
+      { ref: "M1", status: "IMPLIED", evidenceNodeId: "summary" },
+      { ref: "M1", status: "NOT_FOUND", evidenceNodeId: null }, // repetida
+      { ref: "M9", status: "FOUND", evidenceNodeId: null }, // no existe
+      { ref: "n1", status: "NOT_FOUND", evidenceNodeId: null },
+    ],
+    softCoverage: [
+      { ref: "S1", status: "DEMONSTRATED", evidenceNodeId: "summary" },
+      { ref: "S7", status: "DEMONSTRATED", evidenceNodeId: "summary" }, // inventada
+    ],
+  })
+
+  it("le manda al modelo las blandas y los requisitos, cada uno con su referencia", async () => {
+    const client = new ScriptedClient(respuesta)
+    await mod(client).audit(tree, spec)
+    const pedido = String(client.lastParams!.messages[1].content)
+    expect(pedido).toContain('"ref":"S1"')
+    expect(pedido).toContain('"signal":"trabajo en equipo"')
+    expect(pedido).toContain('"ref":"M1"')
+  })
+
+  it("traduce la referencia al nombre de la vacante y descarta lo que no está en la lista", async () => {
+    const a = await mod(new ScriptedClient(respuesta)).audit(tree, spec)
+    expect(a.coverage).toEqual([
+      { skill: "Arqueo de caja", requirement: "MUST", status: "IMPLIED", evidenceNodeId: "summary" },
+      { skill: "Excel", requirement: "NICE", status: "NOT_FOUND", evidenceNodeId: null },
+    ])
+    expect(a.softCoverage).toEqual([{ signal: "trabajo en equipo", status: "DEMONSTRATED", evidenceNodeId: "summary" }])
+  })
+})

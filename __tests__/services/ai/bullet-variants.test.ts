@@ -98,3 +98,52 @@ describe("improve-bullet — a choice, not another round", () => {
     expect(prompt).not.toContain("GIVE THE CANDIDATE A CHOICE")
   })
 })
+
+/**
+ * «VER OTRAS VERSIONES» (medido en local el 2026-09-24).
+ *
+ * La persona ya aceptó la viñeta y pide el mismo trabajo desde otro ángulo. Si
+ * el modelo la devuelve tal cual como recomendada, eso no puede tirar sus
+ * alternativas: la pantalla decía «no hay otro ángulo honesto» con la consulta
+ * gastada.
+ */
+describe("improve-bullet — otros ángulos de una línea que ya está bien", () => {
+  const BUENA = "Wrote XCTest unit tests for the sync module, covering edge cases and regression checks before release."
+  const conAngulos = JSON.stringify({ status: "improved", improvements: [{
+    index: 0, text: BUENA, why: "already strong",
+    alternatives: [
+      { text: "Protected release quality by covering the sync module with XCTest suites for edge cases and regressions.", angle: "business", why: "leads with what it protected" },
+      { text: "Built the sync module's XCTest coverage around edge cases and regression checks.", angle: "technical", why: "names the system" },
+    ],
+  }] })
+
+  it("con el foco `angles`, la línea igual a la original llega con sus alternativas", async () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    const out = await svc(conAngulos, logger).improveBullet("u1", { text: BUENA, language: "en", focus: ["angles"] }, "PRO")
+    expect(out.improvements).toHaveLength(1)
+    expect(out.improvements[0].alternatives).toHaveLength(2)
+  })
+
+  it("sin el foco, una línea devuelta igual sigue sin ser una propuesta", async () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    const out = await svc(conAngulos, logger).improveBullet("u1", { text: BUENA, language: "en" }, "PRO")
+    expect(out.improvements).toHaveLength(0)
+  })
+})
+
+describe("improve-bullet — ángulos pedidos que no llegan", () => {
+  it("se piden UNA vez más, diciendo qué faltó", async () => {
+    const BUENA = "Wrote XCTest unit tests for the sync module, covering edge cases and regression checks before release."
+    const sinAngulos = JSON.stringify({ status: "improved", improvements: [{ index: 0, text: BUENA, why: "ok" }] })
+    const conAngulos = JSON.stringify({ status: "improved", improvements: [{ index: 0, text: BUENA, why: "ok",
+      alternatives: [{ text: "Protected each release by covering the sync module with XCTest suites for edge cases.", angle: "business", why: "outcome first" }] }] })
+    const chat = vi.fn()
+      .mockResolvedValueOnce(completion(sinAngulos))
+      .mockResolvedValueOnce(completion(conAngulos))
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    const out = await new AIService({ chat, embed: vi.fn() } as unknown as IAIClient, logger)
+      .improveBullet("u1", { text: BUENA, language: "en", focus: ["angles"] }, "PRO")
+    expect(chat).toHaveBeenCalledTimes(2)
+    expect(out.improvements[0].alternatives).toHaveLength(1)
+  })
+})

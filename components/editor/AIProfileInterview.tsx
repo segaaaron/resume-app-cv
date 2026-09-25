@@ -208,11 +208,20 @@ export default function AIProfileInterview() {
    * contar. El propio prompt de `improve-bullet` lo dice: los ángulos «sólo se
    * llenan para un pedido de una viñeta».
    */
+  /**
+   * `from` es LO QUE LA PERSONA DICTÓ para esas versiones. Las versiones se
+   * reabren sin gastar sólo si ese texto no cambió: medido en local el
+   * 2026-09-24, corregir el dictado y apretar el botón reabría la redacción
+   * vieja y el cambio se ignoraba.
+   */
   const [bulletPick, setBulletPick] = useState<
-    | { gap: ProfileGap; options: { text: string; label: string; why: string }[] }
+    | { gap: ProfileGap; from: string; options: { text: string; label: string; why: string }[] }
     | null
   >(null)
   const [bulletPickOpen, setBulletPickOpen] = useState(false)
+  /** Las versiones en memoria son de ESTA pregunta y de ESTE dictado. */
+  const mismasVersiones = (g: ProfileGap) =>
+    !!bulletPick && keyOf(bulletPick.gap) === keyOf(g) && bulletPick.from === get(g).trim()
   /** Se están pidiendo los ángulos. Apaga el botón para que no salgan dos. */
   const [anglesBusy, setAnglesBusy] = useState(false)
   /** Ya se pidieron una vez: el botón no vuelve a ofrecerse ni a cobrar. */
@@ -528,11 +537,17 @@ export default function AIProfileInterview() {
           language: cvLanguage,
           postingTerms: posting.terms,
           sectionData,
+          // Es OTRA pregunta que «mejorá esta línea»: la persona ya la aceptó y
+          // quiere el mismo trabajo contado desde otro lado (ver AIBulletModule).
+          focus: ["angles"],
         }),
       })
-      if (!res.ok) return []
+      /* UN FALLO NO ES «NO HAY OTRO ÁNGULO». Devolver una lista vacía acá hacía
+         que la pantalla dijera «esta línea no tiene otro ángulo honesto» cuando
+         en realidad el servidor falló: la conclusión opuesta a la verdad. */
+      if (!res.ok) throw new Error(`http_${res.status}`)
       const parsed = ImproveBulletResponseSchema.safeParse(await res.json().catch(() => ({})))
-      if (!parsed.success) return []
+      if (!parsed.success) throw new Error("respuesta_ilegible")
       /* LA CONSULTA SE GASTÓ APENAS EL SERVIDOR CONTESTÓ, traiga ángulos o no:
          el contador se invalida ACÁ. Estaba después del corte por «sin
          alternativas» —el caso más probable, porque el prompt omite el ángulo
@@ -543,16 +558,22 @@ export default function AIProfileInterview() {
       if (!first) return []
       const alts = first.alternatives ?? []
       if (alts.length === 0) return []
+      // El modelo devuelve las líneas con su marca («• »). El escritor ya la
+      // quita, pero el selector la mostraba: se lee como si fuera a entrar así.
+      // `parseBullets` es el único lector de viñetas del producto.
+      const limpia = (x: string) => parseBullets(x)[0] ?? x.trim()
       return [
-        { text: first.text, label: t("bullet_angle_recommended"), why: first.why ?? "" },
+        { text: limpia(first.text), label: t("bullet_angle_recommended"), why: first.why ?? "" },
         ...alts.map((a) => ({
-          text: a.text,
+          text: limpia(a.text),
           label: t(`bullet_angle_${a.angle}` as "bullet_angle_technical"),
           why: a.why,
         })),
       ]
-    } catch {
-      return []
+    } catch (e) {
+      // `apiFetch` ya avisó los cortes de red y los 5xx; lo demás se dice acá.
+      toast.error(t("bullet_angles_failed"))
+      throw e
     }
   }
 
@@ -631,7 +652,7 @@ export default function AIProfileInterview() {
        * pidió, y si al recargar se pierde, no se pierde nada pagado de más.
        */
       if (lines.length === 1) {
-        setBulletPick({ gap: g, options: [] })
+        setBulletPick({ gap: g, from: told, options: [] })
         setBulletPickOpen(true)
         setAnglesAsked(false)
         setBulletChoice(lines[0])
@@ -941,13 +962,13 @@ export default function AIProfileInterview() {
                   size="sm"
                   isLoading={working}
                   onClick={() => {
-                    if (bulletPick && keyOf(bulletPick.gap) === keyOf(g)) { setBulletPickOpen(true); return }
+                    if (mismasVersiones(g)) { setBulletPickOpen(true); return }
                     void answerBullets(g)
                   }}
                   disabled={get(g).trim().length < 10}
                 >
                   {!working && <Sparkles aria-hidden />}
-                  {bulletPick && keyOf(bulletPick.gap) === keyOf(g) ? t("btn_see_versions") : t("btn_write_bullets")}
+                  {mismasVersiones(g) ? t("btn_see_versions") : t("btn_write_bullets")}
                 </Button>
               </div>
             </div>
@@ -1193,11 +1214,14 @@ export default function AIProfileInterview() {
                       const angles = await bulletAngles(bulletPick.gap, bulletChoice)
                       setAnglesAsked(true)
                       if (angles.length > 1) {
-                        setBulletPick({ gap: bulletPick.gap, options: angles })
+                        setBulletPick({ gap: bulletPick.gap, from: bulletPick.from, options: angles })
                         setBulletChoice(angles[0].text)
                       } else {
                         toast.info(t("bullet_angles_none"))
                       }
+                    } catch {
+                      // Falló: el botón queda para volver a intentarlo, porque
+                      // no se sabe si hubo respuesta.
                     } finally {
                       setAnglesBusy(false)
                     }

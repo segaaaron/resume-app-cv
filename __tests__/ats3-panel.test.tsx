@@ -69,6 +69,7 @@ const messages: Record<string, string> = {
   no_data: "No tengo ese dato",
   fill_required: "Completá la cifra",
   apply: "Aplicar a mi CV",
+  skills_plan_apply: "Aplicar este orden",
   // La hoja de confirmación es `SuggestionDiffModal`, recuperado del historial:
   // su copia vive en `editor.cv_review` y el doble tiene que traerla, o la
   // pantalla se prueba contra claves crudas.
@@ -239,12 +240,16 @@ const ACTS = [
       {
         id: "f1",
         type: "no_metric",
+        // El motor SIEMPRE declara cómo se cierra un hallazgo: la tarjeta
+        // dibuja la salida de su remedio y no otra.
+        remedy: "rewrite",
+        component: "metric",
         merged: ["no_metric"],
         nodeId: NODE_ID,
         nodeText: "Atendí a los clientes en la línea de cajas",
         nodeHash: "h1",
         gain: 1.9,
-        detail: "el logro admite un tamaño",
+        detail: "tamaño",
       },
     ],
   },
@@ -743,13 +748,14 @@ describe("el puntaje se mueve mientras trabajás", () => {
     expect(texto()).toContain("Arqueo de caja")
     expect(updateSectionData.mock.calls.find((c) => c[0] === "skills")).toBeUndefined()
 
-    await click("Aplicar a mi CV")
+    const antes = (storeState.sectionData.skills ?? []).map((x: { name: string }) => x.name)
+    await click("Aplicar este orden")
     const escrito = updateSectionData.mock.calls.find((c) => c[0] === "skills")
     expect(escrito).toBeTruthy()
     const skills = escrito![1] as { name: string; level: string }[]
-    // Conserva lo que la persona ya tenía —su id y su nivel son datos suyos— y
-    // suma lo que entra. Nunca más de las que la plantilla recibe.
-    expect(skills.map((s) => s.name)).toContain("Excel")
-    expect(skills.length).toBeLessThanOrEqual(20)
+    // Conserva TODO lo que la persona tenía —el plan ordena, no borra: el
+    // 2026-09-24 borró 34 habilidades en producción— y suma lo que entra.
+    for (const n of antes) expect(skills.map((s) => s.name)).toContain(n)
+    expect(skills.map((s) => s.name)).toContain("Arqueo de caja")
   })
 })

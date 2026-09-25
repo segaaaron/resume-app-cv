@@ -72,6 +72,14 @@ const resumeSchema = z.object({
     .max(LIMITS.roles)
     .default([]),
   skills: z.array(z.object({ name: z.string().max(120) })).max(120).default([]),
+  /**
+   * Idiomas, certificaciones, educación y el resto del CV, en texto plano.
+   *
+   * El árbol del motor lo declaraba desde el primer día y este esquema lo
+   * DESCARTABA en silencio —Zod borra lo que no declara—: el aviso pedía
+   * «English B2» y el CV lo decía en Idiomas, y el panel lo daba por faltante.
+   */
+  otherText: z.string().max(8_000).default(""),
 })
 
 /**
@@ -110,6 +118,8 @@ const rewriteSchema = z.object({
   mergeWith: z.string().max(64).optional().catch(undefined),
   /** El puesto al que se agrega una línea NUEVA, con el tema en `focus`. */
   addToRole: z.string().max(64).optional().catch(undefined),
+  /** REPLACE: el tema confirmado en `focus` se escribe EN LUGAR de esta línea. */
+  replacing: z.boolean().optional().catch(undefined),
 })
 
 /**
@@ -347,6 +357,7 @@ export async function POST(req: Request) {
         focus: d.focus,
         mergeWith: d.mergeWith,
         addToRole: d.addToRole,
+        replacing: d.replacing,
         ai,
         store,
       })

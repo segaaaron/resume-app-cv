@@ -12,13 +12,14 @@ import {
   findingsOf,
   skillPlan,
   termsOf,
+  coverageOf,
   openLedger,
   type AtsAi,
   type AtsStore,
   type CacheKind,
   type RawResume,
 } from "@/lib/ats3/engine"
-import { buildTermIndex, type JobSpec, type Suggestion, type AnchoredSuggestion, type TriageDecision } from "@/lib/ats3/contracts"
+import { buildTermIndex, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion, type TriageDecision } from "@/lib/ats3/contracts"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
 
@@ -78,8 +79,12 @@ const RAW: RawResume = {
   skills: [{ name: "Excel" }],
 }
 
-function fakeAudit(): AuditFacts {
-  const tree = buildTree(RAW)
+/**
+ * El juicio del CV QUE RECIBE, como hace el modelo real. Un doble que siempre
+ * contesta por el CV original deja sin juicio a las líneas editadas, y desde el
+ * 2026-09-24 el motor las vuelve a pedir: eso contaría como una auditoría más.
+ */
+function fakeAudit(tree: ResumeTree = buildTree(RAW)): AuditFacts {
   return {
     bullets: tree.roles[0].bullets.map((b, i) => ({
       id: b.id,
@@ -111,9 +116,9 @@ class CountingAi implements AtsAi {
     this.jd++
     return SPEC
   }
-  async audit() {
+  async audit(tree: ResumeTree) {
     this.audits++
-    return fakeAudit()
+    return fakeAudit(tree)
   }
   triageDecisions: TriageDecision[] = []
   async triage() {
@@ -443,8 +448,10 @@ describe("el análisis se entrega en actos", () => {
     const score = scoreResume(tree, spec, audit, {})
     const hallazgos = findingsOf(tree, audit, score, index)
 
+    // Cuentan las que se cierran REESCRIBIENDO la línea. La pregunta por un
+    // requisito sin rastro habla del término y sólo sugiere el puesto.
     const porLinea = new Map<string, number>()
-    for (const f of hallazgos) {
+    for (const f of hallazgos.filter((h) => h.remedy === "rewrite")) {
       porLinea.set(f.nodeId, (porLinea.get(f.nodeId) ?? 0) + 1)
     }
     expect([...porLinea.values()].filter((n) => n > 1)).toHaveLength(0)
@@ -1382,28 +1389,323 @@ describe("las habilidades que entran a la plantilla", () => {
    * hallazgo por término suelto que podía llevar la lista a cien, y dos
    * plantillas que cortaban en doce por su cuenta sin mirar la vacante.
    */
-  it("con 100 habilidades entran 20, y las del aviso primero", () => {
+  it("con 100 habilidades se VEN 20, las del aviso primero, y no se borra ninguna", () => {
+    // Medido en producción el 2026-09-24: el plan devolvía «las que salen» y la
+    // pantalla escribía la lista sin ellas — 34 habilidades borradas del CV.
+    // Las plantillas ya cortan en veinte respetando el orden: el plan ORDENA.
     const cien = Array.from({ length: 100 }, (_, i) => `Skill ${i + 1}`)
     const p = skillPlan(cien, specSkills, auditSkills, { Swift: 1.75, Combine: 1, TestFlight: 0.5 })
-    console.log("final:", p.final.length, "| primeras 4:", p.final.slice(0, 4).join(", "))
-    console.log("entran:", p.add.join(", "), "| salen:", p.drop.length)
-    expect(p.final).toHaveLength(SKILLS_MAX)
     expect(p.final[0]).toBe("Combine")
     expect(p.final).not.toContain("Swift")
-    expect(p.drop).toHaveLength(81)
+    for (const s of cien) expect(p.final).toContain(s)
+    expect(p.final).toHaveLength(cien.length + p.add.length)
+    // Lo que pasa a verse desplaza exactamente lo mismo que deja de verse.
+    expect(p.entering).toContain("Combine")
+    expect(p.leaving).toHaveLength(p.entering.length)
   })
 
-  it("una habilidad que el aviso pide NUNCA se cae del corte", () => {
+  it("una habilidad que el aviso pide NUNCA queda fuera de las que se ven", () => {
     const p = skillPlan(["Swift", ...Array.from({ length: 40 }, (_, i) => `X${i}`)], specSkills, auditSkills, {})
-    expect(p.final).toContain("Swift")
-    expect(p.final).toContain("Combine")
-    expect(p.drop).not.toContain("Swift")
+    const seVen = p.final.slice(0, SKILLS_MAX)
+    expect(seVen).toContain("Swift")
+    expect(seVen).toContain("Combine")
+    expect(p.leaving).not.toContain("Swift")
   })
 
-  it("con pocas habilidades no saca ninguna, y respeta TU orden", () => {
+  it("con pocas habilidades no deja de verse ninguna, y respeta TU orden", () => {
     const p = skillPlan(["Excel", "Swift", "Word"], specSkills, auditSkills, {})
-    console.log("pocas → final:", p.final.join(", "))
-    expect(p.drop).toHaveLength(0)
+    expect(p.leaving).toHaveLength(0)
     expect(p.final.filter((s) => !["Swift", "Combine"].includes(s))).toEqual(["Excel", "Word"])
+  })
+})
+
+/**
+ * LAS CONTRADICCIONES QUE SE VIERON EN PRODUCCIÓN (2026-09-24).
+ *
+ * Cada caso es una pantalla real: un iOS dev contra un aviso de fintech. Todas
+ * salían de lo mismo —una pregunta con varios dueños, o un dato del CV que el
+ * motor no leía—, y cada una se fija contra la función que la contesta.
+ */
+describe("una pregunta, una respuesta — lo medido en producción", () => {
+  const specIos = (over: Partial<JobSpec> = {}): JobSpec => ({
+    ...SPEC,
+    mustHave: [
+      { skill: "English", raw: "English B2 or higher", years: null, category: null },
+      { skill: "Combine", raw: "Combine", years: null, category: null },
+      { skill: "Keychain", raw: "Keychain", years: null, category: null },
+    ],
+    niceToHave: [],
+    softSignals: [],
+    ...over,
+  })
+  const cvIos: RawResume = {
+    summary: "iOS Developer",
+    workExperience: [
+      {
+        jobTitle: "iOS Developer",
+        employer: "IA interactive",
+        startDate: "2023",
+        endDate: "2026",
+        description: "• Built reactive flows with publishers and subscribers\n• Led code reviews for the team",
+      },
+    ],
+    skills: [{ name: "Swift" }],
+    otherText: "English B2 . Spanish Native",
+  }
+  const auditDe = (tree: ResumeTree, over: Partial<AuditFacts> = {}): AuditFacts => ({
+    bullets: tree.roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true }))),
+    summary: { identity: true, proof: true, fit: true, extra: true },
+    coverage: [],
+    softCoverage: [],
+    ...over,
+  })
+
+  it("lo que el CV dice en Idiomas cuenta: el filtro lee el documento entero", () => {
+    const tree = buildTree(cvIos)
+    const cov = coverageOf(specIos(), auditDe(tree), tree, buildTermIndex(termsOf(specIos(), tree)))
+    expect(cov.find((c) => c.skill === "English")?.status).toBe("FOUND")
+  })
+
+  it("un FOUND del modelo sin el término escrito es IMPLIED, y un nombre fuera de la vacante no existe", () => {
+    const tree = buildTree(cvIos)
+    const linea = tree.roles[0].bullets[0].id
+    const audit = auditDe(tree, {
+      coverage: [
+        { skill: "Combine", requirement: "MUST", status: "FOUND", evidenceNodeId: linea },
+        { skill: "Kubernetes", requirement: "MUST", status: "FOUND", evidenceNodeId: linea },
+      ],
+    })
+    const cov = coverageOf(specIos(), audit, tree, buildTermIndex(termsOf(specIos(), tree)))
+    expect(cov.map((c) => c.skill)).toEqual(["English", "Combine", "Keychain"])
+    expect(cov.find((c) => c.skill === "Combine")).toMatchObject({ status: "IMPLIED", evidenceNodeId: linea })
+    expect(cov.find((c) => c.skill === "Keychain")?.status).toBe("NOT_FOUND")
+  })
+
+  it("las blandas se cuentan contra las que la vacante pide: nunca 5 de 3", () => {
+    const tree = buildTree(cvIos)
+    const spec = specIos({ softSignals: ["communication", "collaborate", "mentor"] })
+    const demostrada = (signal: string) => ({ signal, status: "DEMONSTRATED" as const, evidenceNodeId: "summary" })
+    const audit = auditDe(tree, {
+      softCoverage: ["mentor", "lead code reviews", "crash rate", "improve app performance", "collaborate with product"].map(demostrada),
+    })
+    const soft = scoreResume(tree, spec, audit, {}).components.find((c) => c.key === "soft")!
+    expect(soft.denominator).toBe(3)
+    expect(soft.numerator).toBe(1)
+  })
+
+  it("un deseable nunca vale más por unidad que un obligatorio", () => {
+    const tree = buildTree(cvIos)
+    const muchos = Array.from({ length: 17 }, (_, i) => ({ skill: `Must${i}`, raw: `Must${i}`, years: null, category: null }))
+    const pocos = Array.from({ length: 3 }, (_, i) => ({ skill: `Nice${i}`, raw: `Nice${i}`, years: null, category: null }))
+    const s = scoreResume(tree, specIos({ mustHave: muchos, niceToHave: pocos }), auditDe(tree), {})
+    const unidad = (k: "must" | "nice") => s.components.find((c) => c.key === k)!.gainPerUnit
+    expect(unidad("nice")).toBeLessThanOrEqual(unidad("must") + 1e-9)
+  })
+
+  it("un año sin mes es un rango: 2015–2016 y 2017–2020 no dejan un hueco seguro", () => {
+    const puestos = (a: [string, string], b: [string, string]) =>
+      buildTree({
+        workExperience: [
+          { jobTitle: "B", employer: "B", startDate: b[0], endDate: b[1], description: "• Hice algo" },
+          { jobTitle: "A", employer: "A", startDate: a[0], endDate: a[1], description: "• Hice algo" },
+        ],
+      })
+    expect(readableChecks(puestos(["2015", "2016"], ["2017", "2020"])).trayectoria_continua).toBe(true)
+    expect(readableChecks(puestos(["2021", "2022"], ["2022", "2023"])).trayectoria_continua).toBe(true)
+    // Dos años enteros sin nada en medio sí es un hueco, lo mires como lo mires.
+    expect(readableChecks(puestos(["2015", "2016"], ["2019", "2020"])).trayectoria_continua).toBe(false)
+    // Con mes, la cuenta es exacta.
+    expect(readableChecks(puestos(["2015-01", "2016-01"], ["2016-10", "2020-01"])).trayectoria_continua).toBe(false)
+  })
+
+  it("el remedio sale de la evidencia: sin rastro se PREGUNTA, con cita se reescribe, un dato del documento no tiene botón", () => {
+    const tree = buildTree({
+      ...cvIos,
+      workExperience: [
+        { ...cvIos.workExperience![0], startDate: "2015-01", endDate: "2016-01" },
+        { ...cvIos.workExperience![0], employer: "Otra", startDate: "2019-01", endDate: "2020-01" },
+      ],
+    })
+    const linea = tree.roles[0].bullets[0].id
+    const spec = specIos()
+    const audit = auditDe(tree, { coverage: [{ skill: "Combine", requirement: "MUST", status: "IMPLIED", evidenceNodeId: linea }] })
+    const index = buildTermIndex(termsOf(spec, tree))
+    const hallazgos = findingsOf(tree, audit, scoreResume(tree, spec, audit, readableChecks(tree)), index, spec)
+    const deTermino = (t: string) => hallazgos.find((f) => f.type === "missing_requirement" && f.detail.includes(t))!
+    expect(deTermino("Keychain")).toMatchObject({ remedy: "ask", subject: "Keychain" })
+    expect(deTermino("Combine")).toMatchObject({ remedy: "rewrite", nodeId: linea })
+  })
+
+  it("un chequeo del documento no tiene botón de IA: el de fechas reescribía el resumen", async () => {
+    const raw: RawResume = {
+      ...RAW,
+      workExperience: [
+        { ...RAW.workExperience![0], startDate: "2019-01", endDate: "2020-01" },
+        { ...RAW.workExperience![0], employer: "Otro", startDate: "2015-01", endDate: "2016-01" },
+      ],
+    }
+    const gen = runAnalysis({ raw, jdText: "Buscamos cajera con arqueo", language: "es", resumeId: "cv", model: "m", ai: new CountingAi(), store: new MemoryStore() })
+    let hallazgos: { type: string; remedy: string }[] = []
+    for (let out = await gen.next(); !out.done; out = await gen.next()) if (out.value.act === "findings") hallazgos = out.value.findings
+    expect(hallazgos.find((f) => f.type === "parse_risk")?.remedy).toBe("none")
+  })
+
+  it("escribir el requisito que faltaba MUEVE el puntaje al aceptar", () => {
+    const tree = buildTree(cvIos)
+    const spec = specIos()
+    const audit = auditDe(tree)
+    const linea = tree.roles[0].bullets[0]
+    const r = applySuggestion(
+      tree,
+      {
+        bulletId: linea.id, changed: true, text: "Built reactive flows with Combine publishers and subscribers",
+        actionVerb: "Built", keywordsUsed: ["Combine"], claim: "", metricType: null, placeholders: [],
+        variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
+        basedOnHash: linea.hash, originalText: linea.text,
+      },
+      spec,
+      audit,
+      {},
+      openLedger(tree, spec, new Set()),
+    )
+    expect(r.ok).toBe(true)
+    expect(r.delta).toBeGreaterThan(0)
+  })
+
+  it("la misma línea dos veces sale por el camino del borrado, y se queda la primera", async () => {
+    const repetida = "Implemented TCA architecture to improve code modularity"
+    const raw: RawResume = {
+      ...RAW,
+      workExperience: [{ ...RAW.workExperience![0], description: `• ${repetida}\n• Otra cosa distinta\n• ${repetida}` }],
+    }
+    const gen = runAnalysis({ raw, jdText: "Buscamos cajera con arqueo", language: "es", resumeId: "cv", model: "m", ai: new CountingAi(), store: new MemoryStore() })
+    let triage: TriageDecision[] = []
+    for (let out = await gen.next(); !out.done; out = await gen.next()) if (out.value.act === "triage") triage = out.value.decisions
+    const tree = buildTree(raw)
+    const [primera, , copia] = tree.roles[0].bullets
+    expect(triage.find((d) => d.bulletId === copia.id)?.verdict).toBe("DROP")
+    expect(triage.find((d) => d.bulletId === primera.id && d.verdict === "DROP")).toBeUndefined()
+  })
+
+  it("las viñetas que la auditoría no juzgó se piden otra vez, sólo ésas, en la misma petición", async () => {
+    const ai = new CountingAi()
+    const vistas: number[] = []
+    ai.audit = async (tree: ResumeTree) => {
+      ai.audits++
+      const todas = tree.roles.flatMap((r) => r.bullets)
+      vistas.push(todas.length)
+      // La primera vez sólo contesta por la primera línea.
+      const juzgadas = ai.audits === 1 ? todas.slice(0, 1) : todas
+      return { ...fakeAudit(tree), bullets: juzgadas.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true })) }
+    }
+    const { telemetry, acts } = await analyze(ai, new MemoryStore())
+    expect(vistas).toEqual([2, 1])
+    expect(telemetry.calls).toBe(4) // vacante, auditoría, la vuelta por la que faltó, triage
+    const puntaje = acts.find((a) => a.act === "score") as { audit: AuditFacts }
+    expect(puntaje.audit.bullets).toHaveLength(2)
+  })
+})
+
+describe("un veredicto sobre una línea no se lleva la pregunta por un requisito", () => {
+  it("la tarjeta «¿lo tenés?» sobrevive aunque su puesto sugerido tenga un KEEP o un DROP", async () => {
+    const ai = new CountingAi()
+    const tree = buildTree(RAW)
+    // El modelo cierra TODAS las líneas: ninguna tarjeta de línea debería quedar,
+    // pero la pregunta por «Inventario» (sin rastro en el CV) sí.
+    ai.triageDecisions = tree.roles[0].bullets.map((b) => ({
+      bulletId: b.id, verdict: "KEEP", reason: "ok", relevance: 1, proposedTopic: null, needsUserConfirm: null, mergeWith: null,
+    }))
+    const { acts } = await analyze(ai, new MemoryStore())
+    const hallazgos = (acts.find((a) => a.act === "findings") as { findings: { remedy: string; subject?: string; nodeId: string }[] }).findings
+    expect(hallazgos.find((f) => f.remedy === "ask")?.subject).toBe("Inventario")
+    // Las tarjetas de LÍNEA sobre viñetas cerradas sí se van: esa regla sigue.
+    const viñetas = new Set(tree.roles[0].bullets.map((b) => b.id))
+    expect(hallazgos.filter((f) => !f.subject && viñetas.has(f.nodeId))).toHaveLength(0)
+  })
+})
+
+describe("el plan de habilidades no duplica lo que otra sección ya dice", () => {
+  it("un término que está en Idiomas o en una certificación no se agrega a Habilidades; uno que una línea demuestra, sí", () => {
+    const spec = { ...SPEC, mustHave: [
+      { skill: "English", raw: "English", years: null, category: null },
+      { skill: "Agile", raw: "Agile", years: null, category: null },
+    ], niceToHave: [] } as JobSpec
+    const audit = { ...fakeAudit(), coverage: [
+      { skill: "English", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: null },
+      { skill: "Agile", requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: "b_linea" },
+    ] }
+    expect(skillPlan(["Swift"], spec, audit, {}).add).toEqual(["Agile"])
+  })
+})
+
+describe("el orden de los puestos se lee como fechas, no como texto", () => {
+  it("«01/2025», «06/2024», «2023» y un puesto sin fecha están en orden", () => {
+    // Formatos medidos en un CV real de la base local (2026-09-24).
+    const cv = buildTree({
+      workExperience: ["", "01/2025", "06/2024", "2023", "2021", "2015"].map((d, i) => ({
+        jobTitle: `P${i}`, employer: `E${i}`, startDate: d, endDate: "", description: "• Hice algo",
+      })),
+    })
+    expect(readableChecks(cv).orden_cronologico).toBe(true)
+    const alReves = buildTree({
+      workExperience: ["2015", "06/2024"].map((d, i) => ({ jobTitle: `P${i}`, employer: `E${i}`, startDate: d, endDate: "", description: "• Hice algo" })),
+    })
+    expect(readableChecks(alReves).orden_cronologico).toBe(false)
+  })
+})
+
+describe("una credencial se tiene: no se redacta como viñeta ni se agrega a Habilidades", () => {
+  const spec = { ...SPEC, mustHave: [
+    { skill: "Licencia de conducir B", raw: "Licencia de conducir categoría B", years: null, category: null, kind: "credential" as const },
+    { skill: "Salesforce", raw: "Salesforce", years: null, category: null, kind: "capability" as const },
+  ], niceToHave: [] } as JobSpec
+
+  it("sin rastro, la credencial sale sin botón de IA y la capacidad pregunta", () => {
+    const tree = buildTree(RAW)
+    const audit = { ...fakeAudit(tree), coverage: [] }
+    const index = buildTermIndex(termsOf(spec, tree))
+    const hallazgos = findingsOf(tree, audit, scoreResume(tree, spec, audit, readableChecks(tree)), index, spec)
+    expect(hallazgos.find((f) => f.subject === "Licencia de conducir B")?.remedy).toBe("none")
+    expect(hallazgos.find((f) => f.subject === "Salesforce")?.remedy).toBe("ask")
+  })
+
+  it("demostrada en una línea, una credencial NO entra a Habilidades; una capacidad sí", () => {
+    const audit = { ...fakeAudit(), coverage: [
+      { skill: "Licencia de conducir B", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: "b1" },
+      { skill: "Salesforce", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: "b1" },
+    ] }
+    expect(skillPlan(["Excel"], spec, audit, {}).add).toEqual(["Salesforce"])
+  })
+})
+
+describe("una fusión es la acción de sus dos líneas", () => {
+  it("las dos viñetas del par no reciben además su propia tarjeta de reescritura", async () => {
+    const ai = new CountingAi()
+    const tree = buildTree(RAW)
+    const [a, b] = tree.roles[0].bullets
+    ai.triageDecisions = [{ bulletId: a.id, verdict: "MERGE", reason: "mismo trabajo", relevance: 1, proposedTopic: null, needsUserConfirm: null, mergeWith: b.id }]
+    const { acts } = await analyze(ai, new MemoryStore())
+    const hallazgos = (acts.find((x) => x.act === "findings") as { findings: { nodeId: string; subject?: string }[] }).findings
+    expect(hallazgos.filter((f) => !f.subject && (f.nodeId === a.id || f.nodeId === b.id))).toHaveLength(0)
+  })
+})
+
+describe("sacar una línea no puede llevarse un requisito que el CV sólo dice ahí", () => {
+  it("un DROP sobre la única línea que escribe un término de la vacante se vuelve DEMOTE; sobre otra, sigue siendo DROP", async () => {
+    const raw: RawResume = {
+      ...RAW,
+      workExperience: [{ ...RAW.workExperience![0], description: "• Realicé el arqueo de caja al cierre\n• Atendí a los clientes en la línea de cajas\n• Ordené la góndola de bebidas" }],
+      skills: [],
+    }
+    const tree = buildTree(raw)
+    const [arqueo, , gondola] = tree.roles[0].bullets
+    const ai = new CountingAi()
+    const drop = (id: string) => ({ bulletId: id, verdict: "DROP" as const, reason: "débil", relevance: 0, proposedTopic: null, needsUserConfirm: null, mergeWith: null })
+    ai.triageDecisions = [drop(arqueo.id), drop(gondola.id)]
+    const gen = runAnalysis({ raw, jdText: "Buscamos cajera con arqueo de caja y atención al cliente", language: "es", resumeId: "cv", model: "m", ai, store: new MemoryStore() })
+    let triage: TriageDecision[] = []
+    for (let out = await gen.next(); !out.done; out = await gen.next()) if (out.value.act === "triage") triage = out.value.decisions
+    expect(triage.find((d) => d.bulletId === arqueo.id)?.verdict).toBe("DEMOTE")
+    expect(triage.find((d) => d.bulletId === gondola.id)?.verdict).toBe("DROP")
   })
 })

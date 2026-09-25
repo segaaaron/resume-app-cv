@@ -80,7 +80,7 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
       softCoverage: []} as unknown as AuditFacts
     const p = skillPlan(tree.declaredSkills, SPEC, audit, {})
     expect(p.add).toHaveLength(0)
-    expect(p.drop).toHaveLength(0)
+    expect(p.leaving).toHaveLength(0)
   })
 })
 
@@ -243,5 +243,74 @@ describe("agregar una viñeta a un puesto que tiene pocas", () => {
     expect(ap.tree.roles[0].bullets).toHaveLength(2)
     expect(ap.tree.roles[0].bullets[0].text).toBe("Gestioné la agenda del consultorio")
     expect(ap.tree.roles[0].bullets[1].text).toContain("Atendí el teléfono")
+  })
+})
+
+/**
+ * REEMPLAZAR UNA LÍNEA POR LO QUE EL USUARIO CONFIRMÓ (2026-09-24).
+ *
+ * El triage pregunta «¿hiciste X?» sobre la viñeta más floja. El «sí» pedía
+ * una reescritura de la línea VIEJA sin el tema: se pulía la floja y lo que la
+ * persona confirmó se perdía. Ahora el tema es el original, y el texto pisa la
+ * línea.
+ */
+describe("reemplazar la viñeta más floja por el tema confirmado", () => {
+  const tema = "Coordiné la migración del sistema de turnos a la nube"
+  const arbol = () =>
+    buildTree({
+      summary: "Secretaria",
+      workExperience: [{
+        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
+        description: "• Gestioné la agenda del consultorio\n• Hice tareas varias",
+      }],
+      skills: [],
+    })
+
+  it("el modelo redacta el TEMA, y el resultado pisa la línea floja", async () => {
+    const tree = arbol()
+    const floja = tree.roles[0].bullets[1]
+    const vistos: string[] = []
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts, triage: async () => [],
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => {
+        vistos.push(input.original)
+        const text = "Coordiné la migración del sistema de turnos del consultorio a la nube"
+        return {
+          bulletId: input.bulletId, changed: true, text, actionVerb: "Coordiné",
+          keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null,
+          measurableAspect: null, declineBasis: null,
+        } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: floja.id, focus: tema, replacing: true,
+      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(vistos[0]).toBe(tema)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // La pantalla muestra como «antes» la línea que desaparece.
+    expect(r.suggestion.originalText).toBe("Hice tareas varias")
+    const ap = applySuggestion(tree, r.suggestion, SPEC, {
+      bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
+      coverage: [], softCoverage: [],    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
+    expect(ap.ok).toBe(true)
+    expect(ap.tree.roles[0].bullets.map((b) => b.text)).toEqual([
+      "Gestioné la agenda del consultorio",
+      "Coordiné la migración del sistema de turnos del consultorio a la nube",
+    ])
+  })
+
+  it("sin el tema NO se pide nada al modelo", async () => {
+    const tree = arbol()
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[1].id, replacing: true,
+      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai: {} as AtsAi, store: new Store(),
+    })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.calls).toBe(0)
   })
 })

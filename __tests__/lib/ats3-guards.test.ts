@@ -13,6 +13,7 @@ import {
   loyalty,
   retryNudge,
   type GuardContext,
+  fillSlot,
 } from "@/lib/ats3/guards"
 import { buildTermIndex, type Suggestion, type ResumeTree, type Finding, type Resolution } from "@/lib/ats3/contracts"
 import type { Ledger } from "@/lib/ats3/ledger"
@@ -337,6 +338,16 @@ describe("lealtad: no volver a señalar lo que el usuario ya resolvió", () => {
     ...over,
   })
 
+  it("una línea que se sacó y volvió (deshacer) vuelve con su tarjeta", () => {
+    // Medido en local el 2026-09-24: sacar y deshacer dejaba la línea en el CV
+    // con su hallazgo suprimido para siempre, porque sacar se anota como
+    // descartado y lo descartado no vuelve.
+    const out = loyalty([finding()], [res({ resolvedBy: "DISMISSED", kind: "dropped" })])
+    expect(out.shown).toHaveLength(1)
+    // Un descarte de verdad —«no me interesa»— sigue sin volver.
+    expect(loyalty([finding()], [res({ resolvedBy: "DISMISSED", kind: "dismissed" })]).shown).toHaveLength(0)
+  })
+
   it("cerrado y el nodo intacto: es una re-detección falsa, no se muestra", () => {
     const out = loyalty([finding()], [res()])
     expect(out.suppressed).toHaveLength(1)
@@ -522,5 +533,24 @@ describe("la tercera persona sin tilde, que es la que se colaba", () => {
     for (const abre of ["Mantuve", "Hice", "Puse", "Soldé", "Atendí", "Coordiné", "Conduje"]) {
       expect(wrongPerson(`${abre} las máquinas en funcionamiento durante el turno`), abre).toBeNull()
     }
+  })
+})
+
+describe("llenar un hueco conserva su unidad", () => {
+  it.each([
+    ["[x%]", "15", "15%"],
+    ["[x%]", "15%", "15%"],
+    ["[$x]", "2000", "$2000"],
+    ["[x users]", "500", "500 users"],
+    ["[x users]", "500 users", "500 users"],
+    ["[n registros/turno]", "40", "40 registros/turno"],
+    ["[x]", "12", "12"],
+    ["[cifra]", "12", "12"],
+    ["[de x a y]", "10 a 20", "10 a 20"],
+    ["[x/y]", "3/5", "3/5"],
+    ["[n/semana]", "40", "40/semana"],
+    ["[n personas]", "8", "8 personas"],
+  ])("%s + «%s» → «%s»", (token, valor, esperado) => {
+    expect(fillSlot(token, valor)).toBe(esperado)
   })
 })

@@ -255,3 +255,50 @@ describe("el vocabulario del motor no tiene piezas muertas", () => {
     expect(huerfanos, `sin emisor: ${huerfanos.join(", ")}`).toEqual([])
   })
 })
+
+/**
+ * LO QUE EL AVISO NOMBRA NO PUEDE QUEDAR FUERA (medido contra la API, 2026-09-24).
+ *
+ * En dos corridas el modelo dejó GraphQL, Clean Architecture y Crashlytics fuera
+ * de las listas aunque el aviso los nombraba. Ahora los DECLARA en `namedTools`
+ * y el contrato completa lo que falte.
+ */
+describe("la vacante trae todo lo que el aviso nombra", () => {
+  const base = {
+    roleTitleRaw: "iOS", roleTitleCanonical: "iOS", language: "en",
+    mustHave: [{ skill: "Swift", raw: "Swift" }, { skill: "CI/CD", raw: "CI/CD" }],
+    niceToHave: [], responsibilities: [], softSignals: [],
+  }
+
+  it("un nombre declarado que ninguna lista trae entra como deseable, una sola vez", () => {
+    const r = JobSpecSchema.parse({ ...base, namedTools: ["GraphQL", "Swift", "ci-cd", "GraphQL", "Clean Architecture"] })
+    expect(r.niceToHave.map((x) => x.skill)).toEqual(["GraphQL", "Clean Architecture"])
+    expect(r.mustHave.map((x) => x.skill)).toEqual(["Swift", "CI/CD"])
+    expect("namedTools" in r).toBe(false)
+  })
+
+  it("un nombre que ya vive dentro de un requisito no se agrega otra vez", () => {
+    const r = JobSpecSchema.parse({
+      ...base,
+      mustHave: [{ skill: "Excel avanzado", raw: "Excel avanzado (tablas dinámicas)" }],
+      namedTools: ["Excel", "tablas dinámicas", "Salesforce"],
+    })
+    expect(r.niceToHave.map((x) => x.skill)).toEqual(["Salesforce"])
+  })
+
+  it("un término vive en una sola lista: lo exigido sale de deseables y de blandas", () => {
+    const r = JobSpecSchema.parse({
+      ...base,
+      mustHave: [{ skill: "Swift", raw: "Swift" }, { skill: "Swift", raw: "Swift 5" }],
+      niceToHave: [{ skill: "Swift", raw: "Swift" }, { skill: "VoiceOver", raw: "VoiceOver" }, { skill: "VoiceOver", raw: "VoiceOver" }],
+      softSignals: ["Swift", "trabajo en equipo"],
+    })
+    expect(r.mustHave.map((x) => x.skill)).toEqual(["Swift"])
+    expect(r.niceToHave.map((x) => x.skill)).toEqual(["VoiceOver"])
+    expect(r.softSignals).toEqual(["trabajo en equipo"])
+  })
+
+  it("sin el campo, la vacante queda igual", () => {
+    expect(JobSpecSchema.parse(base).niceToHave).toEqual([])
+  })
+})

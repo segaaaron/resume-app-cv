@@ -17,9 +17,9 @@
 // "probar" leyendo que la línea existía, y un test que lee el código no prueba
 // nada.
 
-import type { Finding, JobSpec } from "@/lib/ats3/contracts"
-import { detailParts, normalize, termKey } from "@/lib/ats3/contracts"
-import { SCORED_COMPONENTS } from "@/lib/ats3/score"
+import type { Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
+import { buildTermIndex, detailParts, normalize, termCounts, termKey } from "@/lib/ats3/contracts"
+import { cvTextOf, SCORED_COMPONENTS, termsOf } from "@/lib/ats3/score"
 import type { ComponentKey, Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,6 +80,23 @@ export interface PanelCheck {
    * leer la misma frase, o el panel promete una cosa y el pedido pide otra.
    */
   focus: string
+  /**
+   * CÓMO SE CIERRA, dicho por el motor. La tarjeta dibuja SU salida y no otra:
+   * `rewrite` reescribe la línea, `ask` le pregunta a la persona si tiene el
+   * requisito y dónde, `none` no tiene botón de IA —se arregla en el dato—.
+   */
+  remedy: Finding["remedy"]
+  /** El término del que habla, cuando habla de un término y no de una línea. */
+  subject?: string
+  /**
+   * LOS REQUISITOS DE LA VACANTE QUE ESTA TARJETA NOMBRA, y nada más.
+   *
+   * La cabecera los lista como «lo crítico». Leía la evidencia entera, y en una
+   * tarjeta fusionada eso mete el eje de la viñeta junto al requisito: medido en
+   * local el 2026-09-24, la lista decía «Salesforce · No dice de qué tamaño…»,
+   * una frase leída como si fuera un requisito.
+   */
+  requirements: string[]
 }
 
 export interface PanelSection {
@@ -207,12 +224,20 @@ export function checkOf(
   const linea = textoVivo?.(f.nodeId) || f.nodeText
   return {
     id: f.id,
+    remedy: f.remedy,
+    subject: f.subject,
+    requirements: detailParts(f)
+      .filter((p) => p.type === "missing_requirement" || p.type === "title_mismatch")
+      .map((p) => (p.type === "title_mismatch" ? marcaYDato(p.detail).dato : p.detail))
+      .filter(Boolean),
     // La sección sale del componente del que el motor sacó la ganancia, no de
     // una lista de tipos escrita a mano acá.
     section: SECTION_OF.get(f.component) ?? "tips",
     state: f.gain >= CRITICAL_GAIN ? "crit" : "warn",
     weight: Number(f.gain.toFixed(1)),
-    titleKey: `type_${f.type}`,
+    // Diez preguntas con el mismo título obligaban a leer el cuerpo de cada una
+    // para saber de qué requisito hablaba. La pregunta nombra su término.
+    titleKey: f.remedy === "ask" ? `type_${f.type}_ask` : esCredencial(f) ? `type_${f.type}_credential` : `type_${f.type}`,
     /**
      * CUÁNTOS REQUISITOS CIERRA ESTA TARJETA.
      *
@@ -233,7 +258,9 @@ export function checkOf(
      * donde va la copia.
      */
     params:
-      f.type === "missing_requirement"
+      f.remedy === "ask" || esCredencial(f)
+        ? { term: f.subject ?? "" }
+        : f.type === "missing_requirement"
         ? { count: detailParts(f).filter((p) => p.type === "missing_requirement").length }
         : f.type === "title_mismatch"
           ? { cargo: marcaYDato(detalleDe(f, "title_mismatch")).dato }
@@ -250,7 +277,10 @@ export function checkOf(
      * cada hallazgo. `detail` sigue diciendo el caso concreto (qué eje falta,
      * qué término), y viaja aparte en la evidencia.
      */
-    detailKey: `type_${f.type}_detail`,
+    // Una pregunta no promete escribir «donde tu trabajo ya lo sostiene»: nada
+    // lo sostiene. Su explicación dice lo que de verdad va a pasar.
+    detailKey:
+      f.remedy === "ask" ? `type_${f.type}_ask_detail` : esCredencial(f) ? `type_${f.type}_credential_detail` : `type_${f.type}_detail`,
     /**
      * QUÉ señala el hallazgo, no dónde aterrizó.
      *
@@ -267,8 +297,16 @@ export function checkOf(
   }
 }
 
+/**
+ * Un requisito que falta y se cierra fuera de la IA es una CREDENCIAL (ver
+ * `RequirementSchema.kind`). Tener sujeto no alcanza: el cargo también lo lleva.
+ */
+function esCredencial(f: Finding): boolean {
+  return f.type === "missing_requirement" && f.remedy === "none"
+}
+
 /** Los tipos cuyo `detail` es vocabulario del motor y no texto del CV. */
-const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap"])
+const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap", "no_metric"])
 
 /**
  * LOS MOTIVOS QUE SON UN DATO SUELTO, DICHOS COMO FRASE.
@@ -353,7 +391,10 @@ function evidenciaDe(
         : [p.detail],
   )
   const focus = glosados.join(" · ")
-  return { line: f.type === "parse_risk" ? undefined : linea, evidence: glosados, focus }
+  // Sólo una tarjeta que REESCRIBE su línea la muestra como «tu línea». En una
+  // pregunta por un requisito, el nodo es apenas el puesto sugerido; en un
+  // chequeo del documento, un ancla cualquiera.
+  return { line: f.remedy === "rewrite" ? linea : undefined, evidence: glosados, focus }
 }
 
 
@@ -382,21 +423,6 @@ export function sectionsOf(
   }))
 }
 
-/** Cuántas veces dice este texto ese término. Se cuenta, no se estima. */
-function veces(texto: string, termino: string): number {
-  const aguja = normalize(termino)
-  if (!aguja) return 0
-  const hay = ` ${normalize(texto)} `
-  let n = 0
-  let from = 0
-  for (;;) {
-    const at = hay.indexOf(` ${aguja} `, from)
-    if (at === -1) return n
-    n++
-    from = at + 1
-  }
-}
-
 /**
  * La tabla de términos: lo que la vacante pide, a los dos lados.
  *
@@ -408,7 +434,15 @@ export function termsOfSpec(
   spec: JobSpec | null,
   covered: readonly string[],
   jdText: string,
-  cvText: string,
+  /**
+   * EL CV COMO LO LEE EL MOTOR, no un texto armado acá.
+   *
+   * La tabla tenía su propio `veces` —palabra exacta, sin la forma literal del
+   * aviso ni el match maximal— sobre un texto sin Idiomas ni Certificaciones.
+   * Medido en producción: «lo decís 0 veces» sobre términos que el puntaje
+   * contaba. Se cuenta con `termCounts` sobre `cvTextOf`, lo mismo que puntúa.
+   */
+  tree: ResumeTree,
   /**
    * Lo que la auditoría dictaminó sobre las BLANDAS.
    *
@@ -421,6 +455,11 @@ export function termsOfSpec(
 ): PanelTerm[] {
   if (!spec) return []
   const demostrados = new Set(covered.map(normalize))
+  const index = buildTermIndex(termsOf(spec, tree))
+  const blandas = buildTermIndex((spec.softSignals ?? []).map((x) => ({ canonical: x, variants: [] })))
+  const enCv = new Map([...termCounts(index, cvTextOf(tree)), ...termCounts(blandas, cvTextOf(tree))])
+  const enAviso = new Map([...termCounts(index, jdText), ...termCounts(blandas, jdText)])
+  const canonico = (x: string) => index.byKey.get(termKey(x)) ?? blandas.byKey.get(termKey(x)) ?? x
   const filas: PanelTerm[] = []
   const push = (term: string, raw: string, section: PanelTerm["section"]) => {
     /**
@@ -447,12 +486,12 @@ export function termsOfSpec(
     // compara con `termKey`, la misma llave de igualdad que usa el motor, para
     // que "CI/CD" y "ci-cd" no abran dos filas.
     if (filas.some((f) => termKey(f.term) === termKey(nombre))) return
-    const cv = veces(cvText, nombre) || veces(cvText, raw)
+    const cv = enCv.get(canonico(nombre)) ?? 0
     const probado = demostrados.has(normalize(nombre))
     filas.push({
       term: nombre,
       section,
-      jd: veces(jdText, nombre) || veces(jdText, raw),
+      jd: enAviso.get(canonico(nombre)) ?? 0,
       cv,
       listOnly: cv > 0 && !probado,
       proven: probado,
@@ -506,10 +545,7 @@ export function headlineOf(score: Score | null, sections: readonly PanelSection[
      * señalada: volcarlas todas convertía la cabecera en una lista del panel
      * entero y tapaba justo el dato que este renglón existe para dar.
      */
-    detail: críticos
-      .filter((c) => c.section === "hard" || c.section === "other")
-      .flatMap((c) => c.evidence ?? [])
-      .slice(0, 5),
+    detail: [...new Set(críticos.flatMap((c) => c.requirements))].slice(0, 5),
     /** Nunca promete más puntos de los que quedan por ganar. */
     recoverable: score ? Math.round(Math.min(suma, Math.max(0, 100 - score.total))) : 0,
   }

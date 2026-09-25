@@ -32,13 +32,13 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { createPortal } from "react-dom"
 import SuggestionDiffModal from "@/components/editor/SuggestionDiffModal"
-import { Check, Loader2, Minus, Sparkles, X } from "lucide-react"
+import { ArrowUpRight, Check, EyeOff, HelpCircle, Minus, PencilLine, Sparkles, X } from "lucide-react"
 import { Z_MODAL } from "@/lib/ui/z-layers"
 import { skillPlan } from "@/lib/ats3/engine"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
-import { figureSlots } from "@/lib/ats3/guards"
+import { figureSlots, fillSlot } from "@/lib/ats3/guards"
 import type { AnchoredSuggestion, Finding, Placeholder, TriageDecision } from "@/lib/ats3/contracts"
-import { Btn, Card, Chip, Diff, Label, Note, PRESSABLE } from "./ui"
+import { Btn, Card, Chip, Diff, FIELD_CLASS, FIELD_STYLE, Label, Note, PRESSABLE, Writing } from "./ui"
 import type { PanelCheck, PanelSection, PanelSectionId } from "./view-model"
 import type { Tone } from "./ui"
 import type { useAts3 } from "./useAts3"
@@ -190,7 +190,7 @@ export default function TailorPanel({
     () => (a.spec && a.audit ? skillPlan(a.declaredSkills, a.spec, a.audit, a.weights) : null),
     [a.spec, a.audit, a.declaredSkills, a.weights],
   )
-  const planAbierto = plan && (plan.add.length > 0 || plan.drop.length > 0)
+  const planAbierto = plan && (plan.entering.length > 0 || plan.leaving.length > 0)
   /** Lo mismo que cuenta el botón del informe: una cifra, un dueño. */
   const pendientes = useMemo(() => pendingCount(sections, a.triage), [sections, a.triage])
   /**
@@ -351,33 +351,13 @@ export default function TailorPanel({
         style={{ background: "var(--a-bg)", boxShadow: "var(--a-sh-lg)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* LA CARGA CUBRE TAILOR, NO LA PANTALLA (CEO, 2026-09-09).
-            Estaba montada sobre todo el navegador —`fixed inset-0`— y tapaba el
-            editor entero por una reescritura que ocurre dentro de esta ventana.
-            `absolute` dentro de la sección la deja donde pasa el trabajo: se ve
-            qué se está escribiendo y el resto del CV sigue a la vista. Se come
-            el clic para que no se dispare una segunda consulta. */}
-        {a.busyNode !== null && (
-          <div
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl"
-            /* SEMITRANSPARENTE, pedido del CEO: se sigue viendo la tarjeta que
-               se está reescribiendo detrás. El desenfoque hace legible el texto
-               de encima sin tapar lo de abajo. */
-            style={{
-              background: "color-mix(in srgb, var(--a-bg) 55%, transparent)",
-              backdropFilter: "blur(3px)",
-              WebkitBackdropFilter: "blur(3px)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-            role="status"
-            aria-live="polite"
-          >
-            <Loader2 className="h-7 w-7 animate-spin" style={{ color: "var(--a-ai)" }} />
-            <span className="text-[13px] font-semibold" style={{ color: "var(--a-ink)" }}>
-              {t("writing")}
-            </span>
-          </div>
-        )}
+        {/* ── ACÁ VIVÍA UN VELO SOBRE TODA LA VENTANA (retirado el 2026-09-24) ───
+            Cubría Tailor entero mientras se escribía UNA tarjeta, y con el
+            spinner del botón eran dos indicadores para la misma espera. El CEO:
+            «el loading tapa toda la pantalla». La espera se dibuja ahora en la
+            tarjeta que se escribe (`Writing`), y lo que el velo evitaba —un
+            segundo pedido— ya lo evitan los botones de IA, apagados mientras
+            hay uno en vuelo. */}
 
         <header
           className="flex items-start gap-3 border-b px-5 py-4"
@@ -481,37 +461,46 @@ export default function TailorPanel({
             </Note>
           )}
 
-          {/* LAS HABILIDADES QUE ENTRAN A TU PLANTILLA, ANTES DE ESCRIBIRLAS.
-              Una lista de cien términos no la lee nadie y el filtro cuenta cada
-              uno UNA vez, así que el resto sólo ocupa. Se enseña qué entra y qué
-              sale —con el nombre exacto— y se escribe cuando lo aceptás. */}
+          {/* LAS HABILIDADES QUE SE VEN EN TU PLANTILLA, ANTES DE ESCRIBIRLAS.
+              La plantilla muestra las primeras veinte; el plan decide el ORDEN
+              y no borra ninguna. Se enseña cuáles pasan a verse y cuáles dejan
+              de verse —con el nombre exacto— y se escribe cuando lo aceptás. */}
           {planAbierto && plan && (
             <Card tone="accent" filled>
               <div className="px-4 py-3">
                 <h3 className="text-[13px] font-semibold" style={{ color: "var(--a-ink)" }}>
-                  {t("skills_plan_title", { max: SKILLS_MAX })}
+                  {t("skills_plan_title")}
                 </h3>
                 <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: "var(--a-muted)" }}>
                   {t("skills_plan_sub", { total: a.declaredSkills.length, max: SKILLS_MAX })}
                 </p>
-                {plan.add.length > 0 && (
-                  <>
-                    <Label tone="ok">{t("skills_plan_in", { count: plan.add.length })}</Label>
-                    <ul className="mb-2 mt-1 flex flex-wrap gap-1.5">
-                      {plan.add.map((s) => <li key={s}><Chip tone="ok">{s}</Chip></li>)}
+                {plan.entering.length > 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <ArrowUpRight aria-hidden className="h-3.5 w-3.5" style={{ color: "var(--a-ok-ink)" }} />
+                      <Label tone="ok">{t("skills_plan_in", { count: plan.entering.length, max: SKILLS_MAX })}</Label>
+                    </div>
+                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                      {plan.entering.map((s) => <li key={s}><Chip tone="ok">{s}</Chip></li>)}
                     </ul>
-                  </>
+                  </div>
                 )}
-                {plan.drop.length > 0 && (
-                  <>
-                    <Label>{t("skills_plan_out", { count: plan.drop.length })}</Label>
-                    <ul className="mb-2 mt-1 flex flex-wrap gap-1.5">
-                      {plan.drop.map((s) => <li key={s}><Chip>{s}</Chip></li>)}
+                {plan.leaving.length > 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <EyeOff aria-hidden className="h-3.5 w-3.5" style={{ color: "var(--a-muted-2)" }} />
+                      <Label>{t("skills_plan_out", { count: plan.leaving.length, max: SKILLS_MAX })}</Label>
+                    </div>
+                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                      {plan.leaving.map((s) => <li key={s}><Chip className="opacity-80">{s}</Chip></li>)}
                     </ul>
-                  </>
+                  </div>
                 )}
-                <div className="mt-2 flex gap-2">
-                  <Btn onClick={() => a.applySkills(plan.final)}>{t("apply")}</Btn>
+                <div className="mt-3.5 flex gap-2">
+                  <Btn onClick={() => a.applySkills(plan.final)}>
+                    <Check className="h-3.5 w-3.5" />
+                    {t("skills_plan_apply")}
+                  </Btn>
                 </div>
               </div>
             </Card>
@@ -552,7 +541,7 @@ export default function TailorPanel({
                  respuesta, apretabas un botón y las veinticuatro tarjetas
                  decían «Escribiendo…»: reportado con captura. */
               busy={a.busyNode !== null}
-              writing={a.busyNode === nodoDe(check.id)?.nodeId}
+              writing={a.busyNode !== null && (a.busyNode === nodoDe(check.id)?.nodeId || a.pendingFinding === check.id)}
               onSolve={() => {
                 // No se marca acá: pedir una reescritura no es haberla
                 // aplicado, y los guards pueden rechazarla.
@@ -563,6 +552,17 @@ export default function TailorPanel({
                 // frase que el usuario leyó, no el token crudo del motor.
                 if (f) a.requestRewrite(f.nodeId, check.id, check.focus)
               }}
+              onAsk={(roleId, hecho) => {
+                // El tema es lo que la persona afirmó, con el término del aviso
+                // adelante: es el «original» contra el que se juzga la línea.
+                const f = nodoDe(check.id)
+                if (!f) return
+                const tema = `${check.subject ?? ""}: ${hecho}`
+                const ancla = a.anclaDe(roleId) ?? f.nodeId
+                a.requestRewrite(ancla, check.id, tema, undefined, roleId)
+              }}
+              roles={a.roles}
+              suggestedRole={a.roleOf(nodoDe(check.id)?.nodeId ?? "")}
               onDismiss={() => {
                 // NO entra en «Hechas»: descartar no es arreglar. La lista de
                 // resueltas existe para releer lo que se escribió en el CV, y
@@ -596,6 +596,7 @@ export default function TailorPanel({
               }}
               onUndo={a.undoDrop}
               onRewrite={(nodeId, mergeWith) => a.requestRewrite(nodeId, undefined, undefined, mergeWith)}
+              onReplace={(nodeId, tema) => a.requestRewrite(nodeId, undefined, tema, undefined, undefined, true)}
               onAdd={(roleId, tema) => {
                 // El ancla del pedido es una viñeta de ESE puesto: el motor la
                 // usa para saber de qué puesto habla, no para reemplazarla.
@@ -652,6 +653,7 @@ function TriageBoard({
   onDrop,
   onUndo,
   onRewrite,
+  onReplace,
   onAdd,
   roles,
   roleOf,
@@ -663,6 +665,8 @@ function TriageBoard({
   onDrop: (nodeId: string) => { roleIndex: number; bulletIndex: number; text: string } | null
   onUndo: (roleIndex: number, bulletIndex: number, text: string) => void
   onRewrite: (nodeId: string, mergeWith?: string) => void
+  /** Escribe EN LUGAR de esa línea lo que el usuario confirmó que hizo. */
+  onReplace: (nodeId: string, tema: string) => void
   /** Escribe una línea NUEVA en ESE puesto, con el tema que el usuario confirmó. */
   onAdd: (roleId: string, tema: string) => void
   /** Los puestos del CV, para elegir dónde va. */
@@ -680,6 +684,18 @@ function TriageBoard({
   const [confirmando, setConfirmando] = useState<TriageDecision | null>(null)
   /** El puesto elegido para la línea nueva. `null` = el que el motor recomienda. */
   const [destino, setDestino] = useState<string | null>(null)
+  /**
+   * EL «DESHACER» SE TRAE A LA VISTA.
+   *
+   * Vive arriba del tablero y el botón de borrar suele estar varias pantallas
+   * más abajo: medido en local el 2026-09-24, al confirmar un borrado el aviso
+   * quedaba fuera de cuadro y la única vuelta atrás era invisible. Mismo
+   * remedio que la respuesta de Tailor (`respuestaRef`), y con la misma guarda.
+   */
+  const deshacerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (ultimo) deshacerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" })
+  }, [ultimo])
 
   // Con la lista vacía el tablero se va, PERO no si hay algo que deshacer: al
   // sacar la última línea, el aviso de "deshacer" desaparecía junto con ella —
@@ -700,7 +716,7 @@ function TriageBoard({
       )}
 
       {ultimo && (
-        <div className="mb-3 flex items-center gap-2">
+        <div ref={deshacerRef} className="mb-3 flex items-center gap-2">
           <Note tone="warn" className="flex-1">{t("dropped")}</Note>
           <Btn
             variant="outline"
@@ -735,6 +751,8 @@ function TriageBoard({
                 </Note>
               )}
               <span className="block" style={{ color: "var(--a-muted)" }}>{d.reason}</span>
+              {/* La misma espera que en las tarjetas, en la fila que se escribe. */}
+              {busyNode === d.bulletId && <Writing label={t("writing_card")} className="mt-2" />}
 
               {/* En REPLACE y en ADD el motor NUNCA afirma que la persona hizo
                   algo: pregunta, y la respuesta es del usuario.
@@ -756,8 +774,8 @@ function TriageBoard({
                       <select
                         value={destino ?? roleOf(d.bulletId)}
                         onChange={(e) => setDestino(e.target.value)}
-                        className="mt-1 block w-full rounded-lg px-2.5 py-2 text-[12px]"
-                        style={{ background: "var(--a-surface-2)", border: "1px solid var(--a-border)", color: "var(--a-ink)" }}
+                        className={`mt-1 ${FIELD_CLASS}`}
+                        style={FIELD_STYLE}
                       >
                         {roles.map((r) => (
                           <option key={r.id} value={r.id}>
@@ -772,7 +790,7 @@ function TriageBoard({
                     onClick={() =>
                       d.verdict === "ADD"
                         ? onAdd(destino ?? roleOf(d.bulletId), d.proposedTopic ?? d.needsUserConfirm ?? "")
-                        : onRewrite(d.bulletId)
+                        : onReplace(d.bulletId, d.proposedTopic ?? d.needsUserConfirm ?? "")
                     }
                     className="mt-1"
                   >
@@ -932,7 +950,7 @@ function SuggestionSheet({
     let out = suggestion.text
     for (const p of suggestion.placeholders) {
       const v = (values[p.token] ?? "").trim()
-      if (v) out = out.split(p.token).join(v)
+      if (v) out = out.split(p.token).join(fillSlot(p.token, v))
     }
     return out
   }, [suggestion, useVariant, values])
@@ -1080,7 +1098,10 @@ function FixCard({
   busy,
   writing,
   onSolve,
+  onAsk,
   onDismiss,
+  roles,
+  suggestedRole,
   t,
   ta,
 }: {
@@ -1092,12 +1113,20 @@ function FixCard({
   /** Y ES ÉSTA la que está escribiendo. */
   writing: boolean
   onSolve: () => void
+  /** El requisito que la persona confirmó: en qué puesto y qué hizo. */
+  onAsk: (roleId: string, hecho: string) => void
   onDismiss: () => void
+  roles: { id: string; label: string }[]
+  /** El puesto que el motor recomienda; la persona puede moverlo. */
+  suggestedRole: string
   t: (k: string, v?: Record<string, string | number>) => string
   ta: (k: string, v?: Record<string, string | number>) => string
 }) {
-  /* Toda tarjeta se cierra reescribiendo su línea: es el único remedio que el
-     motor emite desde que la lista de habilidades tiene su propio dueño. */
+  /* La salida la decide el remedio que el motor declaró: reescribir la línea,
+     preguntar por un requisito del que no hay rastro, o nada que la IA pueda
+     escribir. */
+  const [puesto, setPuesto] = useState(suggestedRole || roles[0]?.id || "")
+  const [hecho, setHecho] = useState("")
   return (
     <Card>
       <div className="flex items-start gap-2.5 px-3.5 pt-3">
@@ -1185,11 +1214,90 @@ function FixCard({
         </div>
       )}
 
+      {/* ── LA PREGUNTA, CUANDO EL CV NO TIENE RASTRO DEL REQUISITO ──────────
+          El hecho lo pone la persona: si lo tiene, dice en qué puesto y qué
+          hizo, y recién ahí se redacta una línea NUEVA con eso — el mismo
+          camino del veredicto ADD. Sin respuesta no hay nada que escribir, así
+          que el botón espera el texto. */}
+      {check.remedy === "ask" && (
+        <div
+          className="mx-3.5 mt-3 flex flex-col gap-3 rounded-xl p-3.5"
+          style={{
+            background: "linear-gradient(180deg, var(--a-accent-soft), var(--a-surface))",
+            border: "1px solid color-mix(in srgb, var(--a-accent-ink) 30%, transparent)",
+          }}
+        >
+          <p className="flex items-start gap-2 text-[12.5px] font-semibold leading-snug" style={{ color: "var(--a-ink)" }}>
+            <HelpCircle aria-hidden className="mt-px h-4 w-4 shrink-0" style={{ color: "var(--a-accent-ink)" }} />
+            <span>{t("ask_have_it", { term: check.subject ?? "" })}</span>
+          </p>
+          {roles.length > 1 && (
+            <div>
+              <label htmlFor={`${check.id}-puesto`} className="text-[11px] font-semibold" style={{ color: "var(--a-muted)" }}>
+                {t("add_where")}
+              </label>
+              <select
+                id={`${check.id}-puesto`}
+                value={puesto}
+                onChange={(e) => setPuesto(e.target.value)}
+                className={`mt-1 ${FIELD_CLASS}`}
+                style={FIELD_STYLE}
+              >
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label htmlFor={`${check.id}-hecho`} className="text-[11px] font-semibold" style={{ color: "var(--a-muted)" }}>
+              {t("ask_what_you_did", { term: check.subject ?? "" })}
+            </label>
+            <textarea
+              id={`${check.id}-hecho`}
+              value={hecho}
+              onChange={(e) => setHecho(e.target.value)}
+              rows={3}
+              maxLength={300}
+              aria-describedby={`${check.id}-ayuda`}
+              placeholder={t("ask_placeholder")}
+              className={`mt-1 resize-y ${FIELD_CLASS}`}
+              style={FIELD_STYLE}
+            />
+            <p id={`${check.id}-ayuda`} className="mt-1 flex justify-between gap-2 text-[10.5px]" style={{ color: "var(--a-muted-2)" }}>
+              <span>{t("ask_help")}</span>
+              <span className="tabular-nums">{hecho.length}/300</span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* LA ÚNICA ESPERA: en la tarjeta que se está escribiendo. */}
+      {writing && <Writing label={t("writing_card")} className="mx-3.5 mt-3" />}
+
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
-        <Btn tone="ai" disabled={busy} onClick={onSolve}>
-          <Sparkles className="h-3 w-3" />
-          {writing ? t("writing") : t("fix_it")}
-        </Btn>
+        {check.remedy === "rewrite" && (
+          <Btn tone="ai" disabled={busy} onClick={onSolve}>
+            <Sparkles className="h-3 w-3" />
+            {writing ? t("writing") : t("fix_it")}
+          </Btn>
+        )}
+        {check.remedy === "ask" && (
+          <Btn tone="ai" disabled={busy || hecho.trim().length < 3} onClick={() => onAsk(puesto, hecho.trim())}>
+            <Sparkles className="h-3 w-3" />
+            {writing ? t("writing") : t("ask_write")}
+          </Btn>
+        )}
+        {/* `none`: se arregla en el dato del CV —las fechas, el orden—, no con
+            una redacción. Un botón de IA acá reescribía el resumen. */}
+        {check.remedy === "none" && (
+          <p className="flex flex-1 items-center gap-2 text-[11.5px] font-medium" style={{ color: "var(--a-ink-2)" }}>
+            <PencilLine aria-hidden className="h-4 w-4 shrink-0" style={{ color: "var(--a-muted)" }} />
+            {t("fix_in_content")}
+          </p>
+        )}
         <Btn variant="quiet" onClick={onDismiss} className="ml-auto">
           {t("dismiss")}
         </Btn>

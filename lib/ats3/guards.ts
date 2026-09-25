@@ -502,6 +502,19 @@ export function loyalty(findings: Finding[], log: Resolution[]): LoyaltyResult {
       out.shown.push(f)
       continue
     }
+    /**
+     * UNA LÍNEA SACADA QUE VUELVE A ESTAR, VUELVE CON SUS TARJETAS.
+     *
+     * Sacar una viñeta se anota como descartado, y «descartado» no vuelve nunca.
+     * Pero lo que esa anotación afirma es «esta línea ya no existe»: si el motor
+     * la está leyendo otra vez, el usuario la devolvió —el «Deshacer» del
+     * tablero, o escribiéndola a mano—. Medido en local el 2026-09-24: sacar y
+     * deshacer dejaba la línea en el CV con su hallazgo suprimido para siempre.
+     */
+    if (closed.kind === "dropped") {
+      out.shown.push(f)
+      continue
+    }
     // Descartado a mano: no vuelve nunca, salvo que cambie la vacante — y eso
     // cambia la clave del análisis entero, así que el registro ya no aplica.
     if (closed.resolvedBy === "DISMISSED") {
@@ -593,6 +606,34 @@ export function lossNudge(lost: string[], language: "es" | "en"): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const HUECO = /\[[^\]]+\]/g
+
+/**
+ * LO QUE ESCRIBE LA PERSONA ENTRA EN EL LUGAR DE LA «x», CON LA UNIDAD DEL HUECO.
+ *
+ * El hueco trae su unidad adentro —`[x%]`, `[$x]`, `[x usuarios]`— y se
+ * reemplazaba el corchete ENTERO por lo tipeado. Medido en local el
+ * 2026-09-24: `[x%]` + «15» escribía «…completion rates by 15.» — sin el %, una
+ * cifra que ya no dice qué mide. Si la persona ya escribió la unidad («15%»,
+ * «500 usuarios»), no se duplica.
+ */
+export function fillSlot(token: string, value: string): string {
+  const v = value.trim()
+  const adentro = token.replace(/^\[|\]$/g, "")
+  const variables = [...adentro.matchAll(/(^|[^\p{L}])([xXyYnN])(?=[^\p{L}]|$)/gu)]
+  // `[de x a y]`, `[x/y]`: dos números. La persona escribe el rango entero y
+  // no hay una sola «x» donde ponerlo.
+  if (variables.length !== 1) return v
+  const x = variables[0]
+  if (x.index === undefined) return v
+  const at = x.index + x[1].length
+  const resto = normalize(adentro.slice(0, at) + " " + adentro.slice(at + 1))
+  // Ya trae las palabras de la unidad: se escribe tal cual la persona lo dijo.
+  if (resto && normalize(v).includes(resto)) return v
+  let numero = v
+  if (adentro.includes("%")) numero = numero.replace(/%/g, "").trim()
+  if (adentro.includes("$")) numero = numero.replace(/\$/g, "").trim()
+  return adentro.slice(0, at) + numero + adentro.slice(at + 1)
+}
 
 /**
  * LA CIFRA DEL CANDIDATO, PUESTA EN EL HUECO QUE LA REEMPLAZÓ.

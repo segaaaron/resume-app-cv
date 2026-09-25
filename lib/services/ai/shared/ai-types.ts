@@ -810,7 +810,7 @@ export type FillProfileResult = z.infer<typeof FillProfileResponseSchema>
  * esa tarjeta llamaba SIN foco y el modelo contestaba «ya está bien escrita»
  * sobre una línea que el propio panel acababa de marcar — reportado con captura.
  */
-export type BulletFocus = "metric" | "weak_verb" | "cliche" | "passive" | "polish"
+export type BulletFocus = "metric" | "weak_verb" | "cliche" | "passive" | "polish" | "angles"
 
 export interface ImproveBulletInput {
   text: string

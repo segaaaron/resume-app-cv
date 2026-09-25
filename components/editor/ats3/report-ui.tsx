@@ -755,6 +755,10 @@ export function TermTable({ terms, onSolve }: TableProps) {
     // Demostrado lo dice la auditoría, no la cuenta: un CV puede probar el
     // requisito sin escribirlo con esas mismas palabras.
     if (x.proven) return "proven"
+    // Escrito sin respaldo es «sólo en la lista», lo cuente la palabra o lo
+    // diga el juicio de la auditoría: una blanda declarada con otras palabras
+    // tiene cuenta 0 y NO falta.
+    if (x.listOnly) return "listed"
     if (x.cv === 0 && !added) return "missing"
     return "listed"
   }

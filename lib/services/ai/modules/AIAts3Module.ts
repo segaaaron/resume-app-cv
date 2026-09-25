@@ -121,8 +121,9 @@ const AuditSchema = z.object({
     .transform((v) => v ?? { identity: false, proof: false, fit: false, extra: false }),
   coverage: listaDe(
       z.object({
-        skill: z.string().max(80),
-        requirement: z.enum(["MUST", "NICE"]).catch("NICE"),
+        // La referencia del requisito en la lista que se le mandó (M1, N2…).
+        // El nombre lo pone la vacante, no el modelo: ver `audit`.
+        ref: z.string().max(8),
         // Un estado que no reconocemos NO cuenta como cubierto: decirle a
         // alguien que cubre un requisito que no cubre es el error caro.
         status: z.enum(["FOUND", "IMPLIED", "NOT_FOUND"]).catch("NOT_FOUND"),
@@ -132,7 +133,7 @@ const AuditSchema = z.object({
   ),
   softCoverage: listaDe(
     z.object({
-      signal: z.string().max(80),
+      ref: z.string().max(8),
       status: z.enum(["DEMONSTRATED", "DECLARED_ONLY", "ABSENT"]).catch("ABSENT"),
       evidenceNodeId: z.string().max(64).nullish().transform((v) => v ?? null),
     }),
@@ -241,6 +242,11 @@ export function jobPrompt(lang: Lang): string {
     "3. Ante la duda, DESEABLE. Es preferible subestimar una exigencia que agregar una que el aviso no pide.",
     "4. Normalizá cada término a un nombre canónico y GUARDÁ el texto con el que el aviso lo escribió. Ese texto original es lo que después permite reconocerlo en el CV: el filtro compara cadenas, así que perder la forma literal del aviso es perder la coincidencia.",
     "4b. Si el aviso escribe una sigla y su forma completa, son UN solo requisito, no dos. En `raw` va la forma que el aviso usa al enunciarlo, y en `skill` el nombre canónico. NUNCA deduzcas la expansión de una sigla que el aviso no expandió: si no está escrita, no existe.",
+    "4c. `skill` es el NOMBRE de la capacidad —una herramienta, una técnica, un idioma, una certificación—, en una a cuatro palabras, nunca la oración del aviso: «Swift» y no «experiencia desarrollando en Swift»; para un idioma, el idioma («Inglés»), y el nivel queda en `raw`. La oración completa va en `raw`. Un nombre largo no coincide con nada en ningún CV.",
+    "4d. Leé el aviso ENTERO, y antes de devolver hacé este recorrido: por cada responsabilidad y cada oración de la descripción, anotá TODA herramienta, tecnología, norma o método que nombra con nombre propio —en un aviso de cocina «HACCP» o «horno de convección», en uno de desarrollo «GraphQL» o «Clean Architecture»— y ponela en mustHave o niceToHave, aunque no esté bajo el encabezado de requisitos. Decidí cuál con las reglas 1 a 3. Si un nombre propio del aviso no quedó en ninguna de las dos listas, falta.",
+    "4e. `responsibilities` copia cada responsabilidad CON los nombres que trae: «Integrar APIs REST y GraphQL», no «Integrar APIs». Resumirla borra justo lo que el filtro compara.",
+    "4g. `kind` de cada requisito: \"capability\" si es algo que se HACE en un puesto —una herramienta, una técnica, una tarea— o \"credential\" si es algo que se TIENE —una licencia, un título, una certificación, un idioma, un permiso de trabajo—.",
+    "4f. `namedTools`: la lista de TODOS los nombres propios de herramientas, tecnologías, normas o métodos que el aviso escribe, en cualquier parte, tal como los escribe. Es un recuento de lo que el texto escribe, no un juicio: si está escrito con nombre propio, va.",
     "5. Si un dato no está en el aviso, devolvé null. NUNCA lo deduzcas.",
     "6. No agregues categorías técnicas donde no las hay: la categoría es una palabra del propio aviso, o null.",
     "6b. ORDENÁ las dos listas por PESO REAL, no por el orden en que aparecen: pesa más lo que el aviso repite y lo que enuncia al abrir la descripción; pesa menos lo que queda al final de una enumeración. La primera de la lista es la que el motor va a atender primero, así que el orden es una decisión, no un detalle.",
@@ -259,6 +265,11 @@ export function jobPrompt(lang: Lang): string {
     "3. When in doubt, NICE-TO-HAVE. Underestimating a demand beats adding one the ad never states.",
     "4. Normalise each term to a canonical name and KEEP the exact wording the ad used. That original wording is what later allows recognising it in the CV: the filter compares strings, so losing the ad's literal form is losing the match.",
     "4b. If the ad writes an acronym and its spelled-out form, they are ONE requirement, not two. `raw` carries the form the ad uses when stating it, `skill` the canonical name. NEVER derive the expansion of an acronym the ad did not spell out: if it is not written, it does not exist.",
+    "4c. `skill` is the NAME of the capability — a tool, a technique, a language, a certification — in one to four words, never the ad's sentence: \"Swift\", not \"iOS development experience with Swift\"; for a language, the language (\"English\"), with the level kept in `raw`. The full sentence goes in `raw`. A long name matches nothing in any CV.",
+    "4d. Read the WHOLE ad, and before returning walk through it: for every responsibility and every sentence of the description, note EVERY tool, technology, standard or method it names by its proper name — in a kitchen ad \"HACCP\" or \"convection oven\", in a software ad \"GraphQL\" or \"Clean Architecture\" — and put it in mustHave or niceToHave, even outside the requirements heading. Decide which with rules 1 to 3. If a proper name from the ad is in neither list, it is missing.",
+    "4e. `responsibilities` copies each responsibility WITH the names it carries: \"Integrate REST and GraphQL APIs\", not \"Integrate APIs\". Summarising it erases exactly what the filter compares.",
+    "4g. Each requirement's `kind`: \"capability\" if it is something DONE in a role — a tool, a technique, a task — or \"credential\" if it is something one HAS — a licence, a degree, a certification, a language, a work permit.",
+    "4f. `namedTools`: the list of ALL proper names of tools, technologies, standards or methods the ad writes, anywhere, as it writes them. It is a tally of what the text writes, not a judgement: if it is written as a proper name, it goes in.",
     "5. If the ad does not state something, return null. NEVER infer it.",
     "6. Do not add technical categories where there are none: the category is a word from the ad itself, or null.",
     "6b. ORDER both lists by REAL WEIGHT, not by order of appearance: what the ad repeats and what it states when opening the description weighs more; what trails at the end of an enumeration weighs less. The first item is the one the engine works on first, so the order is a decision, not a detail.",
@@ -285,6 +296,9 @@ export function auditPrompt(lang: Lang): string {
     "   hasMethod     — dice con qué herramienta, técnica o enfoque",
     "5. Por cada habilidad BLANDA que la vacante pide, un estado: DEMONSTRATED (hay un logro que la evidencia, y citás el id de esa línea), DECLARED_ONLY (aparece como adjetivo o en una lista, sin ningún logro que la respalde), ABSENT (no hay rastro). Una blanda NO se cumple porque la palabra esté escrita: así se cumple sólo en la lista de adjetivos que todo reclutador saltea. Sin id de línea, nunca es DEMONSTRATED.",
     "6. El resumen se juzga en cuatro funciones: identity (quién es y cuántos años), proof (un logro concreto), fit (la conexión con lo que la vacante pide), extra (dominio, idioma o credencial que la vacante pida).",
+    "7. Contestá POR REFERENCIA: cada requisito de la vacante trae su `ref` (M1, N1…) y cada blanda la suya (S1…). Devolvé una entrada por CADA referencia, con esa `ref` y nada más para nombrarla. No agregues requisitos ni blandas que la lista no trae.",
+    "8. Juzgá TODAS las viñetas del CV, una entrada por cada id. Una viñeta sin juicio no se puede mejorar ni contar.",
+    "9. `otherSections` es parte del CV (idiomas, certificaciones, educación): lo que dice ahí cuenta como escrito en el CV.",
   ]
   const en = [
     "You are a résumé auditor. You compare the structured CV against the structured job spec and return findings WITH EVIDENCE.",
@@ -301,6 +315,9 @@ export function auditPrompt(lang: Lang): string {
     "   hasMethod     — says with which tool, technique or approach",
     "5. For each SOFT skill the posting asks for, one state: DEMONSTRATED (an achievement evidences it, and you cite that line's id), DECLARED_ONLY (it appears as an adjective or in a list, with no achievement backing it), ABSENT (no trace). A soft skill is NOT met because the word is written: that only meets it in the adjective list every recruiter skips. With no line id, it is never DEMONSTRATED.",
     "6. The summary is judged on four jobs: identity (who they are, how many years), proof (one concrete achievement), fit (the link to what the posting asks), extra (domain, language or credential the posting asks for).",
+    "7. Answer BY REFERENCE: each posting requirement carries its `ref` (M1, N1…) and each soft skill its own (S1…). Return one entry for EVERY reference, using that `ref` and nothing else to name it. Do not add requirements or soft skills the list does not carry.",
+    "8. Judge EVERY bullet in the CV, one entry per id. A bullet with no judgement cannot be improved or counted.",
+    "9. `otherSections` is part of the CV (languages, certifications, education): what it says counts as written in the CV.",
   ]
   return (lang === "en" ? en : es).join("\n")
 }
@@ -321,7 +338,7 @@ export function triagePrompt(lang: Lang): string {
     "REGLAS",
     "1. KEEP + REWRITE + REPLACE no puede superar el presupuesto de cada puesto.",
     "2. NUNCA propongas DROP sobre la única viñeta de una experiencia: dejaría un puesto sin contenido. Usá DEMOTE.",
-    "3. En REPLACE NUNCA afirmes que el candidato hizo algo. Formulalo como PREGUNTA verificable en needsUserConfirm.",
+    "3. En REPLACE NUNCA afirmes que el candidato hizo algo. Formulalo como PREGUNTA verificable en needsUserConfirm, y en `proposedTopic` la responsabilidad que la reemplazaría, dicha como tema (sin afirmar que la hizo).",
     "4. Justificá cada DROP en una línea. Si no podés justificarlo, es DEMOTE.",
     "5. relevance: de 0 a 1, cuánto aporta esa línea a ESTA vacante.",
     "6. KEEP exige que la línea sea SUYA: si podría estar en el CV de cualquier otro postulante al mismo puesto —no nombra herramienta, ni ámbito concreto, ni tamaño—, es REWRITE aunque esté bien escrita. Una línea correcta y genérica ocupa el lugar de una que distingue.",
@@ -342,7 +359,7 @@ export function triagePrompt(lang: Lang): string {
     "RULES",
     "1. KEEP + REWRITE + REPLACE cannot exceed each role's budget.",
     "2. NEVER propose DROP on the only bullet of an experience: it would leave a role empty. Use DEMOTE.",
-    "3. In REPLACE NEVER assert the candidate did something. Phrase it as a verifiable QUESTION in needsUserConfirm.",
+    "3. In REPLACE NEVER assert the candidate did something. Phrase it as a verifiable QUESTION in needsUserConfirm, and put in `proposedTopic` the responsibility that would replace it, stated as a topic (without asserting they did it).",
     "4. Justify every DROP in one line. If you cannot justify it, it is DEMOTE.",
     "5. relevance: 0 to 1, how much that line contributes to THIS posting.",
     "6. KEEP requires the line to be THEIRS: if it could sit in any other applicant's CV for the same role — no tool, no concrete scope, no size — it is REWRITE even if well written. A correct but generic line takes the place of one that distinguishes.",
@@ -487,8 +504,8 @@ export const OUTPUT_CONTRACT =
  * desincronizan.
  */
 export const OUTPUT_SHAPE: Record<PromptId, string> = {
-  P1: `{"roleTitleRaw":"","roleTitleCanonical":"","seniority":null,"yearsRequired":null,"domain":null,"workMode":null,"language":"es","metricThatMatters":null,"mustHave":[{"skill":"","raw":"","years":null,"category":null}],"niceToHave":[{"skill":"","raw":"","years":null,"category":null}],"responsibilities":[""],"softSignals":[""]}`,
-  P2: `{"bullets":[{"id":"","hasActionVerb":true,"hasResult":false,"hasMethod":true}],"summary":{"identity":true,"proof":false,"fit":false,"extra":false},"coverage":[{"skill":"","requirement":"MUST","status":"FOUND","evidenceNodeId":null}],"softCoverage":[{"signal":"","status":"DECLARED_ONLY","evidenceNodeId":null}]}`,
+  P1: `{"roleTitleRaw":"","roleTitleCanonical":"","seniority":null,"yearsRequired":null,"domain":null,"workMode":null,"language":"es","metricThatMatters":null,"mustHave":[{"skill":"","raw":"","years":null,"category":null,"kind":"capability"}],"niceToHave":[{"skill":"","raw":"","years":null,"category":null,"kind":"capability"}],"responsibilities":[""],"softSignals":[""],"namedTools":[""]}`,
+  P2: `{"bullets":[{"id":"","hasActionVerb":true,"hasResult":false,"hasMethod":true}],"summary":{"identity":true,"proof":false,"fit":false,"extra":false},"coverage":[{"ref":"M1","status":"IMPLIED","evidenceNodeId":null}],"softCoverage":[{"ref":"S1","status":"DECLARED_ONLY","evidenceNodeId":null}]}`,
   P3: `{"decisions":[{"bulletId":"","verdict":"KEEP","reason":"","relevance":0.8,"proposedTopic":null,"needsUserConfirm":null}]}`,
   P4: `{"measurableAspect":"","bulletId":"","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[{"token":"[x%]","type":"PERCENT_DELTA","label":"","hint":"","evidenceNeeded":"","required":true}],"variantWithoutMetric":null}`,
   P5: `{"measurableAspect":null,"bulletId":"summary","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[],"variantWithoutMetric":null}`,
@@ -505,7 +522,7 @@ export function outputBlock(id: PromptId): string {
     // Medido contra la API: un aviso en inglés volvía con language "es" porque
     // el ejemplo lo mostraba así, y la auditoría devolvía "NICE_TO_HAVE" donde
     // el contrato dice "NICE". Un valor enumerado que no se enumera se adivina.
-    'Valores permitidos / allowed values: "language" = idioma DEL AVISO ("es" o "en") · "requirement" = "MUST" o "NICE" · "status" = "FOUND", "IMPLIED" o "NOT_FOUND" · "verdict" (triage) = "KEEP", "REWRITE", "REPLACE", "DEMOTE" o "DROP" · "verdict" (verificador) = "PASS" o "FAIL" · "type" (hueco) = "PERCENT_DELTA", "SCALE", "TIME_DELTA", "MONEY", "TEAM_SIZE", "FREQUENCY" o "QUALITY_SCORE".',
+    'Valores permitidos / allowed values: "language" = idioma DEL AVISO ("es" o "en") · "status" (coverage) = "FOUND", "IMPLIED" o "NOT_FOUND" · "status" (softCoverage) = "DEMONSTRATED", "DECLARED_ONLY" o "ABSENT" · "verdict" (triage) = "KEEP", "REWRITE", "REPLACE", "DEMOTE" o "DROP" · "verdict" (verificador) = "PASS" o "FAIL" · "kind" = "capability" o "credential" · "type" (hueco) = "PERCENT_DELTA", "SCALE", "TIME_DELTA", "MONEY", "TEAM_SIZE", "FREQUENCY" o "QUALITY_SCORE".',
     OUTPUT_SHAPE[id],
   ].join("\n")
 }
@@ -531,19 +548,31 @@ export class AIAts3Module implements AtsAi {
       `VACANTE / POSTING:\n${JSON.stringify(compactSpec(spec))}`,
     ].join("\n\n")
     const raw = await this.ask(auditPrompt(this.deps.language), body, AuditSchema, "P2")
+    /**
+     * LA REFERENCIA SE TRADUCE AL REQUISITO DE LA VACANTE; LO DEMÁS NO EXISTE.
+     *
+     * Una referencia que no está en la lista que se mandó se descarta, y una
+     * repetida cuenta la primera vez: el modelo no puede agregar requisitos ni
+     * contar uno dos veces. Lo que no contestó queda sin juicio y el motor lo
+     * trata como no encontrado (`coverageOf`).
+     */
+    const refs = refsOf(spec)
+    const requisito = new Map<string, { skill: string; requirement: "MUST" | "NICE" }>([
+      ...refs.mustHave.map((r): [string, { skill: string; requirement: "MUST" | "NICE" }] => [r.ref, { skill: r.skill, requirement: "MUST" }]),
+      ...refs.niceToHave.map((r): [string, { skill: string; requirement: "MUST" | "NICE" }] => [r.ref, { skill: r.skill, requirement: "NICE" }]),
+    ])
+    const blanda = new Map(refs.softSignals.map((s) => [s.ref, s.signal]))
+    const primeraVez = <T extends { ref: string }>(xs: T[]) => xs.filter((x, i) => xs.findIndex((y) => y.ref === x.ref) === i)
     return {
       bullets: raw.bullets,
       summary: raw.summary,
-      // El id del nodo VIAJA. Se estaba descartando al mapear, y sin él no se
-      // puede saber DÓNDE vive el término: un requisito demostrado en el puesto
-      // de 2015 no pesa lo mismo que en el actual, y ésa es la diferencia entre
-      // "cubierta" y "cubierta pero enterrada".
-      coverage: raw.coverage.map((c) => ({
-        skill: c.skill,
-        requirement: c.requirement,
-        status: c.status,
-        evidenceNodeId: c.evidenceNodeId,
-      })),
+      // El id del nodo VIAJA: sin él no se puede saber DÓNDE vive el término, y
+      // un requisito demostrado en el puesto de 2015 no pesa lo mismo que en el
+      // actual.
+      coverage: primeraVez(raw.coverage).flatMap((c) => {
+        const r = requisito.get(c.ref.trim().toUpperCase())
+        return r ? [{ ...r, status: c.status, evidenceNodeId: c.evidenceNodeId }] : []
+      }),
       /**
        * Sin id de línea NO está demostrada, lo diga el modelo o no.
        *
@@ -551,11 +580,12 @@ export class AIAts3Module implements AtsAi {
        * nodo"— y acá importa más: una blanda "demostrada" sin un logro detrás
        * es exactamente el adjetivo suelto que el reclutador saltea.
        */
-      softCoverage: raw.softCoverage.map((s) => ({
-        signal: s.signal,
-        status: s.status === "DEMONSTRATED" && !s.evidenceNodeId ? ("DECLARED_ONLY" as const) : s.status,
-        evidenceNodeId: s.evidenceNodeId,
-      })),
+      softCoverage: primeraVez(raw.softCoverage).flatMap((s) => {
+        const signal = blanda.get(s.ref.trim().toUpperCase())
+        if (!signal) return []
+        const status = s.status === "DEMONSTRATED" && !s.evidenceNodeId ? ("DECLARED_ONLY" as const) : s.status
+        return [{ signal, status, evidenceNodeId: s.evidenceNodeId }]
+      }),
     }
   }
 
@@ -722,6 +752,8 @@ function compactTree(tree: ResumeTree) {
       bullets: r.bullets.map((b) => ({ id: b.id, text: b.text })),
     })),
     declaredSkills: tree.declaredSkills,
+    // Idiomas, certificaciones, educación: un filtro las lee y el auditor también.
+    otherSections: tree.otherText || null,
   }
 }
 
@@ -738,9 +770,26 @@ function compactSpec(spec: JobSpec) {
     seniority: spec.seniority,
     // La vara con la que se le pide una cifra al candidato.
     metricThatMatters: spec.metricThatMatters || null,
-    mustHave: (spec.mustHave ?? []).map((r) => r.skill),
-    niceToHave: (spec.niceToHave ?? []).map((r) => r.skill),
+    ...refsOf(spec),
     responsibilities: spec.responsibilities ?? [],
+  }
+}
+
+/**
+ * CADA REQUISITO CON SU REFERENCIA, Y LA MISMA PARA PREGUNTAR Y PARA LEER.
+ *
+ * La auditoría contestaba con el nombre que al modelo se le ocurría escribir, y
+ * el motor emparejaba por ese nombre: una mayúscula, una palabra de más o una
+ * blanda que la vacante no pidió y la respuesta hablaba de otra lista. Medido en producción
+ * el 2026-09-24: la vacante pedía tres blandas —que además NO se le mandaban—
+ * y volvieron cinco con otros nombres. Con referencias, lo que no es de la
+ * lista no tiene dónde caer.
+ */
+function refsOf(spec: JobSpec) {
+  return {
+    mustHave: (spec.mustHave ?? []).map((r, i) => ({ ref: `M${i + 1}`, skill: r.skill })),
+    niceToHave: (spec.niceToHave ?? []).map((r, i) => ({ ref: `N${i + 1}`, skill: r.skill })),
+    softSignals: (spec.softSignals ?? []).map((s, i) => ({ ref: `S${i + 1}`, signal: s })),
   }
 }
 

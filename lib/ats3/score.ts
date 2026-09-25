@@ -25,7 +25,18 @@
 // hechos (los deterministas los mide él; los de juicio los trae la auditoría) y
 // los suma. Un CV de soldadura y uno de iOS recorren el mismo código.
 
-import { normalize, type ResumeTree, type JobSpec } from "@/lib/ats3/contracts"
+import {
+  buildTermIndex,
+  normalize,
+  specTerms,
+  termCounts,
+  termKey,
+  termsIn,
+  type JobSpec,
+  type ResumeTree,
+  type TermIndex,
+  type TermVariants,
+} from "@/lib/ats3/contracts"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PESOS
@@ -351,35 +362,96 @@ function effectiveWeights(raws: RawComponent[]): Map<ComponentKey, number> {
  * se puede probar es sólo que repetir importa, no cuánto.
  */
 export function postingWeights(spec: JobSpec, jdText: string): Record<string, number> {
-  const aviso = ` ${normalize(jdText)} `
-  const titulo = ` ${normalize(`${spec.roleTitleRaw ?? ""} ${spec.roleTitleCanonical ?? ""}`)} `
+  // Se cuenta con `termCounts`, la misma cuenta que la tabla pinta: «lo pide 3
+  // veces» y el peso extra por repetirse no pueden salir de dos lecturas.
+  const index = buildTermIndex(specTerms(spec))
+  const enAviso = termCounts(index, jdText)
+  const enTitulo = termsIn(index, `${spec.roleTitleRaw ?? ""} ${spec.roleTitleCanonical ?? ""}`)
   const pesos: Record<string, number> = {}
   for (const r of [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])]) {
-    const aguja = normalize(r.raw || r.skill)
-    if (!aguja) continue
-    pesos[r.skill] = 1 + (titulo.includes(` ${aguja} `) ? 0.5 : 0) + (veces(aviso, aguja) >= 3 ? 0.25 : 0)
+    const termino = index.byKey.get(termKey(r.skill)) ?? r.skill
+    pesos[r.skill] = 1 + (enTitulo.has(termino) ? 0.5 : 0) + ((enAviso.get(termino) ?? 0) >= 3 ? 0.25 : 0)
   }
   return pesos
 }
 
+
+/** Los términos en juego: los que la vacante nombra y los que el CV declara. */
+export function termsOf(spec: JobSpec, tree: ResumeTree): TermVariants[] {
+  const out = specTerms(spec)
+  for (const s of tree.declaredSkills) {
+    if (!out.some((o) => normalize(o.canonical) === normalize(s))) out.push({ canonical: s, variants: [] })
+  }
+  return out
+}
+
 /**
- * CUÁNTAS VECES DICE ESTE TEXTO ESE TÉRMINO — como PALABRA, no como subcadena.
+ * TODO LO QUE EL CV DICE, como lo lee un filtro.
  *
- * ── EL DEFECTO QUE ESTO CIERRA, MEDIDO ANTES DE SUBIRLO ────────────────────
- * La primera versión buscaba la subcadena y le daba peso extra a "R" en un
- * aviso donde la letra aparece dentro de "buscamos", "analista" y "reportes";
- * "Excel" contaba dentro de "excelente" y "excelencia". Es la misma clase que
- * este proyecto ya pagó con «plusvalía» conteniendo «plus».
- *
- * Los dos textos van rodeados de espacios y la aguja también: `normalize`
- * convierte toda puntuación en separador, así que un límite de palabra es un
- * espacio y nada más. Funciona igual para "SQL" que para "atención al público".
+ * ── EL CABLE QUE ESTABA CORTADO (2026-09-24, medido en producción) ─────────
+ * `otherText` existía en el árbol desde el primer día —«participa del puntaje,
+ * no se reescribe»— y nadie lo mandaba, la ruta lo descartaba y el motor no lo
+ * leía. El aviso pedía «English B2» y el CV lo decía en Idiomas: el panel lo
+ * daba por faltante. Un filtro lee el documento entero, no tres secciones.
  */
-function veces(textoConBordes: string, aguja: string): number {
-  const pat = ` ${aguja} `
-  let n = 0
-  for (let i = textoConBordes.indexOf(pat); i !== -1; i = textoConBordes.indexOf(pat, i + 1)) n++
-  return n
+export function cvTextOf(tree: ResumeTree): string {
+  return [
+    tree.summary.text,
+    ...tree.roles.flatMap((r) => [r.title, r.company, ...r.bullets.map((b) => b.text)]),
+    ...tree.declaredSkills,
+    tree.otherText,
+  ].join(" . ")
+}
+
+/**
+ * ¿EL CV CUBRE CADA REQUISITO? — una respuesta, y la da el código.
+ *
+ * ── LA CONTRADICCIÓN QUE ESTO CIERRA (2026-09-24, medida en producción) ────
+ * La pregunta tenía tres dueños: el modelo escribía un nombre y un estado, el
+ * motor degradaba su FOUND buscando el término en un texto sin Habilidades ni
+ * Idiomas, y la tabla contaba la palabra exacta por su lado. Se leían tres
+ * respuestas en la misma pantalla —«lo decís 1 vez · sólo en la lista» con el
+ * puntaje dándolo por faltante—, contra una copia que promete que en la lista
+ * «cuenta igual para el filtro».
+ *
+ * Ahora cada requisito DE LA VACANTE —no cada nombre que el modelo escriba—
+ * recibe su estado así:
+ *   FOUND     — el término está escrito en el CV, en cualquier sección. Es lo
+ *               que el filtro compara, y lo mide `termCounts`, la misma cuenta
+ *               que pinta la tabla. Si una línea lo dice, esa es su evidencia.
+ *   IMPLIED   — no está escrito, pero el modelo citó una línea real cuyo
+ *               trabajo lo demuestra.
+ *   NOT_FOUND — ninguna de las dos. Lo que el auditor no afirmó, no está.
+ */
+export function coverageOf(
+  spec: JobSpec,
+  audit: AuditFacts,
+  tree: ResumeTree,
+  index: TermIndex,
+): AuditFacts["coverage"] {
+  const enElCv = termCounts(index, cvTextOf(tree))
+  const lineas = [tree.summary, ...tree.roles.flatMap((r) => r.bullets)]
+  const canonico = (skill: string) => index.byKey.get(termKey(skill)) ?? skill
+  const delModelo = new Map(audit.coverage.map((c) => [normalize(c.skill), c]))
+  const vistos = new Set<string>()
+  const out: AuditFacts["coverage"] = []
+  const juzgar = (skill: string, requirement: "MUST" | "NICE") => {
+    const llave = normalize(skill)
+    if (!llave || vistos.has(llave)) return
+    vistos.add(llave)
+    const termino = canonico(skill)
+    if (enElCv.has(termino)) {
+      const linea = lineas.find((l) => termsIn(index, l.text).has(termino))
+      out.push({ skill, requirement, status: "FOUND", evidenceNodeId: linea?.id ?? null })
+      return
+    }
+    const m = delModelo.get(llave)
+    const cita = m && m.status !== "NOT_FOUND" && m.evidenceNodeId && lineas.some((l) => l.id === m.evidenceNodeId) ? m.evidenceNodeId : null
+    out.push({ skill, requirement, status: cita ? "IMPLIED" : "NOT_FOUND", evidenceNodeId: cita })
+  }
+  for (const r of spec.mustHave ?? []) juzgar(r.skill, "MUST")
+  for (const r of spec.niceToHave ?? []) juzgar(r.skill, "NICE")
+  return out
 }
 
 export function scoreResume(
@@ -401,10 +473,22 @@ export function scoreResume(
   const peso = (skill: string) => termWeights[skill] ?? 1
   const mustTotal = (spec.mustHave ?? []).reduce((n, r) => n + peso(r.skill), 0)
   const niceTotal = (spec.niceToHave ?? []).reduce((n, r) => n + peso(r.skill), 0)
-  const mustFound = audit.coverage
+  /**
+   * LA COBERTURA SE MIDE SOBRE EL CV QUE SE ESTÁ PUNTUANDO.
+   *
+   * ── EL DEFECTO QUE ESTO CIERRA (2026-09-24) ─────────────────────────────────
+   * Se leía `audit.coverage` tal cual, y la auditoría es la foto del CV que el
+   * modelo leyó. Al aceptar una reescritura que escribe el requisito que
+   * faltaba, `applySuggestion` puntuaba la copia con la MISMA foto: el término
+   * ya estaba en la línea y el dial no se movía, mientras la tarjeta prometía
+   * los puntos. Que el término esté escrito lo decide el texto, y el texto es
+   * éste.
+   */
+  const coverage = coverageOf(spec, audit, tree, buildTermIndex(termsOf(spec, tree)))
+  const mustFound = coverage
     .filter((c) => c.requirement === "MUST" && c.status === "FOUND")
     .reduce((n, c) => n + peso(c.skill), 0)
-  const niceFound = audit.coverage
+  const niceFound = coverage
     .filter((c) => c.requirement === "NICE" && c.status === "FOUND")
     .reduce((n, c) => n + peso(c.skill), 0)
 
@@ -419,11 +503,22 @@ export function scoreResume(
    * Sale de `softCoverage`, que la auditoría ya juzga en cada análisis: no
    * cuesta una llamada nueva.
    */
-  const softTotal = (spec.softSignals ?? []).length
-  const softFound = audit.softCoverage.reduce(
-    (n, s) => n + (s.status === "DEMONSTRATED" ? 1 : s.status === "DECLARED_ONLY" ? 0.6 : 0),
-    0,
-  )
+  /**
+   * SE CUENTA POR LA LISTA DE LA VACANTE, NO POR LO QUE EL MODELO DEVOLVIÓ.
+   *
+   * Medido en producción el 2026-09-24: la vacante pedía tres blandas, la
+   * auditoría devolvió cinco con otros nombres —«crash rate» entre ellas— y
+   * esto sumaba 5 sobre 3: 100% en el dial, las tres pintadas como faltantes en
+   * la tabla. Una blanda que la vacante no pidió no puede sumar, y una pedida
+   * cuenta una sola vez.
+   */
+  const juicioBlando = new Map(audit.softCoverage.map((s) => [normalize(s.signal), s.status]))
+  const pedidasBlandas = [...new Set((spec.softSignals ?? []).map(normalize).filter(Boolean))]
+  const softTotal = pedidasBlandas.length
+  const softFound = pedidasBlandas.reduce((n, s) => {
+    const estado = juicioBlando.get(s)
+    return n + (estado === "DEMONSTRATED" ? 1 : estado === "DECLARED_ONLY" ? 0.6 : 0)
+  }, 0)
 
   const bulletTexts = tree.roles.flatMap((r) => r.bullets.map((b) => b.text))
   /**
@@ -475,6 +570,30 @@ export function scoreResume(
   ]
 
   const weights = effectiveWeights(raws)
+  /**
+   * UN DESEABLE NUNCA VALE MÁS QUE UN OBLIGATORIO.
+   *
+   * ── MEDIDO EN PRODUCCIÓN (2026-09-24) ───────────────────────────────────────
+   * `must` y `nice` reparten su peso entre sus propios requisitos. Con 17
+   * obligatorios y 3 deseables, cada deseable valía 3,3 puntos y cada
+   * obligatorio 1,5: «Kotlin Multiplatform», que el aviso pone como «nice to
+   * have», salía en la cabecera como arreglo CRÍTICO y por encima de lo que el
+   * aviso exige. El orden de los pesos (0,54 contra 0,22) decía lo contrario de
+   * lo que el usuario leía.
+   *
+   * El total de los dos no cambia; sólo se impide que la unidad deseable supere
+   * a la obligatoria. En el tope valen lo mismo por unidad.
+   */
+  const must = raws.find((r) => r.key === "must")
+  const nice = raws.find((r) => r.key === "nice")
+  if (must && nice && must.denominator > 0 && nice.denominator > 0) {
+    const juntos = (weights.get("must") ?? 0) + (weights.get("nice") ?? 0)
+    const tope = (juntos * nice.denominator) / (must.denominator + nice.denominator)
+    if ((weights.get("nice") ?? 0) > tope) {
+      weights.set("nice", tope)
+      weights.set("must", juntos - tope)
+    }
+  }
   const components: ComponentScore[] = raws.map((r) => {
     const w = weights.get(r.key) ?? 0
     const ratio = r.denominator > 0 ? clamp01(r.numerator / r.denominator) : 0

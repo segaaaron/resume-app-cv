@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest"
 import { checkOf, sectionsOf, termsOfSpec, headlineOf } from "@/components/editor/ats3/view-model"
 import { encodeDetail, type Finding, type JobSpec } from "@/lib/ats3/contracts"
 import type { Score } from "@/lib/ats3/score"
+import { buildTree } from "@/lib/ats3/engine"
+
+/** Un CV que dice exactamente ese texto. La tabla cuenta sobre el árbol del motor. */
+const cvDe = (texto: string) => buildTree({ otherText: texto })
 
 /**
  * LA TRADUCCIÓN ENTRE EL MOTOR NUEVO Y LA PANTALLA DE SIEMPRE.
@@ -73,7 +77,7 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
       mustHave: [{ skill: "Excel", raw: "Excel", years: null, category: null }],
       niceToHave: [], softSignals: ["trabajo en equipo"],
     } as unknown as JobSpec
-    const filas = termsOfSpec(spec, [], "Buscamos Excel avanzado. Excel es clave.", "Manejo de Excel en planilla")
+    const filas = termsOfSpec(spec, [], "Buscamos Excel avanzado. Excel es clave.", cvDe("Manejo de Excel en planilla"))
     const excel = filas.find((f) => f.term === "Excel")
     expect(excel?.jd).toBe(2)
     expect(excel?.cv).toBe(1)
@@ -84,7 +88,7 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
   })
 
   it("una vacante a medias no tumba la pantalla con el análisis ya pagado", () => {
-    expect(() => termsOfSpec({} as JobSpec, [], "aviso", "cv")).not.toThrow()
+    expect(() => termsOfSpec({} as JobSpec, [], "aviso", cvDe("cv"))).not.toThrow()
   })
 
   it("la cabecera dice QUÉ es lo crítico: los requisitos, no cada línea señalada", () => {
@@ -211,7 +215,7 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     // a 1 porque la auditoría lo dio por probado era escribir un dato que el
     // usuario no puede verificar en su propio CV.
     const spec = { mustHave: [{ skill: "Atención al público", raw: "atención al público", years: null, category: null }], niceToHave: [], softSignals: [] } as unknown as JobSpec
-    const [fila] = termsOfSpec(spec, ["Atención al público"], "Se requiere atención al público", "Recibí y orienté a los visitantes")
+    const [fila] = termsOfSpec(spec, ["Atención al público"], "Se requiere atención al público", cvDe("Recibí y orienté a los visitantes"))
     expect(fila.cv).toBe(0)
     expect(fila.proven).toBe(true)
     expect(fila.listOnly).toBe(false)
@@ -222,7 +226,7 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     // que todo reclutador saltea. El estado lo dicta la auditoría, con el id del
     // logro detrás.
     const spec = { mustHave: [], niceToHave: [], softSignals: ["Trabajo en equipo", "Liderazgo"] } as unknown as JobSpec
-    const filas = termsOfSpec(spec, [], "Buscamos trabajo en equipo y liderazgo", "Trabajo en equipo · Liderazgo", [
+    const filas = termsOfSpec(spec, [], "Buscamos trabajo en equipo y liderazgo", cvDe("Trabajo en equipo · Liderazgo"), [
       { signal: "Trabajo en equipo", status: "DEMONSTRATED" },
       { signal: "Liderazgo", status: "DECLARED_ONLY" },
     ])
@@ -232,5 +236,33 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     // Escrita en el CV, sí. Demostrada, no: eso es lo que el panel tiene que decir.
     expect(liderazgo?.proven).toBe(false)
     expect(liderazgo?.listOnly).toBe(true)
+  })
+})
+
+describe("cada tarjeta con sujeto se titula por lo que es", () => {
+  it("el cargo conserva su título; la pregunta y la credencial nombran su término", () => {
+    const cargo = checkOf(finding({ type: "title_mismatch", component: "title", subject: "Senior iOS Engineer", detail: "Senior iOS Engineer" }))
+    expect(cargo.titleKey).toBe("type_title_mismatch")
+    expect(cargo.params).toEqual({ cargo: "Senior iOS Engineer" })
+    const pregunta = checkOf(finding({ type: "missing_requirement", component: "must", remedy: "ask", subject: "Keychain" }))
+    expect(pregunta.titleKey).toBe("type_missing_requirement_ask")
+    expect(pregunta.params).toEqual({ term: "Keychain" })
+    const credencial = checkOf(finding({ type: "missing_requirement", component: "must", remedy: "none", subject: "Licencia B" }))
+    expect(credencial.titleKey).toBe("type_missing_requirement_credential")
+  })
+})
+
+describe("la cabecera nombra requisitos, no frases", () => {
+  it("una tarjeta que fusiona un requisito con un eje de la viñeta aporta SÓLO el requisito", () => {
+    const fusionada = finding({
+      id: "fx", type: "missing_requirement", component: "must", gain: 9,
+      merged: ["missing_requirement", "no_metric"],
+      detail: encodeDetail([
+        { type: "missing_requirement", detail: "Salesforce" },
+        { type: "no_metric", detail: "tamaño" },
+      ]),
+    })
+    const cab = headlineOf(score(), sectionsOf(score(), [fusionada], undefined, (t) => (t === "tamano" ? "No dice de qué tamaño" : t)))
+    expect(cab.detail).toEqual(["Salesforce"])
   })
 })

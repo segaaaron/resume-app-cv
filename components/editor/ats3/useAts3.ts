@@ -105,8 +105,12 @@ function olvidar(st: Ats3State, quien: { nodeId: string } | { findingId: string 
    * usuario no hizo, esfumado sin que nadie se lo dijera. La que queda se sigue
    * leyendo bien porque su evidencia sale del CV vivo, no de la foto vieja.
    */
-  const fuera = (f: { id: string; nodeId: string }) =>
-    "nodeId" in quien ? f.nodeId === quien.nodeId : f.id === quien.findingId
+  // Un hallazgo con SUJETO habla del término, no de la línea: su nodo sólo
+  // sugiere el puesto donde escribirlo. Que esa línea se vaya o se reescriba no
+  // cierra la pregunta «¿tenés este requisito?».
+  const fuera = (f: { id: string; nodeId: string; subject?: string }) =>
+    "nodeId" in quien ? f.nodeId === quien.nodeId && !f.subject : f.id === quien.findingId
+  const cerrado = "findingId" in quien ? st.findings.find((f) => f.id === quien.findingId) : undefined
   return {
     ...st,
     findings: st.findings.filter((f) => !fuera(f)),
@@ -114,11 +118,35 @@ function olvidar(st: Ats3State, quien: { nodeId: string } | { findingId: string 
     // El veredicto habla de la LÍNEA entera: se retira cuando se retira ella, o
     // cuando el hallazgo que se cerró era el de esa misma línea.
     triage: st.triage.filter((d) =>
-      "nodeId" in quien
-        ? d.bulletId !== quien.nodeId
-        : d.bulletId !== st.findings.find((f) => f.id === quien.findingId)?.nodeId,
+      "nodeId" in quien ? d.bulletId !== quien.nodeId : !(cerrado && !cerrado.subject && d.bulletId === cerrado.nodeId),
     ),
   }
+}
+
+/**
+ * EL RESTO DEL CV, EN TEXTO PLANO: lo que un filtro lee y el motor no reescribe.
+ *
+ * El árbol del motor tenía el campo desde el primer día y nadie lo llenaba. Un
+ * aviso que pide «English B2» se cumple en Idiomas; uno que pide una
+ * certificación, en Certificaciones. Se dicen en las palabras del CV —el nivel
+ * de idioma como se lee impreso— porque eso es lo que el filtro compara.
+ */
+function otherTextOf(d: ResumeSections): string {
+  const nivel = (l: string) => (l === "native" ? "Native" : l.toUpperCase())
+  return [
+    d.personalDetails?.jobTitle ?? "",
+    ...(d.languages ?? []).map((l) => `${l.name} ${nivel(l.level)}`),
+    ...(d.certifications ?? []).map((c) => `${c.name} ${c.issuer}`),
+    ...(d.education ?? []).map((e) => `${e.degree} ${e.fieldOfStudy} ${e.institution} ${e.description}`),
+    ...(d.projects ?? []).map((p) => `${p.name} ${p.role} ${p.description}`),
+    ...(d.volunteer ?? []).map((v) => `${v.role} ${v.organization} ${v.description}`),
+    ...(d.customSections ?? []).flatMap((c) => [c.title, ...c.items.map((i) => `${i.title} ${i.subtitle} ${i.description}`)]),
+    d.hobbies ?? "",
+  ]
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .join(" . ")
+    .slice(0, 8_000)
 }
 
 export function useAts3(resumeId: string, language: "es" | "en") {
@@ -153,6 +181,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         description: r.description ?? "",
       })),
       skills: (sectionData.skills ?? []).map((s) => ({ name: s.name ?? "" })),
+      otherText: otherTextOf(sectionData),
     }),
     [sectionData],
   )
@@ -307,7 +336,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      * Trabajo en equipo» y al modelo se le mandaba el CV, la vacante y nada más.
      * Se dice una vez, en un solo lugar, y los dos leen lo mismo.
      */
-    async (nodeId: string, findingId?: string, focus?: string, mergeWith?: string, addToRole?: string) => {
+    async (nodeId: string, findingId?: string, focus?: string, mergeWith?: string, addToRole?: string, replacing?: boolean) => {
       if (!state.spec) return
       setBusyNode(nodeId)
       setPendingFinding(findingId ?? null)
@@ -336,6 +365,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             focus,
             mergeWith,
             addToRole,
+            replacing,
           }),
         })
         // Mismo motivo que en el análisis: un 500 devuelve `{error}` y sin este
@@ -708,6 +738,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * Es un mapa y no una búsqueda por fila: armar el árbol una vez por render en
    * vez de una vez por veredicto.
    */
+  /** El CV vivo, como lo lee el motor: la tabla cuenta sobre ESTE texto. */
+  const tree = useMemo(() => buildTree(payloadResume()), [payloadResume])
+
   const textOf = useMemo(() => {
     const tree = buildTree(payloadResume())
     const m = new Map<string, string>([[tree.summary.id, tree.summary.text]])
@@ -733,6 +766,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     loading,
     error,
     busyNode,
+    /** La tarjeta que pidió la reescritura en curso: su botón dice «Escribiendo…». */
+    pendingFinding,
     rejected,
     pending,
     setPending,
@@ -783,6 +818,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       buildTree(payloadResume()).roles.find((r) => r.bullets.some((b) => b.id === nodeId))?.id ?? "",
     /** Las habilidades que el CV declara HOY. La lista viva, no la del análisis. */
     declaredSkills: (sectionData.skills ?? []).map((s) => s.name ?? "").filter(Boolean),
+    tree,
     weights: state.weights,
     accept,
     dismiss,

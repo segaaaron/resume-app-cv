@@ -20,6 +20,15 @@
 // needs a reason written here — not a hunch, and never a number tuned until one
 // example looked better.
 
+/**
+ * ── UN NÚMERO, UN DUEÑO (2026-09-24) ──────────────────────────────────────────
+ * El techo y el piso de viñetas por puesto estaban escritos acá Y en el ATS
+ * (`lib/ats3/ledger`). Hoy coinciden; el día que uno cambiara, el asistente
+ * ofrecería agregar la línea que el ATS pide sacar. El ATS manda (CEO) y el
+ * número es suyo.
+ */
+import { BULLETS_PER_ROLE_MAX as TOPE_DEL_ATS, BULLETS_PER_ROLE_MIN as PISO_DEL_ATS } from "@/lib/ats3/ledger"
+
 /** How a value got here. Displayed nowhere; it exists to keep us honest. */
 export type Basis =
   /** Observable behaviour of real parsers, reproducible on demand. */
@@ -182,7 +191,9 @@ export const SEMANTIC_THRESHOLD: Tunable = {
  * up rather than the target we push people to.
  */
 export const BULLETS_PER_ROLE_MAX: Tunable = {
-  value: 6,
+  // El número vive en el ATS y se lee de ahí: el asistente y el escritor de
+  // habilidades no pueden proponer una línea que el ATS después pide sacar.
+  value: TOPE_DEL_ATS,
   basis: "convention",
   why: "Past six on one role, the lines that show results get diluted by the ones that do not.",
 }
@@ -198,7 +209,7 @@ export const BULLETS_PER_ROLE_MAX: Tunable = {
  * a line the editor allows, get told to delete it.
  */
 export const BULLETS_PER_ROLE_MIN: Tunable = {
-  value: 3,
+  value: PISO_DEL_ATS,
   basis: "convention",
   why: "Under three lines a role reads as a placeholder rather than a job someone did.",
 }

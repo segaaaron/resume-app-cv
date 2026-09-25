@@ -150,7 +150,24 @@ export const PROMPT_VERSION = {
   // entera se descarta», y el motor no descarta nada por eso: el esquema ni
   // tiene el campo. Un prompt que amenaza con algo que el código no hace es una
   // contradicción, y GPT-5 gasta razonamiento en reconciliarlas (guía oficial).
-  P1: "p1-9", // parser de vacante
+  // p1-10 (2026-09-24): la vacante se lee ENTERA. Medido en producción: las
+  // herramientas nombradas en las responsabilidades (GraphQL, Clean Architecture,
+  // async/await) no llegaban a ninguna lista, y el plan de habilidades proponía
+  // sacarlas del CV. Y `skill` es el NOMBRE de la capacidad, no la oración del
+  // aviso: «iOS development experience with Swift» terminaba escrito como una
+  // habilidad y nunca podía coincidir con nada.
+  // p1-11 (2026-09-24): medido contra la API, la regla 4d en prosa NO alcanzó:
+  // el modelo siguió dejando fuera GraphQL, Clean Architecture y Crashlytics, y
+  // además RECORTABA las responsabilidades («Own app architecture» sin MVVM).
+  // Pasa a ser un recorrido que se hace antes de devolver, y las
+  // responsabilidades se copian con sus nombres.
+  // p1-12: y el modelo DECLARA en `namedTools` cada nombre propio del aviso; el
+  // código completa las listas con lo que falte (ver `JobSpecSchema`).
+  // p1-13: cada requisito declara si se EJERCE o se TIENE (`kind`).
+  // p1-14: un nombre que ya vive dentro de un requisito («Excel» en «Excel
+  // avanzado») no se agrega otra vez. Lo guardado con p1-13 los duplicaba.
+  // p1-15: un término vive en una sola lista (ver `JobSpecSchema`).
+  P1: "p1-15", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -162,7 +179,13 @@ export const PROMPT_VERSION = {
   // lo leía nadie y contradecía a la tarjeta: con alineación 1 la tarjeta salía
   // prometiendo 0 puntos.
   // p2-5 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
-  P2: "p2-5", // auditoría
+  // p2-6 (2026-09-24): el modelo contesta POR REFERENCIA (M1, N2, S1), no por el
+  // nombre que se le ocurra escribir. Medido en producción: sin la lista de
+  // blandas del aviso —nunca se le mandaba— devolvió cinco inventadas («crash
+  // rate» entre ellas) contra tres pedidas, y el puntaje daba 5/3 = 100% con la
+  // tabla mostrando las tres como faltantes. Y juzga TODAS las viñetas: devolvió
+  // 12 de 42 y la pantalla dijo «12/12».
+  P2: "p2-6", // auditoría
   // p3-2: KEEP exige que la línea sea SUYA. Una correcta pero genérica ocupa el
   // lugar de una que distingue.
   // p3-3 (2026-09-09): sexto veredicto, MERGE — dos viñetas del mismo puesto que
@@ -174,7 +197,8 @@ export const PROMPT_VERSION = {
   // señalar lo que sobra. El hecho lo pone el usuario: el modelo propone el tema
   // y la pregunta, nunca afirma.
   // p3-5 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
-  P3: "p3-5", // triage
+  // p3-6 (2026-09-24): REPLACE declara `proposedTopic` — el «sí» escribe ESE tema en lugar de la línea.
+  P3: "p3-6", // triage
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -308,15 +332,22 @@ export function buildTermIndex(terms: TermVariants[]): TermIndex {
 
 
 /**
- * Qué términos del índice aparecen realmente en un texto.
+ * CUÁNTAS VECES DICE UN TEXTO CADA TÉRMINO DEL ÍNDICE.
  *
- * Devuelve canónicos. Una posición del texto pertenece a UN solo término: el
- * más largo que la cubre.
+ * Una posición del texto pertenece a UN solo término: el más largo que la cubre.
+ *
+ * ── UNA SOLA CUENTA PARA TODA LA PANTALLA (2026-09-24) ──────────────────────
+ * «¿El CV dice este término?» tenía tres respuestas: ésta para el puntaje, un
+ * `veces` propio en la tabla —palabra exacta, sin variantes ni match maximal— y
+ * el nombre que el modelo escribía en la auditoría. Medido en producción: la
+ * tabla decía «lo decís 0 veces» sobre términos que el puntaje contaba, y al
+ * revés. Contar es UNA pregunta, y se contesta acá para el puntaje, la tabla,
+ * el plan de habilidades y las tarjetas.
  */
-export function termsIn(index: TermIndex, text: string): Set<string> {
+export function termCounts(index: TermIndex, text: string): Map<string, number> {
   const hay = ` ${normalize(text)} `
   const taken: [number, number][] = []
-  const found = new Set<string>()
+  const counts = new Map<string, number>()
 
   for (const { canonical, needle } of index.ordered) {
     const pat = ` ${needle} `
@@ -329,12 +360,34 @@ export function termsIn(index: TermIndex, text: string): Set<string> {
       const overlaps = taken.some(([s, e]) => start < e && end > s)
       if (!overlaps) {
         taken.push([start, end])
-        found.add(canonical)
+        counts.set(canonical, (counts.get(canonical) ?? 0) + 1)
       }
       from = at + 1
     }
   }
-  return found
+  return counts
+}
+
+/** Qué términos del índice aparecen realmente en un texto. Canónicos. */
+export function termsIn(index: TermIndex, text: string): Set<string> {
+  return new Set(termCounts(index, text).keys())
+}
+
+/**
+ * LOS TÉRMINOS QUE LA VACANTE PONE EN JUEGO, con la forma literal del aviso.
+ *
+ * Vive acá porque lo necesitan el motor, el puntaje y la pantalla, y los tres
+ * tienen que contar con las MISMAS variantes: si uno buscara sólo el canónico y
+ * otro también la forma del aviso, volverían a discrepar.
+ */
+export function specTerms(spec: JobSpec): TermVariants[] {
+  const out: TermVariants[] = []
+  for (const r of [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])]) {
+    const previo = out.find((o) => normalize(o.canonical) === normalize(r.skill))
+    if (previo) previo.variants.push(r.raw)
+    else out.push({ canonical: r.skill, variants: [r.raw] })
+  }
+  return out
 }
 
 /** ¿Este término concreto aparece en el texto, sin que otro más largo lo reclame? */
@@ -360,6 +413,20 @@ export const RequirementSchema = z.object({
   /** Categoría libre, en las palabras del aviso: no hay taxonomía cerrada
    *  porque un aviso de soldadura no habla de "LANGUAGE" ni de "FRAMEWORK". */
   category: z.string().max(40).nullish().transform((v) => v ?? null),
+  /**
+   * ¿SE EJERCE O SE TIENE?
+   *
+   * `capability` es algo que se HACE en un puesto —una herramienta, una
+   * técnica, una tarea— y se demuestra en una viñeta. `credential` es algo que
+   * se TIENE —una licencia, un título, una certificación, un idioma, un
+   * permiso— y vive en su sección del CV, no en una línea de experiencia.
+   *
+   * Medido en local el 2026-09-24: sin esta distinción la tarjeta preguntaba
+   * «¿Qué hiciste con Licencia de conducir B? ¿En qué puesto va?» y ofrecía
+   * redactar una viñeta. El modelo lo DECLARA; sin respuesta, es capacidad —el
+   * caso de siempre—.
+   */
+  kind: z.enum(["capability", "credential"]).optional().catch(undefined),
 })
 
 export const JobSpecSchema = z.object({
@@ -391,6 +458,72 @@ export const JobSpecSchema = z.object({
   niceToHave: lista(RequirementSchema, 40),
   responsibilities: lista(z.string().max(300), 30),
   softSignals: lista(z.string().max(160), 20),
+  /**
+   * TODO NOMBRE PROPIO DE HERRAMIENTA, TECNOLOGÍA, NORMA O MÉTODO DEL AVISO.
+   *
+   * ── POR QUÉ SE DECLARA (medido contra la API el 2026-09-24) ───────────────
+   * La regla en prosa —«una herramienta nombrada en las responsabilidades
+   * también es un requisito»— no alcanzó en dos corridas: GraphQL, Clean
+   * Architecture y Crashlytics quedaban fuera de las dos listas, y en la
+   * segunda también Fastlane. Un campo vacío se nota; una regla salteada no deja
+   * rastro. El modelo DECLARA lo que nombra el aviso y el código garantiza que
+   * nada de eso quede fuera (ver la transformación de abajo).
+   */
+  namedTools: lista(z.string().max(80), 60),
+}).transform(({ namedTools, ...crudo }) => {
+  /**
+   * UN TÉRMINO VIVE EN UNA SOLA LISTA.
+   *
+   * Medido en local el 2026-09-24: el modelo puso Swift, SwiftUI y Combine en
+   * obligatorios Y en deseables. El puntaje los contaba dos veces en el
+   * denominador y la tarjeta caía en la sección que tocara. Si el aviso lo
+   * exige, es obligatorio; y una blanda no repite un requisito duro. La regla
+   * ya estaba escrita en el prompt («no repite algo que ya pusiste»): un prompt
+   * es una petición, esto es el contrato.
+   */
+  const llaves = (rs: { skill: string; raw: string }[]) => new Set(rs.flatMap((r) => [termKey(r.skill), termKey(r.raw)]))
+  const exigidos = llaves(crudo.mustHave)
+  const niceToHave = crudo.niceToHave.filter(
+    (r, i, xs) => !exigidos.has(termKey(r.skill)) && xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i,
+  )
+  const duros = new Set([...exigidos, ...llaves(niceToHave)])
+  const spec = {
+    ...crudo,
+    mustHave: crudo.mustHave.filter((r, i, xs) => xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i),
+    niceToHave,
+    softSignals: crudo.softSignals.filter((x) => !duros.has(termKey(x))),
+  }
+  /**
+   * LO QUE EL AVISO NOMBRA Y NINGUNA LISTA TRAE, ENTRA COMO DESEABLE.
+   *
+   * Deseable y no obligatorio: la regla del parser ya dice «ante la duda,
+   * deseable», y el tope de peso impide que un deseable valga más que un
+   * obligatorio. Se compara con `termKey`, la llave de igualdad del motor, para
+   * que «CI/CD» y «ci-cd» no entren dos veces. El campo no viaja más allá: su
+   * trabajo termina acá.
+   */
+  // Un nombre que ya vive DENTRO de un requisito —«Excel» en «Excel avanzado»,
+  // medido en local el 2026-09-24— no es un requisito nuevo: agregarlo contaba
+  // el mismo pedido dos veces y abría dos tarjetas. Se busca como palabra, con
+  // la misma normalización del resto del motor.
+  const dichos = [...spec.mustHave, ...spec.niceToHave].map((r) => ` ${normalize(r.skill)} ${normalize(r.raw)} `)
+  const yaEsta = (t: string) => dichos.some((d) => d.includes(` ${normalize(t)} `))
+  const vistos = new Set<string>()
+  const faltan = namedTools
+    .map((t) => t.trim())
+    .filter((t) => {
+      const k = termKey(t)
+      if (!k || vistos.has(k) || yaEsta(t)) return false
+      vistos.add(k)
+      return true
+    })
+  return {
+    ...spec,
+    niceToHave: [
+      ...spec.niceToHave,
+      ...faltan.slice(0, Math.max(0, 40 - spec.niceToHave.length)).map((t) => ({ skill: t, raw: t, years: null, category: null, kind: "capability" as const })),
+    ],
+  }
 })
 export type JobSpec = z.infer<typeof JobSpecSchema>
 
@@ -666,8 +799,21 @@ export interface Finding {
    * 2026-09-09: la lista entera la decide `skillPlan` con el techo de veinte y
    * los pesos del aviso, así que un remedio por término era la mitad de esa
    * respuesta dada por otro dueño.
+   *
+   * ── LOS DOS QUE FALTABAN (2026-09-24, medido en producción) ──────────────
+   * Con un solo remedio, todo hallazgo terminaba en «reescribí esta línea», y
+   * eso mentía en dos casos:
+   *
+   *   ask  — la vacante pide algo de lo que el CV no tiene NINGÚN rastro. Pedir
+   *          una reescritura es pedirle al modelo que lo afirme: escribió
+   *          «applying security best practices for fintech apps» sobre un
+   *          puesto de 2015 que no era fintech. El hecho lo pone la persona —se
+   *          le pregunta si lo tiene y dónde— y recién ahí se redacta, por el
+   *          mismo camino que ya usa el veredicto ADD.
+   *   none — lo arregla un dato del documento (las fechas, el orden), no una
+   *          redacción. El botón de la tarjeta de fechas reescribía el RESUMEN.
    */
-  remedy: "rewrite"
+  remedy: "rewrite" | "ask" | "none"
   /**
    * DE QUÉ habla, cuando no habla de la línea.
    *

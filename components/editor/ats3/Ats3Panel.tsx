@@ -21,24 +21,12 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
 import { statesQuantity } from "@/lib/ats3/score"
 import type { AuditFacts } from "@/lib/ats3/score"
-import type { ResumeSections } from "@/types/resume"
 // LA PANTALLA DE SIEMPRE. El motor cambió debajo; el informe que el usuario
 // aprendió a leer —dial, secciones, filas de chequeo, tabla de términos— no.
 import { ScoreDial, ReportSectionCard, CheckRow, TermTable } from "./report-ui"
 import { Btn, Card, Chip, Note } from "./ui"
 import TailorPanel, { pendingCount, type DoneEntry } from "./TailorPanel"
 import { sectionsOf, termsOfSpec, headlineOf } from "./view-model"
-
-
-/** El texto del CV donde un término puede estar demostrado. */
-function cvText(data: ResumeSections): string {
-  return [
-    data.summary ?? "",
-    ...(data.workExperience ?? []).map((r) => `${r.jobTitle ?? ""} ${r.employer ?? ""} ${r.description ?? ""}`),
-    ...(data.skills ?? []).map((s) => s.name ?? ""),
-  ].join(" \n ")
-}
-
 
 
 export default function Ats3Panel() {
@@ -50,10 +38,6 @@ export default function Ats3Panel() {
   // caminos termina discrepando en uno.
   const resumeId = useResumeStore((s: { resumeId: string | null }) => s.resumeId)
   const language = useResumeStore((s: { config?: { language?: string } }) => s.config?.language)
-  // El CV, para CONTAR los términos de la tabla. Se cuenta sobre el documento
-  // vivo, no sobre una estimación: "lo pide 4 veces, tu CV lo dice 0" es una
-  // afirmación que el usuario puede comprobar leyendo.
-  const sectionData = useResumeStore((s: { sectionData: ResumeSections }) => s.sectionData)
   const a = useAts3(resumeId ?? "", language === "en" ? "en" : "es")
 
   /** Los hallazgos, dichos en la forma que la pantalla ya sabía pintar. */
@@ -79,8 +63,8 @@ export default function Ats3Panel() {
   /** Las cuatro cifras de la cabecera salen juntas: no pueden discrepar. */
   const cabecera = useMemo(() => headlineOf(a.score, secciones), [a.score, secciones])
   const términos = useMemo(
-    () => termsOfSpec(a.spec, a.covered, a.jd, cvText(sectionData), a.audit?.softCoverage ?? []),
-    [a.spec, a.covered, a.jd, sectionData, a.audit],
+    () => termsOfSpec(a.spec, a.covered, a.jd, a.tree, a.audit?.softCoverage ?? []),
+    [a.spec, a.covered, a.jd, a.tree, a.audit],
   )
 
   /**
@@ -170,6 +154,36 @@ export default function Ats3Panel() {
         </Note>
       )}
 
+      {/* LA ESPERA DEL ANÁLISIS TIENE LA FORMA DE LO QUE VIENE.
+          Tarda de 15 a 60 segundos y el panel quedaba vacío con el botón
+          diciendo «Analizando…». Se dibuja el esqueleto del informe —el dial y
+          las secciones— en el lugar donde va a aparecer, sin tapar el CV. */}
+      {a.loading && !a.score && (
+        <div role="status" aria-live="polite" aria-label={t("analyzing")} className="flex flex-col gap-3">
+          <p className="text-[11.5px] font-medium" style={{ color: "var(--a-muted)" }}>{t("analyzing_hint")}</p>
+          <div aria-hidden className="flex items-center gap-4 motion-safe:animate-pulse">
+            <span className="h-[88px] w-[88px] shrink-0 rounded-full" style={{ border: "8px solid var(--a-border)" }} />
+            <span className="flex flex-1 flex-col gap-2">
+              <span className="h-3.5 w-3/4 rounded-full" style={{ background: "var(--a-border)" }} />
+              <span className="h-2.5 w-full rounded-full" style={{ background: "var(--a-border)" }} />
+              <span className="h-2.5 w-2/3 rounded-full" style={{ background: "var(--a-border)" }} />
+            </span>
+          </div>
+          {[0, 1, 2, 3].map((i) => (
+            <span
+              key={i}
+              aria-hidden
+              className="flex h-[58px] items-center gap-3 rounded-2xl px-4 motion-safe:animate-pulse"
+              style={{ background: "var(--a-surface)", border: "1px solid var(--a-border)" }}
+            >
+              <span className="h-7 w-7 shrink-0 rounded-lg" style={{ background: "var(--a-border)" }} />
+              <span className="h-3 w-1/3 rounded-full" style={{ background: "var(--a-border)" }} />
+              <span className="ml-auto h-3 w-10 rounded-full" style={{ background: "var(--a-border)" }} />
+            </span>
+          ))}
+        </div>
+      )}
+
       {a.score && (
         <>
           {/* EL DIAL, con lo que se puede recuperar y qué es lo crítico —no
@@ -237,7 +251,13 @@ export default function Ats3Panel() {
           ))}
 
           {a.audit && (
-            <Anatomy audit={a.audit} metric={medidaDeLaCifra} textOf={a.textOf} t={t} />
+            <Anatomy
+              audit={a.audit}
+              metric={medidaDeLaCifra}
+              textOf={a.textOf}
+              lines={a.tree.roles.reduce((n, r) => n + r.bullets.length, 0)}
+              t={t}
+            />
           )}
 
           {/* LA ÚNICA SALIDA DEL INFORME.
@@ -377,9 +397,19 @@ function Anatomy({
   audit,
   metric,
   textOf,
+  lines,
   t,
 }: {
   audit: AuditFacts
+  /**
+   * CUÁNTAS LÍNEAS TIENE EL CV, revisadas o no.
+   *
+   * El cuadro cuenta sobre las líneas que la auditoría juzgó, y está bien: son
+   * las únicas de las que puede hablar. Pero decir «12/12» sobre un CV de 42
+   * es decir que se revisó todo (medido en producción el 2026-09-24). Si
+   * quedaron líneas sin juicio, se dice cuántas.
+   */
+  lines: number
   /**
    * LA VARA DE LA CIFRA ES EL PUNTAJE, y por eso viene de él.
    *
@@ -464,6 +494,11 @@ function Anatomy({
     <Card radius="2xl" className="p-4">
       <h3 className="text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_title")}</h3>
       <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_caption")}</p>
+      {total < lines && (
+        <Note tone="warn" className="mt-2">
+          {t("bq_partial", { n: total, total: lines })}
+        </Note>
+      )}
 
       <ul className="mt-3 flex flex-col gap-2">
         {filas.map(([clave, n]) => (

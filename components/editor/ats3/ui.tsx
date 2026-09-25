@@ -42,6 +42,21 @@ export const PRESSABLE =
   "transition-[filter,transform] duration-150 hover:brightness-95 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
 
 /**
+ * EL CAMPO: un selector o un texto que escribe la persona.
+ *
+ * Estaba copiado a mano en cada `<select>` de la pestaña, sin estado de foco:
+ * con teclado no se sabía dónde estaba el cursor. Una forma, con su anillo de
+ * foco, y el piso de 40px para que el dedo no falle en un teléfono.
+ */
+export const FIELD_CLASS =
+  "block w-full min-h-[40px] rounded-lg px-3 py-2 text-[12.5px] leading-relaxed outline-none transition-shadow duration-150 focus-visible:ring-2 focus-visible:ring-[var(--a-accent-ink)] focus-visible:ring-offset-1"
+export const FIELD_STYLE: CSSProperties = {
+  background: "var(--a-surface)",
+  border: "1px solid var(--a-border)",
+  color: "var(--a-ink)",
+}
+
+/**
  * QUÉ SIGNIFICA, no de qué color es.
  *
  * Se nombra por lo que la cosa ES —está bien, avisa, rompe, lo escribe la IA,
@@ -248,6 +263,42 @@ export function Note({
     >
       {children}
     </p>
+  )
+}
+
+/**
+ * LA ESPERA DE UNA ESCRITURA, EN EL LUGAR DONDE VA A APARECER.
+ *
+ * Una reescritura tarda de 10 a 25 segundos y afecta a UNA tarjeta. Había dos
+ * indicadores para esa misma espera —un velo sobre toda la ventana de Tailor y
+ * un spinner en el botón— y el velo tapaba todo lo demás (CEO, 2026-09-24:
+ * «el loading tapa toda la pantalla»). Queda uno: estas líneas que late, en la
+ * tarjeta que se está escribiendo. El resto se sigue leyendo; lo que evita un
+ * segundo pedido es que los botones de IA se apagan mientras hay uno en vuelo.
+ * `motion-safe`: con «reducir movimiento» no late, queda quieto.
+ */
+export function Writing({ label, className = "" }: { label: string; className?: string }) {
+  const t = TONE.ai
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={`rounded-xl px-3.5 py-3 ${className}`}
+      style={{ background: t.soft, border: `1px solid color-mix(in srgb, ${t.solid} 30%, transparent)` }}
+    >
+      <p className="mb-2.5 text-[11.5px] font-semibold" style={{ color: t.ink }}>
+        {label}
+      </p>
+      <div aria-hidden className="flex flex-col gap-1.5 motion-safe:animate-pulse">
+        {["92%", "78%", "55%"].map((w) => (
+          <span
+            key={w}
+            className="block h-2.5 rounded-full"
+            style={{ width: w, background: `color-mix(in srgb, ${t.solid} 22%, transparent)` }}
+          />
+        ))}
+      </div>
+    </div>
   )
 }
 
