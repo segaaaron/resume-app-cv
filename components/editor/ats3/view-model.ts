@@ -17,7 +17,7 @@
 // "probar" leyendo que la línea existía, y un test que lee el código no prueba
 // nada.
 
-import type { Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
+import type { Axis, Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
 import { buildTermIndex, detailParts, normalize, termCounts, termKey } from "@/lib/ats3/contracts"
 import { cvTextOf, SCORED_COMPONENTS, termsOf } from "@/lib/ats3/score"
 import type { ComponentKey, Score } from "@/lib/ats3/score"
@@ -97,6 +97,12 @@ export interface PanelCheck {
    * una frase leída como si fuera un requisito.
    */
   requirements: string[]
+  /** El verbo que la tarjeta promete dejar de repetir, si lo promete. */
+  avoidOpener?: string
+  /** La tarjeta promete el tamaño del logro: una cifra o su hueco. */
+  wantsSize?: boolean
+  /** Los ejes de la viñeta que la tarjeta promete cerrar. */
+  axes?: Axis[]
 }
 
 export interface PanelSection {
@@ -142,21 +148,23 @@ export interface PanelTerm {
  */
 const COMPONENTS_OF: Record<PanelSectionId, ComponentKey[]> = {
   /**
-   * El cargo va acá y no en «Lo que mira la persona»: es lo PRIMERO que lee un
-   * filtro y compara cadenas, igual que los requisitos duros. Sin esto caía en
-   * la sección del reclutador por descarte —`title` no estaba en ninguna— que es
-   * la clase de agrupamiento a dedo que este archivo existe para no tener.
+   * El cargo va con las duras: es lo PRIMERO que lee un filtro y compara
+   * cadenas, igual que los requisitos duros.
    */
-  hard: ["must", "title"],
+  hard: ["must", "title", "years"],
   /**
    * Las blandas tienen componente propio y SÍ puntúan: 0,10 del pilar de
    * relevancia, el mismo peso que el motor viejo les daba y que v3 había
-   * perdido. Antes esta lista estaba vacía y sus tarjetas caían en «Lo que mira
-   * la persona» —la sección del reclutador— bajo un porcentaje que mide otra cosa.
+   * perdido.
    */
   soft: ["soft"],
   other: ["nice"],
   format: ["checks"],
+  /**
+   * EL IMPACTO DE LAS VIÑETAS: acción, resultado y método (XYZ), la cifra, los
+   * verbos que se repiten y el resumen. Es parte del análisis, no un consejo
+   * aparte (CEO, 2026-09-28).
+   */
   tips: ["xyz", "metric", "verbs", "summary"],
 }
 
@@ -198,9 +206,8 @@ export function checkOf(
    * QUÉ DICE ESA LÍNEA HOY.
    *
    * `f.nodeText` es lo que el motor LEYÓ al analizar, y la pantalla lo pintaba
-   * como si fuera el texto actual. En la misma ventana el tablero de veredictos
-   * ya mostraba la línea viva: dos versiones del mismo renglón, una al lado de
-   * la otra, apenas el usuario editara algo. Una sola pregunta, una sola
+   * como si fuera el texto actual: apenas el usuario editaba algo, la tarjeta
+   * hablaba de un renglón que ya no existía. Una sola pregunta, una sola
    * respuesta — y la que corresponde es la del CV que la persona tiene delante,
    * porque es sobre ése que va a decidir.
    *
@@ -230,6 +237,21 @@ export function checkOf(
       .filter((p) => p.type === "missing_requirement" || p.type === "title_mismatch")
       .map((p) => (p.type === "title_mismatch" ? marcaYDato(p.detail).dato : p.detail))
       .filter(Boolean),
+    wantsSize: detailParts(f).some((p) => p.type === "no_metric") || undefined,
+    // Los ejes que falta cerrar, estructurados: el motor comprueba que la
+    // línea nueva los tenga, y la tarjeta le pregunta a la persona el que sólo
+    // ella puede dar.
+    axes: (() => {
+      const ejes = detailParts(f)
+        .filter((p) => p.type === "no_result")
+        .flatMap((p) => p.detail.split(/,\s*/))
+        .filter((e): e is Axis => e === "verbo" || e === "resultado" || e === "método")
+      return ejes.length ? [...new Set(ejes)] : undefined
+    })(),
+    avoidOpener: (() => {
+      const v = detailParts(f).find((p) => p.type === "verb_repeated")
+      return v ? marcaYDato(v.detail).dato : undefined
+    })(),
     // La sección sale del componente del que el motor sacó la ganancia, no de
     // una lista de tipos escrita a mano acá.
     section: SECTION_OF.get(f.component) ?? "tips",
@@ -237,7 +259,16 @@ export function checkOf(
     weight: Number(f.gain.toFixed(1)),
     // Diez preguntas con el mismo título obligaban a leer el cuerpo de cada una
     // para saber de qué requisito hablaba. La pregunta nombra su término.
-    titleKey: f.remedy === "ask" ? `type_${f.type}_ask` : esCredencial(f) ? `type_${f.type}_credential` : `type_${f.type}`,
+    titleKey:
+      f.remedy === "ask"
+        ? `type_${f.type}_ask`
+        : esCredencial(f)
+          ? `type_${f.type}_credential`
+          : // Nueve chequeos distintos con un título común se leían como la misma
+            // tarjeta repetida: el título nombra el chequeo que falló.
+            f.type === "parse_risk"
+            ? `type_parse_risk_${detalleDe(f, "parse_risk")}`
+            : `type_${f.type}`,
     /**
      * CUÁNTOS REQUISITOS CIERRA ESTA TARJETA.
      *
@@ -261,12 +292,33 @@ export function checkOf(
       f.remedy === "ask" || esCredencial(f)
         ? { term: f.subject ?? "" }
         : f.type === "missing_requirement"
-        ? { count: detailParts(f).filter((p) => p.type === "missing_requirement").length }
+        ? (() => {
+            // El título NOMBRA el requisito: «falta un requisito» a secas obligaba
+            // a abrir la tarjeta para saber cuál (medido el 2026-09-28).
+            const reqs = detailParts(f).filter((p) => p.type === "missing_requirement").map((p) => p.detail)
+            return { count: reqs.length, term: reqs.join(", ") }
+          })()
         : f.type === "title_mismatch"
           ? { cargo: marcaYDato(detalleDe(f, "title_mismatch")).dato }
-          : f.type === "verb_repeated"
-            ? { verbo: marcaYDato(detalleDe(f, "verb_repeated")).dato }
-            : undefined,
+          : f.type === "soft_not_shown"
+            ? { term: detalleDe(f, "soft_not_shown") }
+            : f.type === "verb_repeated"
+              ? { verbo: marcaYDato(detalleDe(f, "verb_repeated")).dato }
+              : f.type === "years_short"
+                ? (() => {
+                    const [tiene, pide] = marcaYDato(detalleDe(f, "years_short")).dato.split("/")
+                    return { tiene, pide }
+                  })()
+                : f.type === "role_too_long"
+                  ? (() => {
+                      // El cargo puede tener barras («Marketing / Community»):
+                      // los dos números son siempre los dos últimos pedazos.
+                      const partes = marcaYDato(detalleDe(f, "role_too_long")).dato.split("/")
+                      const max = partes.pop() ?? ""
+                      const n = partes.pop() ?? ""
+                      return { puesto: partes.join("/"), n, max }
+                    })()
+                  : undefined,
     /**
      * POR QUÉ IMPORTA, y sale del TIPO del hallazgo.
      *
@@ -316,7 +368,10 @@ const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap", "no_
  * captura. El título de la tarjeta ya los nombra bien cuando el hallazgo va
  * solo; el problema aparece cuando se FUSIONA y el título lo pone otro.
  */
-const FRASE_DE = new Set(["verb_repeated", "title_mismatch"])
+const FRASE_DE = new Set(["verb_repeated", "title_mismatch", "cliche"])
+
+/** Los tipos cuyo dato ya lo dice el título: repetirlo abajo es ruido. */
+const SOLO_TITULO = new Set(["years_short", "role_too_long"])
 
 /**
  * UN MOTIVO MARCADO SE PARTE EN MARCA Y DATO. «verbo:developed» → «developed».
@@ -384,7 +439,9 @@ function evidenciaDe(
   // salía crudo porque la tarjeta ya no era de un tipo con tokens.
   // El motor une con coma los ejes de la viñeta y las funciones del resumen.
   const glosados = detailParts(f).flatMap((p) =>
-    TIPOS_CON_TOKENS.has(p.type)
+    SOLO_TITULO.has(p.type)
+      ? []
+      : TIPOS_CON_TOKENS.has(p.type)
       ? p.detail.split(/\s*,\s*/).filter(Boolean).map(decir)
       : FRASE_DE.has(p.type)
         ? [decir(p.detail)]
@@ -413,9 +470,8 @@ export function sectionsOf(
     id,
     /**
      * Puntúa la sección cuyo componente el PUNTAJE mide, no la que simplemente
-     * tiene uno. Las blandas tienen componente propio —para que sus tarjetas no
-     * caigan en la sección del reclutador— y no se miden: la pregunta se le hace
-     * a quien los enumera, `SCORED_COMPONENTS`, en vez de contar la lista.
+     * tiene uno: la pregunta se le hace a quien los enumera,
+     * `SCORED_COMPONENTS`, en vez de contar la lista.
      */
     scored: COMPONENTS_OF[id].some((k) => (SCORED_COMPONENTS as string[]).includes(k)),
     coveragePct: score ? pctOf(score, COMPONENTS_OF[id]) : null,

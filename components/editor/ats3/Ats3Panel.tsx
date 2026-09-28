@@ -19,8 +19,9 @@ import { useTranslations } from "next-intl"
 import { Check, Lightbulb, Loader2, Minus, Sparkles, Target } from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
-import { statesQuantity } from "@/lib/ats3/score"
+import { softCoverageOf, statesQuantity } from "@/lib/ats3/score"
 import type { AuditFacts } from "@/lib/ats3/score"
+import type { ResumeSections } from "@/types/resume"
 // LA PANTALLA DE SIEMPRE. El motor cambió debajo; el informe que el usuario
 // aprendió a leer —dial, secciones, filas de chequeo, tabla de términos— no.
 import { ScoreDial, ReportSectionCard, CheckRow, TermTable } from "./report-ui"
@@ -31,6 +32,8 @@ import { sectionsOf, termsOfSpec, headlineOf } from "./view-model"
 
 export default function Ats3Panel() {
   const t = useTranslations("editor.ats3")
+  /** Los errores de la IA ya tienen su copia (cuota diaria, límite por hora). */
+  const tai = useTranslations("editor.ai")
   /** La copia de la pantalla de entrada, que el producto ya tenía escrita. */
   const tv = useTranslations("editor.ats")
   // El CV y su idioma salen del store, no de props: quien monta el panel no
@@ -63,7 +66,7 @@ export default function Ats3Panel() {
   /** Las cuatro cifras de la cabecera salen juntas: no pueden discrepar. */
   const cabecera = useMemo(() => headlineOf(a.score, secciones), [a.score, secciones])
   const términos = useMemo(
-    () => termsOfSpec(a.spec, a.covered, a.jd, a.tree, a.audit?.softCoverage ?? []),
+    () => termsOfSpec(a.spec, a.covered, a.jd, a.tree, a.spec && a.audit ? softCoverageOf(a.spec, a.audit, a.tree) : []),
     [a.spec, a.covered, a.jd, a.tree, a.audit],
   )
 
@@ -75,8 +78,8 @@ export default function Ats3Panel() {
    * mentira aunque las dos sean ciertas — este panel ya lo pagó dos veces.
    */
   const paraTailor = useMemo(
-    () => pendingCount(secciones, a.triage),
-    [secciones, a.triage],
+    () => pendingCount(secciones),
+    [secciones],
   )
   const [tailorAbierto, setTailorAbierto] = useState(false)
   /**
@@ -106,6 +109,10 @@ export default function Ats3Panel() {
    * lo que tienen en vez de desaparecer.
    */
   const [hechas, setHechas] = useState<DoneEntry[]>([])
+  /** Lo que el CV dice HOY, donde el motor escribe: el resumen y los puestos. */
+  const cvVivo = useResumeStore((s: { sectionData: ResumeSections }) =>
+    [s.sectionData.summary ?? "", ...(s.sectionData.workExperience ?? []).map((r) => r.description ?? "")].join("\n"),
+  )
   const registro = useMemo(() => {
     const porId = new Map<string, DoneEntry>()
     for (const r of a.resolved) {
@@ -120,8 +127,32 @@ export default function Ats3Panel() {
       })
     }
     for (const h of hechas) porId.set(h.id, h)
-    return [...porId.values()]
-  }, [a.resolved, hechas])
+    // «Hechas» se deriva del CV vivo, no sólo de lo que se anotó: «Ahora dice X»
+    // sobre un CV que no dice X es falso, y pasa al recargar sin haber guardado
+    // (medido el 2026-09-28: una pestaña limpia abría con «Hechas 5»). Lo mismo
+    // «Sacada del CV» sobre un texto que el CV tiene.
+    //
+    // Y un arreglo que otro arreglo posterior volvió a mejorar sigue hecho: su
+    // texto ya no está tal cual, pero el siguiente partió de él (su «antes» es
+    // este «después»). Medido el 2026-09-28: escribir «facturación electrónica»
+    // sobre la línea nueva de SIN sacaba de «Hechas» la tarjeta de SIN, con SIN
+    // todavía escrito en el CV.
+    const todas = [...porId.values()]
+    const vivos = new Set(todas.filter((h) => h.kind === "applied" && h.after && cvVivo.includes(h.after)))
+    for (let cambio = true; cambio; ) {
+      cambio = false
+      for (const h of todas) {
+        if (h.kind !== "applied" || !h.after || vivos.has(h)) continue
+        if ([...vivos].some((v) => v.before === h.after)) {
+          vivos.add(h)
+          cambio = true
+        }
+      }
+    }
+    return todas.filter((h) =>
+      h.kind === "applied" && h.after ? vivos.has(h) : !(h.kind === "dropped" && h.before && cvVivo.includes(h.before)),
+    )
+  }, [a.resolved, hechas, cvVivo])
 
   /**
    * Un error del análisis se lleva la vista, porque es lo único que la pantalla
@@ -150,7 +181,7 @@ export default function Ats3Panel() {
 
       {a.error && (
         <Note ref={errorRef} tone="bad" role="alert">
-          {t("failed")} · {a.error}
+          {tai.has(a.error) ? tai(a.error) : `${t("failed")} · ${a.error}`}
         </Note>
       )}
 
@@ -196,7 +227,7 @@ export default function Ats3Panel() {
             recoverable={cabecera.recoverable}
           />
 
-          {a.calls === 0 && (
+          {a.calls === 0 && a.cvSinCambios && (
             // Servir del caché no es un detalle técnico: es la promesa de que
             // volver a analizar no cuesta nada y no devuelve otra cosa.
             <p className="text-xs" style={{ color: "var(--a-muted)" }}>{t("served_from_cache")}</p>

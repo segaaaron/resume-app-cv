@@ -50,9 +50,9 @@ plantilla ATS y el asistente, que no son éste.
   veredicto, que además exige cero críticos abiertos para decir «listo».
 - **¿Cuánto se puede recuperar?** → `view-model.ts`, acotado al techo real
   (`min(suma, 100 - total)`): el dial no puede prometer puntos imposibles.
-- **¿Cuántas cosas hay que hacer?** → una sola expresión,
-  `workOf(secciones).length + verdictsToDo(triage).length`, y la usan el botón
-  del informe y la pestaña de Tailor. Dos cifras ciertas que cuentan cosas
+- **¿Cuántas cosas hay que hacer?** → una sola expresión, `pendingCount`
+  (`workOf(secciones).length`), y la usan el botón del informe y la pestaña de
+  Tailor. Dos cifras ciertas que cuentan cosas
   distintas se leen como una mentira.
 
 ## 2 · El índice es pista, el texto es identidad
@@ -73,7 +73,7 @@ guardado en un puntero a la línea equivocada.
 ## 3 · Cada clave de caché nombra TODO de lo que depende su respuesta
 
 Dueño: `cacheKey` en `engine.ts`. Cinco capas: `ats3-jd`, `ats3-audit`,
-`ats3-triage`, `ats3-fix`, `ats3-log`.
+`ats3-fix`, `ats3-log` y `ats3-lock` (los juicios fijados).
 
 Una clave incompleta es peor que no tener caché: sirve la respuesta de otra
 pregunta. `treeHash` cubre viñetas, resumen, **cargo, empresa, fechas y
@@ -104,16 +104,24 @@ Dueños: `loyalty` en `guards.ts` (qué se vuelve a mostrar) y el registro
 
 ## 5 · Un hallazgo declara su remedio, y la pantalla sólo traduce
 
-`rewrite` · `weave` · `add_skill`. La pantalla no adivina cómo se cierra: si lo
-adivinara volvería a decir «reescribí esta línea» para todo, y reescribir la
-línea de 2015 no la desentierra.
+`rewrite` · `ask` · `none`. La pantalla no adivina cómo se cierra: si lo
+adivinara volvería a decir «reescribí esta línea» para todo.
 
-- **El triage manda sobre la línea.** `KEEP` y `DROP` cierran cualquier hallazgo
-  sobre esa viñeta: pedir una mejora sobre una de las dos es contradecirse en la
-  misma pantalla.
-- **Ningún veredicto sin botón.** Un `REPLACE` sin su pregunta degrada a
-  `REWRITE` al leer la respuesta: el campo es nulable y sólo lo pedía un renglón
-  del prompt, y un prompt es una petición, no un contrato.
+- **Un juicio sólo cambia si cambió el texto que lo sostiene (CEO,
+  2026-09-28).** Los ejes XYZ de cada viñeta, las funciones del resumen y la
+  cobertura implícita los decide el modelo, y el modelo no juzga igual dos
+  veces: arreglabas una línea y aparecía trabajo en otras que nadie tocó.
+  `fijarJuicios` ata cada juicio al hash de su texto (`ats3-lock`) y el análisis
+  siguiente lo respeta mientras ese texto exista.
+- **Lo esencial de un ATS se mide con código, sin consultas (CEO,
+  2026-09-28):** los años que pide el aviso contra los que prueban las fechas
+  (`experienceYears`, sin contar dos veces lo superpuesto; componente `years`,
+  0,10 de la relevancia), el email y el teléfono detectables (dos chequeos de
+  lectura), las frases hechas (`findCliches`, la misma lista que Tailor tiene
+  prohibida) y los puestos con más viñetas de las que se leen
+  (`BULLETS_PER_ROLE_MAX`).
+- **El triage de espacio salió** (sacar, fusionar, agregar líneas): no movía el
+  puntaje y cerraba tarjetas según un veredicto que oscilaba.
 - **Un componente que puntúa sin hallazgos que lo nombren no tiene sección.** El
   cargo (`title`) pesa y se mide, y ninguna tarjeta puede moverlo: por eso ya no
   hay una sección «Que te encuentren» pintando un porcentaje sin nada debajo.

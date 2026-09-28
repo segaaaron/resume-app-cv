@@ -167,10 +167,15 @@ export function hasCliche(text: string): boolean {
   return ALL.some((c) => lower.includes(c.phrase)) || isEmptyPhrasing(text)
 }
 
+/** The listed clichés the text carries, by their phrase — what a screen can quote. */
+export function namedCliches(text: string): string[] {
+  const lower = (text ?? "").toLowerCase()
+  return ALL.filter((c) => lower.includes(c.phrase)).map((c) => c.phrase)
+}
+
 /** Every cliché the text carries — for logs, so a run can be explained. */
 export function findCliches(text: string): string[] {
-  const lower = (text ?? "").toLowerCase()
-  const named = ALL.filter((c) => lower.includes(c.phrase)).map((c) => c.phrase)
+  const named = namedCliches(text)
   // The structural finding has no phrase to name — say so rather than return an
   // empty list for a text the gate just rejected, which reads like a bug in a log.
   if (named.length === 0 && isEmptyPhrasing(text)) return ["(empty phrasing: a quality claimed, not work reported)"]

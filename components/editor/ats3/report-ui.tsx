@@ -20,7 +20,7 @@ import { useTranslations } from "next-intl"
 // El lenguaje de pulsación vive con el resto del vocabulario visual: definirlo
 // acá otra vez era la misma frase en dos archivos.
 import { Btn, Chip, Note, PRESSABLE, toneOf, type Tone } from "./ui"
-import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Sparkles, Tag,  User } from "lucide-react"
+import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Sparkles, Tag, User } from "lucide-react"
 import { READY_SCORE, scoreBand } from "@/lib/ats3/score"
 import type { PanelCheck, PanelSection, PanelSectionId, PanelTerm } from "./view-model"
 
@@ -623,6 +623,15 @@ export function CheckRow({ check }: RowProps) {
           <span className="block text-[12.5px] font-semibold leading-snug" style={{ color: "var(--a-ink-2)" }}>
             {t(check.titleKey, params)}
           </span>
+          {/* DE QUÉ LÍNEA HABLA, sin abrir la fila. Treinta filas que dicen
+              «Logro sin cifra» sin decir dónde obligaban a abrirlas de a una
+              (medido el 2026-09-28). Dos renglones: identifica, no reemplaza a
+              Tailor, que es donde se lee entera y se arregla. */}
+          {check.line && (
+            <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug" style={{ color: "var(--a-muted)" }}>
+              {check.line}
+            </span>
+          )}
           {/* CUÁNTO MUEVE — y cuando no mueve nada, POR QUÉ igual importa.
               «CRÍTICO · no mueve el número» son dos frases ciertas que juntas se
               leen como una mentira: reportado con captura, con la nota en 100.
@@ -882,7 +891,12 @@ export function TermTable({ terms, onSolve }: TableProps) {
                             está demostrado — el botón habría llevado a una
                             tarjeta que no existe. Se pregunta por lo demostrado,
                             que es lo que produce la tarjeta. */}
-                        {onSolve && !row.proven && (
+                        {/* Y una dura que ya está en la lista CUENTA para el
+                            filtro: el motor no emite hallazgo sobre ella, así
+                            que su botón abría Tailor sin nada que resolver
+                            (medido el 2026-09-28: Combine, XCTest, English). La
+                            blanda sí tiene tarjeta: dicha no es demostrada. */}
+                        {onSolve && !row.proven && !(row.listOnly && row.section !== "soft") && (
                           <span className="shrink-0">
                             <Btn
                               variant="outline"

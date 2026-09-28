@@ -185,20 +185,13 @@ export const PROMPT_VERSION = {
   // rate» entre ellas) contra tres pedidas, y el puntaje daba 5/3 = 100% con la
   // tabla mostrando las tres como faltantes. Y juzga TODAS las viñetas: devolvió
   // 12 de 42 y la pantalla dijo «12/12».
-  P2: "p2-6", // auditoría
-  // p3-2: KEEP exige que la línea sea SUYA. Una correcta pero genérica ocupa el
-  // lugar de una que distingue.
-  // p3-3 (2026-09-09): sexto veredicto, MERGE — dos viñetas del mismo puesto que
-  // cuentan el mismo trabajo partido en dos. Se pide en el MISMO acto que ya
-  // recibe el bloque entero, así que no cuesta una llamada nueva; y cambia lo
-  // que el modelo devuelve, así que lo guardado con p3-2 ya no es la respuesta.
-  // p3-4 (2026-09-09): séptimo veredicto, ADD — un puesto con menos de tres
-  // viñetas no dice qué hizo la persona ahí, y hasta ahora el motor sólo sabía
-  // señalar lo que sobra. El hecho lo pone el usuario: el modelo propone el tema
-  // y la pregunta, nunca afirma.
-  // p3-5 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
-  // p3-6 (2026-09-24): REPLACE declara `proposedTopic` — el «sí» escribe ESE tema en lugar de la línea.
-  P3: "p3-6", // triage
+  // p2-8 (2026-09-28): vuelve a juzgar viñetas y resumen (p2-7 no lo hacía), y
+  // ahora el motor FIJA cada juicio al texto que lo sostiene: una línea que no
+  // cambió conserva el suyo entre análisis. Ver `fijarJuicios`.
+  // p2-9 (2026-09-28): una viñeta que abre con «Ayudé con…»/«Participé en…» ya
+  // no cuenta como verbo de acción (`opensWeakly` corrige el juicio).
+  // p2-10 (2026-09-28): IMPLIED exige la línea citada; hasActionVerb cita `WEAK_OPENERS`; la blanda demostrada cita una viñeta, nunca el resumen.
+  P2: "p2-10", // auditoría
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -224,11 +217,41 @@ export const PROMPT_VERSION = {
   // vuelve hueco, y `variantWithoutMetric` tiene su regla. La regla vieja —«si
   // declarás un tamaño, la línea LLEVA su hueco»— hacía que el modelo cambiara
   // el «30%» del candidato por «[x%]». Reportado con captura.
-  P4: "p4-10", // reescritura de viñeta
+  // p4-11 (2026-09-28): el idioma de salida se dice. En la pregunta «¿tenés
+  // esto?» la persona contesta con sus palabras, y esa respuesta hace de
+  // original: medido en Chrome, un CV en inglés recibió «Guardé y protegí los
+  // tokens de sesión en Keychain…».
+  // p4-12 (2026-09-28): las aperturas prohibidas salen de `WEAK_OPENERS`, no de una
+  // copia escrita a mano que ya decía otra cosa («Ayudé a» contra «ayudé»).
+  // p4-13 (2026-09-28): lo que la tarjeta promete (términos, verbo a evitar, tamaño) viaja en la primera llamada, y los términos comprometidos quedan fuera de la prueba de la palabra compartida.
+  // p4-14 (2026-09-28): un término comprometido con formas « | » se cumple con una.
+  // p4-15 (2026-09-28): no se declina con una promesa abierta de la tarjeta.
+  // p4-16: el término comprometido tampoco choca con la regla del sector/ámbito.
+  // p4-17: el término comprometido no se traduce.
+  // p4-18: el término comprometido se integra con naturalidad y con la mayúscula de la oración.
+  // p4-19 (2026-09-28): los ejes prometidos viajan estructurados, la persona puede
+  // contar el resultado en la tarjeta, y el modelo declara `newBasis` de su línea.
+  P4: "p4-19", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
-  P5: "p5-3", // resumen
+  // p5-4 (2026-09-28): recibe lo que la tarjeta prometió (el cargo abre la
+  // identidad), una sola voz, y ni viñetas pegadas ni oraciones de una palabra.
+  // Medido en Chrome: devolvía un resumen sin el cargo, con «Builds…» y un
+  // «English.» suelto.
+  // p5-5 (2026-09-28): recibe los años medidos sobre las fechas y los términos comprometidos desde la primera llamada.
+  // p5-6 (2026-09-28): la tercera persona se prohíbe con el ejemplo del verbo conjugado.
+  // p5-7 (2026-09-28): las funciones del resumen sin rótulos que el modelo copie,
+  // y las tareas del aviso no son de la persona. Formas del cargo con « | ».
+  // p5-8 (2026-09-28): los años son de toda la trayectoria.
+  // p5-9 (2026-09-28): la prueba y los términos del ajuste salen de lo que ESTE puesto pide.
+  // p5-10: los términos demostrados no se enumeran al final.
+  // p5-11: los rótulos del pedido hablan de la persona, no del CV — el modelo copiaba «the CV shows».
+  // p5-12: la prueba es el primer logro dado (con cifra); ninguna oración es una lista de términos.
+  // p5-13: la prueba elegida se exige con su cifra.
+  // p5-14: la prueba llega en su propia sección, no mezclada en una lista.
+  // p5-15: la antigüedad del resumen viejo no se exige conservar (se escribe la medida).
+  P5: "p5-15", // resumen
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -306,8 +329,24 @@ export interface TermVariants {
 export interface TermIndex {
   /** termKey → canónico. */
   byKey: Map<string, string>
-  /** Todas las variantes normalizadas, de la más larga a la más corta. */
-  ordered: { canonical: string; needle: string }[]
+  /**
+   * Todas las variantes normalizadas, de la más larga a la más corta. `sigla`
+   * marca la que el aviso escribe en mayúsculas: ver `termCounts`.
+   */
+  ordered: { canonical: string; needle: string; sigla?: boolean }[]
+}
+
+/** «SIN», «IT», «US»: dos a cuatro letras escritas enteras en mayúscula. */
+const SIGLA = /^[A-Z]{2,4}$/
+
+/** `normalize` sin bajar a minúsculas: las posiciones coinciden con las suyas. */
+function normalizeKeepCase(raw: string): string {
+  return raw
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\p{L}\p{N}+#]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ")
 }
 
 export function buildTermIndex(terms: TermVariants[]): TermIndex {
@@ -320,7 +359,7 @@ export function buildTermIndex(terms: TermVariants[]): TermIndex {
       const key = termKey(raw)
       if (!byKey.has(key)) byKey.set(key, t.canonical)
       if (!ordered.some((o) => o.needle === needle && o.canonical === t.canonical)) {
-        ordered.push({ canonical: t.canonical, needle })
+        ordered.push({ canonical: t.canonical, needle, ...(SIGLA.test(raw.trim()) && { sigla: true }) })
       }
     }
   }
@@ -346,10 +385,20 @@ export function buildTermIndex(terms: TermVariants[]): TermIndex {
  */
 export function termCounts(index: TermIndex, text: string): Map<string, number> {
   const hay = ` ${normalize(text)} `
-  const taken: [number, number][] = []
+  /**
+   * UNA SIGLA SÓLO CUENTA ESCRITA COMO SIGLA.
+   *
+   * Medido el 2026-09-28: una vacante boliviana pedía «facturación electrónica
+   * (SIN)» —el Servicio de Impuestos— y al comparar en minúsculas cada «sin» del
+   * CV la cubría. Lo mismo «IT» contra «it» o «US» contra «us» en inglés. Si el
+   * aviso la escribe en mayúsculas, el CV tiene que escribirla igual.
+   */
+  const conMayusculas = ` ${normalizeKeepCase(text)} `
+  const comparable = conMayusculas.length === hay.length
+  const taken: [number, number, string][] = []
   const counts = new Map<string, number>()
 
-  for (const { canonical, needle } of index.ordered) {
+  for (const { canonical, needle, sigla } of index.ordered) {
     const pat = ` ${needle} `
     let from = 0
     for (;;) {
@@ -357,9 +406,21 @@ export function termCounts(index: TermIndex, text: string): Map<string, number> 
       if (at === -1) break
       const start = at + 1
       const end = start + needle.length
-      const overlaps = taken.some(([s, e]) => start < e && end > s)
+      if (sigla && comparable && conMayusculas.slice(start, end) !== needle.toUpperCase()) {
+        from = at + 1
+        continue
+      }
+      // El término largo reclama lo que NOMBRA DISTINTO: «React Native» no es
+      // React. Pero lo que cierra el nombre es el sustantivo: «Xcode Instruments»
+      // ES Instruments, «Unit Testing» ES testing. Un término distinto que
+      // termina donde termina el largo no se lo roba nadie (medido el
+      // 2026-09-28: el CV declaraba «Xcode Instruments» y el panel decía que
+      // faltaba Instruments).
+      const overlaps = taken.some(
+        ([s, e, c]) => start < e && end > s && !(end === e && start > s && c !== canonical),
+      )
       if (!overlaps) {
-        taken.push([start, end])
+        taken.push([start, end, canonical])
         counts.set(canonical, (counts.get(canonical) ?? 0) + 1)
       }
       from = at + 1
@@ -383,9 +444,16 @@ export function termsIn(index: TermIndex, text: string): Set<string> {
 export function specTerms(spec: JobSpec): TermVariants[] {
   const out: TermVariants[] = []
   for (const r of [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])]) {
+    // `raw` es una VARIANTE sólo si nombra el término de otra forma («cuadre de
+    // caja» para «Arqueo de caja»). Si ya contiene el canónico —P1 pone ahí la
+    // oración del aviso, regla 4c—, sólo puede coincidir donde el canónico ya
+    // coincide, y por match maximal le ROBA el tramo a sus vecinos: medido el
+    // 2026-09-28, «Integrate REST and GraphQL APIs» (raw de REST) dejaba GraphQL
+    // en «no lo pude contar», y «…CI/CD pipelines with Fastlane» se comía CI/CD.
+    const variants = ` ${normalize(r.raw)} `.includes(` ${normalize(r.skill)} `) ? [] : [r.raw]
     const previo = out.find((o) => normalize(o.canonical) === normalize(r.skill))
-    if (previo) previo.variants.push(r.raw)
-    else out.push({ canonical: r.skill, variants: [r.raw] })
+    if (previo) previo.variants.push(...variants)
+    else out.push({ canonical: r.skill, variants })
   }
   return out
 }
@@ -573,6 +641,12 @@ export interface ResumeTree {
   declaredSkills: string[]
   /** Texto plano de las secciones que el puntaje mira pero no reescribe. */
   otherText: string
+  /**
+   * CÓMO SE CONTACTA A LA PERSONA, sólo para saber si un lector lo encuentra.
+   * NO viaja al modelo —`compactTree` elige sus campos uno por uno— ni entra a
+   * la huella del CV: es un dato personal y no cambia ningún juicio.
+   */
+  contact?: { email: string; phone: string }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -658,6 +732,7 @@ export function nodeHash(text: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Los tipos son del MOTOR, no de un oficio: describen qué le falta a un texto. */
+/** Los tipos son del MOTOR, no de un oficio: describen qué le falta a un texto. */
 export const FINDING_TYPES = [
   "missing_requirement", // la vacante lo exige y el CV no lo demuestra
   /**
@@ -671,19 +746,19 @@ export const FINDING_TYPES = [
   "no_metric", // el logro admite tamaño y no lo declara
   "summary_gap", // al resumen le falta una de sus funciones
   "parse_risk", // algo que un lector automático no va a extraer bien
-  "buried_term", // lo demuestra, pero en un puesto viejo: el lector no llega
   "soft_not_shown", // la vacante la pide, el CV la declara y nada la respalda
   /**
    * ── LOS DOS QUE COBRABAN SIN REPORTAR (CEO, 2026-09-09) ────────────────────
    * El puntaje descuenta por el cargo que no coincide (0,14 de la relevancia) y
    * por los verbos repetidos (0,10 del impacto), y NINGÚN hallazgo declaraba
-   * esos componentes: el usuario podía cerrar las cuarenta y ocho tarjetas del
-   * panel y quedarse con casi un cuarto del peso perdido sin que nadie le
-   * dijera por qué. Un puntaje que cobra algo que no enseña a arreglar no es
+   * esos componentes: un puntaje que cobra algo que no enseña a arreglar no es
    * un puntaje, es un reproche con decimales.
    */
   "title_mismatch", // el cargo que la vacante busca no está escrito en el CV
   "verb_repeated", // ese verbo abre más de una viñeta
+  "years_short", // la vacante pide más años de los que el CV prueba
+  "cliche", // una frase que podría estar en el CV de cualquiera
+  "role_too_long", // un puesto con más viñetas de las que se leen
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
 
@@ -809,7 +884,7 @@ export interface Finding {
    *          «applying security best practices for fintech apps» sobre un
    *          puesto de 2015 que no era fintech. El hecho lo pone la persona —se
    *          le pregunta si lo tiene y dónde— y recién ahí se redacta, por el
-   *          mismo camino que ya usa el veredicto ADD.
+   *          camino de una línea nueva en el puesto que la persona elige.
    *   none — lo arregla un dato del documento (las fechas, el orden), no una
    *          redacción. El botón de la tarjeta de fechas reescribía el RESUMEN.
    */
@@ -890,39 +965,8 @@ export const PlaceholderSchema = z.object({
 export type Placeholder = z.infer<typeof PlaceholderSchema>
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TRIAGE Y SUGERENCIAS
+// SUGERENCIAS
 // ─────────────────────────────────────────────────────────────────────────────
-
-export const VERDICTS = ["KEEP", "REWRITE", "REPLACE", "DEMOTE", "DROP", "MERGE", "ADD"] as const
-export type Verdict = (typeof VERDICTS)[number]
-
-export const TriageDecisionSchema = z.object({
-  bulletId: texto(64),
-  verdict: z.enum(VERDICTS),
-  reason: texto(240),
-  relevance: numero(0, 1, 0.5),
-  proposedTopic: z.string().max(200).nullish().transform((v) => v ?? null),
-  /** En REPLACE el modelo NUNCA afirma que el candidato hizo algo: pregunta. */
-  needsUserConfirm: z.string().max(300).nullish().transform((v) => v ?? null),
-  /**
-   * LA OTRA LÍNEA DEL PAR, cuando dos viñetas cuentan el mismo trabajo.
-   *
-   * ── POR QUÉ VIVE EN EL TRIAGE Y NO EN UNA LLAMADA PROPIA ───────────────────
-   * El triage YA recibe todas las viñetas del puesto en una sola petición: es
-   * el único momento en que el motor tiene el bloque entero delante. Detectar
-   * el par ahí cuesta CERO llamadas nuevas. Un detector léxico aparte no sirve
-   * —este proyecto lo midió: dos líneas que cuentan el mismo trabajo a menudo
-   * no comparten ni una palabra («Gestioné la agenda» / «Confirmé los turnos»),
-   * y ofrecía 0 de 10 fusiones reales—.
-   *
-   * `MERGE` PROPONE, NUNCA IMPONE (CEO, 2026-09-09): «pregunta al usuario si
-   * quiere hacerlo, no se obliga a nadie a nada; y si también hace falta
-   * eliminar, dale esa opción». La tarjeta enseña las DOS líneas y ofrece las
-   * dos salidas; el motor no elige por él.
-   */
-  mergeWith: z.string().max(64).nullish().transform((v) => v ?? null),
-})
-export type TriageDecision = z.infer<typeof TriageDecisionSchema>
 
 /**
  * ── POR QUÉ CASI TODO ACÁ TIENE UN VALOR POR DEFECTO ────────────────────────
@@ -1014,8 +1058,27 @@ export const SuggestionSchema = z.object({
     })
     .nullish()
     .transform((v) => v ?? null),
+  /**
+   * LOS TRES EJES DE LA LÍNEA NUEVA, declarados por quien la escribió.
+   *
+   * La tarjeta promete ejes —«no dice en qué terminó»— y viajaban como prosa:
+   * el modelo, sin un resultado verdadero que escribir, rellenaba con una
+   * palabra de la vacante («Resolví reclamos de clientes con atención al
+   * cliente», medido el 2026-09-28) y nada lo veía. Declarados, el motor
+   * compara contra lo prometido y, si falta el resultado, se le pide el dato a
+   * la persona en vez de entregar relleno. Omitido, cuenta como no cumplido.
+   */
+  newBasis: z
+    .object({
+      hasActionVerb: bandera(),
+      hasResult: bandera(),
+      hasMethod: bandera(),
+    })
+    .nullish(),
 })
 export type Suggestion = z.infer<typeof SuggestionSchema>
+/** Los ejes de una viñeta, con el nombre con el que el motor los marca en un hallazgo. */
+export type Axis = "verbo" | "resultado" | "método"
 
 /** Lo que el motor le agrega a una sugerencia. El modelo no lo puede escribir. */
 export interface AnchoredSuggestion extends Suggestion {
@@ -1033,14 +1096,6 @@ export interface AnchoredSuggestion extends Suggestion {
    * escriba nada— y el modelo sólo lo redacta.
    */
   addToRole?: string
-  /**
-   * LA LÍNEA QUE SE ABSORBE, en una fusión. Se BORRA al aplicar.
-   *
-   * Viaja con la propuesta y no aparte porque aplicar tiene que ser un solo
-   * acto: escribir la fusionada y dejar la otra en pie deja el CV con el mismo
-   * trabajo contado dos veces, que es justo lo que la fusión venía a arreglar.
-   */
-  mergedFrom?: NodeId
   /**
    * LA LÍNEA DEL CV A LA QUE ESTA PROPUESTA SE PARECE, si se parece.
    *

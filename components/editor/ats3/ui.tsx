@@ -374,7 +374,7 @@ export function Diff({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div>
+      {before && <div>
         <Label>{beforeLabel}</Label>
         <p
           className="text-[12px] leading-relaxed line-through decoration-1 [overflow-wrap:anywhere]"
@@ -382,7 +382,7 @@ export function Diff({
         >
           {before}
         </p>
-      </div>
+      </div>}
       <div>
         <Label tone={tone}>{afterLabel}</Label>
         <Note tone={tone} size="md" className="mt-0.5">

@@ -184,7 +184,7 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
     })
     const c = checkOf(f, () => "Designed user-friendly interfaces", (k) =>
       k.normalize("NFD").replace(/\p{Diacritic}/gu, "") === "metodo" ? "No dice cómo lo lograste" : k)
-    expect(c.params).toEqual({ count: 1 })
+    expect(c.params).toEqual({ count: 1, term: "first or early mobile hire at a startup" })
     expect(c.evidence).toEqual(["first or early mobile hire at a startup", "No dice cómo lo lograste"])
   })
 

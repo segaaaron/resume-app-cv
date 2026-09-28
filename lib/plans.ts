@@ -23,6 +23,7 @@ export type AiEndpointName =
   | "improve-cover-letter"
   | "ats-score"
   | "ats3"
+  | "ats3-rewrite"
   | "review-cv"
   | "translate-cv"
 
@@ -40,6 +41,8 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   // petición, una cuota, el mismo tope diario y las mismas puertas. Ningún plan
   // gana ni pierde nada por esto — lo que cambia es qué motor contesta.
   "ats3",
+  // Las reescrituras de Tailor, con su propia cuenta: ver AI_DAILY_CAP.
+  "ats3-rewrite",
   "review-cv",
   "translate-cv",
 ] as const
@@ -83,6 +86,12 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   // una cuota. Con el reembolso por respuesta servida del caché, reanalizar un
   // CV que no cambió no gasta ranura, porque no gasta una llamada.
   "ats3": 20,
+  // Las reescrituras de Tailor son la acción por viñeta del motor v3: la misma
+  // superficie que improve-bullet/skill-bullet/merge-bullets, y el mismo tope.
+  // Compartían las 20 ranuras del análisis, así que un CV con 20 a 40 tarjetas
+  // no se podía terminar en un día aunque nadie abusara de nada (medido el
+  // 2026-09-28). Con el reembolso, sólo cuenta la reescritura que se entrega.
+  "ats3-rewrite": 50,
   "review-cv": 10,
   // 3/day: translation is idempotent (a CV is translated once and the copy is
   // reused); this cap only bites the re-do case (user deleted the copy).
@@ -302,6 +311,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": -1,
       "ats3": -1,
+      "ats3-rewrite": -1,
       "review-cv": -1,
       "translate-cv": -1,
     },
@@ -325,6 +335,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": 0,
       "ats-score": 0,
       "ats3": 0,
+      "ats3-rewrite": 0,
       "review-cv": 0,
       "translate-cv": 0,
     },
@@ -346,6 +357,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": 0,
       "ats-score": 0,
       "ats3": 0,
+      "ats3-rewrite": 0,
       "review-cv": 0,
       "translate-cv": 0,
     },
@@ -365,6 +377,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": 0,
       "ats3": 0,
+      "ats3-rewrite": 0,
       "review-cv": 0,
       "translate-cv": 0,
     },
@@ -383,6 +396,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": -1,
       "ats3": -1,
+      "ats3-rewrite": -1,
       "review-cv": -1,
       "translate-cv": -1,
     },

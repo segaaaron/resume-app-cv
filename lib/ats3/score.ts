@@ -62,8 +62,14 @@ export const COMPONENT_WEIGHT = {
    *
    * Los otros tres bajan proporcionalmente para dejarle su lugar: `must` sigue
    * pesando más del doble que `nice`, y el orden entre ellos no cambia.
+   *
+   * ── LOS AÑOS DE EXPERIENCIA, 0,10 (CEO, 2026-09-28) ─────────────────────────
+   * Los ATS que filtran de verdad —Workday, Taleo, Greenhouse— miran los años
+   * que pide el aviso, y P1 ya los extraía (`yearsRequired`) sin que nadie los
+   * usara. Entran con el mismo peso que las blandas, y los demás bajan en la
+   * misma proporción (×0,9): el orden entre ellos no cambia.
    */
-  relevance: { must: 0.54, nice: 0.22, title: 0.14, soft: 0.1 },
+  relevance: { must: 0.486, nice: 0.198, title: 0.126, soft: 0.09, years: 0.1 },
   impact: { xyz: 0.45, metric: 0.3, verbs: 0.1, summary: 0.15 },
 } as const
 
@@ -75,30 +81,14 @@ export type ScoredComponent =
   | "must"
   | "nice"
   | "title"
+  | "years"
   | "xyz"
   | "metric"
   | "verbs"
   | "summary"
   | "soft"
 
-/**
- * LO QUE UN HALLAZGO PUEDE NOMBRAR — hoy, lo mismo.
- *
- * ── EL CRUCE QUE ESTO CIERRA (CEO, 2026-09-09) ──────────────────────────────
- * Una habilidad blanda sin demostrar salía con el componente `xyz`, que
- * pertenece a «Lo que mira la persona»: la tarjeta de una blanda aparecía en la
- * sección del reclutador, bajo un porcentaje que mide otra cosa. Y la sección
- * «Habilidades blandas» existía sin poder recibir ni una tarjeta.
- *
- * `soft` es un componente que el puntaje NO mide, y eso es lo correcto: las
- * blandas no puntúan por decisión de producto. Al no estar entre los medidos, la
- * sección no pinta porcentaje —`pctOf` devuelve null— así que «esto no mueve el
- * número» queda dicho por construcción, no por una excepción escrita a mano.
- *
- * Son dos tipos porque son dos preguntas. Con uno solo había que elegir entre
- * dejar a las blandas fuera de las secciones o meterlas en el cálculo, y las dos
- * están mal.
- */
+/** Lo que un hallazgo puede nombrar: hoy, exactamente lo que el puntaje mide. */
 export type ComponentKey = ScoredComponent
 
 const PILLAR_OF: Record<ScoredComponent, Pillar> = {
@@ -106,6 +96,7 @@ const PILLAR_OF: Record<ScoredComponent, Pillar> = {
   must: "relevance",
   nice: "relevance",
   title: "relevance",
+  years: "relevance",
   xyz: "impact",
   metric: "impact",
   verbs: "impact",
@@ -257,6 +248,58 @@ export function statesQuantity(text: string): boolean {
  * oficios—: acá sólo se mide REPETICIÓN, que es lo que un reclutador ve en
  * cinco segundos cuando seis líneas empiezan igual.
  */
+/** Una fecha como rango de meses: con mes, un punto; con sólo el año, el año entero. */
+export type Mes = { min: number; max: number }
+/** El puesto sigue abierto: no termina, así que no deja hueco ni solape. */
+export const ABIERTO: Mes = { min: Infinity, max: Infinity }
+/** «Presente», «current», «actual»: el puesto sigue abierto. */
+export const FECHA_ABIERTA = /presente|current|actual/i
+
+/**
+ * LA FECHA COMO CANTIDAD DE MESES. Un solo lector para todo el motor: la
+ * línea de tiempo, el orden de los puestos y los años de experiencia.
+ */
+export function mes(fecha: string): Mes | null {
+  const m = fecha.match(/(\d{4})[-/](\d{1,2})|(\d{1,2})[-/](\d{4})|(\d{4})/)
+  if (!m) return null
+  const anio = Number(m[1] ?? m[4] ?? m[5])
+  const numeroMes = m[2] ?? m[3]
+  if (numeroMes === undefined) return { min: anio * 12 + 1, max: anio * 12 + 12 }
+  const punto = anio * 12 + Math.min(12, Math.max(1, Number(numeroMes)))
+  return { min: punto, max: punto }
+}
+
+/**
+ * ¿CUÁNTOS AÑOS DE EXPERIENCIA PRUEBA EL CV?
+ *
+ * La suma de los períodos de sus puestos SIN contar dos veces los que se
+ * superponen: dos trabajos a la vez son un año de experiencia, no dos. Un año
+ * sin mes se lee entero («2017 — 2020» va de enero de 2017 a diciembre de 2020),
+ * que es como lo lee una persona. Un puesto abierto llega hasta hoy.
+ */
+export function experienceYears(tree: ResumeTree, hoy: Date = new Date()): number {
+  const ahora = hoy.getFullYear() * 12 + hoy.getMonth() + 1
+  const tramos = tree.roles
+    .map((r) => {
+      const desde = mes(r.startDate)
+      const hasta = !r.endDate.trim() || FECHA_ABIERTA.test(r.endDate) ? null : mes(r.endDate)
+      // Nunca más allá de hoy: un «2026» suelto es el año entero, y contaba los
+      // meses que todavía no pasaron (medido el 2026-09-28: 12 años donde las
+      // fechas daban 11).
+      return desde ? { desde: desde.min, hasta: Math.min(hasta ? hasta.max : ahora, ahora) } : null
+    })
+    .filter((t): t is { desde: number; hasta: number } => t !== null && t.hasta >= t.desde)
+    .sort((a, b) => a.desde - b.desde)
+  let meses = 0
+  let fin = -Infinity
+  for (const t of tramos) {
+    const desde = Math.max(t.desde, fin + 1)
+    if (t.hasta >= desde) meses += t.hasta - desde + 1
+    fin = Math.max(fin, t.hasta)
+  }
+  return meses / 12
+}
+
 /**
  * ¿EL CARGO QUE LA VACANTE BUSCA ESTÁ ESCRITO EN EL CV?
  *
@@ -269,10 +312,42 @@ export function statesQuantity(text: string): boolean {
  * que este proyecto ya pagó con «plusvalía contiene plus».
  */
 export function titleWritten(tree: ResumeTree, spec: JobSpec): boolean {
-  const cargo = normalize(spec.roleTitleRaw ?? "")
-  if (!cargo) return true // Sin cargo en el aviso no hay nada que comparar.
+  const formas = titleForms(spec.roleTitleRaw ?? "").map(normalize).filter(Boolean)
+  if (formas.length === 0) return true // Sin cargo en el aviso no hay nada que comparar.
   const donde = ` ${[tree.summary.text, ...tree.roles.map((r) => r.title)].map(normalize).join(" · ")} `
-  return donde.includes(` ${cargo} `)
+  return formas.some((f) => donde.includes(` ${f} `))
+}
+
+/**
+ * UN CARGO CON BARRA SON VARIOS CARGOS, Y CUALQUIERA CUMPLE.
+ *
+ * Medido el 2026-09-28: la vacante buscaba «Cajera / Cajero de Supermercado» y
+ * el puntaje exigía esa cadena entera con la barra. Ningún CV la escribe así,
+ * así que la tarjeta del cargo no se cerraba nunca. La barra separa formas del
+ * mismo cargo, y la palabra suelta comparte el resto con su vecina:
+ *
+ *   «Cajera / Cajero de Supermercado»  → Cajera de Supermercado · Cajero de Supermercado
+ *   «Frontend Developer / Engineer»    → Frontend Developer · Frontend Engineer
+ *   «Vendedor/a»                       → Vendedor · Vendedora
+ *
+ * Sólo la barra con espacios, o la del género al final: «CI/CD» es un nombre.
+ * ponytail: tres o más alternativas, o dos de varias palabras, quedan como
+ * están escritas; alcanza para cómo se redactan los cargos de verdad.
+ */
+export function titleForms(raw: string): string[] {
+  const t = raw.trim()
+  if (!t) return []
+  const genero = t.match(/^(.*\p{L})\/(as?|os?)$/iu)
+  if (genero) {
+    const base = genero[1]
+    return [base, /[aeo]$/i.test(base) ? base.replace(/[aeo]$/i, genero[2]) : base + genero[2]]
+  }
+  const partes = t.split(/\s+\/\s+/)
+  if (partes.length !== 2) return [t]
+  const [a, b] = partes.map((p) => p.split(/\s+/))
+  if (a.length === 1 && b.length > 1) return [[a[0], ...b.slice(1)].join(" "), b.join(" ")]
+  if (b.length === 1 && a.length > 1) return [a.join(" "), [...a.slice(0, -1), b[0]].join(" ")]
+  return [a.join(" "), b.join(" ")]
 }
 
 export function distinctOpeners(texts: string[]): number {
@@ -379,8 +454,12 @@ export function postingWeights(spec: JobSpec, jdText: string): Record<string, nu
 /** Los términos en juego: los que la vacante nombra y los que el CV declara. */
 export function termsOf(spec: JobSpec, tree: ResumeTree): TermVariants[] {
   const out = specTerms(spec)
-  for (const s of tree.declaredSkills) {
-    if (!out.some((o) => normalize(o.canonical) === normalize(s))) out.push({ canonical: s, variants: [] })
+  // «Swift Package Manager / SPM» son DOS nombres del mismo término, no uno
+  // largo: entero, le robaba por match maximal la aparición a «Swift Package
+  // Manager» y el panel decía que el CV no lo nombraba. Se parte sólo por la
+  // barra CON espacios: «CI/CD» y «async/await» son un nombre.
+  for (const s of tree.declaredSkills.flatMap((x) => x.split(/\s+\/\s+|\s*[,;|]\s*/))) {
+    if (normalize(s) && !out.some((o) => normalize(o.canonical) === normalize(s))) out.push({ canonical: s.trim(), variants: [] })
   }
   return out
 }
@@ -454,6 +533,28 @@ export function coverageOf(
   return out
 }
 
+/**
+ * LA BLANDA, CON LA MISMA VARA QUE LA DURA: EL CÓDIGO DECIDE SOBRE EL TEXTO.
+ *
+ * Medido el 2026-09-28 sobre un CV de cajera: «honestidad» salía «sólo en la
+ * lista» con «lo decís 0» — el modelo la dio por demostrada sin citar línea, la
+ * degradación la dejó en declarada y sumaba 0,6 por una palabra que no está en
+ * ningún lado. «Declarada» es un hecho del texto, no un juicio: está escrita o
+ * no. Demostrada sigue siendo juicio del modelo, y vale sólo si la línea que
+ * cita existe.
+ */
+export function softCoverageOf(spec: JobSpec, audit: AuditFacts, tree: ResumeTree): AuditFacts["softCoverage"] {
+  const index = buildTermIndex((spec.softSignals ?? []).map((x) => ({ canonical: x, variants: [] })))
+  const escritas = termCounts(index, cvTextOf(tree))
+  // Un logro vive en una viñeta: el resumen afirma, no demuestra (P2, regla 5).
+  const ids = new Set(tree.roles.flatMap((r) => r.bullets).map((l) => l.id))
+  return audit.softCoverage.map((s) => {
+    if (s.status === "DEMONSTRATED" && s.evidenceNodeId && ids.has(s.evidenceNodeId)) return s
+    const escrita = escritas.has(index.byKey.get(termKey(s.signal)) ?? s.signal)
+    return { ...s, status: escrita ? ("DECLARED_ONLY" as const) : ("ABSENT" as const), evidenceNodeId: null }
+  })
+}
+
 export function scoreResume(
   tree: ResumeTree,
   spec: JobSpec,
@@ -512,7 +613,7 @@ export function scoreResume(
    * la tabla. Una blanda que la vacante no pidió no puede sumar, y una pedida
    * cuenta una sola vez.
    */
-  const juicioBlando = new Map(audit.softCoverage.map((s) => [normalize(s.signal), s.status]))
+  const juicioBlando = new Map(softCoverageOf(spec, audit, tree).map((s) => [normalize(s.signal), s.status]))
   const pedidasBlandas = [...new Set((spec.softSignals ?? []).map(normalize).filter(Boolean))]
   const softTotal = pedidasBlandas.length
   const softFound = pedidasBlandas.reduce((n, s) => {
@@ -563,6 +664,13 @@ export function scoreResume(
      */
     { key: "title", numerator: titleWritten(tree, spec) ? 1 : 0, denominator: 1 },
     { key: "soft", numerator: softFound, denominator: softTotal },
+    // Razón continua, como el cargo: con la mitad de los años pedidos, la mitad
+    // del peso. Sin años en el aviso no aplica y su peso se reparte.
+    {
+      key: "years",
+      numerator: spec.yearsRequired ? Math.min(1, experienceYears(tree) / spec.yearsRequired) : 0,
+      denominator: spec.yearsRequired ? 1 : 0,
+    },
     { key: "xyz", numerator: complete, denominator: bullets.length },
     { key: "metric", numerator: withQuantity, denominator: bulletTexts.length },
     { key: "verbs", numerator: distinctOpeners(bulletTexts), denominator: bulletTexts.length },

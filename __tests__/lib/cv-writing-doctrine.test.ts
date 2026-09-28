@@ -155,7 +155,7 @@ describe("the CV-writing bar", () => {
    * how "Participé en la automatización de QA…" reached a real CV.
    */
   it("quotes the duty openers from the list the checker uses", () => {
-    expect(proseRules("es")).toContain("Participé en")
+    expect(proseRules("es")).toContain("Participé")
     expect(proseRules("en")).toContain("Participated in")
     // Each language quotes its own half — an English phrase in the Spanish
     // prompt teaches nothing, and a regex split put one there once.

@@ -5,8 +5,8 @@
 // EL PUENTE ENTRE EL MOTOR Y LA PANTALLA.
 //
 // Lee los actos a medida que llegan y los pinta apenas llegan: el puntaje está
-// listo en milisegundos y el triage tarda segundos, así que esperar a tenerlo
-// todo sería regalar pantalla quieta.
+// listo en milisegundos y la auditoría tarda segundos, así que esperar a
+// tenerlo todo sería regalar pantalla quieta.
 //
 // ── LO QUE ESTE ARCHIVO NO HACE, A PROPÓSITO ────────────────────────────────
 // No decide nada. No puntúa, no juzga una reescritura, no calcula una ganancia.
@@ -17,11 +17,11 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAtsPostingStore } from "@/stores/atsPostingStore"
-import { appendBullet, applySuggestion, buildTree, removeNode, writeBack, writeInto, readBullets, type RawResume } from "@/lib/ats3/engine"
+import { appendBullet, applySuggestion, buildTree, coverageOf, termsOf, writeBack, writeInto, type RawResume } from "@/lib/ats3/engine"
 import { openLedger } from "@/lib/ats3/ledger"
 import { findNode } from "@/lib/ats3/guards"
-import { nodeHash, normalize } from "@/lib/ats3/contracts"
-import type { AnchoredSuggestion, Finding, JobSpec, Resolution, TriageDecision } from "@/lib/ats3/contracts"
+import { buildTermIndex, detailParts, nodeHash, normalize } from "@/lib/ats3/contracts"
+import type { AnchoredSuggestion, Axis, Finding, JobSpec, Resolution } from "@/lib/ats3/contracts"
 import { scoreResume, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 export type FailureReason = string
@@ -34,6 +34,23 @@ export type FailureReason = string
  * usa para no volver a señalar lo cerrado, y la lista, que lo vuelve a dibujar
  * después de recargar.
  */
+/**
+ * LO QUE LA TARJETA LE PROMETIÓ A LA PERSONA, EN UN SOLO OBJETO.
+ *
+ * Eran siete argumentos posicionales, y cada promesa nueva agregaba uno al
+ * final: un llamador que se salteaba uno corría a todos los demás de lugar.
+ * Viaja igual de la tarjeta a la ruta y al motor.
+ */
+export interface Promesa {
+  focus?: string
+  addToRole?: string
+  mustWrite?: string[]
+  avoidOpener?: string
+  wantsSize?: boolean
+  axes?: Axis[]
+  told?: string
+}
+
 export interface DoneRecord {
   title: string
   kind: "applied" | "dropped" | "dismissed"
@@ -49,7 +66,6 @@ export interface Ats3State {
   suppressed: number
   /** Lo que el usuario ya cerró en corridas anteriores. Sobrevive a recargar. */
   resolved: Resolution[]
-  triage: TriageDecision[]
   /** Términos de la vacante que el CV ya demuestra. Guían el presupuesto. */
   covered: string[]
   /** Llamadas que la última corrida gastó de verdad. Cero = todo del caché. */
@@ -74,7 +90,6 @@ const EMPTY: Ats3State = {
   regressed: [],
   suppressed: 0,
   resolved: [],
-  triage: [],
   covered: [],
   calls: null,
   audit: null,
@@ -110,16 +125,10 @@ function olvidar(st: Ats3State, quien: { nodeId: string } | { findingId: string 
   // cierra la pregunta «¿tenés este requisito?».
   const fuera = (f: { id: string; nodeId: string; subject?: string }) =>
     "nodeId" in quien ? f.nodeId === quien.nodeId && !f.subject : f.id === quien.findingId
-  const cerrado = "findingId" in quien ? st.findings.find((f) => f.id === quien.findingId) : undefined
   return {
     ...st,
     findings: st.findings.filter((f) => !fuera(f)),
     regressed: st.regressed.filter((f) => !fuera(f)),
-    // El veredicto habla de la LÍNEA entera: se retira cuando se retira ella, o
-    // cuando el hallazgo que se cerró era el de esa misma línea.
-    triage: st.triage.filter((d) =>
-      "nodeId" in quien ? d.bulletId !== quien.nodeId : !(cerrado && !cerrado.subject && d.bulletId === cerrado.nodeId),
-    ),
   }
 }
 
@@ -169,6 +178,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   /** Cuál de las tarjetas de esa línea pidió la reescritura. Ver `olvidar`. */
   const [pendingFinding, setPendingFinding] = useState<string | null>(null)
   const inFlight = useRef<AbortController | null>(null)
+  /** El CV tal como se mandó a analizar: contra esto se dice si cambió después. */
+  const [analizado, setAnalizado] = useState<string | null>(null)
 
   const payloadResume = useCallback(
     (): RawResume => ({
@@ -182,6 +193,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       })),
       skills: (sectionData.skills ?? []).map((s) => ({ name: s.name ?? "" })),
       otherText: otherTextOf(sectionData),
+      contact: { email: sectionData.personalDetails?.email ?? "", phone: sectionData.personalDetails?.phone ?? "" },
     }),
     [sectionData],
   )
@@ -202,6 +214,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     setLoading(true)
     setError(null)
     setState(EMPTY)
+    const cv = payloadResume()
+    setAnalizado(JSON.stringify(cv))
     try {
       const res = await apiFetch("/api/ai/ats3", {
         method: "POST",
@@ -211,7 +225,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
           resumeId,
           jobDescription: jd,
           language,
-          resume: payloadResume(),
+          resume: cv,
           checks: {},
         }),
       })
@@ -305,12 +319,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             resolved: (act.resolved as Resolution[]) ?? [],
           }))
           break
-        case "triage":
-          setState((s) => ({
-            ...s,
-            triage: act.decisions as TriageDecision[],
-          }))
-          break
         case "done":
           setState((s) => ({ ...s, calls: (act.telemetry as { calls: number }).calls }))
           break
@@ -336,11 +344,15 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      * Trabajo en equipo» y al modelo se le mandaba el CV, la vacante y nada más.
      * Se dice una vez, en un solo lugar, y los dos leen lo mismo.
      */
-    async (nodeId: string, findingId?: string, focus?: string, mergeWith?: string, addToRole?: string, replacing?: boolean) => {
+    async (nodeId: string, findingId: string | undefined, promesa: Promesa = {}) => {
+      const { focus, addToRole, mustWrite, avoidOpener, wantsSize, axes, told } = promesa
       if (!state.spec) return
       setBusyNode(nodeId)
       setPendingFinding(findingId ?? null)
       setRejected(null)
+      // Un intento nuevo borra el error del anterior: si no, el aviso viejo
+      // quedaba pegado y el nuevo no se distinguía de él.
+      setError(null)
       try {
         const res = await apiFetch("/api/ai/ats3", {
           method: "POST",
@@ -363,9 +375,12 @@ export function useAts3(resumeId: string, language: "es" | "en") {
              */
             covered: state.covered,
             focus,
-            mergeWith,
             addToRole,
-            replacing,
+            mustWrite,
+            avoidOpener,
+            wantsSize,
+            axes,
+            told,
           }),
         })
         // Mismo motivo que en el análisis: un 500 devuelve `{error}` y sin este
@@ -416,8 +431,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      * la misma viñeta, cerrar una escribía la resolución de las DOS y la otra no
      * volvía. Descartada a mano, no volvía NUNCA.
      *
-     * Sin `findingId` se anota la línea entera, que es lo correcto en el único
-     * caso donde eso es cierto: `dropBullet`, donde la viñeta deja de existir.
+     * Sin `findingId` se anota la línea entera.
      */
     (
       nodeId: string,
@@ -427,8 +441,12 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       /** Con qué nombre se cerró y qué quedó escrito: es lo que «Hechas» dibuja. */
       registro?: DoneRecord,
     ) => {
-      const deLaLinea = [...state.findings, ...state.regressed].filter((f) => f.nodeId === nodeId)
-      const hallazgos = findingId ? deLaLinea.filter((f) => f.id === findingId) : deLaLinea
+      // Con su id, el hallazgo se busca por id: el de un término se pide sobre
+      // una viñeta del puesto que la persona ELIGIÓ, no sobre su propio nodo, y
+      // buscándolo por línea no aparecía — la línea entraba al CV y el hallazgo
+      // nunca se anotaba (medido el 2026-09-28 con «¿Trabajaste con Keychain?»).
+      const todos = [...state.findings, ...state.regressed]
+      const hallazgos = findingId ? todos.filter((f) => f.id === findingId) : todos.filter((f) => f.nodeId === nodeId)
       if (hallazgos.length === 0 || jd.trim().length < 20) return
       // Envuelto: una anotación que falla —o una petición que ni sale— NO puede
       // tumbar el aplicado. El CV ya está escrito; esto es memoria, no el acto.
@@ -520,21 +538,10 @@ export function useAts3(resumeId: string, language: "es" | "en") {
 
       // Sin los insumos de la medición se escribe igual: el CV del usuario nunca
       // depende de que hayamos podido recalcular su puntaje.
-      /**
-       * EN UNA FUSIÓN, LA LÍNEA ABSORBIDA SE VA EN EL MISMO ACTO.
-       *
-       * `applySuggestion` ya lo hace sobre su copia; este camino de respaldo
-       * —el que corre cuando no se pudo recalcular el puntaje— tenía que
-       * hacerlo también, o el CV quedaba con la fusionada Y la original: el
-       * mismo trabajo contado dos veces, que es lo que la fusión venía a
-       * arreglar. Dos caminos de escritura que no hacen lo mismo es como este
-       * panel ya se contradijo antes.
-       */
       const escrito = s.addToRole
         ? appendBullet(tree, s.addToRole, finalText)
         : writeInto(tree, s.bulletId, finalText)
-      const aMano = s.mergedFrom ? removeNode(escrito, s.mergedFrom) : escrito
-      const written = writeBack(medido ? medido.tree : aMano, raw)
+      const written = writeBack(medido ? medido.tree : escrito, raw)
       if (s.bulletId === "summary") updateSectionData("summary", written.summary ?? "")
       else {
         // Sólo los puestos: escribir el CV entero pisaría lo que el usuario
@@ -559,13 +566,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         const nuevo = scoreResume(medido.tree, state.spec, state.audit, state.checks, state.weights)
         setState((st) => ({ ...st, score: nuevo }))
       }
-      // La línea se retira de las TRES listas que hablan de ella.
-      //
-      // Sacarla sólo de `findings` dejaba en pantalla el hallazgo REGRESADO
-      // sobre la misma línea —el panel pinta las dos listas juntas— y el
-      // veredicto del triage ofreciendo reescribir lo que se acaba de
-      // reescribir. Las dos cosas se leen igual: «lo arreglé y me lo vuelve a
-      // pedir», que es el bucle que este motor existe para no tener.
+      // La línea se retira de las DOS listas que hablan de ella: sacarla sólo
+      // de `findings` dejaba en pantalla el hallazgo REGRESADO sobre la misma
+      // línea, y se leía «lo arreglé y me lo vuelve a pedir».
       /**
        * SE RETIRA TODO LO QUE HABLABA DE ESA LÍNEA, no sólo el que cerraste.
        *
@@ -584,87 +587,18 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * análisis, medido sobre lo que ahora hay escrito.
        */
       setState((st) => {
-        const sinLaLinea = olvidar(st, { nodeId: s.bulletId })
-        // La absorbida ya no existe: se va TODO lo que hablaba de ella, incluido
-        // su veredicto. Si no, el tablero sigue ofreciendo fusionar una línea
-        // que el usuario acaba de fusionar.
-        return s.mergedFrom ? olvidar(sinLaLinea, { nodeId: s.mergedFrom }) : sinLaLinea
+        // La tarjeta que pidió la propuesta se cierra por su id. La de un
+        // término lleva sujeto y `olvidar` por línea la deja viva a propósito,
+        // así que respondías «¿tenés Keychain?», la línea entraba al CV y la
+        // pregunta seguía abierta (medido el 2026-09-28). Y una línea NUEVA no
+        // reescribe su ancla: borrar lo que se decía de ella era tirar tarjetas
+        // de una viñeta que nadie tocó.
+        const cerrada = pendingFinding ? olvidar(st, { findingId: pendingFinding }) : st
+        return s.addToRole && pendingFinding ? cerrada : olvidar(cerrada, { nodeId: s.bulletId })
       })
     },
     [payloadResume, pendingFinding, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, state.weights, updateSectionData],
   )
-
-  /**
-   * Saca una línea del CV.
-   *
-   * Es la acción del veredicto DROP y NO gasta un token: quitar una viñeta es
-   * determinista. Devuelve el texto que sacó para poder deshacerlo — es la
-   * primera acción de este producto que DESTRUYE contenido, y un borrado que no
-   * se puede revertir no se ofrece.
-   */
-  const dropBullet = useCallback(
-    (nodeId: string, registro?: DoneRecord): { roleIndex: number; bulletIndex: number; text: string } | null => {
-      const raw = payloadResume()
-      const tree = buildTree(raw)
-      const roleIndex = tree.roles.findIndex((r) => r.bullets.some((b) => b.id === nodeId))
-      if (roleIndex === -1) {
-        setError("stale_node")
-        return null
-      }
-      const bulletIndex = tree.roles[roleIndex].bullets.findIndex((b) => b.id === nodeId)
-      const quitada = tree.roles[roleIndex].bullets[bulletIndex]
-      const roles: WorkExperienceItem[] = (sectionData.workExperience ?? []).map((role, i) =>
-        i !== roleIndex
-          ? role
-          : {
-              ...role,
-              description: tree.roles[roleIndex].bullets
-                .filter((b) => b.id !== nodeId)
-                .map((b) => `• ${b.text}`)
-                .join("\n"),
-            },
-      )
-      updateSectionData("workExperience", roles)
-      /**
-       * SACAR UNA LÍNEA TAMBIÉN SE ANOTA, y por un motivo que cambió.
-       *
-       * Mientras el registro servía sólo para que el motor no repitiera un
-       * hallazgo, anotar un borrado no tenía a quién contestarle: la línea ya no
-       * está en el árbol del análisis siguiente. Desde que ese mismo registro es
-       * el que dibuja «Hechas» —para que sobreviva a recargar—, es su casa: sin
-       * esto, el usuario recarga y no tiene dónde ver qué sacó de su CV.
-       *
-       * Va sin `findingId`: la viñeta dejó de existir, así que se cierra TODO lo
-       * que hablaba de ella. Es el único caso donde eso es cierto.
-       */
-      registrarResuelto(nodeId, quitada.text, "DISMISSED", undefined, registro)
-      setState((st) => olvidar(st, { nodeId }))
-      return { roleIndex, bulletIndex, text: quitada.text }
-    },
-    [payloadResume, registrarResuelto, sectionData.workExperience, updateSectionData],
-  )
-
-  /**
-   * Vuelve a poner la línea que se sacó, EN SU LUGAR.
-   *
-   * Pegarla al final era medio deshacer: el CV quedaba distinto del que el
-   * usuario tenía antes de apretar, con la línea al pie de un puesto que la
-   * traía tercera. Un "deshacer" que no devuelve el estado anterior no es un
-   * deshacer, y en un documento el orden es contenido.
-   */
-  const undoDrop = useCallback(
-    (roleIndex: number, bulletIndex: number, text: string) => {
-      const roles: WorkExperienceItem[] = (sectionData.workExperience ?? []).map((role, i) => {
-        if (i !== roleIndex) return role
-        const lineas = readBullets(role.description ?? "")
-        lineas.splice(Math.min(Math.max(bulletIndex, 0), lineas.length), 0, text)
-        return { ...role, description: lineas.map((t) => `• ${t}`).join("\n") }
-      })
-      updateSectionData("workExperience", roles)
-    },
-    [sectionData.workExperience, updateSectionData],
-  )
-
 
   /**
    * ESCRIBE LA LISTA DE HABILIDADES QUE EL USUARIO ACEPTÓ.
@@ -684,8 +618,31 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             porNombre.get(normalize(nombre)) ?? { id: `sk_${nodeHash(nombre)}`, name: nombre, level: "intermediate" },
         ) as ResumeSections["skills"],
       )
+      /**
+       * Y SE MIDE, como al aceptar una propuesta. El plan puede escribir un
+       * requisito que era una tarjeta abierta —«REST», demostrado en una línea
+       * y ausente de la lista—: el dial quedaba quieto y la tarjeta seguía
+       * pidiendo algo que el CV ya decía (medido el 2026-09-28).
+       */
+      if (!state.spec || !state.audit) return
+      const tree = buildTree({ ...payloadResume(), skills: final.map((name) => ({ name })) })
+      const escritos = new Set(
+        coverageOf(state.spec, state.audit, tree, buildTermIndex(termsOf(state.spec, tree)))
+          .filter((c) => c.status === "FOUND")
+          .map((c) => normalize(c.skill)),
+      )
+      const cerrado = (f: Finding) =>
+        f.type === "missing_requirement" &&
+        detailParts(f).filter((p) => p.type === "missing_requirement").every((p) => escritos.has(normalize(p.detail)))
+      const score = scoreResume(tree, state.spec, state.audit, state.checks, state.weights)
+      setState((st) => ({
+        ...st,
+        score,
+        findings: st.findings.filter((f) => !cerrado(f)),
+        regressed: st.regressed.filter((f) => !cerrado(f)),
+      }))
     },
-    [updateSectionData],
+    [payloadResume, state.audit, state.checks, state.spec, state.weights, updateSectionData],
   )
 
   /**
@@ -725,18 +682,12 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   /**
    * EL TEXTO VIVO DE UNA LÍNEA, POR SU ID.
    *
-   * El triage viaja con `bulletId` y nada más —así lo devuelve el modelo— y la
-   * pantalla no tenía forma de decir DE QUÉ LÍNEA habla cada veredicto: mostraba
-   * "Sacar · duplica la viñeta de arriba" sobre un CV de veinte líneas. Un
-   * veredicto sin su sujeto no es una recomendación, es un acertijo, y el
-   * borrado pedía confirmación sin enseñar lo que iba a borrar.
-   *
    * Se resuelve contra el CV VIVO y no contra una copia que el motor mandó
    * cuando analizó: entre el análisis y el clic el usuario puede haber editado,
-   * y enseñar el texto viejo antes de un borrado es peor que no enseñar nada.
+   * y enseñar el texto viejo en una tarjeta es peor que no enseñar nada.
    *
    * Es un mapa y no una búsqueda por fila: armar el árbol una vez por render en
-   * vez de una vez por veredicto.
+   * vez de una vez por tarjeta.
    */
   /** El CV vivo, como lo lee el motor: la tabla cuenta sobre ESTE texto. */
   const tree = useMemo(() => buildTree(payloadResume()), [payloadResume])
@@ -773,13 +724,19 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     setPending,
     analyze,
     requestRewrite,
-    dropBullet,
-    undoDrop,
     applySkills,
+    /**
+     * ¿EL CV SIGUE SIENDO EL QUE SE ANALIZÓ?
+     *
+     * «Sin cambios desde el último análisis» se quedaba en pantalla después de
+     * aplicar tres arreglos (medido el 2026-09-28): afirmaba algo sobre un CV
+     * que ya era otro.
+     */
+    cvSinCambios: analizado === JSON.stringify(payloadResume()),
     /**
      * LOS PUESTOS DEL CV, para que el usuario elija dónde va una línea nueva.
      *
-     * El motor RECOMIENDA uno —el del veredicto— y la pantalla lo deja marcado,
+     * El motor RECOMIENDA uno —el de la tarjeta— y la pantalla lo deja marcado,
      * pero la decisión es suya: «preguntar al usuario dónde sería un mejor
      * match, pero siempre recomendando uno en específico» (CEO, 2026-09-09).
      */

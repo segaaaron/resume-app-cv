@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest"
 import {
   postingWeights,
   scoreResume,
+  softCoverageOf,
+  titleForms,
+  experienceYears,
+  titleWritten,
   gainOf,
   deltaOf,
   statesQuantity,
@@ -375,5 +379,48 @@ describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => 
     const conReportes = { ...spec, mustHave: [{ skill: "reportes", raw: "reportes", years: null, category: null }] }
     const w = postingWeights(conReportes, "Reportes diarios. Los reportes se envían. Sin reportes no hay control.")
     expect(w["reportes"]).toBe(1.25)
+  })
+})
+
+describe("la blanda la decide el texto, como la dura", () => {
+  it("declarada sólo si está escrita; demostrada sólo con una línea que existe", () => {
+    const tree = makeTree(2)
+    tree.summary = { ...tree.summary, text: "Cajera honesta y con atención al cliente" }
+    const spec = { ...makeSpec(0, 0), softSignals: ["honestidad", "atención al cliente", "trabajo bajo presión"] }
+    const audit: AuditFacts = {
+      bullets: [],
+      summary: { identity: true, proof: false, fit: false, extra: false },
+      coverage: [],
+      softCoverage: [
+        { signal: "honestidad", status: "DECLARED_ONLY", evidenceNodeId: null },
+        { signal: "atención al cliente", status: "DEMONSTRATED", evidenceNodeId: "no-existe" },
+        { signal: "trabajo bajo presión", status: "DEMONSTRATED", evidenceNodeId: "b1" },
+      ],
+    }
+    expect(softCoverageOf(spec, audit, tree).map((s) => s.status)).toEqual(["ABSENT", "DECLARED_ONLY", "DEMONSTRATED"])
+  })
+})
+
+describe("un cargo con barra son varios cargos", () => {
+  it("parte por la barra con espacios o de género, nunca por la de un nombre", () => {
+    expect(titleForms("Cajera / Cajero de Supermercado")).toEqual(["Cajera de Supermercado", "Cajero de Supermercado"])
+    expect(titleForms("Frontend Developer / Engineer")).toEqual(["Frontend Developer", "Frontend Engineer"])
+    expect(titleForms("Vendedor/a")).toEqual(["Vendedor", "Vendedora"])
+    expect(titleForms("CI/CD Engineer")).toEqual(["CI/CD Engineer"])
+  })
+  it("el cargo está escrito si lo está cualquiera de sus formas", () => {
+    const tree = makeTree(1)
+    tree.summary = { ...tree.summary, text: "Cajera de Supermercado con 4 años" }
+    const spec = { ...makeSpec(0, 0), roleTitleRaw: "Cajera / Cajero de Supermercado" }
+    expect(titleWritten(tree, spec)).toBe(true)
+    expect(titleWritten(tree, { ...spec, roleTitleRaw: "Repositor / Repositora" })).toBe(false)
+  })
+})
+
+describe("los años no cuentan meses que no pasaron", () => {
+  it("un año suelto en curso cuenta hasta hoy, no hasta diciembre", () => {
+    const tree = makeTree(1)
+    tree.roles[0] = { ...tree.roles[0], startDate: "2021", endDate: "2026" }
+    expect(experienceYears(tree, new Date(2026, 8, 28))).toBeCloseTo(69 / 12, 5)
   })
 })

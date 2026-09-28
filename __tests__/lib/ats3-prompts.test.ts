@@ -5,7 +5,6 @@ import {
   OUTPUT_CONTRACT,
   jobPrompt,
   auditPrompt,
-  triagePrompt,
   bulletPrompt,
   summaryPrompt,
   truthRule,
@@ -27,7 +26,6 @@ import { createHash } from "node:crypto"
 const PROMPTS = [
   ["P1 vacante", jobPrompt],
   ["P2 auditoría", auditPrompt],
-  ["P3 triage", triagePrompt],
   ["P4 viñeta", bulletPrompt],
   ["P5 resumen", summaryPrompt],
 ] as const
@@ -94,10 +92,6 @@ describe("las reglas que no pueden faltar", () => {
     expect(summaryPrompt("en").toLowerCase()).toContain("slots")
   })
 
-  it("el triage nunca deja un puesto sin viñetas", () => {
-    expect(triagePrompt("es")).toContain("única viñeta")
-    expect(triagePrompt("en")).toContain("only bullet")
-  })
 })
 
 // ── el borde con la API ──────────────────────────────────────────────────────
@@ -191,13 +185,13 @@ describe("los cuatro modos de fallo se distinguen", () => {
   })
 
   it("esquema: JSON válido que no cumple el contrato", async () => {
-    const client = new ScriptedClient(JSON.stringify({ bullets: "no es un arreglo" }))
+    const client = new ScriptedClient(JSON.stringify({ coverage: "no es un arreglo" }))
     await expect(mod(client).audit(tree, spec)).rejects.toMatchObject({ kind: "schema" })
   })
 
   it("los cuatro son el mismo síntoma para el usuario, y por eso se nombran distinto", async () => {
     const kinds = new Set<string>()
-    for (const reply of ["", "no json", JSON.stringify({ bullets: 1 })]) {
+    for (const reply of ["", "no json", JSON.stringify({ coverage: 1 })]) {
       try {
         await mod(new ScriptedClient(reply)).audit(tree, spec)
       } catch (e) {
@@ -220,8 +214,6 @@ describe("lo que NO viaja al modelo", () => {
   it("ni nombre, ni edad, ni foto, ni nacionalidad", async () => {
     const client = new ScriptedClient(
       JSON.stringify({
-        bullets: [],
-        summary: { identity: true, proof: true, fit: true, extra: false },
         coverage: [],
         softCoverage: [],
       }),
@@ -268,7 +260,6 @@ describe("cada prompt viaja con su versión", () => {
   const HOY: Record<string, { version: string; huella: string }> = {
     P1: { version: PROMPT_VERSION.P1, huella: huella(jobPrompt("es") + jobPrompt("en")) },
     P2: { version: PROMPT_VERSION.P2, huella: huella(auditPrompt("es") + auditPrompt("en")) },
-    P3: { version: PROMPT_VERSION.P3, huella: huella(triagePrompt("es") + triagePrompt("en")) },
     P4: { version: PROMPT_VERSION.P4, huella: huella(bulletPrompt("es") + bulletPrompt("en")) },
     P5: { version: PROMPT_VERSION.P5, huella: huella(summaryPrompt("es") + summaryPrompt("en")) },
   }
@@ -345,11 +336,6 @@ describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas"
     expect(auditPrompt("en")).toMatch(/what the filter can see/i)
   })
 
-  it("una línea genérica no puede quedarse quieta: es REWRITE, no KEEP", () => {
-    expect(triagePrompt("es")).toMatch(/cualquier otro postulante/)
-    expect(triagePrompt("en")).toMatch(/any other applicant/)
-  })
-
   it("el resumen prueba con un resultado, no con cualidades declaradas", () => {
     expect(summaryPrompt("es")).toMatch(/declara cualidades en vez de mostrar un resultado/)
     expect(summaryPrompt("en")).toMatch(/declares qualities instead of showing a result/)
@@ -371,17 +357,24 @@ describe("tampoco mueren los esquemas del módulo", () => {
   const mod = (c: IAIClient) => new AIAts3Module({ client: c, model: "m", language: "es" })
 
   it("la auditoría (P2) sobrevive a una respuesta con todo en null", async () => {
-    const c = responde({ bullets: null, summary: null, coverage: null})
+    const c = responde({ coverage: null, softCoverage: null })
     const r = await mod(c).audit({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec)
-    expect(r.bullets).toEqual([])
-    // Lo que el auditor no pudo afirmar NO cuenta como cumplido.
-    expect(r.summary.identity).toBe(false)
+    // Lo que el auditor no pudo afirmar NO cuenta como cubierto.
+    expect(r.coverage).toEqual([])
+    expect(r.softCoverage).toEqual([])
   })
 
-  it("el triage (P3) descarta el veredicto ilegible y entrega los demás", async () => {
-    const c = responde({ decisions: [{ bulletId: null, verdict: "NO_EXISTE" }, { bulletId: "b1", verdict: "KEEP", reason: null, relevance: null }] })
-    const r = await mod(c).triage({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec, { bullets: [], summary: { identity: false, proof: false, fit: false, extra: false }, coverage: [], softCoverage: []}, {})
-    expect(r.map((d) => d.bulletId)).toEqual(["b1"])
+  it("«Ayudé con…» no cuenta como verbo de acción aunque el modelo diga que sí", async () => {
+    const linea = (id: string, text: string) => ({ id, text, hash: id, origin: "USER" as const })
+    const tree = {
+      roles: [{ id: "r", title: "Cajera", company: "X", startDate: "2023-01", endDate: null, bullets: [linea("a", "Ayudé con el inventario mensual de la tienda"), linea("b", "Cuadré la caja al cierre del turno")] }],
+      summary: linea("summary", ""),
+      declaredSkills: [],
+      otherText: "",
+    } as unknown as ResumeTree
+    const verbo = { hasActionVerb: true, hasResult: false, hasMethod: false }
+    const r = await mod(responde({ bullets: [{ id: "a", ...verbo }, { id: "b", ...verbo }] })).audit(tree, {} as JobSpec)
+    expect(r.bullets.map((b) => b.hasActionVerb)).toEqual([false, true])
   })
 
   it("la vacante se pide ORDENADA por peso, y dice qué número le importa al puesto", () => {
@@ -392,8 +385,8 @@ describe("tampoco mueren los esquemas del módulo", () => {
   })
 
   it("las blandas se juzgan con su logro, en los dos idiomas", () => {
-    expect(auditPrompt("es")).toMatch(/DEMONSTRATED \(hay un logro que la evidencia/)
-    expect(auditPrompt("en")).toMatch(/DEMONSTRATED \(an achievement evidences it/)
+    expect(auditPrompt("es")).toMatch(/DEMONSTRATED \(una viñeta de experiencia —nunca el resumen— la evidencia con un logro/)
+    expect(auditPrompt("en")).toMatch(/DEMONSTRATED \(an experience bullet — never the summary — evidences it with an achievement/)
     // Sin id de línea nunca es demostrada: la misma vara que rige a las duras.
     expect(auditPrompt("es")).toMatch(/Sin id de línea, nunca es DEMONSTRATED/)
     expect(auditPrompt("en")).toMatch(/With no line id, it is never DEMONSTRATED/)
@@ -450,5 +443,43 @@ describe("la auditoría habla de la lista de la vacante, y de nada más", () => 
       { skill: "Excel", requirement: "NICE", status: "NOT_FOUND", evidenceNodeId: null },
     ])
     expect(a.softCoverage).toEqual([{ signal: "trabajo en equipo", status: "DEMONSTRATED", evidenceNodeId: "summary" }])
+  })
+})
+
+/**
+ * LO QUE LA TARJETA PROMETE LLEGA EN LA PRIMERA LLAMADA (2026-09-28).
+ * Viajaba sólo en el reintento: el modelo fallaba siempre una vez.
+ */
+describe("el pedido lleva lo prometido desde la primera llamada", () => {
+  const vacia = JSON.stringify({ changed: true, text: "Emití facturas electrónicas ante el SIN", bulletId: "b", actionVerb: "Emití", keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null })
+  const ledger = { verbsUsed: [], keywordBudget: {}, metricTypesUsed: [], claimsMade: [] } as never
+  const spec = JSON.parse(SPEC_JSON) as JobSpec
+
+  it("viñeta: términos comprometidos, verbo a evitar, tamaño y línea nueva", async () => {
+    const client = new ScriptedClient(vacia)
+    await mod(client).rewriteBullet({
+      original: "SIN: emití facturas", bulletId: "b", roleContext: "Cajera", spec, ledger, declaredSkills: [],
+      mustWrite: ["SIN"], avoidOpener: "Atendí", wantsSize: true, isNew: true, axes: ["resultado"], told: "bajó la fila en caja",
+    })
+    const pedido = String(client.lastParams!.messages[1].content)
+    expect(pedido).toContain('TÉRMINOS COMPROMETIDOS / COMMITTED TERMS:\n["SIN"]')
+    expect(pedido).toContain("VERB YOU MAY NOT OPEN WITH:\nAtendí")
+    expect(pedido).toContain("ESTA LÍNEA LLEVA SU TAMAÑO")
+    expect(pedido).toContain("LO QUE LA PERSONA CONTÓ — LÍNEA NUEVA")
+    expect(pedido).not.toContain("VIÑETA ORIGINAL")
+    expect(pedido).toContain('EJES PROMETIDOS / PROMISED AXES:\n["resultado"]')
+    expect(pedido).toContain('LO QUE LA PERSONA AGREGA / WHAT THE PERSON ADDS:\n"""bajó la fila en caja"""')
+  })
+
+  it("resumen: los años medidos y los términos comprometidos", async () => {
+    const client = new ScriptedClient(vacia)
+    await mod(client).rewriteSummary({
+      current: "Cajera", cvLines: [], otherSections: "", spec, topBullets: [], ledger, declaredSkills: [],
+      mustWrite: ["Cajera de Supermercado"], yearsOfExperience: 4, provenTerms: ["Arqueo de caja"],
+    })
+    const pedido = String(client.lastParams!.messages[1].content)
+    expect(pedido).toContain("AÑOS DE EXPERIENCIA / YEARS OF EXPERIENCE:\n4")
+    expect(pedido).toContain('["Cajera de Supermercado"]')
+    expect(pedido).toContain('POSTING TERMS THIS PERSON HAS ALREADY PROVEN:\n["Arqueo de caja"]')
   })
 })

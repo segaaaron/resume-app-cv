@@ -37,7 +37,7 @@ const logAIUsage = vi.fn()
 vi.mock("@/lib/ai-client", () => ({ AI_MODEL_PROSE: "modelo-de-prueba", logAIUsage: (...a: unknown[]) => logAIUsage(...a) }))
 vi.mock("@/lib/services/ai/OpenAIClientAdapter", () => ({ OpenAIClientAdapter: class {} }))
 
-const llamadas = { jd: 0, audit: 0, triage: 0 }
+const llamadas = { jd: 0, audit: 0 }
 vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
   AIAts3Module: class {
     constructor(readonly deps: { onUsage?: (u: { promptTokens: number; completionTokens: number; cachedTokens: number }) => void }) {}
@@ -61,10 +61,6 @@ vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
         bullets: tree.roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true }))),
         summary: { identity: true, proof: true, fit: true, extra: true },
         coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [],      }
-    }
-    async triage() {
-      llamadas.triage++
-      return []
     }
     /** Devuelve una reescritura CALCADA al original: el guard la rechaza. */
     async rewriteBullet(input: { bulletId: string; original: string }) {
@@ -108,7 +104,7 @@ async function actos(res: Response): Promise<Record<string, unknown>[]> {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  llamadas.jd = 0; llamadas.audit = 0; llamadas.triage = 0
+  llamadas.jd = 0; llamadas.audit = 0
   vi.mocked(requireUser).mockResolvedValue({ userId: "u1", user: { plan: "PRO", email: "a@b.com" } } as never)
   vi.mocked(enforceAIQuota).mockResolvedValue(undefined as never)
   vi.mocked(db.aiAnswerCache.findUnique).mockResolvedValue(null as never)
@@ -126,7 +122,7 @@ describe("la ruta del motor v3", () => {
     expect(res.headers.get("Cache-Control")).toContain("no-transform")
 
     const salida = await actos(res)
-    expect(salida.map((a) => a.act)).toEqual(["score", "job", "covered", "triage", "findings", "done"])
+    expect(salida.map((a) => a.act)).toEqual(["score", "job", "covered", "findings", "done"])
     const score = salida[0].score as { total: number }
     expect(score.total).toBeGreaterThan(0)
     expect(score.total).toBeLessThanOrEqual(100)
@@ -167,12 +163,11 @@ describe("la ruta del motor v3", () => {
       if (kind === "ats3-audit") return { payload: {
         bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
         coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [],      } }
-      if (kind === "ats3-triage") return { payload: [] }
       return null
     }) as never)
 
     const salida = await actos(await POST(req(CUERPO)))
-    expect(llamadas).toEqual({ jd: 0, audit: 0, triage: 0 })
+    expect(llamadas).toEqual({ jd: 0, audit: 0 })
     expect((salida.at(-1)!.telemetry as { calls: number }).calls).toBe(0)
     expect(refundDailyQuota).toHaveBeenCalledWith("u1", "ats3", "PRO")
   })
@@ -235,7 +230,11 @@ describe("la ruta del motor v3", () => {
     )
     const body = (await res.json()) as { ok: boolean }
     expect(body.ok).toBe(false)
-    expect(refundDailyQuota).toHaveBeenCalledWith("u1", "ats3", "PRO")
+    // La reescritura se cobra en su propia cuenta: no compite con el análisis.
+    // La reescritura se cobra en su propia cuenta: no compite con el análisis.
+    expect(refundDailyQuota).toHaveBeenCalledWith("u1", "ats3-rewrite", "PRO")
+    expect(enforceAIQuota).toHaveBeenCalledWith("u1", "ats3-rewrite", "PRO")
+    expect(enforceAIQuota).not.toHaveBeenCalledWith("u1", "ats3", "PRO")
   })
 
   it("la vacante se guarda SIN resumeId: dos candidatos con el mismo aviso la comparten", async () => {

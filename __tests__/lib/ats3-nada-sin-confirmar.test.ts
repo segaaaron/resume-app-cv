@@ -18,10 +18,11 @@ describe("nada se escribe en el CV sin confirmación", () => {
   const hook = readFileSync("components/editor/ats3/useAts3.ts", "utf8")
   const panel = readFileSync("components/editor/ats3/TailorPanel.tsx", "utf8")
 
-  it("las escrituras al CV son las cinco conocidas, y ninguna más", () => {
-    // `updateSectionData` es la ÚNICA puerta al CV del usuario.
+  it("las escrituras al CV son las tres conocidas, y ninguna más", () => {
+    // `updateSectionData` es la ÚNICA puerta al CV del usuario: aceptar una
+    // propuesta (resumen o puestos) y aplicar el plan de habilidades.
     const escrituras = [...hook.matchAll(/updateSectionData\(/g)].length
-    expect(escrituras).toBe(5)
+    expect(escrituras).toBe(3)
   })
 
   it("la reescritura pasa por el modal, que dice DÓNDE cae", () => {
@@ -37,11 +38,6 @@ describe("nada se escribe en el CV sin confirmación", () => {
        no el lugar donde va a quedar. Numerarla señalaba una línea que el cambio
        no toca. */
     expect(panel).toContain("line: esNueva ? undefined : donde.linea")
-  })
-
-  it("sacar una línea pide confirmación mostrando la línea que se va", () => {
-    expect(panel).toContain('t("confirm_drop")')
-    expect(panel).toContain("strike={confirmando?.bulletId === d.bulletId}")
   })
 
   it("no se confirma con una petición del modelo en vuelo", () => {

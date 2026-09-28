@@ -37,10 +37,9 @@ import { Z_MODAL } from "@/lib/ui/z-layers"
 import { skillPlan } from "@/lib/ats3/engine"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { figureSlots, fillSlot } from "@/lib/ats3/guards"
-import type { AnchoredSuggestion, Finding, Placeholder, TriageDecision } from "@/lib/ats3/contracts"
+import type { AnchoredSuggestion, Finding, Placeholder } from "@/lib/ats3/contracts"
 import { Btn, Card, Chip, Diff, FIELD_CLASS, FIELD_STYLE, Label, Note, PRESSABLE, Writing } from "./ui"
 import type { PanelCheck, PanelSection, PanelSectionId } from "./view-model"
-import type { Tone } from "./ui"
 import type { useAts3 } from "./useAts3"
 
 type Ats3 = ReturnType<typeof useAts3>
@@ -91,26 +90,6 @@ export function workOf(sections: readonly PanelSection[]): PanelCheck[] {
 }
 
 /**
- * LOS VEREDICTOS QUE ESTE TABLERO OFRECE. `KEEP` y `REWRITE` no son suyos.
- *
- * `KEEP` —«esta línea se gana su lugar»— es una respuesta, no una tarea: no
- * tiene botón porque no hay nada que hacer. Contarlo sería prometer siete
- * arreglos y abrir una pantalla con cuatro.
- *
- * ── Y `REWRITE` TAMPOCO, QUE ERA UNA PISADA (CEO, 2026-09-09) ───────────────
- * Un veredicto REWRITE deja la línea abierta, así que esa viñeta TIENE su
- * tarjeta. El tablero mostraba además su propia fila con otro botón: dos
- * botones para la misma acción sobre la misma línea, y la misma línea contada
- * DOS VECES en «48 cosas para arreglar». Peor, el del tablero era el peor de
- * los dos: pide la reescritura sin el `focus` de la tarjeta, así que el modelo
- * la recibía sin saber qué se le había prometido al usuario.
- *
- * El reparto queda limpio y sin solaparse:
- *   el tablero  → qué pasa con la LÍNEA   (sacarla, comprimirla, reemplazarla)
- *   las tarjetas → qué pasa con su CONTENIDO (reescribirla)
- */
-
-/**
  * CUÁNTO QUEDA POR ARREGLAR. Un número, un dueño.
  *
  * La misma suma estaba escrita en dos pantallas —el botón del informe y la
@@ -118,12 +97,8 @@ export function workOf(sections: readonly PanelSection[]): PanelCheck[] {
  * promete siete y la ventana abre con cuatro, que es el defecto que este panel
  * ya pagó tres veces. Se pregunta acá, que es donde vive lo que se cuenta.
  */
-export function pendingCount(sections: readonly PanelSection[], triage: readonly TriageDecision[]): number {
-  return workOf(sections).length + verdictsToDo(triage).length
-}
-
-export function verdictsToDo(decisions: readonly TriageDecision[]): TriageDecision[] {
-  return decisions.filter((d) => d.verdict !== "KEEP" && d.verdict !== "REWRITE")
+export function pendingCount(sections: readonly PanelSection[]): number {
+  return workOf(sections).length
 }
 
 export default function TailorPanel({
@@ -168,6 +143,8 @@ export default function TailorPanel({
   /** La copia de la tarjeta es la que el producto ya tenía escrita, y vive en
    *  su propio espacio: traerla copiada sería la misma frase en dos lugares. */
   const ta = useTranslations("editor.ats")
+  /** Los errores de la IA ya tienen su copia (cuota diaria, límite por hora). */
+  const tai = useTranslations("editor.ai")
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -192,7 +169,7 @@ export default function TailorPanel({
   )
   const planAbierto = plan && (plan.entering.length > 0 || plan.leaving.length > 0)
   /** Lo mismo que cuenta el botón del informe: una cifra, un dueño. */
-  const pendientes = useMemo(() => pendingCount(sections, a.triage), [sections, a.triage])
+  const pendientes = useMemo(() => pendingCount(sections), [sections])
   /**
    * «HECHAS» ES LO QUE SE RESOLVIÓ EN ESTA SESIÓN, y se cuenta acá.
    *
@@ -234,8 +211,11 @@ export default function TailorPanel({
     if (c) marcar(c, "applied", cambio)
   }
 
+  // La tarjeta con la que se pidió la propuesta manda: la de un término se pide
+  // sobre una viñeta del puesto elegido, y por nodo no se encontraba — la línea
+  // entraba al CV y su tarjeta seguía abierta, fuera de «Hechas».
   const checkDe = (nodeId: string) => {
-    const f = findings.find((x) => x.nodeId === nodeId)
+    const f = findings.find((x) => (a.pendingFinding ? x.id === a.pendingFinding : x.nodeId === nodeId))
     return f && trabajo.find((x) => x.id === f.id)
   }
 
@@ -294,10 +274,15 @@ export default function TailorPanel({
   }, [focusTerm, filter])
 
   const respuestaRef = useRef<HTMLDivElement>(null)
-  const hayRespuesta = Boolean(a.pending) || Boolean(a.rejected)
+  // Un error también es la respuesta al clic: se dibuja acá y se trae a la vista.
+  // Arriba de la lista quedaba fuera de cuadro y el botón parecía no hacer nada
+  // (medido el 2026-09-28 con un 429 de cuota diaria).
+  const hayRespuesta = Boolean(a.pending) || Boolean(a.rejected) || Boolean(a.error)
+  // Cada respuesta NUEVA trae la vista, no sólo la primera: con un booleano, un
+  // segundo aviso seguido no se movía y quedaba fuera de cuadro.
   useEffect(() => {
     if (hayRespuesta) respuestaRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" })
-  }, [hayRespuesta])
+  }, [hayRespuesta, a.pending, a.rejected, a.error])
 
   /** Las resueltas que ESTA vista pinta. Una sola pregunta, un solo lugar. */
   const visiblesResueltas = filter === "all" || filter === "done" ? done : []
@@ -312,16 +297,6 @@ export default function TailorPanel({
    * pantalla. Se cuenta lo que se ve, que es la única cuenta que el usuario
    * puede comprobar.
    */
-  /* Los veredictos hablan del espacio de la página, no de una sección del
-     informe: se muestran en las vistas generales y no bajo un filtro de
-     sección, donde prometerían pertenecer a algo que no les corresponde. */
-  /**
-   * KEEP no entra: «esta línea se gana su lugar» es un diagnóstico, no una
-   * tarea, y en la superficie que arregla es ruido — el motivo exacto por el
-   * que el CEO preguntó para qué servía el tablero. Además hace que la lista y
-   * el número de la cabecera cuenten lo mismo, fila por fila.
-   */
-  const veredictos = filter === "all" || filter === "open" ? verdictsToDo(a.triage) : []
 
   // Sólo existe tras un clic, así que no hay pasada de servidor que proteger —
   // el guard mantiene el componente seguro si alguien lo monta desde un árbol
@@ -433,16 +408,16 @@ export default function TailorPanel({
             `overflow-y-auto` no engancha nunca: en vez de scrollear, la lista
             empuja la caja. */}
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
-          {a.error && (
-            <Note tone="bad" role="alert">
-              {t("failed")} · {a.error}
-            </Note>
-          )}
 
           {/* «Ya está bien» NO es un fallo: el modelo leyó la línea y dice que no
               hay nada que mejorar. Pintarlo como rechazo enseña a desconfiar de
               una respuesta honesta. */}
           <div ref={respuestaRef} className="flex flex-col gap-3 empty:hidden">
+          {a.error && (
+            <Note tone="bad" role="alert">
+              {tai.has(a.error) ? tai(a.error) : `${t("write_failed")} · ${a.error}`}
+            </Note>
+          )}
           {a.rejected && (
             <Note tone={a.rejected.reason === "already_good" ? "ok" : "warn"}>
               {/* EL MOTIVO SE DICE, NO SE PEGA EL TOKEN AL LADO.
@@ -481,7 +456,11 @@ export default function TailorPanel({
                       <Label tone="ok">{t("skills_plan_in", { count: plan.entering.length, max: SKILLS_MAX })}</Label>
                     </div>
                     <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                      {plan.entering.map((s) => <li key={s}><Chip tone="ok">{s}</Chip></li>)}
+                      {/* Con su término: un requisito que una línea demuestra sin
+                          nombrarlo sale por este plan, y la fila del informe
+                          tiene que aterrizar acá (medido el 2026-09-28: «REST»
+                          llevaba a Tailor y no caía en ningún lado). */}
+                      {plan.entering.map((s) => <li key={s} data-term={s}><Chip tone="ok">{s}</Chip></li>)}
                     </ul>
                   </div>
                 )}
@@ -514,7 +493,9 @@ export default function TailorPanel({
               suggestion={a.pending}
               onCancel={() => a.setPending(null)}
               onAccept={(text) => {
-                const cambio = { before: a.pending!.originalText, after: text }
+                // Una línea NUEVA no tiene «antes»: su original es lo que la
+                // persona contó para pedirla, no algo que estuviera en el CV.
+                const cambio = { before: a.pending!.addToRole ? "" : a.pending!.originalText, after: text }
                 marcarPorNodo(a.pending!.bulletId, cambio)
                 a.accept(a.pending!, text, registroDe(a.pending!.bulletId, "applied", cambio))
               }}
@@ -542,7 +523,7 @@ export default function TailorPanel({
                  decían «Escribiendo…»: reportado con captura. */
               busy={a.busyNode !== null}
               writing={a.busyNode !== null && (a.busyNode === nodoDe(check.id)?.nodeId || a.pendingFinding === check.id)}
-              onSolve={() => {
+              onSolve={(told) => {
                 // No se marca acá: pedir una reescritura no es haberla
                 // aplicado, y los guards pueden rechazarla.
                 // Con QUÉ tarjeta se pidió: una línea puede tener dos, y al
@@ -550,7 +531,15 @@ export default function TailorPanel({
                 const f = nodoDe(check.id)
                 // Lo que ESTA tarjeta dice, dicho también al modelo — la MISMA
                 // frase que el usuario leyó, no el token crudo del motor.
-                if (f) a.requestRewrite(f.nodeId, check.id, check.focus)
+                if (f)
+                  a.requestRewrite(f.nodeId, check.id, {
+                    focus: check.focus,
+                    mustWrite: check.requirements,
+                    avoidOpener: check.avoidOpener,
+                    wantsSize: check.wantsSize,
+                    axes: check.axes,
+                    told,
+                  })
               }}
               onAsk={(roleId, hecho) => {
                 // El tema es lo que la persona afirmó, con el término del aviso
@@ -559,16 +548,14 @@ export default function TailorPanel({
                 if (!f) return
                 const tema = `${check.subject ?? ""}: ${hecho}`
                 const ancla = a.anclaDe(roleId) ?? f.nodeId
-                a.requestRewrite(ancla, check.id, tema, undefined, roleId)
+                a.requestRewrite(ancla, check.id, { focus: tema, addToRole: roleId, mustWrite: check.subject ? [check.subject] : undefined })
               }}
               roles={a.roles}
               suggestedRole={a.roleOf(nodoDe(check.id)?.nodeId ?? "")}
               onDismiss={() => {
-                // NO entra en «Hechas»: descartar no es arreglar. La lista de
-                // resueltas existe para releer lo que se escribió en el CV, y
-                // una tarjeta que el usuario rechazó no escribió nada — pintarla
-                // con el tilde de «Aplicado» sería decirle que hizo algo que no
-                // hizo.
+                // Entra en «Hechas» como «Descartada por vos», en tono neutro y
+                // sin el tilde de «Aplicado»: es una decisión suya, no un
+                // arreglo, y la lista tiene que decir las dos cosas distinto.
                 const f = nodoDe(check.id)
                 if (!f) return
                 marcar(check, "dismissed")
@@ -578,37 +565,6 @@ export default function TailorPanel({
               ta={ta}
             />
           ))}
-
-          {/* SE MONTA SIEMPRE, y el tablero decide si se muestra.
-              Envolverlo en «hay veredictos» mata el aviso de «Deshacer» en el
-              momento exacto en que hace falta: al sacar la última línea, la
-              lista queda vacía y con ella se iba la única forma de revertir un
-              borrado. El componente ya se retira solo cuando no queda nada que
-              decir NI nada que deshacer. */}
-          <TriageBoard
-              decisions={veredictos}
-              onDrop={(nodeId) => {
-                const texto = a.textOf(nodeId)
-                const entrada: DoneEntry = { id: `drop:${nodeId}`, title: texto, weight: 0, kind: "dropped", before: texto }
-                const quitada = a.dropBullet(nodeId, entrada)
-                if (quitada) onDone(entrada)
-                return quitada
-              }}
-              onUndo={a.undoDrop}
-              onRewrite={(nodeId, mergeWith) => a.requestRewrite(nodeId, undefined, undefined, mergeWith)}
-              onReplace={(nodeId, tema) => a.requestRewrite(nodeId, undefined, tema, undefined, undefined, true)}
-              onAdd={(roleId, tema) => {
-                // El ancla del pedido es una viñeta de ESE puesto: el motor la
-                // usa para saber de qué puesto habla, no para reemplazarla.
-                const ancla = a.textOf(roleId) ? roleId : (a.anclaDe(roleId) ?? roleId)
-                a.requestRewrite(ancla, undefined, tema, undefined, roleId)
-              }}
-              roles={a.roles}
-              roleOf={a.roleOf}
-              textOf={a.textOf}
-              busyNode={a.busyNode}
-              t={t}
-            />
 
           {/* LO RESUELTO NO DESAPARECE: queda con su tilde y con lo que cambió.
               Una tarjeta que se esfuma al resolverla le saca al usuario la
@@ -622,7 +578,7 @@ export default function TailorPanel({
               no salía ni una tarjeta ni el mensaje — un hueco mudo, y el usuario
               leyendo que su trabajo se perdió. Se pregunta por lo que se
               renderiza, que es la única pregunta que corresponde acá. */}
-          {mostradas.length === 0 && veredictos.length === 0 && visiblesResueltas.length === 0 && (
+          {mostradas.length === 0 && visiblesResueltas.length === 0 && (
             <p className="py-10 text-center text-[13px]" style={{ color: "var(--a-muted)" }}>
               {filter === "done" ? t("tailor_none_done") : t("tailor_all_done")}
             </p>
@@ -642,255 +598,6 @@ export default function TailorPanel({
     </div>,
     document.body,
   )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EL TABLERO DE VEREDICTOS — qué merece el espacio de la página
-// ─────────────────────────────────────────────────────────────────────────────
-
-function TriageBoard({
-  decisions,
-  onDrop,
-  onUndo,
-  onRewrite,
-  onReplace,
-  onAdd,
-  roles,
-  roleOf,
-  textOf,
-  busyNode,
-  t,
-}: {
-  decisions: TriageDecision[]
-  onDrop: (nodeId: string) => { roleIndex: number; bulletIndex: number; text: string } | null
-  onUndo: (roleIndex: number, bulletIndex: number, text: string) => void
-  onRewrite: (nodeId: string, mergeWith?: string) => void
-  /** Escribe EN LUGAR de esa línea lo que el usuario confirmó que hizo. */
-  onReplace: (nodeId: string, tema: string) => void
-  /** Escribe una línea NUEVA en ESE puesto, con el tema que el usuario confirmó. */
-  onAdd: (roleId: string, tema: string) => void
-  /** Los puestos del CV, para elegir dónde va. */
-  roles: { id: string; label: string }[]
-  /** El puesto que el motor recomienda para esa viñeta. */
-  roleOf: (nodeId: string) => string
-  /** De qué línea habla cada veredicto. Sin esto el tablero es un acertijo. */
-  textOf: (nodeId: string) => string
-  busyNode: string | null
-  t: (k: string, v?: Record<string, string | number>) => string
-}) {
-  /** Lo último que se sacó, para poder devolverlo. Un borrado sin vuelta atrás no se ofrece. */
-  const [ultimo, setUltimo] = useState<{ roleIndex: number; bulletIndex: number; text: string } | null>(null)
-  /** DROP borra contenido: se muestra la línea exacta antes de tocarla. */
-  const [confirmando, setConfirmando] = useState<TriageDecision | null>(null)
-  /** El puesto elegido para la línea nueva. `null` = el que el motor recomienda. */
-  const [destino, setDestino] = useState<string | null>(null)
-  /**
-   * EL «DESHACER» SE TRAE A LA VISTA.
-   *
-   * Vive arriba del tablero y el botón de borrar suele estar varias pantallas
-   * más abajo: medido en local el 2026-09-24, al confirmar un borrado el aviso
-   * quedaba fuera de cuadro y la única vuelta atrás era invisible. Mismo
-   * remedio que la respuesta de Tailor (`respuestaRef`), y con la misma guarda.
-   */
-  const deshacerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (ultimo) deshacerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" })
-  }, [ultimo])
-
-  // Con la lista vacía el tablero se va, PERO no si hay algo que deshacer: al
-  // sacar la última línea, el aviso de "deshacer" desaparecía junto con ella —
-  // justo en el momento en que el usuario lo necesita.
-  if (decisions.length === 0 && !ultimo) return null
-  return (
-    <section className="rounded-2xl border p-4" style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}>
-      {decisions.length > 0 && (
-        <>
-          <h3 className="mb-1 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("triage_title")}</h3>
-          <p className="mb-1 text-xs" style={{ color: "var(--a-muted)" }}>{t("triage_caption")}</p>
-          {/* DOS COSAS CIERTAS QUE JUNTAS SE LEEN COMO UNA MENTIRA si no se
-              explican: el panel pide sacar una línea y el número no se mueve.
-              Es correcto —cortar lo irrelevante no te hace más apto— pero desde
-              afuera parece trabajo que no cuenta. Se dice. */}
-          <p className="mb-3 text-[11px]" style={{ color: "var(--a-muted-2)" }}>{t("triage_space_note")}</p>
-        </>
-      )}
-
-      {ultimo && (
-        <div ref={deshacerRef} className="mb-3 flex items-center gap-2">
-          <Note tone="warn" className="flex-1">{t("dropped")}</Note>
-          <Btn
-            variant="outline"
-            onClick={() => {
-              onUndo(ultimo.roleIndex, ultimo.bulletIndex, ultimo.text)
-              setUltimo(null)
-            }}
-          >
-            {t("undo")}
-          </Btn>
-        </div>
-      )}
-
-      <ul className="flex flex-col gap-2">
-        {decisions.map((d) => (
-          <li key={d.bulletId} className="flex items-start gap-2 text-xs">
-            <Chip tone={VERDICT_TONE[d.verdict] ?? "neutral"}>{t(`verdict_${d.verdict}`)}</Chip>
-            <span className="min-w-0 flex-1">
-              {/* DE QUÉ LÍNEA HABLA. El veredicto y el motivo se entienden sólo
-                  con su sujeto delante: "Sacar · duplica la viñeta de arriba"
-                  sobre un CV de veinte líneas no le dice a nadie cuál sacar. */}
-              {/* Al confirmar el borrado, la misma línea se pinta como lo que va
-                  a desaparecer. Repetirla tachada debajo sería el mismo texto
-                  largo dos veces en la misma fila. */}
-              {textOf(d.bulletId) && (
-                <Note
-                  tone={confirmando?.bulletId === d.bulletId ? "bad" : "neutral"}
-                  strike={confirmando?.bulletId === d.bulletId}
-                  className="mb-1"
-                >
-                  {textOf(d.bulletId)}
-                </Note>
-              )}
-              <span className="block" style={{ color: "var(--a-muted)" }}>{d.reason}</span>
-              {/* La misma espera que en las tarjetas, en la fila que se escribe. */}
-              {busyNode === d.bulletId && <Writing label={t("writing_card")} className="mt-2" />}
-
-              {/* En REPLACE y en ADD el motor NUNCA afirma que la persona hizo
-                  algo: pregunta, y la respuesta es del usuario.
-
-                  En ADD la línea no existe todavía, así que lo único que hay es
-                  lo que él confirma: el tema viaja como `focus` y es contra eso
-                  que los guards juzgan la redacción. El modelo escribe lo que la
-                  persona ya dijo que hizo; no lo inventa. */}
-              {d.needsUserConfirm && (
-                <span className="mt-1 block">
-                  <em className="block not-italic" style={{ color: "var(--a-ink)" }}>{d.needsUserConfirm}</em>
-                  {/* DÓNDE VA, Y LA RECOMENDACIÓN VIENE MARCADA.
-                      El motor eligió el puesto que mejor encaja y queda
-                      seleccionado; el usuario puede moverlo. Con un solo puesto
-                      no se pregunta: no hay nada que elegir. */}
-                  {d.verdict === "ADD" && roles.length > 1 && (
-                    <label className="mt-1 block text-[11.5px]" style={{ color: "var(--a-muted)" }}>
-                      {t("add_where")}
-                      <select
-                        value={destino ?? roleOf(d.bulletId)}
-                        onChange={(e) => setDestino(e.target.value)}
-                        className={`mt-1 ${FIELD_CLASS}`}
-                        style={FIELD_STYLE}
-                      >
-                        {roles.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <Btn
-                    disabled={busyNode !== null}
-                    onClick={() =>
-                      d.verdict === "ADD"
-                        ? onAdd(destino ?? roleOf(d.bulletId), d.proposedTopic ?? d.needsUserConfirm ?? "")
-                        : onReplace(d.bulletId, d.proposedTopic ?? d.needsUserConfirm ?? "")
-                    }
-                    className="mt-1"
-                  >
-                    {t("yes_i_did")}
-                  </Btn>
-                </span>
-              )}
-
-              {/* Un veredicto sin botón es un reproche. DEMOTE entra por la misma
-                  puerta que REWRITE: comprimir una línea ES reescribirla más corta,
-                  y abrir una acción propia sería un segundo camino para lo mismo. */}
-              {(d.verdict === "REWRITE" || d.verdict === "DEMOTE") && !d.needsUserConfirm && (
-                <Btn disabled={busyNode !== null} onClick={() => onRewrite(d.bulletId)} className="mt-1">
-                  {busyNode === d.bulletId ? t("writing") : t("fix_it")}
-                </Btn>
-              )}
-
-              {/* ── UNA FUSIÓN SE PROPONE, NUNCA SE IMPONE (CEO, 2026-09-09) ──
-                  «Preguntá al usuario si quiere hacerlo, no se obliga a nadie a
-                  nada; y si también hace falta eliminar, dale esa opción.»
-
-                  Las DOS líneas a la vista antes de tocar nada: fusionar BORRA
-                  una, y acá no se acepta un borrado que no se vio. Y las dos
-                  salidas se ofrecen JUNTAS, no encadenadas — fusionar para
-                  después pedir que saques algo es lo que el CEO no quiere. */}
-              {d.verdict === "MERGE" && d.mergeWith && (
-                <>
-                  {/* La OTRA línea, y sólo si existe. Sin la guarda, un id que
-                      no resuelve —el usuario la editó o la sacó entre el
-                      análisis y el clic— pinta una caja gris vacía debajo del
-                      motivo: el mismo defecto que la fila principal ya cerraba
-                      dos renglones más arriba. Visto en pantalla, no en un test. */}
-                  {textOf(d.mergeWith) && (
-                    <Note tone="neutral" className="mt-1">{textOf(d.mergeWith)}</Note>
-                  )}
-                  <span className="mt-1 flex flex-wrap items-center gap-2">
-                    <Btn
-                      tone="ai"
-                      disabled={busyNode !== null}
-                      onClick={() => onRewrite(d.bulletId, d.mergeWith ?? undefined)}
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      {busyNode === d.bulletId ? t("writing") : t("merge_it")}
-                    </Btn>
-                    {/* La otra salida, ofrecida a la par: si una de las dos no
-                        aporta, sacarla es mejor que juntarlas. */}
-                    <Btn variant="outline" onClick={() => setConfirmando(d)}>
-                      {t("drop_it")}
-                    </Btn>
-                  </span>
-                </>
-              )}
-
-              {(d.verdict === "DROP" || d.verdict === "MERGE") &&
-                (confirmando?.bulletId === d.bulletId ? (
-                  <span className="mt-1 flex flex-wrap items-center gap-2">
-                    <Btn
-                      tone="bad"
-                      onClick={() => {
-                        const quitada = onDrop(d.bulletId)
-                        if (quitada) setUltimo(quitada)
-                        setConfirmando(null)
-                      }}
-                    >
-                      {t("confirm_drop")}
-                    </Btn>
-                    <Btn variant="outline" onClick={() => setConfirmando(null)}>
-                      {t("cancel")}
-                    </Btn>
-                  </span>
-                ) : (
-                  d.verdict === "DROP" && (
-                    <Btn variant="outline" onClick={() => setConfirmando(d)} className="mt-1">
-                      {t("drop_it")}
-                    </Btn>
-                  )
-                ))}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-/**
- * QUÉ SIGNIFICA CADA VEREDICTO, dicho en el vocabulario del panel.
- *
- * Antes era un mapa de colores escrito acá; ahora es el SIGNIFICADO y el color
- * lo pone `ui.tsx`. Un veredicto nuevo es una línea, y el día que el tono de
- * «avisa» cambie, cambia para todo el panel a la vez.
- */
-const VERDICT_TONE: Record<string, Tone> = {
-  KEEP: "ok",
-  REWRITE: "ai",
-  REPLACE: "ai",
-  DEMOTE: "warn",
-  DROP: "bad",
-  MERGE: "warn",
-  ADD: "accent",
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1112,7 +819,8 @@ function FixCard({
   busy: boolean
   /** Y ES ÉSTA la que está escribiendo. */
   writing: boolean
-  onSolve: () => void
+  /** `told`: lo que la persona contó sobre esta línea, si la tarjeta se lo preguntó. */
+  onSolve: (told?: string) => void
   /** El requisito que la persona confirmó: en qué puesto y qué hizo. */
   onAsk: (roleId: string, hecho: string) => void
   onDismiss: () => void
@@ -1127,6 +835,18 @@ function FixCard({
      escribir. */
   const [puesto, setPuesto] = useState(suggestedRole || roles[0]?.id || "")
   const [hecho, setHecho] = useState("")
+  /* EL EJE QUE SÓLO LA PERSONA PUEDE DAR. Si a la línea le falta en qué terminó
+     o cómo se hizo, nadie más lo sabe: el campo es opcional, y si queda vacío
+     Tailor no lo inventa —lo pide— en vez de rellenar con una palabra del aviso. */
+  const pideDato = check.remedy === "rewrite" && (check.axes ?? []).some((e) => e !== "verbo")
+  // El resultado no se escribe sin ella: el botón espera su respuesta.
+  const pideResultado = check.remedy === "rewrite" && Boolean(check.axes?.includes("resultado"))
+  const [dato, setDato] = useState("")
+  const preguntaDato = check.axes?.includes("resultado")
+    ? check.axes.includes("método")
+      ? "told_label_both"
+      : "told_label_result"
+    : "told_label_method"
   return (
     <Card>
       <div className="flex items-start gap-2.5 px-3.5 pt-3">
@@ -1216,8 +936,7 @@ function FixCard({
 
       {/* ── LA PREGUNTA, CUANDO EL CV NO TIENE RASTRO DEL REQUISITO ──────────
           El hecho lo pone la persona: si lo tiene, dice en qué puesto y qué
-          hizo, y recién ahí se redacta una línea NUEVA con eso — el mismo
-          camino del veredicto ADD. Sin respuesta no hay nada que escribir, así
+          hizo, y recién ahí se redacta una línea NUEVA con eso. Sin respuesta no hay nada que escribir, así
           que el botón espera el texto. */}
       {check.remedy === "ask" && (
         <div
@@ -1274,12 +993,35 @@ function FixCard({
         </div>
       )}
 
+      {pideDato && (
+        <div className="mx-3.5 mt-3">
+          <label htmlFor={`${check.id}-dato`} className="text-[11px] font-semibold" style={{ color: "var(--a-muted)" }}>
+            {t(preguntaDato)}
+          </label>
+          <textarea
+            id={`${check.id}-dato`}
+            value={dato}
+            onChange={(e) => setDato(e.target.value)}
+            rows={2}
+            maxLength={300}
+            aria-describedby={`${check.id}-dato-ayuda`}
+            placeholder={t("told_placeholder")}
+            className={`mt-1 resize-y ${FIELD_CLASS}`}
+            style={FIELD_STYLE}
+          />
+          <p id={`${check.id}-dato-ayuda`} className="mt-1 flex justify-between gap-2 text-[10.5px]" style={{ color: "var(--a-muted-2)" }}>
+            <span>{t(pideResultado ? "told_help_required" : "told_help")}</span>
+            <span className="tabular-nums">{dato.length}/300</span>
+          </p>
+        </div>
+      )}
+
       {/* LA ÚNICA ESPERA: en la tarjeta que se está escribiendo. */}
       {writing && <Writing label={t("writing_card")} className="mx-3.5 mt-3" />}
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
         {check.remedy === "rewrite" && (
-          <Btn tone="ai" disabled={busy} onClick={onSolve}>
+          <Btn tone="ai" disabled={busy || (pideResultado && dato.trim().length < 3)} onClick={() => onSolve(dato.trim() || undefined)}>
             <Sparkles className="h-3 w-3" />
             {writing ? t("writing") : t("fix_it")}
           </Btn>

@@ -23,7 +23,6 @@ const messages: Record<string, string> = {
   score_caption: "Preparación para esta vacante",
   pillar_parse: "Se lee bien",
   pillar_relevance: "Sirve para el puesto",
-  pillar_impact: "Convence",
   served_from_cache: "Sin cambios: no se gastó ninguna consulta",
   findings_title: "cosas para mejorar",
   already_solved: "ya resueltas",
@@ -37,8 +36,8 @@ const messages: Record<string, string> = {
   term_add: "Agregar a Habilidades",
   why_matters: "Por qué importa.",
   fix_applied: "Aplicado",
-  diff_current: "Ahora dice",
-  diff_rewrite: "Reescritura de Tailor",
+  diff_current: "Antes",
+  diff_rewrite: "Ahora dice",
   tailor_title: "Tailor",
   tailor_pending: "cosas para arreglar",
   tailor_sub: "Cada tarjeta sale del análisis",
@@ -52,16 +51,6 @@ const messages: Record<string, string> = {
   fix_it: "Escribirla mejor",
   writing: "Escribiendo…",
   dismiss: "No me interesa",
-  triage_title: "Qué merece el espacio",
-  triage_caption: "Una página sostiene pocas líneas",
-  verdict_DROP: "Sacar",
-  drop_it: "Sacar del CV",
-  confirm_drop: "Sí, sacarla",
-  dropped: "Línea sacada del CV",
-  undo: "Deshacer",
-  yes_i_did: "Sí, lo hice — escribirla",
-  verdict_KEEP: "Dejar",
-  verdict_REPLACE: "Reemplazar",
   confirm_title: "Confirmá antes de escribirlo",
   before: "Dice ahora",
   after: "Quedaría",
@@ -97,8 +86,7 @@ const messages: Record<string, string> = {
   check_only_you: "esto sólo lo sabés vos",
   solve_with_tailor: "Escribirla mejor",
   check_fix_now: "Agregar a Habilidades",
-  section_tips: "Lo que mira la persona",
-  section_tips_blurb: "Después del filtro automático",
+  section_other: "Lo deseable",
   section_hard: "Habilidades duras",
   // La pantalla de entrada (espacio `editor.ats`).
   title: "ATS Score",
@@ -107,7 +95,7 @@ const messages: Record<string, string> = {
   placeholder: "Pega aquí el texto completo de la vacante...",
   hint: "Copia y pega el texto de la oferta tal como aparece.",
   analyze: "Analizar compatibilidad",
-  type_no_metric: "Le falta la cifra",
+  type_missing_requirement: "Falta un requisito del aviso",
 }
 
 vi.mock("next-intl", () => ({
@@ -203,11 +191,10 @@ const ACTS = [
       total: 63.5,
       pillars: {
         parse: { points: 16.7, max: 20, ratio: 0.83 },
-        relevance: { points: 25.4, max: 45, ratio: 0.56 },
-        impact: { points: 21.4, max: 35, ratio: 0.61 },
+        relevance: { points: 46.8, max: 80, ratio: 0.59 },
       },
       components: [
-        { key: "metric", pillar: "impact", numerator: 0, denominator: 2, ratio: 0, effectiveWeight: 10, points: 0, gainPerUnit: 5 },
+        { key: "nice", pillar: "relevance", numerator: 0, denominator: 1, ratio: 0, effectiveWeight: 10, points: 0, gainPerUnit: 1.9 },
       ],
     },
     // Los dos insumos con los que se midió: sin ellos la pantalla no puede
@@ -239,25 +226,18 @@ const ACTS = [
     findings: [
       {
         id: "f1",
-        type: "no_metric",
+        type: "missing_requirement",
         // El motor SIEMPRE declara cómo se cierra un hallazgo: la tarjeta
         // dibuja la salida de su remedio y no otra.
         remedy: "rewrite",
-        component: "metric",
-        merged: ["no_metric"],
+        component: "nice",
+        merged: ["missing_requirement"],
         nodeId: NODE_ID,
         nodeText: "Atendí a los clientes en la línea de cajas",
         nodeHash: "h1",
         gain: 1.9,
-        detail: "tamaño",
+        detail: "Excel",
       },
-    ],
-  },
-  {
-    act: "triage",
-    budget: {},
-    decisions: [
-      { bulletId: NODE_ID, verdict: "DROP", reason: "no aporta a esta vacante", relevance: 0.1, proposedTopic: null, needsUserConfirm: null },
     ],
   },
   { act: "done", telemetry: { calls: 0, served: { jd: true, audit: true } } },
@@ -266,7 +246,7 @@ const ACTS = [
 const SUGGESTION = {
   bulletId: NODE_ID,
   changed: true,
-  text: "Atendí a [n] clientes por turno resolviendo consultas y cobros",
+  text: "Atendí a [n] clientes por turno cuadrando la caja en Excel",
   actionVerb: "Atendí",
   keywordsUsed: [],
   claim: "atención en caja",
@@ -413,13 +393,13 @@ describe("el panel pinta lo que el motor midió", () => {
   it("la fila del hallazgo muestra la ganancia MEDIDA, no una promesa del modelo", async () => {
     await analyze()
     expect(texto()).toContain("1.9p")
-    expect(texto()).toContain("Le falta la cifra")
+    expect(texto()).toContain("Falta un requisito del aviso")
   })
 
   it("el hallazgo cae en su sección, y la sección dice cuánto cubre", async () => {
     await analyze()
     // Un hallazgo, un lugar: la regla del informe sigue en pie con el motor nuevo.
-    expect(texto()).toContain("Lo que mira la persona")
+    expect(texto()).toContain("Lo deseable")
   })
 
   it("dice cuántas cosas ya resueltas NO se están repitiendo", async () => {
@@ -431,54 +411,6 @@ describe("el panel pinta lo que el motor midió", () => {
   it("avisa cuando la corrida no gastó ninguna consulta", async () => {
     await analyze()
     expect(texto()).toContain("no se gastó ninguna consulta")
-  })
-
-  it("el triage se ve, con su veredicto por línea", async () => {
-    await analyze()
-    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
-    await click("Arreglar con Tailor")
-    expect(texto()).toContain("Qué merece el espacio")
-    expect(texto()).toContain("Sacar")
-  })
-
-  it("NINGÚN veredicto queda sin puerta: DROP ofrece su botón", async () => {
-    // Un veredicto que sólo se mira es un reproche, no un producto.
-    await analyze()
-    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
-    await click("Arreglar con Tailor")
-    expect(botón("Sacar del CV")).toBeTruthy()
-  })
-
-  it("sacar una línea PIDE confirmación y recién entonces toca el CV", async () => {
-    await analyze()
-    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
-    await click("Arreglar con Tailor")
-    await click("Sacar del CV")
-    // Es la primera acción que DESTRUYE contenido: se ve la línea antes.
-    expect(updateSectionData).not.toHaveBeenCalled()
-
-    await click("Sí, sacarla")
-    expect(updateSectionData).toHaveBeenCalled()
-    const escrito = (updateSectionData.mock.calls[0][1] as { description: string }[])[0].description
-    expect(escrito).not.toContain("Atendí a los clientes en la línea de cajas")
-  })
-
-  it("y se puede deshacer: un borrado sin vuelta atrás no se ofrece", async () => {
-    await analyze()
-    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
-    await click("Arreglar con Tailor")
-    const lineas = (d: string) => d.split("\n").map((l) => l.replace(/^\s*[•\-*]\s*/, "").trim()).filter(Boolean)
-    const antes = lineas((storeState.sectionData.workExperience[0] as { description: string }).description)
-    await click("Sacar del CV")
-    await click("Sí, sacarla")
-    expect(texto()).toContain("Línea sacada del CV")
-
-    await click("Deshacer")
-    const ultimo = updateSectionData.mock.calls[updateSectionData.mock.calls.length - 1]
-    const despues = lineas((ultimo[1] as { description: string }[])[0].description)
-    // EN SU LUGAR, no al final: pegarla al pie deja un CV distinto del que el
-    // usuario tenía antes de apretar, y en un documento el orden es contenido.
-    expect(despues).toEqual(antes)
   })
 
   it("no analiza con un aviso demasiado corto: el botón está apagado", async () => {
@@ -617,6 +549,27 @@ describe("la cifra la escribe el candidato", () => {
     expect(texto()).toContain(body.focus)
   })
 
+  it("la tarjeta sin resultado pregunta en qué terminó, y lo contado viaja con los ejes", async () => {
+    const sinResultado = {
+      ...ACTS[2],
+      findings: [{
+        id: "r1", type: "no_result", remedy: "rewrite", component: "xyz", merged: ["no_result"],
+        nodeId: NODE_ID, nodeText: "Atendí a los clientes en la línea de cajas", nodeHash: "h1", gain: 1.5, detail: "resultado",
+      }],
+    }
+    apiFetch.mockResolvedValueOnce(ndjsonResponse([ACTS[0], ACTS[1], sinResultado, ACTS[3]]))
+    await mount()
+    await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
+    await click("Analizar compatibilidad")
+    await click("Arreglar con Tailor")
+    await escribir("#r1-dato", "bajó la fila en hora pico")
+    apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
+    await click("Escribirla mejor")
+    const body = JSON.parse((apiFetch.mock.calls[1][1] as { body: string }).body)
+    expect(body.axes).toEqual(["resultado"])
+    expect(body.told).toBe("bajó la fila en hora pico")
+  })
+
   it("«no me interesa» cierra el hallazgo sin gastar una consulta, y lo RECUERDA", async () => {
     await analyze()
     // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
@@ -649,10 +602,8 @@ describe("el puntaje se mueve mientras trabajás", () => {
     await analyze()
     // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
     await click("Arreglar con Tailor")
-    // Lo que el motor midió al analizar: el pilar de impacto, con la única
-    // línea medible sin cifra.
+    // Lo que el motor midió al analizar: el deseable, sin escribir.
     const antes = texto()
-    expect(antes).toMatch(/Después del filtro automático/)
 
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
     await click("Escribirla mejor")
@@ -660,9 +611,9 @@ describe("el puntaje se mueve mientras trabajás", () => {
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, stored: 1 }) })
     await click("Confirmar cambio")
 
-    // La línea aceptada declara una cantidad, y ESE componente lo mide el código
+    // La línea aceptada escribe el deseable, y ESE componente lo mide el código
     // sin preguntarle a nadie: la sección sube en el acto, sin gastar llamada.
-    const pct = (t: string) => Number((t.match(/Lo que mira la persona(\d+)%/) ?? [])[1] ?? -1)
+    const pct = (t: string) => Number((t.match(/Lo deseable(\d+)%/) ?? [])[1] ?? -1)
     expect(pct(texto())).toBeGreaterThan(pct(antes))
   })
 
@@ -706,6 +657,9 @@ describe("el puntaje se mueve mientras trabajás", () => {
         },
       ],
     }
+    // El CV guardado dice lo que se aplicó: es lo que queda tras guardar.
+    ;(storeState.sectionData.workExperience[0] as { description: string }).description =
+      "• Atendí a 60 clientes por turno\n• Ordené la góndola al cierre"
     apiFetch.mockResolvedValueOnce(ndjsonResponse([ACTS[0], ACTS[1], conRegistro]))
     await mount()
     await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
@@ -716,6 +670,53 @@ describe("el puntaje se mueve mientras trabajás", () => {
     // en esta sesión.
     expect(texto()).toContain("Atendí a 60 clientes por turno")
     expect(texto()).toContain("done_dismissed")
+  })
+
+  it("«Ahora dice» no se muestra si el CV no lo dice: se aplicó y no se guardó", async () => {
+    const conRegistro = {
+      ...ACTS[2],
+      resolved: [{
+        findingId: "viejo1", nodeId: NODE_ID, nodeHashAtResolution: "h",
+        resolvedBy: "AI_SUGGESTION", resolvedAt: "2026-09-08T10:00:00.000Z",
+        title: "Le falta la cifra", kind: "applied",
+        before: "Atendí a los clientes", after: "Atendí a 60 clientes por turno",
+      }],
+    }
+    apiFetch.mockResolvedValueOnce(ndjsonResponse([ACTS[0], ACTS[1], conRegistro]))
+    await mount()
+    await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
+    await click("Analizar compatibilidad")
+    await click("Arreglar con Tailor")
+    expect(texto()).not.toContain("Atendí a 60 clientes por turno")
+  })
+
+  it("un arreglo que otro volvió a mejorar sigue en «Hechas»", async () => {
+    const conRegistro = {
+      ...ACTS[2],
+      resolved: [
+        {
+          findingId: "sin", nodeId: NODE_ID, nodeHashAtResolution: "h",
+          resolvedBy: "AI_SUGGESTION", resolvedAt: "2026-09-08T10:00:00.000Z",
+          title: "Falta SIN", kind: "applied",
+          before: "", after: "Emití la factura electrónica del SIN",
+        },
+        {
+          findingId: "fact", nodeId: NODE_ID, nodeHashAtResolution: "h2",
+          resolvedBy: "AI_SUGGESTION", resolvedAt: "2026-09-08T10:05:00.000Z",
+          title: "Falta facturación", kind: "applied",
+          before: "Emití la factura electrónica del SIN", after: "Registré la facturación electrónica del SIN",
+        },
+      ],
+    }
+    ;(storeState.sectionData.workExperience[0] as { description: string }).description =
+      "• Registré la facturación electrónica del SIN\n• Ordené la góndola al cierre"
+    apiFetch.mockResolvedValueOnce(ndjsonResponse([ACTS[0], ACTS[1], conRegistro]))
+    await mount()
+    await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
+    await click("Analizar compatibilidad")
+    await click("Arreglar con Tailor")
+    expect(texto()).toContain("Falta SIN")
+    expect(texto()).toContain("Falta facturación")
   })
 
   /**

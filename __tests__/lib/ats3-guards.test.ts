@@ -319,9 +319,9 @@ describe("una sugerencia pensada sobre una versión que ya no existe", () => {
 describe("lealtad: no volver a señalar lo que el usuario ya resolvió", () => {
   const finding = (over: Partial<Finding> = {}): Finding => ({
     id: "f1",
-    type: "no_metric",
-    component: "metric", remedy: "rewrite",
-    merged: ["no_metric"],
+    type: "soft_not_shown",
+    component: "soft", remedy: "rewrite",
+    merged: ["soft_not_shown"],
     nodeId: "b1",
     nodeText: "Atendí la caja",
     nodeHash: "h4",
@@ -346,6 +346,15 @@ describe("lealtad: no volver a señalar lo que el usuario ya resolvió", () => {
     expect(out.shown).toHaveLength(1)
     // Un descarte de verdad —«no me interesa»— sigue sin volver.
     expect(loyalty([finding()], [res({ resolvedBy: "DISMISSED", kind: "dismissed" })]).shown).toHaveLength(0)
+  })
+
+  it("un arreglo aplicado que el CV no dice —no se guardó— no cuenta: ni suprime ni es regresión", () => {
+    const aplicado = res({ after: "Atendí la caja cuadrando el efectivo del turno" })
+    const sinGuardar = loyalty([finding({ nodeHash: "h6" })], [aplicado], "Atendí la caja")
+    expect(sinGuardar.shown).toHaveLength(1)
+    expect(sinGuardar.regressed).toHaveLength(0)
+    // Guardado, vale como siempre.
+    expect(loyalty([finding({ nodeHash: "h6" })], [aplicado], "Atendí la caja cuadrando el efectivo del turno").regressed).toHaveLength(1)
   })
 
   it("cerrado y el nodo intacto: es una re-detección falsa, no se muestra", () => {
@@ -552,5 +561,13 @@ describe("llenar un hueco conserva su unidad", () => {
     ["[n personas]", "8", "8 personas"],
   ])("%s + «%s» → «%s»", (token, valor, esperado) => {
     expect(fillSlot(token, valor)).toBe(esperado)
+  })
+})
+
+describe("la antigüedad no es una cifra que se pierde", () => {
+  it("«7+ years» no se exige; «15%» sí", async () => {
+    const { droppedFigures } = await import("@/lib/ats3/guards")
+    expect(droppedFigures("iOS Developer with 7+ years, cutting errors by 15%", "Senior iOS Engineer with 11 years, cutting errors")).toEqual(["15%"])
+    expect(droppedFigures("Cajera con 3 años de experiencia", "Cajera con 4 años")).toEqual([])
   })
 })

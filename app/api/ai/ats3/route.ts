@@ -80,6 +80,8 @@ const resumeSchema = z.object({
    * «English B2» y el CV lo decía en Idiomas, y el panel lo daba por faltante.
    */
   otherText: z.string().max(8_000).default(""),
+  /** Sólo para saber si un lector encuentra cómo contactar: no va al modelo. */
+  contact: z.object({ email: z.string().max(200).default(""), phone: z.string().max(60).default("") }).optional().catch(undefined),
 })
 
 /**
@@ -114,12 +116,18 @@ const rewriteSchema = z.object({
    * reescritura con la cuota ya gastada.
    */
   focus: z.string().max(400).optional().catch(undefined),
-  /** La otra línea de una fusión. El motor la absorbe y la retira. */
-  mergeWith: z.string().max(64).optional().catch(undefined),
+  /** Los términos que la tarjeta prometió escribir. El motor comprueba que estén. */
+  mustWrite: z.array(z.string().max(160)).max(12).optional().catch(undefined),
+  /** El verbo que la tarjeta promete dejar de repetir. */
+  avoidOpener: z.string().max(60).optional().catch(undefined),
+  /** La tarjeta promete el tamaño del logro. */
+  wantsSize: z.boolean().optional().catch(undefined),
+  /** Los ejes que la tarjeta promete cerrar. */
+  axes: z.array(z.enum(["verbo", "resultado", "método"])).max(3).optional().catch(undefined),
+  /** Lo que la persona contó en la tarjeta: va al prompt, así que se acota. */
+  told: z.string().max(300).optional().catch(undefined),
   /** El puesto al que se agrega una línea NUEVA, con el tema en `focus`. */
   addToRole: z.string().max(64).optional().catch(undefined),
-  /** REPLACE: el tema confirmado en `focus` se escribe EN LUGAR de esta línea. */
-  replacing: z.boolean().optional().catch(undefined),
 })
 
 /**
@@ -308,7 +316,10 @@ export async function POST(req: Request) {
 
     // Antes de gastar nada: si el plan no llega o la cuota se acabó, esto
     // responde con su código y el stream nunca se abre.
-    await enforceAIQuota(authResult.userId, "ats3", authResult.user.plan)
+    // La reescritura de Tailor tiene su propia cuenta (ver AI_DAILY_CAP en
+    // lib/plans): el análisis y las tarjetas no compiten por las mismas ranuras.
+    const cuenta = parsed.data.action === "rewrite" ? "ats3-rewrite" : "ats3"
+    await enforceAIQuota(authResult.userId, cuenta, authResult.user.plan)
 
     const model = AI_MODEL_PROSE
 
@@ -332,7 +343,7 @@ export async function POST(req: Request) {
     }
     const bill = () => {
       if (spend.promptTokens || spend.completionTokens) {
-        logAIUsage(authResult.userId, "ats3", { model, plan: authResult.user.plan, ...spend })
+        logAIUsage(authResult.userId, cuenta, { model, plan: authResult.user.plan, ...spend })
       }
     }
 
@@ -355,15 +366,18 @@ export async function POST(req: Request) {
         model,
         jdKey: cacheKey.jd(d.jobDescription, model),
         focus: d.focus,
-        mergeWith: d.mergeWith,
+        mustWrite: d.mustWrite,
+        avoidOpener: d.avoidOpener,
+        wantsSize: d.wantsSize,
+        axes: d.axes,
+        told: d.told,
         addToRole: d.addToRole,
-        replacing: d.replacing,
         ai,
         store,
       })
       bill()
       if (result.ok) {
-        if (result.calls === 0) await refundDailyQuota(authResult.userId, "ats3", authResult.user.plan)
+        if (result.calls === 0) await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
         return NextResponse.json({ ok: true, suggestion: result.suggestion, served: result.served })
       }
       /**
@@ -385,7 +399,7 @@ export async function POST(req: Request) {
        * Es la misma regla que el producto ya tenía escrita para todos sus
        * endpoints: ninguno entrega un hueco cobrando el uso.
        */
-      await refundDailyQuota(authResult.userId, "ats3", authResult.user.plan)
+      await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
       if (result.alreadyGood) {
         // No es un fallo: el modelo leyó la línea y dice que ya cumple.
         return NextResponse.json({ ok: false, reason: "already_good", detail: "" })
@@ -440,7 +454,7 @@ export async function POST(req: Request) {
           // este reembolso, el tope que existe para frenar el gasto cobraría por
           // peticiones que no gastaron nada.
           if (step.value.calls === 0) {
-            await refundDailyQuota(authResult.userId, "ats3", authResult.user.plan)
+            await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
           }
           write({ act: "done", telemetry: step.value })
         } catch (e) {

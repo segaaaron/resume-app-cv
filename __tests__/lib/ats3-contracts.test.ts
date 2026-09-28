@@ -6,6 +6,8 @@ import {
   termKey,
   buildTermIndex,
   termsIn,
+  termCounts,
+  specTerms,
   termPresent,
   roleIdFor,
   bulletIdFor,
@@ -14,9 +16,10 @@ import {
   FINDING_TYPES,
   JobSpecSchema,
   SuggestionSchema,
-  TriageDecisionSchema,
   type TermVariants,
 } from "@/lib/ats3/contracts"
+import { termsOf } from "@/lib/ats3/score"
+import type { ResumeTree } from "@/lib/ats3/contracts"
 
 /**
  * El vocabulario del motor v3.
@@ -120,6 +123,55 @@ describe("el error que este módulo existe para no cometer", () => {
     expect(termPresent(i, "Go", "Gestioné el gobierno del dato")).toBe(false)
     expect(termPresent(i, "Go", "Escribí el servicio en Go")).toBe(true)
   })
+
+  /**
+   * Medido el 2026-09-28 en Chrome, con un CV iOS real: el panel daba por
+   * faltantes Instruments, Swift Package Manager y GraphQL, los tres escritos.
+   */
+  it("un nombre que CIERRA el término largo no se lo roba nadie", () => {
+    const i = idx([
+      { canonical: "Instruments", variants: [] },
+      { canonical: "Xcode Instruments", variants: [] },
+    ])
+    expect(termsIn(i, "Perfilé la app con Xcode Instruments")).toEqual(new Set(["Xcode Instruments", "Instruments"]))
+    // El mismo término con su alias al final no se cuenta dos veces.
+    const mig = termCounts(idx([{ canonical: "Soldadura MIG", variants: ["MIG"] }]), "Soldadura MIG en planta")
+    expect(mig.get("Soldadura MIG")).toBe(1)
+  })
+
+  it("una sigla del aviso sólo cuenta escrita como sigla", () => {
+    const i = idx([{ canonical: "SIN", variants: [] }, { canonical: "IT", variants: [] }])
+    expect(termsIn(i, "Cobré sin errores y lo ordené; it works")).toEqual(new Set())
+    expect(termsIn(i, "Emití facturas ante el SIN; soporte de IT")).toEqual(new Set(["SIN", "IT"]))
+  })
+
+  it("la oración del aviso no le roba el tramo a otro requisito", () => {
+    const spec = JobSpecSchema.parse({
+      roleTitleRaw: "iOS", roleTitleCanonical: "iOS", seniority: null, yearsRequired: null, domain: null,
+      workMode: null, language: "en", metricThatMatters: null, responsibilities: [], softSignals: [], namedTools: [],
+      mustHave: [
+        { skill: "REST", raw: "Integrate REST and GraphQL APIs", years: null, category: null, kind: "capability" },
+        { skill: "GraphQL", raw: "Integrate REST and GraphQL APIs", years: null, category: null, kind: "capability" },
+      ],
+      niceToHave: [],
+    })
+    const counts = termCounts(idx(specTerms(spec)), "Integrate REST and GraphQL APIs")
+    expect(counts.get("REST")).toBe(1)
+    expect(counts.get("GraphQL")).toBe(1)
+  })
+
+  it("una habilidad declarada con alias son dos nombres, no uno largo", () => {
+    const spec = JobSpecSchema.parse({
+      roleTitleRaw: "iOS", roleTitleCanonical: "iOS", seniority: null, yearsRequired: null, domain: null,
+      workMode: null, language: "en", metricThatMatters: null, responsibilities: [], softSignals: [], namedTools: [],
+      mustHave: [{ skill: "Swift Package Manager", raw: "Swift Package Manager", years: null, category: null, kind: "capability" }],
+      niceToHave: [],
+    })
+    const tree = { declaredSkills: ["Swift Package Manager / SPM", "CI/CD"] } as unknown as ResumeTree
+    const i = idx(termsOf(spec, tree))
+    expect(termsIn(i, "Swift Package Manager / SPM").has("Swift Package Manager")).toBe(true)
+    expect(i.byKey.get(termKey("CI/CD"))).toBe("CI/CD")
+  })
 })
 
 describe("identidad de los nodos", () => {
@@ -146,10 +198,10 @@ describe("identidad de los nodos", () => {
   })
 
   it("el id de un hallazgo es el mismo dentro de tres semanas", () => {
-    const one = findingId("b_abc123", "no_metric")
-    const two = findingId("b_abc123", "no_metric")
+    const one = findingId("b_abc123", "soft_not_shown")
+    const two = findingId("b_abc123", "soft_not_shown")
     expect(one).toBe(two)
-    expect(findingId("b_abc123", "no_result")).not.toBe(one)
+    expect(findingId("b_abc123", "missing_requirement")).not.toBe(one)
   })
 })
 
@@ -232,10 +284,6 @@ describe("ningún esquema del motor muere por un null", () => {
       bulletId: null, changed: null, text: null, actionVerb: null, keywordsUsed: null,
       claim: null, metricType: null, placeholders: null, variantWithoutMetric: null,
       measurableAspect: null, declineBasis: null,
-    }],
-    ["el triage (P3)", TriageDecisionSchema, {
-      bulletId: null, verdict: "KEEP", reason: null, relevance: null,
-      proposedTopic: null, needsUserConfirm: null,
     }],
   ]
   for (const [nombre, esquema, todoNulo] of casos) {

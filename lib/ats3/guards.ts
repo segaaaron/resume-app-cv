@@ -46,6 +46,8 @@ import { type Ledger } from "@/lib/ats3/ledger"
 export type GuardReason =
   | "stale" // se pensó sobre una versión que ya no existe
   | "empty" // no hay texto que entregar
+  | "declined" // la tarjeta prometía algo y el modelo no encontró cómo escribirlo sin agregar lo que el CV no dice
+  | "needs_fact" // la tarjeta prometía un eje (resultado, método) que sólo la persona puede contar
   /**
    * ── ACÁ VIVÍAN CUATRO RECHAZOS MÁS (CEO, 2026-09-11) ───────────────────────
    *
@@ -393,6 +395,11 @@ export function droppedFigures(original: string, rewritten: string): string[] {
   for (const m of original.matchAll(/\d[\d.,]*\s*%?/g)) {
     const digits = m[0].replace(/\D/g, "")
     if (!digits || bareYear(digits) || after.has(digits)) continue
+    // «7+ years», «7 años»: la antigüedad no es un logro, es una duración que se
+    // mide sobre las fechas, y el resumen la escribe con el número medido.
+    // Exigirla le pedía al modelo el «7» viejo y los «11» medidos a la vez
+    // (medido el 2026-09-28).
+    if (/^\s*\+?\s*(years?|yrs?|a[ñn]os?)\b/i.test(original.slice((m.index ?? 0) + m[0].length))) continue
     const escrita = m[0].trim()
     if (!perdidas.includes(escrita)) perdidas.push(escrita)
   }
@@ -492,7 +499,12 @@ export interface LoyaltyResult {
   regressed: Finding[]
 }
 
-export function loyalty(findings: Finding[], log: Resolution[]): LoyaltyResult {
+export function loyalty(
+  findings: Finding[],
+  log: Resolution[],
+  /** Lo que el CV dice hoy. Con él, un arreglo que nunca se guardó no cuenta. */
+  cvTexto?: string,
+): LoyaltyResult {
   const byFinding = new Map(log.map((r) => [r.findingId, r]))
   const out: LoyaltyResult = { shown: [], suppressed: [], regressed: [] }
 
@@ -512,6 +524,18 @@ export function loyalty(findings: Finding[], log: Resolution[]): LoyaltyResult {
      * deshacer dejaba la línea en el CV con su hallazgo suprimido para siempre.
      */
     if (closed.kind === "dropped") {
+      out.shown.push(f)
+      continue
+    }
+    /**
+     * UN ARREGLO QUE EL CV NO DICE NO ESTÁ HECHO (medido el 2026-09-28).
+     *
+     * La resolución se anota al APLICAR, y aplicar no es guardar: se aplicaba,
+     * se recargaba sin guardar, y el hallazgo volvía pintado como «Volvió a
+     * aparecer» — una regresión que nadie provocó. Si lo que se escribió no está
+     * en el CV, el arreglo no existe y el hallazgo es uno más.
+     */
+    if (closed.resolvedBy === "AI_SUGGESTION" && closed.after && cvTexto !== undefined && !cvTexto.includes(closed.after)) {
       out.shown.push(f)
       continue
     }
@@ -547,10 +571,14 @@ export function retryNudge(v: GuardVerdict, language: "es" | "en"): string {
   const es: Record<GuardReason, string> = {
     stale: `La línea cambió desde que la leíste.`,
     empty: `Devolviste una reescritura vacía.`,
+    declined: `Declinaste una línea que todavía tiene algo que arreglar.`,
+    needs_fact: `A tu línea le falta un eje que no se puede escribir sin un dato de la persona.`,
   }
   const en: Record<GuardReason, string> = {
     stale: `The line changed since you read it.`,
     empty: `You returned an empty rewrite.`,
+    declined: `You declined a line that still has something to fix.`,
+    needs_fact: `Your line lacks an axis that cannot be written without a fact from the person.`,
   }
   return (language === "en" ? en : es)[v.reason]
 }

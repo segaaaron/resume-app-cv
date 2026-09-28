@@ -214,67 +214,6 @@ export function saturatedMetricTypes(l: Ledger): MetricType[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EL PRESUPUESTO DE ESPACIO
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface SpaceBudget {
-  total: number
-  /** Cuántas viñetas merece cada puesto. La suma nunca supera el total. */
-  perRole: Record<string, number>
-}
-
-/**
- * Reparte el espacio por ANTIGÜEDAD RELATIVA, no por una tabla de años.
- *
- * El PDF fija "el puesto más reciente 4-6, el anterior 3-4, lo de más de 10 años
- * máximo 2". Eso supone una carrera con la forma de la de quien lo escribió. Acá
- * el reparto sale del orden del propio CV: el puesto más reciente pesa más, y
- * cada uno hacia atrás pesa menos, sea una carrera de tres años o de treinta.
- *
- * Si el CV tiene un solo puesto, se lleva todo el presupuesto: partirlo entre
- * puestos que no existen dejaría espacio sin usar.
- */
-export function spaceBudget(tree: ResumeTree, total: number = BULLETS_PER_PAGE): SpaceBudget {
-  const roles = [...tree.roles].sort((a, b) => (a.startDate < b.startDate ? 1 : -1))
-  const perRole: Record<string, number> = {}
-  if (roles.length === 0) return { total, perRole }
-
-  // Pesos decrecientes: 1, 1/2, 1/3… Es una curva, no una tabla de años.
-  const weights = roles.map((_, i) => 1 / (i + 1))
-  const sum = weights.reduce((s, w) => s + w, 0)
-
-  let assigned = 0
-  roles.forEach((role, i) => {
-    /**
-     * ── DOS RESPUESTAS A LA MISMA PREGUNTA, Y SE CONTRADECÍAN ────────────────
-     *
-     * El reparto por antigüedad le daba al puesto más reciente hasta DIEZ de
-     * las quince de la página, mientras `BULLETS_PER_ROLE_MAX` dice que de un
-     * mismo puesto se leen SEIS. Con eso, al modelo se le decía «acá caben
-     * diez» y el motor proponía sacar de la séptima en adelante: el panel
-     * pidiendo agregar y quitar al mismo tiempo.
-     *
-     * El techo manda y el reparto acomoda lo que queda debajo de él. Al menos
-     * una, porque un puesto sin viñetas es un puesto que no se entiende.
-     */
-    const share = Math.min(BULLETS_PER_ROLE_MAX, Math.max(1, Math.round((weights[i] / sum) * total)))
-    perRole[role.id] = share
-    assigned += share
-  })
-
-  // El redondeo puede pasarse: se descuenta del más viejo hacia atrás, nunca del
-  // más reciente, que es el que decide la entrevista.
-  for (let i = roles.length - 1; i >= 0 && assigned > total; i--) {
-    const id = roles[i].id
-    while (perRole[id] > 1 && assigned > total) {
-      perRole[id]--
-      assigned--
-    }
-  }
-  return { total, perRole }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // internos
 // ─────────────────────────────────────────────────────────────────────────────
 

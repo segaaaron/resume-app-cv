@@ -48,7 +48,7 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
     const propuestas = ["Mantuve la arquitectura MVVM del proyecto", "Integré Combine con Swift y SwiftUI para sincronizar el estado con la API"]
     let n = 0
     const ai: AtsAi = {
-      parseJob: async () => SPEC, audit: async () => audit, triage: async () => [],
+      parseJob: async () => SPEC, audit: async () => audit,
       rewriteSummary: async () => ({}) as Suggestion,
       rewriteBullet: async (input) => {
         focoVisto = input.focus
@@ -75,87 +75,11 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
 
   it("el plan de habilidades no propone lo que el CV no sostiene", () => {
     const tree = buildTree(RAW)
-    const audit = { bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: [{ skill: "Combine", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null }],
+    const audit = { coverage: [{ skill: "Combine", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null }],
       softCoverage: []} as unknown as AuditFacts
     const p = skillPlan(tree.declaredSkills, SPEC, audit, {})
     expect(p.add).toHaveLength(0)
     expect(p.leaving).toHaveLength(0)
-  })
-})
-
-/**
- * FUSIONAR DOS VIÑETAS (CEO, 2026-09-09).
- *
- * «Si existe la manera de fusionar 2 viñetas porque puede ayudar más a tener un
- * currículum con alto impacto, pues bien. Pero si fusionás cosas para luego
- * pedir eliminar o sacar, eso no quiero.»
- *
- * Lo que este caso protege es lo único que hace SEGURA una fusión: la línea que
- * se devuelve reemplaza a las DOS, y la otra se BORRA — así que lo que se pierda
- * ahí no vuelve de ningún lado. Por eso el guard la juzga contra las dos juntas.
- */
-describe("fusionar dos viñetas en una", () => {
-  const arbol = () =>
-    buildTree({
-      summary: "Secretaria",
-      workExperience: [{
-        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
-        description: "• Gestioné la agenda del consultorio\n• Confirmé los turnos por teléfono",
-      }],
-      skills: [],
-    })
-
-  const motor = (texto: string): AtsAi => ({
-    parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts, triage: async () => [],
-    rewriteSummary: async () => ({}) as Suggestion,
-    rewriteBullet: async (input) => {
-      vistos.push(input.mergeOf)
-      return { bulletId: input.bulletId, changed: true, text: texto, actionVerb: texto.split(" ")[0],
-        keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null,
-        measurableAspect: null, declineBasis: null } as Suggestion
-    },
-  })
-  let vistos: (readonly string[] | undefined)[] = []
-
-  const pedir = async (texto: string) => {
-    vistos = []
-    const tree = arbol()
-    const [a, b] = tree.roles[0].bullets
-    const r = await runRewrite({
-      tree, nodeId: a.id, mergeWith: b.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
-      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd",
-      ai: motor(texto), store: new Store(),
-    })
-    return { tree, a, b, r }
-  }
-
-  it("al modelo le llegan las DOS líneas, y tiene que devolver UNA", async () => {
-    const { r } = await pedir("Gestioné la agenda del consultorio confirmando los turnos por teléfono")
-    expect(vistos[0]).toHaveLength(2)
-    expect(r.ok).toBe(true)
-  })
-
-  it("una fusión que se come lo que decía la segunda se pide UNA vez más, y llega igual", async () => {
-    // La segunda se BORRA al aplicar, así que lo que se pierda no vuelve de ningún
-    // lado: se le reclama al modelo. Pero no bloquea (CEO, 2026-09-11): lo
-    // perdido se ve tachado en el antes/después y el usuario confirma.
-    const { r } = await pedir("Gestioné la agenda del consultorio durante todo el día")
-    expect(vistos).toHaveLength(2)
-    expect(r.ok).toBe(true)
-  })
-
-  it("aplicarla escribe UNA línea y la otra se va, en el mismo acto", async () => {
-    const { tree, b, r } = await pedir("Gestioné la agenda del consultorio confirmando los turnos por teléfono")
-    expect(r.ok).toBe(true)
-    if (!r.ok) return
-    expect(r.suggestion.mergedFrom).toBe(b.id)
-    const ap = applySuggestion(tree, r.suggestion, SPEC, {
-      bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: [], softCoverage: [],    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
-    expect(ap.ok).toBe(true)
-    expect(ap.tree.roles[0].bullets).toHaveLength(1)
-    expect(ap.tree.roles[0].bullets[0].text).toContain("confirmando los turnos")
   })
 })
 
@@ -182,7 +106,7 @@ describe("agregar una viñeta a un puesto que tiene pocas", () => {
     })
 
   const motor = (texto: string): AtsAi => ({
-    parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts, triage: async () => [],
+    parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
     rewriteSummary: async () => ({}) as Suggestion,
     rewriteBullet: async (input) => ({
       bulletId: input.bulletId, changed: true, text: texto, actionVerb: texto.split(" ")[0],
@@ -246,71 +170,592 @@ describe("agregar una viñeta a un puesto que tiene pocas", () => {
   })
 })
 
-/**
- * REEMPLAZAR UNA LÍNEA POR LO QUE EL USUARIO CONFIRMÓ (2026-09-24).
- *
- * El triage pregunta «¿hiciste X?» sobre la viñeta más floja. El «sí» pedía
- * una reescritura de la línea VIEJA sin el tema: se pulía la floja y lo que la
- * persona confirmó se perdía. Ahora el tema es el original, y el texto pisa la
- * línea.
- */
-describe("reemplazar la viñeta más floja por el tema confirmado", () => {
-  const tema = "Coordiné la migración del sistema de turnos a la nube"
-  const arbol = () =>
-    buildTree({
-      summary: "Secretaria",
-      workExperience: [{
-        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
-        description: "• Gestioné la agenda del consultorio\n• Hice tareas varias",
-      }],
-      skills: [],
-    })
 
-  it("el modelo redacta el TEMA, y el resultado pisa la línea floja", async () => {
-    const tree = arbol()
-    const floja = tree.roles[0].bullets[1]
-    const vistos: string[] = []
+/**
+ * LO QUE LA TARJETA PROMETIÓ ESCRIBIR TIENE QUE ESTAR ESCRITO (2026-09-28).
+ * Medido en Chrome: la tarjeta del cargo devolvió un resumen sin el cargo.
+ */
+describe("la reescritura escribe lo que la tarjeta prometió", () => {
+  it("si falta el término se pide una vez más nombrándolo, y se entrega la que lo escribe", async () => {
+    const tree = buildTree(RAW)
+    const index = buildTermIndex(termsOf(SPEC, tree))
+    const textos = ["Desarrollé apps iOS con Swift y SwiftUI para el equipo", "Desarrollé apps iOS con Swift, SwiftUI y Combine para el equipo"]
+    let n = 0
+    let pedido = ""
+    let primera: string[] | undefined
     const ai: AtsAi = {
-      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts, triage: async () => [],
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
       rewriteSummary: async () => ({}) as Suggestion,
       rewriteBullet: async (input) => {
-        vistos.push(input.original)
-        const text = "Coordiné la migración del sistema de turnos del consultorio a la nube"
-        return {
-          bulletId: input.bulletId, changed: true, text, actionVerb: "Coordiné",
-          keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null,
-          measurableAspect: null, declineBasis: null,
-        } as Suggestion
+        if (n === 0) primera = input.mustWrite
+        pedido = input.nudge ?? pedido
+        const text = textos[Math.min(n++, 1)]
+        return { bulletId: input.bulletId, changed: true, text, actionVerb: "Desarrollé", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
       },
     }
     const r = await runRewrite({
-      tree, nodeId: floja.id, focus: tema, replacing: true,
-      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index,
+      language: "es", model: "m", jdKey: "jd", focus: "Combine", mustWrite: ["Combine"], ai, store: new Store(),
+    })
+    // La promesa viaja en la PRIMERA llamada, no recién en la corrección.
+    expect(primera).toEqual(["Combine"])
+    expect(pedido).toContain("«Combine»")
+    expect(r.ok && r.suggestion.text).toContain("Combine")
+  })
+})
+
+describe("arreglar una línea no crea una repetición en otra", () => {
+  it("si la propuesta abre con el verbo de otra viñeta, se pide otra que no lo repita", async () => {
+    const tree = buildTree(RAW)
+    const index = buildTermIndex(termsOf(SPEC, tree))
+    // La otra viñeta abre con «Mantuve»: la primera propuesta lo repite.
+    const textos = ["Mantuve apps iOS con Swift y SwiftUI para el equipo de producto", "Construí apps iOS con Swift y SwiftUI para el equipo de producto"]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => {
+        pedido = input.nudge ?? pedido
+        const text = textos[Math.min(n++, 1)]
+        return { bulletId: input.bulletId, changed: true, text, actionVerb: text.split(" ")[0], keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index,
       language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
     })
-    expect(vistos[0]).toBe(tema)
-    expect(r.ok).toBe(true)
-    if (!r.ok) return
-    // La pantalla muestra como «antes» la línea que desaparece.
-    expect(r.suggestion.originalText).toBe("Hice tareas varias")
-    const ap = applySuggestion(tree, r.suggestion, SPEC, {
-      bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: [], softCoverage: [],    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
-    expect(ap.ok).toBe(true)
-    expect(ap.tree.roles[0].bullets.map((b) => b.text)).toEqual([
-      "Gestioné la agenda del consultorio",
-      "Coordiné la migración del sistema de turnos del consultorio a la nube",
-    ])
+    expect(pedido).toContain("«Mantuve»")
+    expect(r.ok && r.suggestion.text.startsWith("Construí")).toBe(true)
   })
+})
 
-  it("sin el tema NO se pide nada al modelo", async () => {
-    const tree = arbol()
+describe("la línea nueva no abre con una tarea", () => {
+  it("«Apoyé…» vuelve a pedirse diciendo qué falló, y gana la que abre con lo hecho", async () => {
+    const tree = buildTree(RAW)
+    const index = buildTermIndex(termsOf(SPEC, tree))
+    const textos = ["Apoyé el desarrollo de apps iOS con Swift y SwiftUI para el equipo", "Construí apps iOS con Swift y SwiftUI para el equipo de producto"]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => {
+        pedido = input.nudge ?? pedido
+        const text = textos[Math.min(n++, 1)]
+        return { bulletId: input.bulletId, changed: true, text, actionVerb: text.split(" ")[0], keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
     const r = await runRewrite({
-      tree, nodeId: tree.roles[0].bullets[1].id, replacing: true,
-      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
-      language: "es", model: "m", jdKey: "jd", ai: {} as AtsAi, store: new Store(),
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index,
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
     })
+    expect(pedido).toContain("Abre con una tarea")
+    expect(r.ok && r.suggestion.text.startsWith("Construí")).toBe(true)
+  })
+})
+
+describe("el resumen no habla de la persona en tercera", () => {
+  it("«Realizó…, cobró…» se pide de nuevo nombrando las palabras, y gana la que no las tiene", async () => {
+    const tree = buildTree(RAW)
+    const index = buildTermIndex(termsOf(SPEC, tree))
+    const textos = [
+      "Desarrollador iOS con 3 años. Desarrolló apps con Swift y SwiftUI y mantuvo MVVM.",
+      "Desarrollador iOS con 3 años en apps con Swift y SwiftUI sobre arquitectura MVVM.",
+    ]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        const text = textos[Math.min(n++, 1)]
+        return { bulletId: "summary", changed: true, text, actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index,
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("«Desarrolló»")
+    expect(r.ok && r.suggestion.text).toBe(textos[1])
+  })
+})
+
+describe("el resumen no copia las tareas del aviso", () => {
+  it("una tarea pegada se pide de nuevo nombrándola", async () => {
+    const tree = buildTree(RAW)
+    const spec = { ...SPEC, responsibilities: ["Desarrollar pantallas nuevas en SwiftUI, revisar código del equipo"] } as unknown as JobSpec
+    const index = buildTermIndex(termsOf(spec, tree))
+    const textos = [
+      "Desarrollador iOS con 3 años en Swift y SwiftUI. Busca desarrollar pantallas nuevas en SwiftUI.",
+      "Desarrollador iOS con 3 años en apps con Swift y SwiftUI sobre arquitectura MVVM.",
+    ]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => spec, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        const text = textos[Math.min(n++, 1)]
+        return { bulletId: "summary", changed: true, text, actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec, ledger: openLedger(tree, spec, new Set()), index,
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("«Desarrollar pantallas nuevas en SwiftUI»")
+    expect(r.ok && r.suggestion.text).toBe(textos[1])
+  })
+})
+
+describe("el resumen no deja datos sueltos", () => {
+  it("«Bachiller.» se pide integrar en una oración", async () => {
+    const tree = buildTree(RAW)
+    const index = buildTermIndex(termsOf(SPEC, tree))
+    const textos = ["Desarrollador iOS con 3 años en apps con Swift y SwiftUI. Bachiller.", "Desarrollador iOS con 3 años en apps con Swift y SwiftUI sobre MVVM."]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        const text = textos[Math.min(n++, 1)]
+        return { bulletId: "summary", changed: true, text, actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index,
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("«Bachiller.»")
+    expect(r.ok && r.suggestion.text).toBe(textos[1])
+  })
+})
+
+describe("«ya está bien» no contesta una tarjeta abierta", () => {
+  const declina = (): AtsAi => ({
+    parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+    rewriteSummary: async () => ({}) as Suggestion,
+    rewriteBullet: async (input) => ({ bulletId: input.bulletId, changed: false, text: "", actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+      placeholders: [], variantWithoutMetric: null, measurableAspect: null,
+      declineBasis: { hasActionVerb: true, hasResult: true, hasMethod: true } }) as Suggestion,
+  })
+  const pedir = (extra: { mustWrite?: string[]; focus?: string }) => {
+    const tree = buildTree(RAW)
+    return runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai: declina(), store: new Store(), ...extra,
+    })
+  }
+  it("con un término prometido, dos negativas son «no se pudo», no «está bien»", async () => {
+    const r = await pedir({ mustWrite: ["Combine"] })
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.calls).toBe(0)
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("declined")
+  })
+  it("sin nada prometido y con los tres ejes, declinar sigue siendo válido", async () => {
+    const r = await pedir({})
+    expect(!r.ok && "alreadyGood" in r && r.alreadyGood).toBe(true)
+  })
+})
+
+describe("una promesa incumplida no se entrega como si cerrara la tarjeta", () => {
+  it("el término prometido que no llega ni en el reintento es «no se pudo»", async () => {
+    const tree = buildTree(RAW)
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => ({ bulletId: input.bulletId, changed: true, text: "Construí apps iOS con Swift y SwiftUI para el equipo de producto", actionVerb: "Construí",
+        keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null }) as Suggestion,
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(), mustWrite: ["Combine"],
+    })
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("declined")
+  })
+})
+
+describe("los ejes prometidos: el resultado que sólo la persona puede dar", () => {
+  const pedir = async (newBasis: { hasActionVerb: boolean; hasResult: boolean; hasMethod: boolean } | null, told?: string) => {
+    const tree = buildTree(RAW)
+    let primera: { axes?: string[]; told?: string } = {}
+    let n = 0
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => {
+        if (n++ === 0) primera = { axes: input.axes, told: input.told }
+        return { bulletId: input.bulletId, changed: true, text: "Construí apps iOS con Swift y SwiftUI para el equipo de producto", actionVerb: "Construí",
+          keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null, newBasis } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+      axes: ["resultado"], told,
+    })
+    return { r, primera }
+  }
+  it("los ejes y lo contado viajan en la primera llamada", async () => {
+    const { primera } = await pedir({ hasActionVerb: true, hasResult: true, hasMethod: true }, "bajó la fila")
+    expect(primera).toEqual({ axes: ["resultado"], told: "bajó la fila" })
+  })
+  it("sin el dato de la persona no se llama al modelo: se le pide", async () => {
+    const { r } = await pedir({ hasActionVerb: true, hasResult: true, hasMethod: true })
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("needs_fact")
+    expect(r.calls).toBe(0)
+  })
+  it("con el dato, una línea que declara no tener el resultado es una negativa", async () => {
+    const { r } = await pedir({ hasActionVerb: true, hasResult: false, hasMethod: true }, "bajó la fila")
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("declined")
+  })
+  it("la declaración omitida no cuenta como cumplida", async () => {
+    const { r } = await pedir(null, "bajó la fila")
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("declined")
+  })
+  it("con el dato y el resultado escrito, se entrega", async () => {
+    const { r } = await pedir({ hasActionVerb: true, hasResult: true, hasMethod: false }, "bajó la fila")
+    expect(r.ok).toBe(true)
+  })
+})
+
+describe("una declaración de ejes que el texto desmiente no vale", () => {
+  it("agregar sólo términos de la vacante no es un método, aunque se declare", async () => {
+    const tree = buildTree(RAW)
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => ({ bulletId: input.bulletId, changed: true, text: "Mantuve la arquitectura MVVM del proyecto con Swift, SwiftUI y Combine", actionVerb: "Mantuve",
+        keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
+        newBasis: { hasActionVerb: true, hasResult: true, hasMethod: true } }) as Suggestion,
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[1].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(), axes: ["método"],
+    })
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("needs_fact")
+  })
+})
+
+describe("lo que la persona cuenta es aporte, no texto ya dicho", () => {
+  it("una línea escrita con su respuesta se entrega", async () => {
+    const tree = buildTree(RAW)
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => ({ bulletId: input.bulletId, changed: true, text: "Mantuve la arquitectura MVVM del proyecto y bajé los cierres inesperados", actionVerb: "Mantuve",
+        keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
+        newBasis: { hasActionVerb: true, hasResult: true, hasMethod: true } }) as Suggestion,
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[1].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+      axes: ["resultado"], told: "bajaron los cierres inesperados",
+    })
+    expect(r.ok).toBe(true)
+  })
+})
+
+describe("el resumen no comenta el CV", () => {
+  it("«The CV also shows…» se pide de nuevo", async () => {
+    const tree = buildTree(RAW)
+    const textos = ["Desarrollador iOS con 3 años en apps con Swift y SwiftUI. El CV muestra MVVM.", "Desarrollador iOS con 3 años en apps con Swift y SwiftUI sobre MVVM."]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        return { bulletId: "summary", changed: true, text: textos[Math.min(n++, 1)], actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("Hablaste del CV")
+    expect(r.ok && r.suggestion.text).toBe(textos[1])
+  })
+})
+
+describe("el resumen se arma con lo que ESTE puesto pide", () => {
+  it("la prueba es la viñeta que demuestra lo pedido, y los términos llegan en orden de peso", async () => {
+    const tree = buildTree({
+      ...RAW,
+      workExperience: [{
+        jobTitle: "iOS Dev", employer: "Acme", startDate: "2021-03", endDate: "2024-06",
+        description: "• Atendí 40 tickets de soporte por semana\n• Migré el flujo de pagos a Combine con Swift",
+      }],
+    })
+    let recibido: { topBullets: string[]; provenTerms: string[] } | null = null
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        recibido = { topBullets: input.topBullets, provenTerms: input.provenTerms }
+        return { bulletId: "summary", changed: true, text: "Desarrollador iOS con 3 años en Swift, SwiftUI y Combine sobre flujos de pagos.", actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(recibido!.topBullets[0]).toBe("Migré el flujo de pagos a Combine con Swift")
+    expect(recibido!.provenTerms).toEqual(["Combine"])
+  })
+})
+
+describe("lo que el reintento no corrigió y se puede quitar, se quita", () => {
+  it("la oración que habla del CV se retira si el modelo insiste", async () => {
+    const tree = buildTree(RAW)
+    const texto = "Desarrollador iOS con 3 años en apps con Swift y SwiftUI. Mantuvo la arquitectura MVVM de cada proyecto. El CV muestra además Combine."
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async () => ({ bulletId: "summary", changed: true, text: texto, actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+        placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null }) as Suggestion,
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(r.ok && r.suggestion.text).not.toContain("El CV")
+    expect(r.ok && r.suggestion.text).toContain("Desarrollador iOS con 3 años")
+  })
+})
+
+describe("un cargo con barra se escribe en una sola forma", () => {
+  it("se deja la forma que se parece a los cargos de la persona", async () => {
+    const tree = buildTree({ ...RAW, workExperience: [{ ...RAW.workExperience![0], jobTitle: "iOS Developer" }] })
+    const spec = { ...SPEC, roleTitleRaw: "Senior iOS Engineer / Developer" } as unknown as JobSpec
+    const ai: AtsAi = {
+      parseJob: async () => spec, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async () => ({ bulletId: "summary", changed: true, text: "Senior iOS Engineer / Developer con 3 años en apps con Swift y SwiftUI sobre MVVM.",
+        actionVerb: "", keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null }) as Suggestion,
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec, ledger: openLedger(tree, spec, new Set()), index: buildTermIndex(termsOf(spec, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(), mustWrite: ["Senior iOS Engineer / Developer"],
+    })
+    expect(r.ok && r.suggestion.text).toBe("Senior iOS Developer con 3 años en apps con Swift y SwiftUI sobre MVVM.")
+  })
+})
+
+describe("una viñeta casi copiada en el resumen es una viñeta pegada", () => {
+  it("quitarle dos palabras no la esconde", async () => {
+    const tree = buildTree({
+      ...RAW,
+      workExperience: [{ ...RAW.workExperience![0], description: "• Desarrollé y mantuve apps iOS usando los frameworks Swift y SwiftUI con equipos ágiles de producto" }],
+    })
+    const textos = [
+      "Desarrollador iOS con 3 años. Desarrollé y mantuve apps iOS usando Swift y SwiftUI con equipos ágiles de producto.",
+      "Desarrollador iOS con 3 años en apps con Swift y SwiftUI para equipos de producto.",
+    ]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        return { bulletId: "summary", changed: true, text: textos[Math.min(n++, 1)], actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("Pegaste una viñeta")
+    expect(r.ok && r.suggestion.text).toBe(textos[1])
+  })
+})
+
+describe("la prueba del resumen es un resultado sobre lo que el puesto pide", () => {
+  it("gana la viñeta con cifra que habla de lo pedido aunque no lo escriba literal", async () => {
+    const tree = buildTree({
+      ...RAW,
+      workExperience: [{ ...RAW.workExperience![0], description: "• Migré el flujo de pagos a Combine con Swift\n• Reescribí los flujos combinados de datos y bajé la latencia 30%" }],
+    })
+    let top: string[] = []
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        top = input.topBullets
+        return { bulletId: "summary", changed: true, text: "Desarrollador iOS con 3 años en Swift y Combine sobre flujos de pagos y datos.", actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(top[0]).toBe("Reescribí los flujos combinados de datos y bajé la latencia 30%")
+  })
+  it("una oración que sólo enumera términos del aviso se pide de nuevo", async () => {
+    const tree = buildTree(RAW)
+    const textos = ["Desarrollador iOS con 3 años en apps. También Swift, SwiftUI y Combine.", "Desarrollador iOS con 3 años en apps con Swift y SwiftUI sobre MVVM."]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        return { bulletId: "summary", changed: true, text: textos[Math.min(n++, 1)], actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("enumera términos del aviso")
+    expect(r.ok && r.suggestion.text).toBe(textos[1])
+  })
+})
+
+describe("el resumen trae su prueba con cifra", () => {
+  it("si el mejor logro tiene cifra y el resumen ninguna, se pide nombrando el logro", async () => {
+    const tree = buildTree({
+      ...RAW,
+      workExperience: [{ ...RAW.workExperience![0], description: "• Migré los flujos de Combine y bajé la latencia 30%\n• Mantuve la arquitectura MVVM del proyecto" }],
+    })
+    const textos = ["Desarrollador iOS con 3 años en apps con Swift, SwiftUI y Combine sobre MVVM.", "Desarrollador iOS con 3 años en Swift y Combine; bajó la latencia 30% migrando flujos."]
+    let n = 0
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        return { bulletId: "summary", changed: true, text: textos[Math.min(n++, 1)], actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("El resumen no trae prueba")
+    expect(pedido).toContain("latencia 30%")
+  })
+})
+
+describe("la tercera persona en inglés, con el vocabulario del CV", () => {
+  const RAW_EN = {
+    summary: "iOS developer",
+    workExperience: [{
+      jobTitle: "iOS Developer", employer: "Acme", startDate: "2021-03", endDate: "2024-06",
+      description: "• Developed apps with Swift and SwiftUI\n• Led code reviews while building shared components",
+    }],
+    skills: [{ name: "Swift" }, { name: "SwiftUI" }],
+  }
+  const correr = async (nodo: "summary" | "bullet", textos: string[]) => {
+    const tree = buildTree(RAW_EN)
+    let n = 0
+    let pedido = ""
+    const sug = (text: string, id: string) => ({ bulletId: id, changed: true, text, actionVerb: text.split(" ")[0], keywordsUsed: [], claim: "", metricType: null,
+      placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null }) as Suggestion
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async (input) => { pedido = input.nudge ?? pedido; return sug(textos[Math.min(n++, 1)], "summary") },
+      rewriteBullet: async (input) => { pedido = input.nudge ?? pedido; return sug(textos[Math.min(n++, 1)], input.bulletId) },
+    }
+    const r = await runRewrite({
+      tree, nodeId: nodo === "summary" ? tree.summary.id : tree.roles[0].bullets[0].id, spec: SPEC,
+      ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "en", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    return { r, pedido }
+  }
+  it("«Develops…» en el resumen se pide de nuevo", async () => {
+    const { pedido, r } = await correr("summary", [
+      "iOS Developer with 3 years in Swift and SwiftUI. Develops apps with Swift and SwiftUI for product teams.",
+      "iOS Developer with 3 years in Swift and SwiftUI, shipping apps for product teams.",
+    ])
+    expect(pedido).toContain('"Develops"')
+    expect(r.ok && r.suggestion.text).toContain("shipping")
+  })
+  it("«Builds…» abriendo una viñeta se pide de nuevo", async () => {
+    const { pedido } = await correr("bullet", ["Builds apps with Swift and SwiftUI for product teams", "Built apps with Swift and SwiftUI for product teams"])
+    expect(pedido).toContain('"Builds"')
+  })
+  it("«Has integrated…» es tercera persona", async () => {
+    const { pedido } = await correr("summary", [
+      "iOS Developer with 3 years in Swift and SwiftUI. Has integrated Swift apps for product teams.",
+      "iOS Developer with 3 years in Swift and SwiftUI for product teams.",
+    ])
+    expect(pedido).toContain('"Has"')
+  })
+  it("un plural al abrir no es un verbo", async () => {
+    const { pedido } = await correr("summary", [
+      "iOS Developer with 3 years in Swift and SwiftUI for product teams. Skills span Swift, SwiftUI and component design.",
+      "iOS Developer with 3 years in Swift and SwiftUI for product teams.",
+    ])
+    expect(pedido).not.toContain("third person")
+  })
+})
+
+describe("cada oración del resumen trabaja para este puesto", () => {
+  it("una oración sin nada del aviso ni cifra se pide cambiar y, si sigue, se retira", async () => {
+    const tree = buildTree(RAW)
+    const texto = "Desarrollador iOS con 3 años. Construí apps con Swift y SwiftUI para el equipo. Inglés B2 y español nativo."
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        return { bulletId: "summary", changed: true, text: texto, actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("«Inglés B2 y español nativo.»")
+    expect(r.ok && r.suggestion.text).toBe("Desarrollador iOS con 3 años. Construí apps con Swift y SwiftUI para el equipo.")
+  })
+})
+
+describe("una oración con su acción no es una lista de términos", () => {
+  it("«Migré flujos a Swift y SwiftUI con MVVM» no se marca; «También Swift, SwiftUI y Combine» sí", async () => {
+    const tree = buildTree(RAW)
+    let pedido = ""
+    let n = 0
+    const textos = ["Desarrollador iOS con 3 años. Migré flujos a Swift y SwiftUI. También Swift, SwiftUI y Combine.", "Desarrollador iOS con 3 años. Migré flujos a Swift y SwiftUI."]
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteBullet: async () => ({}) as Suggestion,
+      rewriteSummary: async (input) => {
+        pedido = input.nudge ?? pedido
+        return { bulletId: "summary", changed: true, text: textos[Math.min(n++, 1)], actionVerb: "", keywordsUsed: [], claim: "", metricType: null,
+          placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null } as Suggestion
+      },
+    }
+    await runRewrite({
+      tree, nodeId: tree.summary.id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
+      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("«También Swift, SwiftUI y Combine.» enumera")
+    expect(pedido).not.toContain("«Migré flujos a Swift y SwiftUI.» enumera")
   })
 })

@@ -32,24 +32,24 @@ import {
   normalize,
   roleIdFor,
   sha256,
-  specTerms,
-  termCounts,
   termsIn,
   type AnchoredSuggestion,
+  type Axis,
   type Finding,
   type FindingType,
   type JobSpec,
   type NodeId,
-  type Verdict,
   type Resolution,
   type ResumeTree,
   type Suggestion,
   type TermIndex,
-  type TriageDecision,
+  termKey,
 } from "@/lib/ats3/contracts"
-import { afterAccept, BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, spaceBudget, type Ledger } from "@/lib/ats3/ledger"
+import { namedCliches } from "@/lib/services/ai/shared/cliches"
+import { isEmptyPhrasing, opensWeakly } from "@/lib/services/ai/shared/empty-phrasing"
+import { afterAccept, BULLETS_PER_ROLE_MAX, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, type Ledger } from "@/lib/ats3/ledger"
 import { checkSuggestion, findNode, isStale, lossNudge, lostContent, loyalty, repairSuggestion, retryNudge, similarNudge, similarTo, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
-import { coverageOf, cvTextOf, deltaOf, gainOf, postingWeights, scoreResume, statesQuantity, termsOf, titleWritten, type AuditFacts, type ComponentKey, type ParseChecks, type Score } from "@/lib/ats3/score"
+import { ABIERTO, coverageOf, cvTextOf, deltaOf, experienceYears, FECHA_ABIERTA, gainOf, mes, postingWeights, scoreResume, softCoverageOf, statesQuantity, titleForms, termsOf, titleWritten, type AuditFacts, type ComponentKey, type Mes, type ParseChecks, type Score } from "@/lib/ats3/score"
 // Viven con quien mide; se re-exportan porque el motor es la puerta de siempre.
 export { coverageOf, cvTextOf, termsOf } from "@/lib/ats3/score"
 
@@ -61,7 +61,6 @@ export { coverageOf, cvTextOf, termsOf } from "@/lib/ats3/score"
 export interface AtsAi {
   parseJob(jdText: string, language: "es" | "en"): Promise<JobSpec>
   audit(tree: ResumeTree, spec: JobSpec): Promise<AuditFacts>
-  triage(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, budget: Record<NodeId, number>): Promise<TriageDecision[]>
   rewriteBullet(input: RewriteInput): Promise<Suggestion>
   rewriteSummary(input: SummaryInput): Promise<Suggestion>
 }
@@ -86,25 +85,58 @@ export interface RewriteInput {
   roleContext: string
   /** Las otras viñetas del CV: no puede devolver ninguna calcada. */
   siblings?: string[]
-  /**
-   * LAS DOS LÍNEAS DE UNA FUSIÓN, cuando la hay.
-   *
-   * Va aparte de `original` —que las lleva pegadas para que el guard juzgue
-   * contra las dos— porque el modelo necesita saber que son DOS y que tiene que
-   * devolver UNA. Sin decirlo, lo que devuelve es una de las dos retocada.
-   */
-  mergeOf?: [string, string]
   spec: JobSpec
   ledger: Ledger
   declaredSkills: string[]
+  /**
+   * LO QUE LA TARJETA PROMETIÓ, EN LA PRIMERA LLAMADA Y NO SÓLO EN EL REINTENTO.
+   *
+   * Viajaban nada más como corrección del reintento: el modelo no sabía en la
+   * primera llamada que tenía que escribir el término, esquivar un verbo o
+   * dejar el hueco de la cifra, así que fallaba siempre una vez y se pagaba una
+   * segunda llamada por algo que nadie le había dicho (2026-09-28).
+   */
+  mustWrite?: string[]
+  avoidOpener?: string
+  wantsSize?: boolean
+  /**
+   * `original` no es una línea del CV sino lo que la persona contó al contestar
+   * la pregunta de la tarjeta: la línea es NUEVA. Sin esto el modelo lo recibía
+   * rotulado como «viñeta original» y lo trataba como algo ya escrito.
+   */
+  isNew?: boolean
+  /** Los ejes que la tarjeta dice que faltan: la línea nueva tiene que tenerlos. */
+  axes?: Axis[]
+  /** Lo que la persona contó en la tarjeta sobre esta línea (en qué terminó, cómo). */
+  told?: string
   /** Qué falló del intento anterior. Vacío la primera vez. */
   nudge?: string
 }
 
 export interface SummaryInput {
   current: string
+  /**
+   * TODO LO QUE EL CV DICE: cada viñeta y el resto de sus secciones (idiomas,
+   * educación, certificaciones). Con sólo tres viñetas el modelo pegaba una tal
+   * cual y afirmaba que el CV no decía un idioma que estaba en Idiomas
+   * (medido el 2026-09-28).
+   */
+  cvLines: string[]
+  otherSections: string
+  /** Lo que la tarjeta prometió cerrar sobre el resumen, como en las viñetas. */
+  focus?: string
+  /** Lo que la tarjeta prometió escribir tal cual —el cargo—, desde la primera llamada. */
+  mustWrite?: string[]
+  /**
+   * AÑOS DE EXPERIENCIA MEDIDOS SOBRE LAS FECHAS, completos y sin redondear
+   * hacia arriba. La identidad del resumen dice cuántos años lleva la persona,
+   * y el modelo los sacaba sumando períodos a ojo. null si no hay fechas.
+   */
+  yearsOfExperience: number | null
   spec: JobSpec
   topBullets: string[]
+  /** Lo que la vacante pide y el CV ya demuestra, en su orden de peso (`provenTermsOf`). */
+  provenTerms: string[]
   ledger: Ledger
   declaredSkills: string[]
   nudge?: string
@@ -116,7 +148,7 @@ export interface AtsStore {
   write(kind: CacheKind, hash: string, payload: unknown): Promise<void>
 }
 
-export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-triage" | "ats3-fix" | "ats3-log"
+export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-fix" | "ats3-log" | "ats3-lock"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LECTURA DEL CV
@@ -140,6 +172,8 @@ export interface RawResume {
   skills?: { name?: string }[]
   /** Todo lo demás en texto plano: participa del puntaje, no se reescribe. */
   otherText?: string
+  /** Email y teléfono: sólo se mira que un lector los encuentre. */
+  contact?: { email?: string; phone?: string }
 }
 
 /**
@@ -201,6 +235,7 @@ export function buildTree(raw: RawResume): ResumeTree {
     summary: { id: "summary", text: summary, hash: nodeHash(summary), origin: "USER" },
     declaredSkills: (raw.skills ?? []).map((s) => s.name ?? "").filter(Boolean),
     otherText: raw.otherText ?? "",
+    ...(raw.contact ? { contact: { email: raw.contact.email ?? "", phone: raw.contact.phone ?? "" } } : {}),
   }
 }
 
@@ -236,7 +271,7 @@ export function readableChecks(tree: ResumeTree): ParseChecks {
 
   return {
     // Un puesto sin fechas legibles se ordena mal en cualquier buscador interno.
-    fechas_legibles: fechas.length === 0 ? null : fechas.every((d) => MES_ANIO.test(d) || /presente|current|actual/i.test(d)),
+    fechas_legibles: fechas.length === 0 ? null : fechas.every((d) => MES_ANIO.test(d) || FECHA_ABIERTA.test(d)),
     // Del más reciente al más viejo: es el orden que espera quien lee.
     orden_cronologico: ordenCronologico(roles),
     // Un puesto sin una sola línea no dice qué hizo la persona ahí.
@@ -259,6 +294,15 @@ export function readableChecks(tree: ResumeTree): ParseChecks {
      * entiende?— y dos avisos sobre lo mismo se leen como que el panel insiste.
      */
     trayectoria_continua: continuidad(roles),
+    /**
+     * LO PRIMERO QUE UN ATS EXTRAE: CÓMO CONTACTARTE (CEO, 2026-09-28).
+     *
+     * Un CV sin un email o un teléfono que el lector reconozca no llega a nadie,
+     * por bueno que sea. `null` cuando no llegó el dato: no se castiga lo que
+     * no se pudo mirar.
+     */
+    contacto_email: tree.contact ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(tree.contact.email.trim()) : null,
+    contacto_telefono: tree.contact ? tree.contact.phone.replace(/\D/g, "").length >= 7 : null,
   }
 }
 
@@ -272,7 +316,7 @@ function continuidad(roles: ResumeTree["roles"]): boolean | null {
   const periodos = roles
     .map((r) => ({
       desde: mes(r.startDate),
-      hasta: r.endDate.trim() && !/presente|current|actual/i.test(r.endDate) ? mes(r.endDate) : ABIERTO,
+      hasta: r.endDate.trim() && !FECHA_ABIERTA.test(r.endDate) ? mes(r.endDate) : ABIERTO,
     }))
     .filter((p): p is { desde: Mes; hasta: Mes } => p.desde !== null && p.hasta !== null)
   if (periodos.length < 2) return null
@@ -320,22 +364,6 @@ function ordenCronologico(roles: ResumeTree["roles"]): boolean | null {
   return inicios.every((m, i) => i === 0 || inicios[i - 1].max >= m.min)
 }
 
-/** Una fecha como rango de meses: con mes, un punto; con sólo el año, el año entero. */
-type Mes = { min: number; max: number }
-/** El puesto sigue abierto: no termina, así que no deja hueco ni solape. */
-const ABIERTO: Mes = { min: Infinity, max: Infinity }
-
-/** La fecha como cantidad de meses. Acepta las mismas formas que `MES_ANIO`. */
-function mes(fecha: string): Mes | null {
-  const m = fecha.match(/(\d{4})[-/](\d{1,2})|(\d{1,2})[-/](\d{4})|(\d{4})/)
-  if (!m) return null
-  const anio = Number(m[1] ?? m[4] ?? m[5])
-  const numeroMes = m[2] ?? m[3]
-  if (numeroMes === undefined) return { min: anio * 12 + 1, max: anio * 12 + 12 }
-  const punto = anio * 12 + Math.min(12, Math.max(1, Number(numeroMes)))
-  return { min: punto, max: punto }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CLAVES DE CACHÉ
 //
@@ -361,26 +389,21 @@ export const cacheKey = {
   audit: (nodeHashValue: string, jdHash: string, model: string) =>
     sha256(nodeHashValue, jdHash, RUBRIC_VERSION, PROMPT_VERSION.P2, model),
 
-  /**
-   * El triage: qué merece el espacio de la página.
-   *
-   * Sin esta capa, reanalizar un CV que no cambió costaba UNA llamada — el
-   * documento promete cero y era la única que quedaba suelta. Depende del CV,
-   * de la vacante y del presupuesto de espacio: si los tres son los mismos, la
-   * respuesta guardada sigue siendo válida por definición.
-   */
-  triage: (treeHashValue: string, jdHash: string, budget: string, model: string) =>
-    sha256(treeHashValue, jdHash, budget, PROMPT_VERSION.P3, model),
-
   /** Lleva la firma del ledger: si otra viñeta gastó ese verbo, esto ya no vale. */
   fix: (nodeId: NodeId, nodeHashValue: string, jdHash: string, ledgerSig: string, model: string, focus = "") =>
     // El foco entra a la clave porque entra al prompt: sin él, pedir «le falta
     // el método» y «tejé este término» sobre la misma línea devolvía la primera
     // respuesta guardada para las dos.
-    sha256(nodeId, nodeHashValue, jdHash, ledgerSig, PROMPT_VERSION.P4, model, focus),
+    // Las dos versiones: el resumen lo escribe P5 y se guarda acá igual que una
+    // viñeta. Sólo con P4, un cambio del prompt del resumen no llegaba nunca —
+    // se servía el resumen viejo (medido el 2026-09-28).
+    sha256(nodeId, nodeHashValue, jdHash, ledgerSig, PROMPT_VERSION.P4, PROMPT_VERSION.P5, model, focus),
 
   /** El registro de lo resuelto, por CV y vacante. */
   log: (resumeId: string, jdHash: string) => sha256(resumeId, jdHash),
+
+  /** Los juicios fijados al texto que los sostiene, por CV. Ver `fijarJuicios`. */
+  lock: (resumeId: string, model: string) => sha256("lock", resumeId, RUBRIC_VERSION, PROMPT_VERSION.P2, model),
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -516,6 +539,7 @@ export function findingsOf(
     out.push({ id: findingId(clave, type), type, component, remedy, subject, merged: [type], nodeId, nodeText: text, nodeHash: nodeHash(text), gain, detail })
   }
 
+
   const byId = new Map(audit.bullets.map((b) => [b.id, b]))
   for (const role of tree.roles) {
     for (const b of role.bullets) {
@@ -573,7 +597,7 @@ export function findingsOf(
      * for fintech apps» sobre un puesto de 2015 que no era fintech, y la
      * tarjeta prometía escribirlo «donde tu trabajo ya lo respalda». Nada lo
      * respaldaba. Ahora se PREGUNTA —¿lo tenés?, ¿en qué puesto?— y la línea se
-     * redacta con lo que la persona contesta, por el camino del veredicto ADD.
+     * redacta con lo que la persona contesta, como una línea nueva en ese puesto.
      * El hallazgo habla del TÉRMINO, así que lleva sujeto: tarjeta propia, que
      * no se fusiona con la de ninguna línea. El nodo sólo sugiere el puesto.
      */
@@ -594,42 +618,6 @@ export function findingsOf(
       (r) => normalize(r.skill) === normalize(c.skill) && r.kind === "credential",
     )
     push("missing_requirement", key, puesto, textOf(tree, puesto), gainOf(score, key), c.skill, credencial ? "none" : "ask", c.skill)
-  }
-
-  /**
-   * LO QUE ESTÁ, PERO DONDE NO SE VE.
-   *
-   * Un requisito demostrado en el puesto más viejo del CV cuenta para el
-   * puntaje —lo demuestra— y sin embargo el lector, humano o no, puede no
-   * llegar nunca hasta ahí. No es una brecha: es una ubicación. Por eso NO
-   * suma puntos (`gain` 0) y la tarjeta lo dice: mover, no escribir de nuevo.
-   *
-   * Se calcula sin gastar un token: la auditoría ya dice en qué nodo vive el
-   * término, y el árbol sabe a qué puesto pertenece ese nodo.
-   */
-  const puestoDe = new Map<NodeId, number>()
-  tree.roles.forEach((r, i) => r.bullets.forEach((b) => puestoDe.set(b.id, i)))
-  const ultimoPuesto = Math.max(0, tree.roles.length - 1)
-  for (const c of cobertura) {
-    if (c.status !== "FOUND" || !c.evidenceNodeId) continue
-    const dondeVive = puestoDe.get(c.evidenceNodeId)
-    // Sólo el puesto MÁS VIEJO, y sólo si hay tres o más: en un CV de dos
-    // puestos, "el de abajo" sigue estando en la primera pantalla.
-    if (dondeVive === undefined || tree.roles.length < 3 || dondeVive !== ultimoPuesto) continue
-    /**
-     * Se ancla en el PUESTO ACTUAL, no en el viejo.
-     *
-     * El problema no es cómo está escrita la línea de 2015: es que el término
-     * sólo vive ahí. Lo que lo cierra es mencionarlo arriba, donde el lector
-     * llega. Anclarlo a la línea vieja daba un botón que reescribía justamente
-     * lo que no había que tocar.
-     */
-    const arriba = bestHomeFor({ ...tree, roles: [tree.roles[0]] }, c.skill, index)
-    // Sin sujeto, por lo mismo que la blanda: su remedio es REESCRIBIR esta
-    // línea, así que comparte tarjeta con lo demás que se dice de ella. El
-    // sujeto quedaría sólo para un remedio que NO toque el texto de la línea, y
-    // hoy no hay ninguno.
-    push("buried_term", "must", arriba, textOf(tree, arriba), 0, c.skill)
   }
 
   /**
@@ -663,7 +651,7 @@ export function findingsOf(
    * Y SÍ suma puntos: las blandas pesan 0,10 de la relevancia desde que se
    * recuperó el peso que v3 había perdido. La ganancia sale del puntaje.
    */
-  for (const s of audit.softCoverage) {
+  for (const s of spec ? softCoverageOf(spec, audit, tree) : audit.softCoverage) {
     if (s.status === "DEMONSTRATED") continue
     const donde = bestHomeFor(tree, s.signal, index)
     /**
@@ -718,6 +706,53 @@ export function findingsOf(
        */
       push("title_mismatch", "title", tree.summary.id, tree.summary.text, gainOf(score, "title"), cargo, "rewrite", cargo)
     }
+  }
+
+  /**
+   * LOS AÑOS QUE LA VACANTE PIDE (CEO, 2026-09-28).
+   *
+   * Se cuentan con el código sobre las fechas del CV (`experienceYears`), no se
+   * le preguntan al modelo. No tiene botón de IA: la experiencia no se redacta.
+   * Lo que sí se puede es que falte un puesto o una fecha, y la tarjeta lo dice.
+   * Promete lo que queda del componente, no su peso entero.
+   */
+  const pideAnios = spec?.yearsRequired ?? null
+  if (pideAnios) {
+    const tiene = experienceYears(tree)
+    const comp = score.components.find((c) => c.key === "years")
+    if (tiene < pideAnios && comp) {
+      push("years_short", "years", tree.summary.id, tree.summary.text, comp.effectiveWeight - comp.points,
+        `anios:${Math.floor(tiene)}/${pideAnios}`, "none", "years")
+    }
+  }
+
+  /**
+   * LA FRASE QUE PODRÍA ESTAR EN EL CV DE CUALQUIERA.
+   *
+   * La lista vive en un solo lugar —`cliches.ts`, la misma que el prompt de
+   * reescritura prohíbe— así que lo que acá se señala es exactamente lo que
+   * Tailor tiene prohibido escribir. No mueve el número por sí sola; se cierra
+   * reescribiendo la línea, y por eso comparte su tarjeta.
+   */
+  for (const nodo of [tree.summary, ...tree.roles.flatMap((r) => r.bullets)]) {
+    // Una frase de la lista se cita; una cualidad declarada sin trabajo detrás
+    // no tiene frase que citar, y se dice lo que es.
+    const frase = namedCliches(nodo.text)[0]
+    const detalle = frase ? `frase:${frase}` : isEmptyPhrasing(nodo.text) ? "vacia" : null
+    if (detalle) push("cliche", nodo.id === tree.summary.id ? "summary" : "xyz", nodo.id, nodo.text, 0, detalle)
+  }
+
+  /**
+   * UN PUESTO CON MÁS VIÑETAS DE LAS QUE SE LEEN.
+   *
+   * El tope es el que el proyecto ya fijó (`BULLETS_PER_ROLE_MAX`). No hay botón
+   * de IA: elegir qué se va es una decisión de la persona, y la tarjeta le dice
+   * con qué criterio — quedarse con las que prueban lo que esta vacante pide.
+   */
+  for (const role of tree.roles) {
+    if (role.bullets.length <= BULLETS_PER_ROLE_MAX) continue
+    push("role_too_long", "xyz", role.bullets[0].id, role.bullets[0].text, 0,
+      `largo:${[role.title, role.company].filter(Boolean).join(" — ")}/${role.bullets.length}/${BULLETS_PER_ROLE_MAX}`, "none", `role:${role.id}`)
   }
 
   /**
@@ -815,7 +850,7 @@ function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId 
    * Se separan las dos preguntas. La afinidad sigue primero y no se negocia: una
    * línea que no puede sostener el término no es candidata por más floja que
    * esté, porque ahí el término se cae en el guard. Entre las que SÍ pueden,
-   * gana la que menos aporta — la misma señal que el triage usa para REPLACE.
+   * gana la que menos aporta.
    */
   const candidatas: { id: NodeId; afinidad: number; peso: number }[] = []
   for (const role of tree.roles) {
@@ -831,9 +866,8 @@ function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId 
        * «Si el hard y el soft recomiendan, dar prioridad a las viñetas más
        * débiles o que no aportan mucho.» Antes el desempate premiaba a la que ya
        * traía términos del aviso: el requisito caía sobre la línea que MEJOR
-       * estaba, y la floja se quedaba floja. Es la misma señal que el triage usa
-       * para REPLACE —«la viñeta más débil del bloque»— y se mide igual: sin
-       * términos del aviso y corta.
+       * estaba, y la floja se quedaba floja. La más débil se mide sin opinión:
+       * sin términos del aviso y corta.
        */
       candidatas.push({ id: b.id, afinidad, peso: peso(b.text, index) })
     }
@@ -1005,7 +1039,6 @@ export type Act =
    * un F5, junto con todo el trabajo que la persona había hecho.
    */
   | { act: "findings"; findings: Finding[]; suppressed: number; regressed: Finding[]; resolved: Resolution[] }
-  | { act: "triage"; decisions: TriageDecision[]; budget: Record<NodeId, number> }
 
 export interface AnalysisInput {
   raw: RawResume
@@ -1020,11 +1053,11 @@ export interface AnalysisInput {
 export interface AnalysisTelemetry {
   /** Llamadas al modelo que ESTA corrida gastó de verdad. */
   calls: number
-  served: { jd: boolean; audit: boolean; triage: boolean }
+  served: { jd: boolean; audit: boolean }
 }
 
 export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, AnalysisTelemetry> {
-  const telemetry: AnalysisTelemetry = { calls: 0, served: { jd: false, audit: false, triage: false } }
+  const telemetry: AnalysisTelemetry = { calls: 0, served: { jd: false, audit: false } }
   const tree = buildTree(input.raw)
 
   // ── acto 2: la vacante ────────────────────────────────────────────────────
@@ -1077,9 +1110,16 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     await input.store.write("ats3-audit", auditKey, audit)
   }
 
+  // Un juicio sólo cambia si cambió el texto que lo sostiene. Ver `fijarJuicios`.
+  const lockKey = cacheKey.lock(input.resumeId, input.model)
+  const previos = ((await input.store.read("ats3-lock", lockKey)) as Juicios | null) ?? JUICIOS_VACIOS
+  const fijado = fijarJuicios(tree, audit, previos, jdKey)
+  audit = fijado.audit
+  if (JSON.stringify(fijado.juicios) !== JSON.stringify(previos)) await input.store.write("ats3-lock", lockKey, fijado.juicios)
+
   // El modelo aporta la cita; el estado de cada requisito lo decide el código
   // sobre el CV entero. Ver `coverageOf`.
-  audit = { ...audit, coverage: coverageOf(spec, audit, tree, index) }
+  audit = { ...audit, coverage: coverageOf(spec, audit, tree, index), softCoverage: softCoverageOf(spec, audit, tree) }
 
   // ── acto 1: el puntaje, que no cuesta una sola llamada ────────────────────
   //
@@ -1113,204 +1153,6 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     terms: audit.coverage.filter((c) => c.status === "FOUND" && c.evidenceNodeId).map((c) => c.skill),
   }
 
-  // ── el triage: qué merece el espacio de la página ─────────────────────────
-  //
-  // Corre ANTES de emitir los hallazgos y no por gusto: el triage decide si una
-  // línea merece trabajo, y los hallazgos dicen qué trabajo. Emitidos por
-  // separado, la misma viñeta salía marcada "KEEP — relevante y ya bien escrita"
-  // arriba y "le falta una cifra" abajo. Dos sistemas contradiciéndose en la
-  // misma pantalla es un defecto que este proyecto ya pagó con captura.
-  const budget = spaceBudget(tree)
-  const triageKey = cacheKey.triage(treeHash(tree), jdKey, JSON.stringify(budget.perRole), input.model)
-  let decisions = (await input.store.read("ats3-triage", triageKey)) as TriageDecision[] | null
-  if (decisions) {
-    telemetry.served.triage = true
-  } else {
-    decisions = await input.ai.triage(tree, spec, audit, budget.perRole)
-    telemetry.calls++
-    await input.store.write("ats3-triage", triageKey, decisions)
-  }
-  /**
-   * EL TECHO DE SEIS VIÑETAS POR PUESTO, CON SALIDA DE VERDAD.
-   *
-   * ── POR QUÉ ES UN VEREDICTO Y NO UN HALLAZGO (orden del CEO) ───────────────
-   * «Si ves viñetas a mejorar y ya tenés 6, sugerí eliminar la más débil.» Un
-   * hallazgo habría necesitado un remedio nuevo, un botón nuevo, una
-   * confirmación nueva y su propio deshacer — cuatro piezas para algo que el
-   * tablero YA hace: muestra la línea exacta, pide confirmación antes de borrar
-   * y ofrece devolverla. Y el tablero se llama «Qué merece el espacio de la
-   * página», que es literalmente esta pregunta.
-   *
-   * Así además no se pisa con nada: como DROP cierra la línea, esa viñeta deja
-   * de recibir tarjetas pidiéndole mejoras. El panel no puede decir «sacala» y
-   * «mejorala» a la vez.
-   *
-   * NO PISA AL MODELO: sólo habla de viñetas sobre las que el triage no dijo
-   * nada. Si el modelo ya decidió esa línea, manda él.
-   */
-  /**
-   * UNA FUSIÓN NO SE PIDE PARA DESPUÉS PEDIR QUE SAQUES ALGO (CEO, 2026-09-09).
-   *
-   * «Si fusionás es porque tiene buen impacto para el currículum; si fusionás
-   * cosas para luego pedir eliminar o sacar, eso no quiero.»
-   *
-   * El modelo puede devolver MERGE sobre una línea y DROP o DEMOTE sobre la
-   * otra del par: leído en pantalla, es el panel pidiendo juntarlas y tirar una
-   * al mismo tiempo. Manda la fusión —es la que el usuario tiene delante con
-   * las dos líneas— y el veredicto que la contradice se retira.
-   *
-   * Las dos salidas SÍ se ofrecen juntas, pero en la MISMA tarjeta y sin
-   * encadenar: fusionar, o sacar una. Elige el usuario, no el motor.
-   */
-  const enFusion = new Set(
-    decisions.filter((d) => d.verdict === "MERGE" && d.mergeWith).flatMap((d) => [d.bulletId, d.mergeWith as NodeId]),
-  )
-  decisions = decisions.filter(
-    (d) => d.verdict === "MERGE" || !enFusion.has(d.bulletId) || d.verdict === "KEEP",
-  )
-
-  const conVeredicto = new Set(decisions.map((d) => d.bulletId))
-
-  /** Los términos de la VACANTE que esta línea escribe y el resto del CV no. */
-  const pedidos = new Set(specTerms(spec).map((t) => t.canonical))
-  const unicaPruebaDe = (id: NodeId): string[] => {
-    const linea = findNode(tree, id)?.text ?? ""
-    const resto = termCounts(index, cvTextOf(removeNode(tree, id)))
-    return [...termsIn(index, linea)].filter((t) => pedidos.has(t) && !resto.has(t))
-  }
-
-  /**
-   * EL MÍNIMO LO DETECTA EL CÓDIGO, NO EL MODELO (CEO, 2026-09-09).
-   *
-   * «Que controle un máximo de 6 por experiencia y 3 como mínimo.» El techo ya
-   * lo contaba el motor; el piso quedaba en manos de que el modelo se acordara
-   * de devolver `ADD`, guiado por un renglón del prompt. Un prompt es una
-   * petición, no un contrato: un puesto con una sola viñeta podía pasar sin que
-   * nadie lo señalara. Los dos umbrales los cuenta ahora el mismo bucle.
-   *
-   * LO QUE EL CÓDIGO NO INVENTA: el hecho. La pregunta se arma con una
-   * responsabilidad que LA VACANTE enuncia y que este puesto todavía no
-   * menciona — citarla y preguntar no afirma nada sobre la persona. El usuario
-   * confirma, y recién ahí el modelo redacta.
-   */
-  for (const role of tree.roles) {
-    if (role.bullets.length >= BULLETS_PER_ROLE_MIN) continue
-    if (role.bullets.some((b) => conVeredicto.has(b.id))) continue
-    const ancla = role.bullets[0]
-    if (!ancla) continue
-    const dicho = role.bullets.map((b) => normalize(b.text)).join(" ")
-    const tema = spec.responsibilities.find((r) => {
-      const palabras = normalize(r).split(" ").filter((w) => w.length >= 4)
-      return palabras.length > 0 && !palabras.every((w) => dicho.includes(w))
-    })
-    if (!tema) continue
-    decisions.push({
-      bulletId: ancla.id,
-      verdict: "ADD",
-      reason:
-        input.language === "en"
-          ? `This role has ${role.bullets.length} of the ${BULLETS_PER_ROLE_MIN} bullets it needs to be understood.`
-          : `Este puesto tiene ${role.bullets.length} de las ${BULLETS_PER_ROLE_MIN} viñetas que necesita para entenderse.`,
-      relevance: 0.5,
-      proposedTopic: tema,
-      needsUserConfirm:
-        input.language === "en"
-          ? `The posting asks for this. Did you do it in this role? — "${tema}"`
-          : `La vacante pide esto. ¿Lo hiciste en este puesto? — «${tema}»`,
-      mergeWith: null,
-    })
-    conVeredicto.add(ancla.id)
-  }
-
-  /**
-   * LA MISMA LÍNEA DOS VECES SE DETECTA CON CÓDIGO, NO SE ESPERA AL MODELO.
-   *
-   * ── MEDIDO EN PRODUCCIÓN (2026-09-24) ───────────────────────────────────────
-   * Un CV con «Implemented TCA architecture…» escrita dos veces en el mismo
-   * puesto no recibía ningún aviso. El comentario del lector decía que eso lo
-   * cazaba `duplicate_claim`, que sólo mira las PROPUESTAS del modelo, nunca el
-   * CV del usuario. Una repetición literal es un hecho que el código puede
-   * probar, así que manda el código: se conserva la primera y la copia sale por
-   * el mismo camino que cualquier borrado —la línea a la vista, confirmación y
-   * deshacer—.
-   */
-  const yaDichas = new Set<string>()
-  for (const b of tree.roles.flatMap((r) => r.bullets)) {
-    const llave = normalize(b.text)
-    if (!llave) continue
-    if (!yaDichas.has(llave)) {
-      yaDichas.add(llave)
-      continue
-    }
-    // Ni un veredicto sobre la copia ni una fusión que la use: sale entera.
-    decisions = decisions.filter((d) => d.bulletId !== b.id && d.mergeWith !== b.id)
-    decisions.push({
-      bulletId: b.id,
-      verdict: "DROP",
-      reason:
-        input.language === "en"
-          ? "This line repeats another bullet of your CV word for word."
-          : "Esta línea repite palabra por palabra otra viñeta de tu CV.",
-      relevance: 0,
-      proposedTopic: null,
-      needsUserConfirm: null,
-      mergeWith: null,
-    })
-    conVeredicto.add(b.id)
-  }
-
-  for (const role of tree.roles) {
-    const sobran = role.bullets.length - BULLETS_PER_ROLE_MAX
-    if (sobran <= 0) continue
-    // La que es la ÚNICA que escribe un término de la vacante no es candidata:
-    // sacarla haría perder ese requisito (ver `unicaPruebaDe`).
-    const candidatas = role.bullets.filter((b) => !conVeredicto.has(b.id) && unicaPruebaDe(b.id).length === 0)
-    // La más débil primero: la que menos términos del aviso dice y más corta es
-    // — la misma señal con la que el motor elige dónde aterrizar un requisito.
-    const porDebilidad = [...candidatas].sort((a, b) => peso(a.text, index) - peso(b.text, index))
-    for (const b of porDebilidad.slice(0, sobran)) {
-      decisions.push({
-        bulletId: b.id,
-        verdict: "DROP",
-        reason:
-          input.language === "en"
-            ? `This role has ${role.bullets.length} bullets and ${BULLETS_PER_ROLE_MAX} get read: this is the weakest of the block.`
-            : `Este puesto tiene ${role.bullets.length} viñetas y se leen ${BULLETS_PER_ROLE_MAX}: ésta es la más débil del bloque.`,
-        relevance: 0,
-        proposedTopic: null,
-        needsUserConfirm: null,
-        mergeWith: null,
-      })
-      conVeredicto.add(b.id)
-    }
-  }
-
-  /**
-   * SACAR NO PUEDE LLEVARSE UN REQUISITO QUE EL CV SÓLO DICE AHÍ.
-   *
-   * El informe cuenta el término como cubierto y el tablero proponía sacar o
-   * reemplazar la única línea que lo escribe: aceptar el consejo bajaba el
-   * puntaje y abría una tarjeta de «falta». Un veredicto así se vuelve DEMOTE
-   * —comprimir conserva el término— y el motivo lo dice.
-   */
-  decisions = decisions.map((d) => {
-    if (d.verdict !== "DROP" && d.verdict !== "REPLACE") return d
-    const unicos = unicaPruebaDe(d.bulletId)
-    if (unicos.length === 0) return d
-    return {
-      ...d,
-      verdict: "DEMOTE" as const,
-      reason:
-        input.language === "en"
-          ? `Shorten it, but keep it: it is the only line of your CV that says ${unicos.join(", ")}, which this posting asks for.`
-          : `Acortala, pero no la saques: es la única línea de tu CV que dice ${unicos.join(", ")}, que esta vacante pide.`,
-      proposedTopic: null,
-      needsUserConfirm: null,
-    }
-  })
-
-  yield { act: "triage", decisions, budget: budget.perRole }
-
   // ── los hallazgos, filtrados por lo que el usuario ya resolvió ────────────
   const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
   const all = findingsOf(tree, audit, score, index, spec)
@@ -1339,47 +1181,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     }
   }
 
-  /**
-   * El triage manda sobre la línea.
-   *
-   * KEEP significa "no la toques" y DROP significa "se va": pedir una mejora
-   * sobre cualquiera de las dos es contradecirse en la misma pantalla. Los
-   * hallazgos que NO son de una viñeta —un requisito que falta, el resumen, la
-   * lectura del documento— no los toca esta regla: no hay veredicto sobre ellos.
-   */
-  /**
-   * UN VEREDICTO SOBRE LA LÍNEA CIERRA LA LÍNEA. LOS CUATRO.
-   *
-   * Estaban sólo KEEP y DROP. DEMOTE dice «se comprime» y REPLACE dice «ésta es
-   * la más débil, la vacante exige otra cosa» — y aun así la línea seguía
-   * recibiendo tarjetas pidiendo METERLE contenido: tejé esta blanda, agregá el
-   * método que falta. Agrandar lo que el tablero manda achicar o reemplazar.
-   *
-   * REWRITE es el único que NO cierra, y es correcto: «relevante pero floja» es
-   * exactamente la puerta que las tarjetas abren.
-   */
-  const CIERRAN: Verdict[] = ["KEEP", "DROP", "DEMOTE", "REPLACE"]
-  /**
-   * Y UNA FUSIÓN CIERRA LAS DOS LÍNEAS DEL PAR.
-   *
-   * Medido en local el 2026-09-24: el tablero proponía fusionar dos viñetas y
-   * una de ellas tenía además su tarjeta «agregale el tamaño». Son dos órdenes
-   * sobre la misma línea, y si se fusiona la tarjeta queda hablando de un texto
-   * que ya no existe. La fusión es la acción de esas dos líneas; lo que les
-   * falte lo cubre la línea que resulta, que se juzga en el próximo análisis.
-   */
-  const cerradas = new Set(
-    decisions.flatMap((d) =>
-      CIERRAN.includes(d.verdict) ? [d.bulletId] : d.verdict === "MERGE" && d.mergeWith ? [d.bulletId, d.mergeWith] : [],
-    ),
-  )
-  // Un hallazgo con SUJETO habla del término, no de la línea: su nodo sólo
-  // sugiere el puesto. Medido en local el 2026-09-24: todas las preguntas por
-  // requisitos sin rastro (Keychain, SSL pinning…) desaparecían porque la línea
-  // sugerida tenía un veredicto — el comentario de arriba prometía lo contrario.
-  const vigentes = all.filter((f) => f.subject || !cerradas.has(f.nodeId))
-
-  const seen = loyalty(vigentes, log)
+  const seen = loyalty(all, log, cvTextOf(tree))
   yield { act: "findings", findings: seen.shown, suppressed: seen.suppressed.length, regressed: seen.regressed, resolved: log }
 
   return telemetry
@@ -1387,10 +1189,96 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
 
 
 /**
+ * UN JUICIO SÓLO PUEDE CAMBIAR SI CAMBIÓ EL TEXTO QUE LO SOSTIENE (CEO, 2026-09-28).
+ *
+ * ── EL DEFECTO QUE ESTO CIERRA, MEDIDO ──────────────────────────────────────
+ * La auditoría se pedía de nuevo con cualquier cambio del CV, y el modelo no
+ * juzga igual dos veces: con la misma vacante y dos líneas AGREGADAS, 8 de 42
+ * viñetas que nadie tocó cambiaron de juicio y las tarjetas pasaron de 3 a 12.
+ * «Arreglo una cosa y aparece trabajo en otro lado» — el panel contradiciéndose
+ * sobre lo que el usuario no tocó. Lo mismo con la cobertura: «async/await»
+ * pasó de faltante a implícito sin que ninguna línea cambiara.
+ *
+ * La regla: cada juicio se guarda atado al hash del texto que lo sostiene, y
+ * el siguiente análisis lo RESPETA mientras ese texto exista.
+ *   · los tres ejes de una viñeta → por el hash de la viñeta;
+ *   · las funciones del resumen   → por el hash del resumen y la vacante;
+ *   · un requisito o una blanda   → por la línea que lo prueba. Uno que no
+ *     tenía prueba sólo cambia si la cita nueva es una línea NUEVA o editada:
+ *     el modelo no puede descubrir hoy en una línea vieja lo que ayer no vio.
+ *
+ * Lo que el código mide —el término escrito, la cifra, la apertura— no pasa
+ * por acá: no oscila.
+ */
+type Ejes = { hasActionVerb: boolean; hasResult: boolean; hasMethod: boolean }
+type Estado<S> = { status: S; evidencia: string | null }
+export interface Juicios {
+  lineas: Record<string, Ejes>
+  resumen: Record<string, AuditFacts["summary"]>
+  requisitos: Record<string, Estado<AuditFacts["coverage"][number]["status"]>>
+  blandas: Record<string, Estado<AuditFacts["softCoverage"][number]["status"]>>
+}
+export const JUICIOS_VACIOS: Juicios = { lineas: {}, resumen: {}, requisitos: {}, blandas: {} }
+
+export function fijarJuicios(
+  tree: ResumeTree,
+  audit: AuditFacts,
+  previos: Juicios,
+  jdKey: string,
+): { audit: AuditFacts; juicios: Juicios } {
+  const lineas = tree.roles.flatMap((r) => r.bullets)
+  const hashDe = new Map(lineas.map((b) => [b.id, b.hash]))
+  const idDe = new Map(lineas.map((b) => [b.hash, b.id]))
+  const vistas = new Set(Object.keys(previos.lineas))
+  const nueva = (id: string | null) => Boolean(id && hashDe.has(id) && !vistas.has(hashDe.get(id)!))
+
+  // Sólo se guardan las líneas que el CV tiene hoy: el registro no crece sin fin.
+  const ejes: Record<string, Ejes> = {}
+  const bullets = audit.bullets.map((b) => {
+    const h = hashDe.get(b.id)
+    if (!h) return b
+    const fijo = previos.lineas[h] ?? { hasActionVerb: b.hasActionVerb, hasResult: b.hasResult, hasMethod: b.hasMethod }
+    ejes[h] = fijo
+    return { ...b, ...fijo }
+  })
+
+  const claveResumen = `${jdKey}:${tree.summary.hash}`
+  const summary = previos.resumen[claveResumen] ?? audit.summary
+
+  /** El mismo criterio para requisitos y blandas: la prueba manda. */
+  const fijar = <S extends string>(clave: string, nuevo: Estado<S> & { id: string | null }, guardados: Record<string, Estado<S>>) => {
+    const antes = guardados[clave]
+    const lineaDeAntes = antes?.evidencia ? idDe.get(antes.evidencia) : undefined
+    if (antes && lineaDeAntes) return { status: antes.status, id: lineaDeAntes }
+    if (antes && !antes.evidencia && !nueva(nuevo.id)) return { status: antes.status, id: null }
+    return { status: nuevo.status, id: nuevo.id }
+  }
+  const requisitos = { ...previos.requisitos }
+  const coverage = audit.coverage.map((c) => {
+    const clave = `${jdKey}:${normalize(c.skill)}`
+    const r = fijar(clave, { status: c.status, evidencia: null, id: c.evidenceNodeId }, previos.requisitos)
+    requisitos[clave] = { status: r.status, evidencia: r.id ? (hashDe.get(r.id) ?? null) : null }
+    return { ...c, status: r.status, evidenceNodeId: r.id }
+  })
+  const blandas = { ...previos.blandas }
+  const softCoverage = audit.softCoverage.map((s) => {
+    const clave = `${jdKey}:${normalize(s.signal)}`
+    const r = fijar(clave, { status: s.status, evidencia: null, id: s.evidenceNodeId }, previos.blandas)
+    blandas[clave] = { status: r.status, evidencia: r.id ? (hashDe.get(r.id) ?? null) : null }
+    return { ...s, status: r.status, evidenceNodeId: r.id }
+  })
+
+  return {
+    audit: { ...audit, bullets, summary, coverage, softCoverage },
+    juicios: { lineas: ejes, resumen: { ...previos.resumen, [claveResumen]: summary }, requisitos, blandas },
+  }
+}
+
+/**
  * LA HUELLA DEL CV, Y CUBRE TODO LO QUE LA AUDITORÍA MIRA.
  *
- * Es la clave de las dos capas que preguntan por el documento entero: la
- * auditoría (P2) y el triage (P3). La regla que gobierna las claves de este
+ * Es la clave de la capa que pregunta por el documento entero: la auditoría
+ * (P2). La regla que gobierna las claves de este
  * motor está escrita veinte líneas más arriba —«cada una nombra TODO de lo que
  * depende su respuesta»— y ésta la incumplía: contaba las viñetas y el resumen,
  * y `compactTree` le manda al modelo ADEMÁS el cargo, la empresa, el período y
@@ -1433,6 +1321,24 @@ export interface RewriteRequest {
   /** Lo que la tarjeta prometió cerrar. Ver `RewriteInput.focus`. */
   focus?: string
   /**
+   * LOS TÉRMINOS QUE LA TARJETA PROMETIÓ ESCRIBIR, tal como los pide la vacante
+   * de ESTE CV: los requisitos que faltan y el cargo. Salen de la tarjeta, no de
+   * ninguna lista: valen para cualquier oficio.
+   */
+  mustWrite?: string[]
+  /** El verbo que la tarjeta promete dejar de repetir: otra viñeta ya abre con él. */
+  avoidOpener?: string
+  /** La tarjeta promete el tamaño del logro: una cifra escrita o su hueco. */
+  wantsSize?: boolean
+  /** Los ejes que la tarjeta promete cerrar («no dice en qué terminó»). */
+  axes?: Axis[]
+  /**
+   * LO QUE LA PERSONA CONTÓ SOBRE ESTA LÍNEA —en qué terminó, cómo lo hizo—.
+   * Un resultado que el CV no dice no lo puede escribir nadie más: es el único
+   * camino honesto para cerrar ese eje.
+   */
+  told?: string
+  /**
    * EL PUESTO AL QUE SE AGREGA UNA LÍNEA NUEVA.
    *
    * Es el único camino que no parte de una línea del CV, y por eso es el único
@@ -1441,25 +1347,6 @@ export interface RewriteRequest {
    * modelo redacta lo que la persona ya dijo que hizo; no lo inventa.
    */
   addToRole?: string
-  /**
-   * LA OTRA LÍNEA DE UNA FUSIÓN. Cambia QUÉ no se puede perder.
-   *
-   * Una fusión escribe UNA línea que tiene que conservar lo que decían LAS DOS.
-   * Sin esto, `lostContent` juzga contra la primera y sola: la mitad de la
-   * información de la segunda se podría caer sin que nada la reclame — y la
-   * segunda se BORRA al aplicar, así que ese dato no vuelve de ningún lado.
-   */
-  mergeWith?: NodeId
-  /**
-   * REEMPLAZAR ES ESCRIBIR OTRA COSA EN EL LUGAR DE ESTA LÍNEA.
-   *
-   * El triage pregunta «¿hiciste X?» y el «sí» del usuario es el único hecho
-   * que hay. Hasta el 2026-09-24 el botón pedía una reescritura de la línea
-   * VIEJA sin el tema: se pulía la viñeta floja y lo que la persona acababa de
-   * confirmar se perdía. Como al agregar, el tema viaja en `focus` y hace de
-   * original; la diferencia es que el texto resultante pisa esta línea.
-   */
-  replacing?: boolean
   ai: AtsAi
   store: AtsStore
 }
@@ -1486,7 +1373,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   /**
    * UNA LÍNEA NUEVA NO TIENE NODO, y ése es todo el caso especial.
    *
-   * `nodeId` ancla el veredicto en una línea que existe —para saber a qué puesto
+   * `nodeId` ancla el pedido en una línea que existe —para saber a qué puesto
    * pertenece— pero lo que se va a escribir no reemplaza a nadie. El hecho lo
    * puso el usuario al confirmar el tema, y ese tema hace de original: es contra
    * lo que los guards juzgan que la redacción no se lleve ni agregue nada.
@@ -1494,11 +1381,20 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   const agregando = Boolean(req.addToRole)
   const node = findNode(req.tree, req.nodeId)
   if (!node && !agregando) return { ok: false, verdict: { ok: false, reason: "stale", detail: req.nodeId }, calls: 0 }
-  const reemplazando = !agregando && Boolean(req.replacing)
-  /** Agregar y reemplazar escriben lo que el usuario confirmó, no la línea que había. */
-  const desdeTema = agregando || reemplazando
-  if (desdeTema && !req.focus?.trim()) {
+  if (agregando && !req.focus?.trim()) {
     return { ok: false, verdict: { ok: false, reason: "empty", detail: "una línea nueva necesita el tema que el usuario confirmó" }, calls: 0 }
+  }
+  /**
+   * UN RESULTADO QUE LA LÍNEA NO DICE SÓLO LO PUEDE DAR LA PERSONA.
+   *
+   * Medido en Chrome el 2026-09-28, tres intentos sobre «Resolví reclamos de
+   * clientes.»: relleno con un término de la vacante, relleno con una blanda,
+   * y un método sin resultado — los tres declarando que había resultado. Todo
+   * «en qué terminó» que no esté en el original es inventado. Sin su dato no se
+   * llama al modelo: cero consultas, y la tarjeta se lo pide.
+   */
+  if (!agregando && req.axes?.includes("resultado") && !req.told?.trim()) {
+    return { ok: false, verdict: { ok: false, reason: "needs_fact", detail: "resultado" }, calls: 0 }
   }
 
   const isSummary = !agregando && req.nodeId === req.tree.summary.id
@@ -1507,7 +1403,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   const hashBase = node?.hash ?? nodeHash(req.focus ?? "")
   const key = cacheKey.fix(
     req.nodeId, hashBase, req.jdKey, sig, req.model,
-    `${req.focus ?? ""}|${req.mergeWith ?? ""}|${req.addToRole ?? ""}|${reemplazando ? "R" : ""}`,
+    `${req.focus ?? ""}|${req.addToRole ?? ""}|${(req.mustWrite ?? []).join("\u0001")}|${req.avoidOpener ?? ""}|${req.wantsSize ? "S" : ""}|${(req.axes ?? []).join(",")}|${req.told ?? ""}`,
   )
 
   // La línea que se reemplaza suelta su propia apertura: si no, choca consigo
@@ -1515,39 +1411,14 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   // Al agregar no hay ninguna que soltar.
   const ledger = node ? releaseOpener(req.ledger, node.text) : req.ledger
   /**
-   * EN UNA FUSIÓN, EL ORIGINAL SON LAS DOS LÍNEAS.
-   *
-   * Es lo único que hace segura la fusión: el resultado se juzga contra todo lo
-   * que había, así que si se come un dato de cualquiera de las dos, el guard lo
-   * caza. La que se fusiona se borra al aplicar; lo que se pierda acá no vuelve.
+   * QUÉ NO SE PUEDE PERDER: al reescribir, la línea que reemplaza; al agregar,
+   * el TEMA que el usuario confirmó, porque es el único hecho que hay.
    */
-  const otra = !agregando && req.mergeWith ? findNode(req.tree, req.mergeWith) : null
-  /**
-   * QUÉ NO SE PUEDE PERDER, según el caso:
-   *   reescribir  → la línea que reemplaza
-   *   fusionar    → las dos, porque una se borra
-   *   agregar     → el TEMA que el usuario confirmó, porque es el único hecho
-   *                 que hay: la línea todavía no existe.
-   */
-  const original = desdeTema ? (req.focus as string) : otra ? `${node!.text} ${otra.text}` : node!.text
-  /**
-   * ¿HAY UNA LÍNEA QUE ESTA PROPUESTA REEMPLAZA?
-   *
-   * Al agregar, el «original» es el tema que el usuario confirmó; al fusionar,
-   * son las dos líneas juntas. En los dos casos, parecerse a eso no significa
-   * «no aporta». Sólo una reescritura tiene una línea a la que superar.
-   */
-  const esReescritura = !desdeTema && !otra
-  /** Lo que la pantalla muestra como «antes»: al reemplazar, la línea que se pisa. */
-  const antes = reemplazando ? node!.text : original
+  const original = agregando ? (req.focus as string) : node!.text
   const ctx = {
     original,
-    /**
-     * Lo que se pierde si no entra: las dos líneas de una fusión, o el tema que
-     * el usuario confirmó al agregar. En una reescritura normal no hay nada que
-     * desaparezca, así que no va.
-     */
-    mustKeep: desdeTema ? [original] : otra ? [node!.text, otra.text] : undefined,
+    /** Al agregar, el tema confirmado no puede quedar afuera de la línea. */
+    mustKeep: agregando ? [original] : undefined,
     index: req.index,
     ledger,
     language: req.language,
@@ -1562,7 +1433,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
      */
     siblings: req.tree.roles
       .flatMap((r) => r.bullets)
-      .filter((b) => b.id !== req.nodeId && b.id !== req.mergeWith)
+      .filter((b) => b.id !== req.nodeId)
       .map((b) => b.text),
   }
 
@@ -1582,31 +1453,265 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * gasta una llamada —sólo la primera vez, porque lo bueno se vuelve a
    * guardar— en vez de entregar algo que hoy sabemos que está mal.
    */
+  /**
+   * LO QUE LA TARJETA PROMETIÓ ESCRIBIR TIENE QUE ESTAR ESCRITO (2026-09-28).
+   *
+   * La tarjeta dice «la vacante pide X» y el botón promete escribirlo; nada lo
+   * comprobaba. Medido en Chrome: la del cargo devolvió un resumen sin el cargo.
+   * Se comprueba por PALABRA, como compara un filtro, y se pide una vez más
+   * nombrando lo que falta. Si tampoco llega NO se entrega como si cerrara la
+   * tarjeta: la persona confirmaba, la tarjeta pasaba a «Hechas» y el análisis
+   * siguiente la volvía a abrir — el bucle. Se dice que no se pudo (`declined`).
+   */
+  const escrito = (texto: string, termino: string) => ` ${normalize(texto)} `.includes(` ${normalize(termino)} `)
+  // Un cargo con barra se cumple con cualquiera de sus formas (`titleForms`).
+  const faltan = (s: Suggestion) => (req.mustWrite ?? []).filter((t) => normalize(t) && !titleForms(t).some((f) => escrito(s.text, f)))
+  /** Lo prometido como lo lee el modelo: las formas de un mismo término, separadas por « | ». */
+  const prometido = req.mustWrite?.map((t) => titleForms(t).join(" | "))
+  /**
+   * Y EL RESUMEN NO AFIRMA NI COPIA LO QUE EL CV NO DICE.
+   *
+   * Dos cosas medibles para cualquier CV y cualquier vacante: un término que la
+   * vacante pide y que el CV no escribe en ninguna parte (el resumen lo
+   * afirmaría sin respaldo), y una viñeta pegada entera. Medido en Chrome: el
+   * resumen nombró una herramienta del aviso que el CV no tenía y copió una
+   * viñeta textual. Lo que la tarjeta pide escribir no cuenta como ajeno.
+   */
+  const enElCv = termsIn(req.index, cvTextOf(req.tree))
+  const ajenos = (s: Suggestion) =>
+    isSummary
+      ? [...termsIn(req.index, s.text)].filter(
+          (t) => !enElCv.has(t) && !(req.mustWrite ?? []).some((m) => normalize(m) === normalize(t)),
+        )
+      : []
+  /**
+   * NI COPIA LAS TAREAS DEL AVISO COMO SI FUERAN SUYAS. Medido el 2026-09-28:
+   * «Ajuste a registrar ventas, realizar arqueo de caja al cierre, atender
+   * reclamos y apoyar en reposición de mercadería» — las funciones del aviso
+   * pegadas, y una que el CV no dice. Cuenta cada tramo de tres palabras o más.
+   */
+  const copiaAviso = (s: Suggestion) => {
+    if (!isSummary) return []
+    const texto = ` ${normalize(s.text)} `
+    return (req.spec.responsibilities ?? [])
+      .flatMap((r) => r.split(/[,;]|\s+y\s+|\s+and\s+/))
+      .map((r) => r.trim())
+      .filter((r) => normalize(r).split(" ").length >= 3 && texto.includes(` ${normalize(r)} `))
+  }
+  /**
+   * NI HABLA DEL CV. «The CV also shows…», «The profile includes…» (medido el
+   * 2026-09-28): el resumen es el texto impreso, no un comentario sobre él.
+   */
+  const comenta = (s: Suggestion) => (isSummary ? s.text.match(/\b(cv|curr[íi]culum|r[ée]sum[ée])\b/gi) ?? [] : [])
+  /**
+   * NI ENUMERA TÉRMINOS SUELTOS. «Also demonstrated code reviews, Combine,
+   * XCTest, and CI/CD.» (medido el 2026-09-28): tres términos del aviso o más
+   * y casi nada más es relleno de palabras clave, no una oración.
+   */
+  const terminosDelAviso = [...req.index.ordered.map((o) => o.needle), ...(req.spec.softSignals ?? []).map(normalize)].filter(Boolean)
+  const enumera = (s: Suggestion) =>
+    isSummary
+      ? s.text.split(/(?<=[.!?])\s+/).filter((o) => {
+          let resto = ` ${normalize(o)} `
+          let n = 0
+          for (const t of terminosDelAviso) if (resto.includes(` ${t} `)) { n++; resto = resto.split(` ${t} `).join(" ") }
+          // Lista: tres términos o más, y al menos el doble que el resto de las
+          // palabras con contenido. «Migré flujos a Combine con Swift y SwiftUI»
+          // tiene su acción y no es una lista.
+          return n >= 3 && n >= 2 * resto.split(" ").filter((w) => w.length >= 4).length
+        })
+      : []
+  /**
+   * LA PRUEBA LLEVA SU RESULTADO. Medido el 2026-09-28: con «20% reduction in
+   * crash rates» entre los logros, tres resúmenes seguidos salieron sin una sola
+   * cifra — identidad, lista de tareas, idiomas. Si el mejor logro elegido para
+   * este puesto trae cifra, el resumen tiene que traer alguna además de los años.
+   */
+  const pruebaElegida = isSummary ? topBulletsOf(req.tree, req.spec)[0] : undefined
+  const anios = String(Math.floor(experienceYears(req.tree)))
+  const sinPrueba = (s: Suggestion) =>
+    pruebaElegida && statesQuantity(pruebaElegida) && !(s.text.match(/\d+/g) ?? []).some((d) => d !== anios) ? [pruebaElegida] : []
+  /**
+   * CADA ORACIÓN TRABAJA PARA ESTE PUESTO. Salvo la identidad, una oración del
+   * resumen trae algo que el aviso pide o la cifra de un logro. «English B2 and
+   * Spanish native.» sobre un aviso que no pide idiomas no trae ninguna de las
+   * dos (medido el 2026-09-28): ocupa la línea que un reclutador sí lee.
+   */
+  const fueraDelPuesto = (s: Suggestion) =>
+    isSummary
+      ? s.text
+          .split(/(?<=[.!?])\s+/)
+          .slice(1)
+          .filter((o) => {
+            const t = ` ${normalize(o)} `
+            // Una CANTIDAD, no cualquier dígito: el «2» de «B2» no es un resultado.
+            return o.trim() && !statesQuantity(o) && !terminosDelAviso.some((x) => t.includes(` ${x} `))
+          })
+      : []
+  /** Y ninguna oración es un dato suelto: «Bachiller.» (medido el 2026-09-28). */
+  const sueltas = (s: Suggestion) =>
+    isSummary ? s.text.split(/(?<=[.!?])\s+/).map((o) => o.trim()).filter((o) => o && o.split(/\s+/).length < 3) : []
+  /**
+   * Una viñeta pegada no es sólo la copia exacta: medido el 2026-09-28, quitarle
+   * «the … frameworks» a la primera viñeta la hacía pasar. Una oración de ocho
+   * palabras o más con el 85% de sus palabras en UNA sola viñeta es esa viñeta.
+   */
+  const palabras = (t: string) => new Set(normalize(t).split(" ").filter((w) => w.length >= 3))
+  const pegadas = (s: Suggestion) => {
+    if (!isSummary) return []
+    const vinetas = req.tree.roles.flatMap((r) => r.bullets)
+    return s.text
+      .split(/(?<=[.!?])\s+/)
+      .flatMap((o) => {
+        const po = palabras(o)
+        if (normalize(o).split(" ").length < 8) return []
+        const copia = vinetas.find((b) => {
+          const pb = palabras(b.text)
+          return [...po].filter((w) => pb.has(w)).length / po.size >= 0.85
+        })
+        return copia ? [copia.text] : []
+      })
+  }
+  /**
+   * UN VERBO QUE OTRA VIÑETA YA USA NO SE ESTRENA ACÁ.
+   *
+   * La tarjeta prometía dejar de repetir «Resolved» y la propuesta abría con
+   * «Reduced», que ya abría otra línea (medido el 2026-09-28): arreglar una
+   * repetición creaba otra. Cuenta si la línea nueva abre con el verbo que la
+   * tarjeta prometió dejar, o con uno de otra viñeta que la original no usaba.
+   */
+  const aperturaDe = (texto: string) => normalize(texto).split(" ")[0] ?? ""
+  const otrasAperturas = new Set(
+    req.tree.roles.flatMap((r) => r.bullets).filter((b) => b.id !== req.nodeId).map((b) => aperturaDe(b.text)),
+  )
+  const repite = (s: Suggestion) => {
+    if (isSummary) return []
+    const abre = aperturaDe(s.text)
+    if (req.avoidOpener && abre === normalize(req.avoidOpener)) return [req.avoidOpener]
+    return abre !== aperturaDe(original) && otrasAperturas.has(abre) ? [s.text.split(/\s+/)[0]] : []
+  }
+  /**
+   * LA TARJETA DE LA CIFRA PROMETE EL TAMAÑO. Medido en Chrome: devolvía la
+   * misma línea con las palabras en otro orden, sin cifra ni hueco — una
+   * consulta cobrada por nada. Cumple con una cifra que la línea ya diga o con
+   * el hueco tipado para que la persona la escriba.
+   */
+  const sinTamano = (s: Suggestion) => (req.wantsSize && !statesQuantity(s.text) && s.placeholders.length === 0 ? 1 : 0)
+  /**
+   * LA LÍNEA NUEVA NO ABRE CON UNA TAREA. La tarjeta prometía «abrí con lo que
+   * hiciste» y la propuesta volvió con «Apoyé el inventario…» (medido el
+   * 2026-09-28): la auditoría siguiente la habría vuelto a señalar.
+   */
+  const debil = (s: Suggestion) => (!isSummary && opensWeakly(s.text) ? 1 : 0)
+  /**
+   * LOS EJES QUE LA TARJETA PROMETIÓ, CONTRA LOS QUE EL MODELO DECLARA DE SU
+   * LÍNEA NUEVA (`newBasis`). Sin declaración no se le cree: cuenta como no
+   * cumplido. El verbo lo prueba además el código (`debil`).
+   */
+  const ejeDe: Record<Axis, "hasActionVerb" | "hasResult" | "hasMethod"> = { verbo: "hasActionVerb", resultado: "hasResult", método: "hasMethod" }
+  /**
+   * Y LA DECLARACIÓN SE CONTRASTA CON LO QUE EL CÓDIGO PUEDE VER. Medido en
+   * Chrome el 2026-09-28: «Resolví reclamos de clientes con atención al
+   * cliente» volvió con los tres ejes en true. Lo único que agregaba era un
+   * término de la vacante. Un resultado o un método son palabras NUEVAS que no
+   * están en el original ni son un término del aviso —las de lo que la persona
+   * contó sí cuentan—; con menos de dos, no se agregó ninguno de los dos.
+   * ponytail: el umbral de dos palabras de cuatro letras o más no mira sentido;
+   * alcanza para ver relleno de palabra clave, no para juzgar calidad.
+   */
+  // Lo conocido es el original. Lo que la persona contó ES el aporte legítimo:
+  // contarlo como «ya dicho» hacía que una línea escrita con su respuesta
+  // pareciera no agregar nada (medido en Chrome el 2026-09-28).
+  const conocidas = normalize(original).split(" ").filter((w) => w.length >= 4)
+  const aporta = (s: Suggestion) => {
+    let texto = ` ${normalize(s.text)} `
+    // Todo lo que la vacante nombra —duras, deseables, blandas— y lo declarado.
+    const terminos = [...req.index.ordered.map((o) => o.needle), ...(req.spec.softSignals ?? []).map(normalize)]
+    for (const t of terminos) if (t) texto = texto.split(` ${t} `).join(" ")
+    return texto.split(" ").filter((w) => w.length >= 4 && !conocidas.some((c) => sameRoot(w, c))).length >= 2
+  }
+  const ejesFaltan = (s: Suggestion): Axis[] =>
+    isSummary
+      ? []
+      : (req.axes ?? []).filter((e) => !s.newBasis?.[ejeDe[e]] || (e !== "verbo" && !aporta(s)))
+  /**
+   * EL RESUMEN NO HABLA DE LA PERSONA EN TERCERA. Medido el 2026-09-28: abrió
+   * «Cajera con 4 años…» y siguió «Realizó el arqueo…, cobró…, atendió…». El
+   * guard de persona sólo mira la primera palabra, y en el resumen la tercera
+   * aparece en la segunda oración. En español una palabra de cuatro letras o
+   * más terminada en «ó» es un pasado de tercera persona.
+   * ponytail: los pocos sustantivos así (dominó, buró) contarían.
+   *
+   * EN INGLÉS, CON EL VOCABULARIO DEL PROPIO CV. «Builds…», «Specializes…» no
+   * tienen una marca como la tilde, pero sí una prueba: si una oración abre con
+   * una palabra en -s y el CV usa esa raíz como verbo —«developed»,
+   * «leading»—, es un verbo en tercera persona. «Skills in…» no tiene esas
+   * formas y pasa. Vale para el resumen (cada oración) y la viñeta (su
+   * apertura), sin una lista de verbos.
+   */
+  const vocabulario = new Set(normalize(`${cvTextOf(req.tree)} ${original}`).split(" "))
+  const verboEnS = (w: string) => {
+    const x = w.toLowerCase()
+    // Los tres auxiliares irregulares: una clase cerrada de la gramática, no una
+    // lista de verbos que llega tarde. «Has integrated…» (medido el 2026-09-28).
+    if (x === "has" || x === "is" || x === "does") return true
+    if (x.length < 4 || !x.endsWith("s") || x.endsWith("ss") || w === w.toUpperCase()) return false
+    const raices = [x.slice(0, -1), x.endsWith("es") ? x.slice(0, -2) : "", x.endsWith("ies") ? `${x.slice(0, -3)}y` : ""].filter(Boolean)
+    return raices.some((r) =>
+      [`${r}ed`, `${r}d`, `${r}ing`, r.endsWith("e") ? `${r.slice(0, -1)}ing` : "", r.endsWith("y") ? `${r.slice(0, -1)}ied` : ""].some((f) => f && vocabulario.has(f)),
+    )
+  }
+  const terceraPersona = (s: Suggestion) => {
+    if (req.language === "en") {
+      const aperturas = (isSummary ? s.text.split(/(?<=[.!?])\s+/) : [s.text]).map((o) => o.trim().split(/\s+/)[0]?.replace(/[^\p{L}]/gu, "") ?? "")
+      return [...new Set(aperturas.filter(verboEnS))]
+    }
+    return isSummary ? [...new Set((s.text.match(/\p{L}{3,}ó(?!\p{L})/gu) ?? []).filter((w) => w !== w.toUpperCase()))] : []
+  }
+  const problemas = (s: Suggestion) =>
+    faltan(s).length + ajenos(s).length + pegadas(s).length + repite(s).length + sinTamano(s) + debil(s) + terceraPersona(s).length + copiaAviso(s).length + sueltas(s).length + ejesFaltan(s).length + comenta(s).length + enumera(s).length + sinPrueba(s).length + fueraDelPuesto(s).length
+
   const guardada = (await req.store.read("ats3-fix", key)) as Suggestion | null
-  const parecidaA = (s: Suggestion) => similarTo(s, ctx, esReescritura)
+  // Sólo una reescritura tiene una línea a la que superar: al agregar, parecerse
+  // al tema confirmado no es «no aporta».
+  const parecidaA = (s: Suggestion) => similarTo(s, ctx, !agregando)
   const cached = guardada ? repairSuggestion(guardada) : null
-  if (cached && checkSuggestion(cached, ctx).ok) {
-    return { ok: true, suggestion: anchor(cached, hashBase, antes, req.mergeWith, req.addToRole, parecidaA(cached)), served: true, calls: 0 }
+  // Lo guardado pasa también por el ciclo de corrección: con problemas, no se sirve.
+  if (cached && checkSuggestion(cached, ctx).ok && problemas(cached) === 0) {
+    return { ok: true, suggestion: anchor(cached, hashBase, original, req.addToRole, parecidaA(cached)), served: true, calls: 0 }
   }
   const ask = (nudge?: string) =>
     isSummary
       ? req.ai.rewriteSummary({
           current: node!.text,
+          focus: req.focus,
+          mustWrite: prometido,
+          yearsOfExperience: Math.floor(experienceYears(req.tree)) || null,
+          cvLines: req.tree.roles.flatMap((r) => r.bullets.map((b) => b.text)),
+          otherSections: req.tree.otherText,
           spec: req.spec,
-          topBullets: topBulletsOf(req.tree),
+          topBullets: topBulletsOf(req.tree, req.spec),
+          provenTerms: provenTermsOf(req.tree, req.spec, req.index),
           ledger,
           declaredSkills: req.tree.declaredSkills,
           nudge,
         })
       : req.ai.rewriteBullet({
           original,
-          mergeOf: otra ? [node!.text, otra.text] : undefined,
           bulletId: req.nodeId,
           roleContext: roleContextOf(req.tree, req.nodeId),
           spec: req.spec,
           ledger,
           declaredSkills: req.tree.declaredSkills,
-          focus: req.focus,
+          // Al agregar, el tema confirmado ES el original: repetirlo como «lo que
+          // tiene que resolver» le daba al modelo el mismo dato con dos rótulos.
+          focus: agregando ? undefined : req.focus,
+          isNew: agregando || undefined,
+          mustWrite: prometido,
+          avoidOpener: req.avoidOpener,
+          wantsSize: req.wantsSize,
+          axes: req.axes,
+          told: req.told?.trim() || undefined,
           /**
            * LAS OTRAS LÍNEAS DEL PUESTO, para que no repita ninguna.
            *
@@ -1614,11 +1719,9 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
            * el modelo nunca las había visto: se lo castigaba por repetir algo
            * que nadie le mostró. Prevenir en la fuente cuesta cero tokens.
            */
-          // La otra línea de la fusión NO entra: se va a borrar, así que "repetirla"
-          // es exactamente lo que se le está pidiendo.
           siblings: req.tree.roles
             .flatMap((r) => r.bullets)
-            .filter((b) => b.id !== req.nodeId && b.id !== req.mergeWith)
+            .filter((b) => b.id !== req.nodeId)
             .map((b) => b.text),
           nudge,
         })
@@ -1658,21 +1761,48 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * padres" —apertura que el propio prompt prohíbe— y sobre "Di la medicación",
    * tres palabras sin resultado ni método.
    */
+  /**
+   * «YA ESTÁ BIEN» NO CONTESTA UNA TARJETA ABIERTA (2026-09-28).
+   *
+   * Medido en Chrome: sobre «Atendí en mostrador y vendí medicamentos.», con la
+   * tarjeta prometiendo escribir «Retail» y señalando que faltaban resultado y
+   * método, el modelo declinó declarando los tres ejes en true, y la pantalla
+   * pintó «la línea ya está bien» encima de la tarjeta que seguía abierta. Lo
+   * que la tarjeta promete lo sabe el motor —lo midió la auditoría—, así que la
+   * negativa se juzga contra eso y no sólo contra lo que el modelo declara.
+   * Si vuelve a negarse con la promesa abierta, se dice eso, no «está bien».
+   */
+  const promesa = [
+    ...(req.mustWrite ?? []).map((t) => titleForms(t).join(" / ")),
+    req.wantsSize ? (req.language === "en" ? "the size of the achievement" : "el tamaño del logro") : "",
+    req.focus ?? "",
+  ].filter(Boolean)
+  // Un eje que sólo la persona puede dar, sin su dato: se le pide, no se niega.
+  const ejesDeLaPersona = (req.axes ?? []).filter((e) => e !== "verbo")
+  const negada: RewriteResult =
+    ejesDeLaPersona.length && !req.told?.trim()
+      ? { ok: false, verdict: { ok: false, reason: "needs_fact", detail: ejesDeLaPersona.join(", ") }, calls: 0 }
+      : promesa.length || ejesDeLaPersona.length
+        ? { ok: false, verdict: { ok: false, reason: "declined", detail: [...promesa, ...ejesDeLaPersona].join(" · ") }, calls: 0 }
+        : { ok: false, alreadyGood: true, calls: 0 }
   if (!first.changed) {
     const ejes = first.declineBasis
     // Sin declaración tampoco se le cree: el prompt la pide justamente cuando
     // declina, y omitirla es la forma más barata de saltarse la vara.
-    const falta = ejes
-      ? [!ejes.hasActionVerb && "verbo", !ejes.hasResult && "resultado", !ejes.hasMethod && "método"].filter(Boolean)
-      : ["la declaración de los tres ejes"]
+    const falta = [
+      ...(ejes
+        ? [!ejes.hasActionVerb && "verbo", !ejes.hasResult && "resultado", !ejes.hasMethod && "método"].filter(Boolean)
+        : ["la declaración de los tres ejes"]),
+      ...promesa,
+    ]
     if (falta.length === 0) return { ok: false, alreadyGood: true, calls }
     first = await ask(
       req.language === "en"
-        ? `You declined, yet you declared this line lacks: ${falta.join(", ")}. A line missing any of the three has something to fix — rewrite it, keeping strictly to what the original says.`
-        : `Declinaste, pero declaraste que a esta línea le falta: ${falta.join(", ")}. Una línea a la que le falta cualquiera de los tres TIENE algo que arreglar — reescribila, ciñéndote a lo que el original dice.`,
+        ? `You declined, yet this line still needs: ${falta.join(" · ")}. It has something to fix — rewrite it, keeping strictly to what the original says.`
+        : `Declinaste, pero a esta línea todavía le falta: ${falta.join(" · ")}. TIENE algo que arreglar — reescribila, ciñéndote a lo que el original dice.`,
     )
     calls++
-    if (!first.changed) return { ok: false, alreadyGood: true, calls }
+    if (!first.changed) return { ...negada, calls }
   }
 
   /**
@@ -1691,7 +1821,33 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
 
   let verdict = checkSuggestion(first, ctx)
   // Menos es mejor: parecerse a otra línea pesa más que cualquier palabra perdida.
-  const costo = (s: Suggestion) => (parecidaA(s) ? 1000 : 0) + lostContent(s, ctx).length
+  /** Lo que falta, lo ajeno, lo pegado y el verbo repetido, dicho en UN pedido. */
+  const correccion = (s: Suggestion): string => {
+    const [f, a, p, v, t, d, tp, ca, su, ej, co, en_, sp, fp] = [faltan(s), ajenos(s), pegadas(s), repite(s), sinTamano(s), debil(s), terceraPersona(s), copiaAviso(s), sueltas(s), ejesFaltan(s), comenta(s), enumera(s), sinPrueba(s), fueraDelPuesto(s)]
+    const en = req.language === "en"
+    return [
+      f.length ? (en ? `The card promised to write ${f.map((t) => titleForms(t).map((x) => `"${x}"`).join(" or ")).join(", ")} exactly as the posting writes it, and your text does not.` : `La tarjeta prometió escribir ${f.map((t) => titleForms(t).map((x) => `«${x}»`).join(" o ")).join(", ")} tal cual lo escribe la vacante, y tu texto no lo dice.`) : "",
+      a.length ? (en ? `The CV never says ${a.map((t) => `"${t}"`).join(", ")}: remove it.` : `El CV no dice ${a.map((t) => `«${t}»`).join(", ")} en ninguna parte: sacalo.`) : "",
+      p.length ? (en ? `You pasted a CV bullet verbatim ("${p[0]}"): tell that achievement in the summary's own voice.` : `Pegaste una viñeta tal cual («${p[0]}»): contá ese logro con la voz del resumen.`) : "",
+      v.length ? (en ? `Another bullet already opens with "${v[0]}": open with a different verb that says the same.` : `Otra viñeta ya abre con «${v[0]}»: abrí con otro verbo que diga lo mismo.`) : "",
+      fp.length ? (en ? `"${fp[0]}" names nothing this posting asks for and no result: replace it with what the person did that the posting asks, or leave it out.` : `«${fp[0]}» no nombra nada de lo que el aviso pide ni un resultado: cambiala por lo que la persona hizo y el aviso pide, o sacala.`) : "",
+      sp.length ? (en ? `The summary has no proof: tell this achievement in the summary's voice, with its result and its figure exactly as the CV states them — "${sp[0]}".` : `El resumen no trae prueba: contá este logro con la voz del resumen, con su resultado y su cifra tal cual los dice el CV — «${sp[0]}».`) : "",
+      en_.length ? (en ? `"${en_[0]}" lists posting terms: name them inside what the person did, or leave them out.` : `«${en_[0]}» enumera términos del aviso: nombralos dentro de lo que la persona hizo, o sacalos.`) : "",
+      co.length ? (en ? `You wrote about the CV ("${co[0]}"): the summary is the printed text itself, never a comment about the document.` : `Hablaste del CV («${co[0]}»): el resumen es el texto impreso, nunca un comentario sobre el documento.`) : "",
+      ej.length ? (en ? `The card promised this line would have: ${ej.join(", ")}, and your newBasis says it does not. Use what the original and the person say; if they do not say it, keep it false — never fill it with a posting term.` : `La tarjeta prometió que esta línea tendría: ${ej.join(", ")}, y tu newBasis dice que no. Usá lo que dicen el original y la persona; si no lo dicen, dejalo en false — nunca lo rellenes con un término de la vacante.`) : "",
+      su.length ? (en ? `${su.map((x) => `"${x}"`).join(", ")} is a loose datum: fold it into a complete sentence or leave it out.` : `${su.map((x) => `«${x}»`).join(", ")} es un dato suelto: integralo en una oración completa o sacalo.`) : "",
+      ca.length ? (en ? `You copied the posting's duties (${ca.map((x) => `"${x}"`).join(", ")}): the summary says what the CV shows this person did.` : `Copiaste tareas del aviso (${ca.map((x) => `«${x}»`).join(", ")}): el resumen dice lo que el CV muestra que esta persona hizo.`) : "",
+      tp.length
+        ? en
+          ? `${tp.map((w) => `"${w}"`).join(", ")} speaks of the person in the third person: ${isSummary ? "the summary is a noun phrase or the work itself, in one voice" : "open with a past-tense verb"}.`
+          : `${tp.map((w) => `«${w}»`).join(", ")} habla de la persona en tercera: el resumen va como frase nominal o con el trabajo en sí, en una sola voz.`
+        : "",
+      d ? (en ? `It opens with a duty ("${s.text.split(/\s+/).slice(0, 2).join(" ")}…"): open with the verb of what was done.` : `Abre con una tarea («${s.text.split(/\s+/).slice(0, 2).join(" ")}…»): abrí con el verbo de lo que se hizo.`) : "",
+      t ? (en ? `The card promised the size of this achievement: add the typed slot with its believable range, so the person writes the number.` : `La tarjeta prometió el tamaño de este logro: agregá el hueco tipado con su rango creíble, para que la persona escriba el número.`) : "",
+    ].filter(Boolean).join(" ")
+  }
+  // Lo prometido pesa más que una palabra perdida y menos que repetir otra línea.
+  const costo = (s: Suggestion) => (parecidaA(s) ? 1000 : 0) + problemas(s) * 10 + lostContent(s, ctx).length
   const parecida = verdict.ok ? parecidaA(first) : null
   const perdido = verdict.ok ? lostContent(first, ctx) : []
 
@@ -1706,16 +1862,21 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * se avisa con la línea nombrada. Antes eso era «It was not written» con la
    * consulta gastada.
    */
-  if (!verdict.ok || parecida || perdido.length > 0) {
+  const aCorregir = verdict.ok ? correccion(first) : ""
+  if (!verdict.ok || parecida || perdido.length > 0 || aCorregir) {
     const nudge = !verdict.ok
       ? retryNudge(verdict, req.language)
-      : [parecida ? similarNudge(parecida, req.language) : "", perdido.length > 0 ? lossNudge(perdido, req.language) : ""]
+      : [
+          parecida ? similarNudge(parecida, req.language) : "",
+          perdido.length > 0 ? lossNudge(perdido, req.language) : "",
+          aCorregir ? `${aCorregir} ${req.language === "en" ? "Keep strictly to what the CV says." : "Ceñite a lo que el CV dice."}` : "",
+        ]
           .filter(Boolean)
           .join("\n")
     const segundo = await ask(nudge)
     calls++
     if (!segundo.changed) {
-      if (!verdict.ok) return { ok: false, alreadyGood: true, calls }
+      if (!verdict.ok) return { ...negada, calls }
     } else {
       const reparado = preparar(segundo)
       const v2 = checkSuggestion(reparado, ctx)
@@ -1743,8 +1904,8 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * el panel la pinta en verde. La vara es la del CEO —90% idéntico no es
    * mejora—, la misma que ya usa `similarTo`.
    */
-  if (esReescritura && parecidaA(first) === original) {
-    return { ok: false, alreadyGood: true, calls }
+  if (!agregando && parecidaA(first) === original) {
+    return { ...negada, calls }
   }
 
   /**
@@ -1799,19 +1960,66 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     }
   }
 
+  /**
+   * LO QUE EL REINTENTO NO CORRIGIÓ Y SE PUEDE QUITAR SIN TOCAR LO DEMÁS.
+   *
+   * Una oración que habla del CV («The CV also shows…», medido dos veces
+   * seguidas el 2026-09-28), que es un dato suelto o una lista de términos no
+   * tiene redacción que rescatar: se retira, y el resto del resumen queda como el modelo lo
+   * escribió. Sólo si quedan al menos dos oraciones — si no, no hay resumen.
+   */
+  /**
+   * UN CARGO CON BARRA SE ESCRIBE EN UNA SOLA FORMA. Medido el 2026-09-28: el
+   * resumen abrió «Senior iOS Engineer / Developer», la cadena del aviso con su
+   * barra. Se deja la forma que más se parece a los cargos que la persona tuvo
+   * — un «iOS Developer» lleva a «Senior iOS Developer» —, sin otra llamada.
+   */
+  const cargos = normalize(req.tree.roles.map((r) => r.title).join(" ")).split(" ")
+  for (const t of req.mustWrite ?? []) {
+    const formas = titleForms(t)
+    if (formas.length < 2) continue
+    const conBarra = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s*\/\s*/g, "\\s*/\\s*"), "i")
+    if (!conBarra.test(first.text)) continue
+    const afinidad = (f: string) => normalize(f).split(" ").filter((w) => cargos.includes(w)).length
+    const mejor = [...formas].sort((a, b) => afinidad(b) - afinidad(a))[0]
+    first = { ...first, text: first.text.replace(conBarra, mejor) }
+  }
+  if (isSummary) {
+    const oraciones = first.text.split(/(?<=[.!?])\s+/).map((o) => o.trim()).filter(Boolean)
+    // La oración parecida a su viñeta NO se retira: suele ser la prueba con su
+    // cifra, y perderla deja un resumen sin resultado (medido el 2026-09-28).
+    const sinDefecto = oraciones.filter((o) => {
+      const sola = { ...first, text: o }
+      return comenta(sola).length === 0 && sueltas(sola).length === 0 && enumera(sola).length === 0
+    })
+    // Lo que no trabaja para el puesto se quita sólo si quedan dos: es la razón
+    // más débil, y un resumen de una oración rinde menos que uno con una floja.
+    const delPuesto = sinDefecto.filter((o, i) => i === 0 || fueraDelPuesto({ ...first, text: `. ${o}` }).length === 0)
+    const sanas = delPuesto.length >= 2 ? delPuesto : sinDefecto
+    if (sanas.length >= 1 && sanas.length < oraciones.length) first = { ...first, text: sanas.join(" ") }
+  }
+  // Un término prometido que tampoco llegó en el reintento: ver `faltan`.
+  if (faltan(first).length > 0) return { ...negada, calls }
+  /**
+   * UN EJE PROMETIDO QUE SÓLO LA PERSONA PUEDE DAR. Si el resultado o el método
+   * no están ni en el original ni en lo que ella contó, no se entrega relleno:
+   * se le pide el dato en la misma tarjeta. Si ya lo contó y aun así no llegó,
+   * es una negativa como cualquier otra.
+   */
+  if (ejesFaltan(first).some((e) => e !== "verbo")) return { ...negada, calls }
+
   await req.store.write("ats3-fix", key, first)
-  return { ok: true, suggestion: anchor(first, hashBase, antes, req.mergeWith, req.addToRole, parecidaA(first)), served: false, calls }
+  return { ok: true, suggestion: anchor(first, hashBase, original, req.addToRole, parecidaA(first)), served: false, calls }
 }
 
 function anchor(
   s: Suggestion,
   hash: string,
   originalText: string,
-  mergedFrom?: NodeId,
   addToRole?: string,
   similar?: string | null,
 ): AnchoredSuggestion {
-  return { ...s, basedOnHash: hash, originalText, mergedFrom, addToRole, ...(similar ? { similarTo: similar } : {}) }
+  return { ...s, basedOnHash: hash, originalText, addToRole, ...(similar ? { similarTo: similar } : {}) }
 }
 
 function roleContextOf(tree: ResumeTree, nodeId: NodeId): string {
@@ -1819,11 +2027,50 @@ function roleContextOf(tree: ResumeTree, nodeId: NodeId): string {
   return role ? `${role.title} — ${role.company}` : ""
 }
 
-function topBulletsOf(tree: ResumeTree): string[] {
+/**
+ * LO QUE LA VACANTE PIDE Y EL CV YA DEMUESTRA, en el orden en que la vacante lo
+ * pide: primero los obligatorios, en el orden de peso que P1 devuelve, después
+ * los deseables. Es lo único que el resumen puede nombrar de la vacante.
+ */
+function provenTermsOf(tree: ResumeTree, spec: JobSpec, index: TermIndex): string[] {
+  const escritos = termsIn(index, cvTextOf(tree))
+  const pedidos = [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])].map((r) => index.byKey.get(termKey(r.skill)) ?? r.skill)
+  return [...new Set(pedidos.filter((t) => escritos.has(t)))]
+}
+
+/**
+ * LA PRUEBA DEL RESUMEN SALE DE LO QUE ESTE PUESTO PIDE (2026-09-28).
+ *
+ * Eran las tres primeras viñetas con un número, sin mirar la vacante: el
+ * resumen podía probar lo que el puesto no pide y callar lo que sí. Ahora gana
+ * la viñeta que demuestra más de lo pedido —cada término vale más cuanto antes
+ * lo pide la vacante—, y a igual demostración, la que trae cifra y la del
+ * puesto más reciente.
+ */
+function topBulletsOf(tree: ResumeTree, spec: JobSpec): string[] {
+  // Lo que el puesto pide, con su peso: antes pedido, más pesa. Por RAÍZ, como
+  // `bestHomeFor`: para elegir la prueba importa que la viñeta hable de eso
+  // —«RESTful APIs» habla de «REST APIs»—, no que lo escriba literal; eso lo
+  // mide el puntaje, no esta elección.
+  const pedidos = [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])].map((r) => normalize(r.skill).split(" ").filter((w) => w.length >= 4))
   return tree.roles
-    .flatMap((r) => r.bullets.map((b) => b.text))
-    .filter(statesQuantity)
+    .flatMap((r, ri) => r.bullets.map((b) => ({ b, ri })))
+    .map(({ b, ri }) => {
+      const palabras = normalize(b.text).split(" ")
+      const relevancia = pedidos.reduce(
+        (n, ws, i) => n + (ws.length > 0 && ws.some((w) => palabras.some((p) => sameRoot(w, p))) ? pedidos.length - i : 0),
+        0,
+      )
+      // La PRUEBA es un resultado: entre las viñetas que hablan de lo pedido,
+      // primero las que traen cifra — sin cifra el modelo no tiene qué contar y
+      // copia la viñeta (medido el 2026-09-28). Una cifra sobre trabajo que el
+      // puesto no pide no prueba ajuste.
+      const cifra = statesQuantity(b.text) && relevancia > 0 ? 100_000 : 0
+      return { texto: b.text, valor: cifra + relevancia * 10 - ri }
+    })
+    .sort((a, b) => b.valor - a.valor)
     .slice(0, 3)
+    .map((x) => x.texto)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1895,16 +2142,8 @@ export function applySuggestion(
   }
 
   const before = scoreResume(tree, spec, audit, checks, termWeights)
-  /**
-   * UNA FUSIÓN ES UN SOLO ACTO: se escribe la línea y se va la otra.
-   *
-   * Si se escribiera la fusionada y la absorbida quedara en pie, el CV termina
-   * con el mismo trabajo contado dos veces — justo lo que la fusión venía a
-   * arreglar—, y el puntaje mediría un documento que nadie va a tener. Se hace
-   * sobre la COPIA, como todo acá: si algo falla, el CV del usuario no se tocó.
-   */
-  const conTexto = s.addToRole ? appendBullet(tree, s.addToRole, s.text) : writeInto(tree, s.bulletId, s.text)
-  const copy = s.mergedFrom ? removeNode(conTexto, s.mergedFrom) : conTexto
+  // Sobre la COPIA, como todo acá: si algo falla, el CV del usuario no se tocó.
+  const copy = s.addToRole ? appendBullet(tree, s.addToRole, s.text) : writeInto(tree, s.bulletId, s.text)
   const after = scoreResume(copy, spec, audit, checks, termWeights)
 
   return {
@@ -1939,18 +2178,6 @@ export function appendBullet(tree: ResumeTree, roleId: string, text: string): Re
           },
     ),
   }
-}
-
-/**
- * Saca una viñeta devolviendo un árbol NUEVO. El resumen no se puede sacar.
- *
- * Vive acá, al lado de `writeInto`, porque es la otra mitad del mismo acto: la
- * fusión escribe una línea y retira la otra, y las dos tienen que pasar por la
- * copia antes de tocar nada.
- */
-export function removeNode(tree: ResumeTree, nodeId: NodeId): ResumeTree {
-  if (nodeId === tree.summary.id) return tree
-  return { ...tree, roles: tree.roles.map((r) => ({ ...r, bullets: r.bullets.filter((b) => b.id !== nodeId) })) }
 }
 
 /** Escribe un nodo devolviendo un árbol NUEVO. El original no se toca. */

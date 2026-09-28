@@ -4,8 +4,6 @@ import {
   afterAccept,
   ledgerSignature,
   saturatedMetricTypes,
-  spaceBudget,
-  BULLETS_PER_ROLE_MAX,
   KEYWORD_MAX,
   type Ledger,
 } from "@/lib/ats3/ledger"
@@ -129,45 +127,4 @@ describe("aceptar una sugerencia actualiza la memoria y no muta la vieja", () =>
     // serviría del caché proponiendo un verbo que ya no está disponible.
     expect(ledgerSignature(after)).not.toBe(ledgerSignature(before))
   })
-})
-
-describe("el presupuesto de espacio", () => {
-  it("el puesto más reciente se lleva más, sin una tabla de años", () => {
-    const b = spaceBudget(tree(["a", "b"], 3), 15)
-    expect(b.perRole["r0"]).toBeGreaterThan(b.perRole["r1"])
-    expect(b.perRole["r1"]).toBeGreaterThanOrEqual(b.perRole["r2"])
-  })
-
-  it("nunca reparte más espacio del que hay", () => {
-    for (const roles of [1, 2, 3, 5, 8]) {
-      const b = spaceBudget(tree(["a"], roles), 15)
-      const sum = Object.values(b.perRole).reduce((s, n) => s + n, 0)
-      expect(sum).toBeLessThanOrEqual(15)
-    }
-  })
-
-  it("ningún puesto queda sin viñetas: un puesto vacío no se entiende", () => {
-    const b = spaceBudget(tree(["a"], 8), 15)
-    for (const n of Object.values(b.perRole)) expect(n).toBeGreaterThanOrEqual(1)
-  })
-
-  /**
-   * NI CON UN SOLO PUESTO SE PASA DEL TECHO (CEO, 2026-09-09).
-   *
-   * Antes se llevaba las quince de la página, y `BULLETS_PER_ROLE_MAX` dice que
-   * de un mismo puesto se leen seis: al modelo se le decía «acá caben quince» y
-   * el motor proponía sacar de la séptima en adelante. Una pregunta, una
-   * respuesta.
-   */
-  it("un puesto solo tampoco pasa de las que se leen", () => {
-    expect(spaceBudget(tree(["a"], 1), 15).perRole["r0"]).toBe(BULLETS_PER_ROLE_MAX)
-  })
-})
-
-it("la firma cambia cuando cambian los logros ya atribuidos", () => {
-  // Una reescritura servida del caché no vuelve a pasar por los guards. Si la
-  // firma ignora los claims, la segunda línea puede servirse atribuyéndose el
-  // mismo resultado que la primera ya se llevó.
-  const base: Ledger = { verbsUsed: [], keywordBudget: {}, metricTypesUsed: [], claimsMade: [], bulletsRemaining: 6 }
-  expect(ledgerSignature({ ...base, claimsMade: ["bajó las mermas"] })).not.toBe(ledgerSignature(base))
 })

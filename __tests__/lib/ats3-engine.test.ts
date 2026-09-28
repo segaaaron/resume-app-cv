@@ -14,14 +14,16 @@ import {
   termsOf,
   coverageOf,
   openLedger,
+  fijarJuicios,
+  JUICIOS_VACIOS,
   type AtsAi,
   type AtsStore,
   type CacheKind,
   type RawResume,
 } from "@/lib/ats3/engine"
-import { buildTermIndex, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion, type TriageDecision } from "@/lib/ats3/contracts"
+import { buildTermIndex, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion } from "@/lib/ats3/contracts"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
-import { scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
+import { experienceYears, scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
 
 /**
  * El motor, ejecutado de punta a punta con un modelo y un almacenamiento falsos.
@@ -105,7 +107,6 @@ function fakeAudit(tree: ResumeTree = buildTree(RAW)): AuditFacts {
 class CountingAi implements AtsAi {
   jd = 0
   audits = 0
-  triages = 0
   rewrites = 0
   verifies = 0
   /** Lo que el modelo devuelve; cada test lo ajusta. */
@@ -119,11 +120,6 @@ class CountingAi implements AtsAi {
   async audit(tree: ResumeTree) {
     this.audits++
     return fakeAudit(tree)
-  }
-  triageDecisions: TriageDecision[] = []
-  async triage() {
-    this.triages++
-    return this.triageDecisions
   }
   async rewriteBullet(input: { nudge?: string }) {
     this.rewrites++
@@ -251,10 +247,10 @@ describe("leer el CV", () => {
 // ── LO QUE EL PRODUCTO PROMETE: el costo de reanalizar ───────────────────────
 
 describe("cuántas llamadas cuesta cada escenario", () => {
-  it("primera corrida: la vacante, la auditoría y el triage", async () => {
+  it("primera corrida: la vacante y la auditoría", async () => {
     const ai = new CountingAi()
     const { telemetry } = await analyze(ai, new MemoryStore())
-    expect(telemetry.calls).toBe(3)
+    expect(telemetry.calls).toBe(2)
     expect(ai.jd).toBe(1)
     expect(ai.audits).toBe(1)
   })
@@ -266,13 +262,10 @@ describe("cuántas llamadas cuesta cada escenario", () => {
     const second = await analyze(ai, store)
 
     // El documento promete cero tokens al reanalizar. Es un número: se mide.
-    // Medido antes de cerrarlo: costaba UNA llamada, porque el triage era la
-    // única capa sin caché y nadie lo había contado.
     expect(second.telemetry.calls).toBe(0)
-    expect(second.telemetry.served).toEqual({ jd: true, audit: true, triage: true })
+    expect(second.telemetry.served).toEqual({ jd: true, audit: true })
     expect(ai.jd).toBe(1)
     expect(ai.audits).toBe(1)
-    expect(ai.triages).toBe(1)
 
     // Y no basta con no gastar: tiene que decir LO MISMO. Un panel que cambia
     // solo entre dos clics es lo que hace que el usuario deje de creerle.
@@ -392,10 +385,7 @@ describe("el análisis se entrega en actos", () => {
   it("el puntaje llega primero y no cuesta una llamada", async () => {
     const { acts } = await analyze(new CountingAi(), new MemoryStore())
     expect(acts[0].act).toBe("score")
-    // El triage decide ANTES: es quien dice si una línea merece trabajo, y los
-    // hallazgos dicen qué trabajo. Al revés, la misma viñeta salía "ya está
-    // bien" arriba y "arreglala" abajo.
-    expect(acts.map((a) => a.act)).toEqual(["score", "job", "covered", "triage", "findings"])
+    expect(acts.map((a) => a.act)).toEqual(["score", "job", "covered", "findings"])
   })
 
   it("un requisito que falta sale como hallazgo con su ganancia medida", async () => {
@@ -516,20 +506,6 @@ describe("el análisis se entrega en actos", () => {
     if (c?.act !== "covered") throw new Error("sin acto de cobertura")
     expect(c.terms).toContain("Arqueo de caja")
     expect(c.terms).not.toContain("Inventario") // ese no está demostrado
-  })
-
-  it("una línea que el triage marcó KEEP no recibe además una tarjeta que la corrija", async () => {
-    const ai = new CountingAi()
-    const tree = buildTree(RAW)
-    // El triage dice "está bien"; el motor determinista ve que le falta cifra.
-    ai.triageDecisions = [
-      { bulletId: tree.roles[0].bullets[1].id, verdict: "KEEP", reason: "ya está bien", relevance: 0.9, proposedTopic: null, needsUserConfirm: null, mergeWith: null },
-    ]
-    const { acts } = await analyze(ai, new MemoryStore())
-    const f = acts.find((a) => a.act === "findings")
-    if (f?.act !== "findings") throw new Error("sin hallazgos")
-    // Dos sistemas contradiciéndose en la misma pantalla: uno de los dos sobra.
-    expect(f.findings.some((x) => x.nodeId === tree.roles[0].bullets[1].id)).toBe(false)
   })
 
   it("UNA línea, UNA tarjeta: dos defectos en la misma viñeta no dan dos", async () => {
@@ -828,30 +804,6 @@ describe("lo que está pero donde no se ve, y lo que no está en Habilidades", (
     softCoverage: [],
   })
 
-  it("un requisito demostrado SÓLO en el puesto más viejo se señala como enterrado", () => {
-    // No es una brecha: es una ubicación. Por eso no suma puntos — mover, no
-    // escribir de nuevo.
-    const t = arbol()
-    const viejo = t.roles[2].bullets[0].id
-    const spec = { ...SPEC, mustHave: [{ skill: "Arqueo de caja", raw: "arqueo de caja", years: null, category: null }] }
-    const index = buildTermIndex(termsOf(spec, t))
-    const audit = facts(t, "Arqueo de caja", viejo)
-    const score = scoreResume(t, spec, audit, {})
-    const hallazgos = findingsOf(t, audit, score, index)
-    const enterrado = hallazgos.find((f) => f.merged.includes("buried_term"))
-    // SE ANCLA EN EL PUESTO ACTUAL, no en el viejo: el problema no es cómo está
-    // escrita la línea de 2015, es que el término sólo vive ahí. Anclarlo abajo
-    // daba un botón que reescribía justo lo que no había que tocar.
-    const arriba = t.roles[0].bullets.map((b) => b.id)
-    expect(arriba).toContain(enterrado?.nodeId)
-    expect(enterrado?.nodeId).not.toBe(viejo)
-    // UNA LÍNEA, UNA TARJETA, TAMBIÉN PARA ESTO: el término enterrado se cierra
-    // reescribiendo esa línea, así que comparte tarjeta con lo demás que se dice
-    // de ella. Dos tarjetas sobre la misma viñeta eran dos órdenes a la vez.
-    expect(enterrado?.detail).toContain("Arqueo de caja")
-    expect(hallazgos.filter((f) => f.nodeId === enterrado?.nodeId)).toHaveLength(1)
-  })
-
   it("lo demostrado en una viñeta y ausente de Habilidades se señala", () => {
     // El filtro lee esa sección literalmente y es de lo primero que mira.
     const t = arbol()
@@ -992,56 +944,6 @@ const auditSkills = {
  * El modelo puede devolver MERGE sobre una línea y DROP sobre la otra del par:
  * leído en pantalla, es el panel pidiendo juntarlas y tirar una a la vez.
  */
-/**
- * LOS DOS UMBRALES DEL PUESTO LOS CUENTA EL CÓDIGO (CEO, 2026-09-09).
- *
- * «Que controle un máximo de 6 viñetas por experiencia y 3 como mínimo.» El
- * techo ya lo contaba el motor; el piso quedaba en manos de que el modelo se
- * acordara de devolver ADD, guiado por un renglón del prompt — y un prompt es
- * una petición, no un contrato.
- */
-describe("un puesto con menos de tres viñetas se señala aunque el modelo calle", () => {
-  const conUnaViñeta = {
-    summary: "Secretaria",
-    workExperience: [{
-      jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
-      description: "• Gestioné la agenda del consultorio",
-    }],
-    skills: [],
-  }
-
-  const motorMudo = (spec: JobSpec): AtsAi => ({
-    parseJob: async () => spec,
-    audit: async () => fakeAudit(),
-    triage: async () => [],
-    rewriteBullet: async () => ({}) as Suggestion,
-    rewriteSummary: async () => ({}) as Suggestion,
-  })
-
-  const correr = async (spec: JobSpec) => {
-    const actos: Record<string, unknown>[] = []
-    for await (const act of runAnalysis({
-      raw: conUnaViñeta, jdText: "Buscamos secretaria para agenda y turnos de consultorio médico",
-      language: "es", resumeId: "cv1", model: "m", ai: motorMudo(spec), store: new MemoryStore(),
-    })) actos.push(act as Record<string, unknown>)
-    return (actos.find((x) => x.act === "triage")!.decisions as TriageDecision[])
-  }
-
-  it("lo emite el motor, con una responsabilidad de la vacante y una PREGUNTA", async () => {
-    const spec = { ...SPEC, responsibilities: ["Atender el teléfono y derivar las consultas al profesional"] }
-    const add = (await correr(spec)).find((d) => d.verdict === "ADD")
-    expect(add).toBeTruthy()
-    expect(add!.proposedTopic).toContain("teléfono")
-    // NUNCA afirma que lo hizo: pregunta, y la respuesta es del usuario.
-    expect(add!.needsUserConfirm).toContain("¿Lo hiciste")
-  })
-
-  it("sin una responsabilidad que citar NO inventa un tema", async () => {
-    // El código puede detectar la falta; el hecho no lo pone él.
-    const add = (await correr({ ...SPEC, responsibilities: [] })).find((d) => d.verdict === "ADD")
-    expect(add).toBeUndefined()
-  })
-})
 
 /**
  * ENTRE LAS QUE PUEDEN SOSTENER EL TÉRMINO, GANA LA MÁS DÉBIL (CEO, 2026-09-09).
@@ -1074,40 +976,6 @@ describe("un requisito aterriza en la viñeta que menos aporta", () => {
     const req = findingsOf(tree, audit, score, index).find((f) => f.merged.includes("missing_requirement"))
     // Las dos pueden sostenerlo; la segunda es la que menos aporta.
     expect(req?.nodeId).toBe(tree.roles[0].bullets[1].id)
-  })
-})
-
-describe("una fusión manda sobre lo que la contradice", () => {
-  it("el veredicto que contradice a la fusión se retira", async () => {
-    const tree = buildTree({
-      summary: "Secretaria",
-      workExperience: [{
-        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
-        description: "• Gestioné la agenda del consultorio\n• Confirmé los turnos por teléfono",
-      }],
-      skills: [],
-    })
-    const [a, b] = tree.roles[0].bullets
-    const ai: AtsAi = {
-      parseJob: async () => SPEC,
-      audit: async () => fakeAudit(),
-      triage: async () => [
-        { bulletId: a.id, verdict: "MERGE", reason: "cuentan lo mismo", relevance: 0.5, proposedTopic: null, needsUserConfirm: null, mergeWith: b.id },
-        { bulletId: b.id, verdict: "DROP", reason: "sobra", relevance: 0.1, proposedTopic: null, needsUserConfirm: null, mergeWith: null },
-      ],
-      rewriteBullet: async () => ({}) as Suggestion,
-      rewriteSummary: async () => ({}) as Suggestion,
-    }
-    const actos: Record<string, unknown>[] = []
-    for await (const act of runAnalysis({
-      raw: { summary: "Secretaria", workExperience: [{ jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06", description: "• Gestioné la agenda del consultorio\n• Confirmé los turnos por teléfono" }], skills: [] },
-      jdText: "Buscamos secretaria para agenda y turnos de consultorio médico",
-      language: "es", resumeId: "cv1", model: "m", ai, store: new MemoryStore(),
-    })) actos.push(act as Record<string, unknown>)
-
-    const triage = actos.find((x) => x.act === "triage")!.decisions as { bulletId: string; verdict: string }[]
-    expect(triage.filter((d) => d.verdict === "DROP" && d.bulletId === b.id)).toHaveLength(0)
-    expect(triage.find((d) => d.verdict === "MERGE")).toBeTruthy()
   })
 })
 
@@ -1162,10 +1030,12 @@ describe("las blandas que faltan tienen tarjeta, declaradas o ausentes", () => {
 
   const conEstado = (estado: "DECLARED_ONLY" | "ABSENT" | "DEMONSTRATED") => {
     const t = arbol()
+    // «Declarada» es un hecho del texto y «demostrada» cita su línea (`softCoverageOf`).
+    if (estado === "DECLARED_ONLY") t.declaredSkills = ["Trabajo en equipo"]
     const spec = { ...SPEC, softSignals: ["Trabajo en equipo"] } as JobSpec
     const audit: AuditFacts = {
       ...fakeAudit(),
-      softCoverage: [{ signal: "Trabajo en equipo", status: estado, evidenceNodeId: null }],
+      softCoverage: [{ signal: "Trabajo en equipo", status: estado, evidenceNodeId: estado === "DEMONSTRATED" ? t.roles[0].bullets[0].id : null }],
     }
     const score = scoreResume(t, spec, audit, readableChecks(t))
     return findingsOf(t, audit, score, buildTermIndex([]), spec)
@@ -1203,7 +1073,6 @@ describe("un requisito que el CV no NOMBRA no cuenta como cubierto", () => {
         ...fakeAudit(),
         coverage: [{ skill: "Atención al público", requirement: "MUST", status: "FOUND", evidenceNodeId: t.roles[0].bullets[0].id }],
       }),
-      triage: async () => [],
       rewriteBullet: async () => ({}) as Suggestion,
       rewriteSummary: async () => ({}) as Suggestion,
     }
@@ -1229,7 +1098,6 @@ describe("un requisito que el CV no NOMBRA no cuenta como cubierto", () => {
         ...fakeAudit(),
         coverage: [{ skill: "Atencion al Publico", requirement: "MUST", status: "FOUND", evidenceNodeId: t.roles[0].bullets[0].id }],
       }),
-      triage: async () => [],
       rewriteBullet: async () => ({}) as Suggestion,
       rewriteSummary: async () => ({}) as Suggestion,
     }
@@ -1349,17 +1217,20 @@ describe("demostrar una blanda sube el puntaje", () => {
       skills: [],
     })
 
-  const conBlandas = (estado: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT"): AuditFacts => ({
+  const conBlandas = (estado: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT", t: ResumeTree): AuditFacts => ({
     ...fakeAudit(),
-    softCoverage: [{ signal: "Trabajo en equipo", status: estado, evidenceNodeId: null }],
+    softCoverage: [{ signal: "Trabajo en equipo", status: estado, evidenceNodeId: estado === "DEMONSTRATED" ? t.roles[0].bullets[0].id : null }],
   })
 
   const spec = { ...SPEC, softSignals: ["Trabajo en equipo"] } as JobSpec
 
   it("demostrada vale más que sólo listada, y listada más que ausente", () => {
-    const t = arbol()
-    const de = (e: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT") =>
-      scoreResume(t, spec, conBlandas(e), readableChecks(t)).total
+    // La blanda escrita en Habilidades: sin eso no hay «declarada» que medir.
+    // «Ausente» es no tenerla escrita en ningún lado; las otras dos la escriben.
+    const de = (e: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT") => {
+      const t = e === "ABSENT" ? arbol() : { ...arbol(), declaredSkills: ["Trabajo en equipo"] }
+      return scoreResume(t, spec, conBlandas(e, t), readableChecks(t)).total
+    }
     expect(de("DEMONSTRATED")).toBeGreaterThan(de("DECLARED_ONLY"))
     expect(de("DECLARED_ONLY")).toBeGreaterThan(de("ABSENT"))
   })
@@ -1376,7 +1247,7 @@ describe("demostrar una blanda sube el puntaje", () => {
      */
     const t = arbol()
     const sinPedir = scoreResume(t, { ...SPEC, softSignals: [] } as JobSpec, { ...fakeAudit(), softCoverage: [] }, readableChecks(t))
-    const ninguna = scoreResume(t, spec, conBlandas("ABSENT"), readableChecks(t))
+    const ninguna = scoreResume(t, spec, conBlandas("ABSENT", t), readableChecks(t))
     expect(sinPedir.total).toBeGreaterThan(ninguna.total)
   })
 })
@@ -1484,7 +1355,9 @@ describe("una pregunta, una respuesta — lo medido en producción", () => {
   it("las blandas se cuentan contra las que la vacante pide: nunca 5 de 3", () => {
     const tree = buildTree(cvIos)
     const spec = specIos({ softSignals: ["communication", "collaborate", "mentor"] })
-    const demostrada = (signal: string) => ({ signal, status: "DEMONSTRATED" as const, evidenceNodeId: "summary" })
+    // Una viñeta real: el resumen afirma, no demuestra (`softCoverageOf`).
+    const vineta = tree.roles[0].bullets[0].id
+    const demostrada = (signal: string) => ({ signal, status: "DEMONSTRATED" as const, evidenceNodeId: vineta })
     const audit = auditDe(tree, {
       softCoverage: ["mentor", "lead code reviews", "crash rate", "improve app performance", "collaborate with product"].map(demostrada),
     })
@@ -1572,21 +1445,6 @@ describe("una pregunta, una respuesta — lo medido en producción", () => {
     expect(r.delta).toBeGreaterThan(0)
   })
 
-  it("la misma línea dos veces sale por el camino del borrado, y se queda la primera", async () => {
-    const repetida = "Implemented TCA architecture to improve code modularity"
-    const raw: RawResume = {
-      ...RAW,
-      workExperience: [{ ...RAW.workExperience![0], description: `• ${repetida}\n• Otra cosa distinta\n• ${repetida}` }],
-    }
-    const gen = runAnalysis({ raw, jdText: "Buscamos cajera con arqueo", language: "es", resumeId: "cv", model: "m", ai: new CountingAi(), store: new MemoryStore() })
-    let triage: TriageDecision[] = []
-    for (let out = await gen.next(); !out.done; out = await gen.next()) if (out.value.act === "triage") triage = out.value.decisions
-    const tree = buildTree(raw)
-    const [primera, , copia] = tree.roles[0].bullets
-    expect(triage.find((d) => d.bulletId === copia.id)?.verdict).toBe("DROP")
-    expect(triage.find((d) => d.bulletId === primera.id && d.verdict === "DROP")).toBeUndefined()
-  })
-
   it("las viñetas que la auditoría no juzgó se piden otra vez, sólo ésas, en la misma petición", async () => {
     const ai = new CountingAi()
     const vistas: number[] = []
@@ -1600,27 +1458,9 @@ describe("una pregunta, una respuesta — lo medido en producción", () => {
     }
     const { telemetry, acts } = await analyze(ai, new MemoryStore())
     expect(vistas).toEqual([2, 1])
-    expect(telemetry.calls).toBe(4) // vacante, auditoría, la vuelta por la que faltó, triage
+    expect(telemetry.calls).toBe(3) // vacante, auditoría y la vuelta por la que faltó
     const puntaje = acts.find((a) => a.act === "score") as { audit: AuditFacts }
     expect(puntaje.audit.bullets).toHaveLength(2)
-  })
-})
-
-describe("un veredicto sobre una línea no se lleva la pregunta por un requisito", () => {
-  it("la tarjeta «¿lo tenés?» sobrevive aunque su puesto sugerido tenga un KEEP o un DROP", async () => {
-    const ai = new CountingAi()
-    const tree = buildTree(RAW)
-    // El modelo cierra TODAS las líneas: ninguna tarjeta de línea debería quedar,
-    // pero la pregunta por «Inventario» (sin rastro en el CV) sí.
-    ai.triageDecisions = tree.roles[0].bullets.map((b) => ({
-      bulletId: b.id, verdict: "KEEP", reason: "ok", relevance: 1, proposedTopic: null, needsUserConfirm: null, mergeWith: null,
-    }))
-    const { acts } = await analyze(ai, new MemoryStore())
-    const hallazgos = (acts.find((a) => a.act === "findings") as { findings: { remedy: string; subject?: string; nodeId: string }[] }).findings
-    expect(hallazgos.find((f) => f.remedy === "ask")?.subject).toBe("Inventario")
-    // Las tarjetas de LÍNEA sobre viñetas cerradas sí se van: esa regla sigue.
-    const viñetas = new Set(tree.roles[0].bullets.map((b) => b.id))
-    expect(hallazgos.filter((f) => !f.subject && viñetas.has(f.nodeId))).toHaveLength(0)
   })
 })
 
@@ -1678,34 +1518,105 @@ describe("una credencial se tiene: no se redacta como viñeta ni se agrega a Hab
   })
 })
 
-describe("una fusión es la acción de sus dos líneas", () => {
-  it("las dos viñetas del par no reciben además su propia tarjeta de reescritura", async () => {
-    const ai = new CountingAi()
-    const tree = buildTree(RAW)
-    const [a, b] = tree.roles[0].bullets
-    ai.triageDecisions = [{ bulletId: a.id, verdict: "MERGE", reason: "mismo trabajo", relevance: 1, proposedTopic: null, needsUserConfirm: null, mergeWith: b.id }]
-    const { acts } = await analyze(ai, new MemoryStore())
-    const hallazgos = (acts.find((x) => x.act === "findings") as { findings: { nodeId: string; subject?: string }[] }).findings
-    expect(hallazgos.filter((f) => !f.subject && (f.nodeId === a.id || f.nodeId === b.id))).toHaveLength(0)
+
+/**
+ * UN JUICIO SÓLO CAMBIA SI CAMBIÓ EL TEXTO QUE LO SOSTIENE (CEO, 2026-09-28).
+ *
+ * Medido en local: con la misma vacante y dos líneas agregadas, 8 de 42 viñetas
+ * que nadie tocó cambiaron de juicio y las tarjetas pasaron de 3 a 12.
+ */
+describe("lo que no cambió conserva su juicio", () => {
+  const conLineaNueva: RawResume = {
+    ...RAW,
+    workExperience: [{ ...RAW.workExperience![0], description: `${RAW.workExperience![0].description}\n• Controlé el inventario del depósito` }],
+  }
+  const juicio = (tree: ResumeTree, ejes: boolean, cov: AuditFacts["coverage"][number]["status"], cita: string | null): AuditFacts => ({
+    ...fakeAudit(),
+    bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: ejes, hasMethod: ejes })),
+    coverage: [{ skill: "Inventario", requirement: "NICE", status: cov, evidenceNodeId: cita }],
+  })
+
+  it("una viñeta intacta no cambia de ejes aunque el modelo diga otra cosa", () => {
+    const antes = buildTree(RAW)
+    const primero = fijarJuicios(antes, juicio(antes, true, "NOT_FOUND", null), JUICIOS_VACIOS, "jd")
+    const despues = buildTree(conLineaNueva)
+    const segundo = fijarJuicios(despues, juicio(despues, false, "NOT_FOUND", null), primero.juicios, "jd")
+    const vieja = despues.roles[0].bullets[0].id
+    const nueva = despues.roles[0].bullets[2].id
+    expect(segundo.audit.bullets.find((b) => b.id === vieja)?.hasResult).toBe(true)
+    // La línea nueva recibe el juicio de hoy: no hay nada que respetar.
+    expect(segundo.audit.bullets.find((b) => b.id === nueva)?.hasResult).toBe(false)
+  })
+
+  it("un requisito faltante no pasa a implícito citando una línea VIEJA; citando una nueva, sí", () => {
+    const antes = buildTree(RAW)
+    const primero = fijarJuicios(antes, juicio(antes, true, "NOT_FOUND", null), JUICIOS_VACIOS, "jd")
+    const despues = buildTree(conLineaNueva)
+    const vieja = despues.roles[0].bullets[0].id
+    const nueva = despues.roles[0].bullets[2].id
+    expect(fijarJuicios(despues, juicio(despues, true, "IMPLIED", vieja), primero.juicios, "jd").audit.coverage[0].status).toBe("NOT_FOUND")
+    expect(fijarJuicios(despues, juicio(despues, true, "IMPLIED", nueva), primero.juicios, "jd").audit.coverage[0].status).toBe("IMPLIED")
+  })
+
+  it("el análisis guarda los juicios y los respeta en la corrida siguiente", async () => {
+    const store = new MemoryStore()
+    await analyze(new CountingAi(), store)
+    expect([...(store as unknown as { rows: Map<string, unknown> }).rows.keys()].some((k) => k.startsWith("ats3-lock:"))).toBe(true)
   })
 })
 
-describe("sacar una línea no puede llevarse un requisito que el CV sólo dice ahí", () => {
-  it("un DROP sobre la única línea que escribe un término de la vacante se vuelve DEMOTE; sobre otra, sigue siendo DROP", async () => {
-    const raw: RawResume = {
-      ...RAW,
-      workExperience: [{ ...RAW.workExperience![0], description: "• Realicé el arqueo de caja al cierre\n• Atendí a los clientes en la línea de cajas\n• Ordené la góndola de bebidas" }],
+/**
+ * LO QUE UN ATS NECESITA Y EL MOTOR NO MIRABA (CEO, 2026-09-28): los años que
+ * pide el aviso, cómo contactarte, las frases hechas y el largo de cada puesto.
+ * Todo medido por el código sobre el CV: cero llamadas.
+ */
+describe("lo esencial de un ATS, medido por el código", () => {
+  const cv = (roles: { desde: string; hasta: string; lineas?: string[] }[], contacto?: { email: string; phone: string }) =>
+    buildTree({
+      summary: "Cajera con experiencia",
+      workExperience: roles.map((r, i) => ({
+        jobTitle: `Puesto ${i}`, employer: `E${i}`, startDate: r.desde, endDate: r.hasta,
+        description: (r.lineas ?? ["Atendí la caja del turno"]).map((l) => `• ${l}`).join("\n"),
+      })),
       skills: [],
-    }
-    const tree = buildTree(raw)
-    const [arqueo, , gondola] = tree.roles[0].bullets
-    const ai = new CountingAi()
-    const drop = (id: string) => ({ bulletId: id, verdict: "DROP" as const, reason: "débil", relevance: 0, proposedTopic: null, needsUserConfirm: null, mergeWith: null })
-    ai.triageDecisions = [drop(arqueo.id), drop(gondola.id)]
-    const gen = runAnalysis({ raw, jdText: "Buscamos cajera con arqueo de caja y atención al cliente", language: "es", resumeId: "cv", model: "m", ai, store: new MemoryStore() })
-    let triage: TriageDecision[] = []
-    for (let out = await gen.next(); !out.done; out = await gen.next()) if (out.value.act === "triage") triage = out.value.decisions
-    expect(triage.find((d) => d.bulletId === arqueo.id)?.verdict).toBe("DEMOTE")
-    expect(triage.find((d) => d.bulletId === gondola.id)?.verdict).toBe("DROP")
+      ...(contacto ? { contact: contacto } : {}),
+    })
+
+  it("los años no cuentan dos veces lo que se superpone, y un año solo se lee entero", () => {
+    // 2015–2016 (24 meses) y 2016-06 → 2018-05 (se pisan 7 meses): 24 + 17 = 41.
+    const t = cv([{ desde: "2015", hasta: "2016" }, { desde: "2016-06", hasta: "2018-05" }])
+    expect(experienceYears(t)).toBeCloseTo(41 / 12, 5)
+  })
+
+  it("faltan años: suma menos y la tarjeta lo dice, sin botón de IA", () => {
+    const t = cv([{ desde: "2021-01", hasta: "2023-12" }])
+    const spec = { ...SPEC, yearsRequired: 5 }
+    const score = scoreResume(t, spec, fakeAudit(), {})
+    const anios = score.components.find((c) => c.key === "years")!
+    expect(anios.ratio).toBeCloseTo(3 / 5, 5)
+    const f = findingsOf(t, fakeAudit(), score, buildTermIndex(termsOf(spec, t)), spec).find((x) => x.type === "years_short")
+    expect(f?.remedy).toBe("none")
+    expect(f?.detail).toBe("anios:3/5")
+    // Sin años en el aviso no aplica: no suma ni castiga.
+    expect(scoreResume(t, SPEC, fakeAudit(), {}).components.find((c) => c.key === "years")!.denominator).toBe(0)
+  })
+
+  it("el contacto se lee: sin email reconocible falla; sin el dato, no se castiga", () => {
+    const roles = [{ desde: "2021-01", hasta: "2023-12" }]
+    expect(readableChecks(cv(roles, { email: "ana@correo.com", phone: "+591 7694 4986" })).contacto_email).toBe(true)
+    expect(readableChecks(cv(roles, { email: "ana arroba correo", phone: "12" })).contacto_email).toBe(false)
+    expect(readableChecks(cv(roles, { email: "ana@correo.com", phone: "12" })).contacto_telefono).toBe(false)
+    expect(readableChecks(cv(roles)).contacto_email).toBeNull()
+  })
+
+  it("una frase hecha y un puesto con más viñetas de las que se leen tienen su tarjeta", () => {
+    const lineas = ["Team player en el equipo de caja", "Atendí la caja", "Cobré", "Ordené", "Repuse", "Conté", "Cerré"]
+    const t = cv([{ desde: "2021-01", hasta: "2023-12", lineas }])
+    const score = scoreResume(t, SPEC, fakeAudit(), {})
+    const fs = findingsOf(t, fakeAudit(), score, buildTermIndex(termsOf(SPEC, t)), SPEC)
+    expect(fs.some((f) => f.merged.includes("cliche") && f.nodeId === t.roles[0].bullets[0].id)).toBe(true)
+    const largo = fs.find((f) => f.type === "role_too_long")
+    // Con la empresa: tres puestos pueden llamarse igual y la tarjeta tiene que decir cuál.
+    expect(largo?.detail).toBe("largo:Puesto 0 — E0/7/6")
   })
 })
