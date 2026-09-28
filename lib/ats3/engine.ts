@@ -48,7 +48,7 @@ import {
 import { namedCliches } from "@/lib/services/ai/shared/cliches"
 import { isEmptyPhrasing, opensWeakly } from "@/lib/services/ai/shared/empty-phrasing"
 import { afterAccept, BULLETS_PER_ROLE_MAX, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, type Ledger } from "@/lib/ats3/ledger"
-import { checkSuggestion, findNode, isStale, lossNudge, lostContent, loyalty, repairSuggestion, retryNudge, similarNudge, similarTo, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
+import { checkSuggestion, droppedNames, findNode, isStale, lossNudge, lostContent, loyalty, repairSuggestion, retryNudge, similarNudge, similarTo, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
 import { ABIERTO, coverageOf, cvTextOf, deltaOf, experienceYears, FECHA_ABIERTA, gainOf, mes, postingWeights, scoreResume, softCoverageOf, statesQuantity, titleForms, termsOf, titleWritten, type AuditFacts, type ComponentKey, type Mes, type ParseChecks, type Score } from "@/lib/ats3/score"
 // Viven con quien mide; se re-exportan porque el motor es la puerta de siempre.
 export { coverageOf, cvTextOf, termsOf } from "@/lib/ats3/score"
@@ -1569,6 +1569,13 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    */
   const sinTamano = (s: Suggestion) => (req.wantsSize && !statesQuantity(s.text) && s.placeholders.length === 0 ? 1 : 0)
   /**
+   * UN HUECO SIN SALIDA TRABA LA TARJETA. Medido postulando el 2026-09-28: la
+   * propuesta traía «across [n] reviews» sin su versión sin cifra, y la ventana
+   * no podía ofrecer «no tengo ese dato» — el botón de confirmar quedaba
+   * apagado para quien no sabe el número.
+   */
+  const sinVariante = (s: Suggestion) => (!isSummary && s.placeholders.length > 0 && !s.variantWithoutMetric?.trim() ? 1 : 0)
+  /**
    * LA LÍNEA NUEVA NO ABRE CON UNA TAREA. La tarjeta prometía «abrí con lo que
    * hiciste» y la propuesta volvió con «Apoyé el inventario…» (medido el
    * 2026-09-28): la auditoría siguiente la habría vuelto a señalar.
@@ -1640,7 +1647,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     return isSummary ? [...new Set((s.text.match(/\p{L}{3,}ó(?!\p{L})/gu) ?? []).filter((w) => w !== w.toUpperCase()))] : []
   }
   const problemas = (s: Suggestion) =>
-    faltan(s).length + ajenos(s).length + pegadas(s).length + repite(s).length + sinTamano(s) + debil(s) + terceraPersona(s).length + copiaAviso(s).length + sueltas(s).length + ejesFaltan(s).length + comenta(s).length + enumera(s).length + sinPrueba(s).length + fueraDelPuesto(s).length
+    faltan(s).length + ajenos(s).length + pegadas(s).length + repite(s).length + sinTamano(s) + debil(s) + terceraPersona(s).length + copiaAviso(s).length + sueltas(s).length + ejesFaltan(s).length + comenta(s).length + enumera(s).length + sinPrueba(s).length + fueraDelPuesto(s).length + sinVariante(s)
 
   const guardada = (await req.store.read("ats3-fix", key)) as Suggestion | null
   // Sólo una reescritura tiene una línea a la que superar: al agregar, parecerse
@@ -1790,13 +1797,14 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   // Menos es mejor: parecerse a otra línea pesa más que cualquier palabra perdida.
   /** Lo que falta, lo ajeno, lo pegado y el verbo repetido, dicho en UN pedido. */
   const correccion = (s: Suggestion): string => {
-    const [f, a, p, v, t, d, tp, ca, su, ej, co, en_, sp, fp] = [faltan(s), ajenos(s), pegadas(s), repite(s), sinTamano(s), debil(s), terceraPersona(s), copiaAviso(s), sueltas(s), ejesFaltan(s), comenta(s), enumera(s), sinPrueba(s), fueraDelPuesto(s)]
+    const [f, a, p, v, t, d, tp, ca, su, ej, co, en_, sp, fp, sv] = [faltan(s), ajenos(s), pegadas(s), repite(s), sinTamano(s), debil(s), terceraPersona(s), copiaAviso(s), sueltas(s), ejesFaltan(s), comenta(s), enumera(s), sinPrueba(s), fueraDelPuesto(s), sinVariante(s)]
     const en = req.language === "en"
     return [
-      f.length ? (en ? `The card promised to write ${f.map((t) => titleForms(t).map((x) => `"${x}"`).join(" or ")).join(", ")} exactly as the posting writes it, and your text does not.` : `La tarjeta prometió escribir ${f.map((t) => titleForms(t).map((x) => `«${x}»`).join(" o ")).join(", ")} tal cual lo escribe la vacante, y tu texto no lo dice.`) : "",
+      f.length ? (en ? `The card promised to write ${f.map((t) => titleForms(t).map((x) => `"${x}"`).join(" or ")).join(", ")} exactly as the posting writes it, and your text does not. Add it next to what the line already names, dropping nothing.` : `La tarjeta prometió escribir ${f.map((t) => titleForms(t).map((x) => `«${x}»`).join(" o ")).join(", ")} tal cual lo escribe la vacante, y tu texto no lo dice. Agregalo al lado de lo que la línea ya nombra, sin soltar nada.`) : "",
       a.length ? (en ? `The CV never says ${a.map((t) => `"${t}"`).join(", ")}: remove it.` : `El CV no dice ${a.map((t) => `«${t}»`).join(", ")} en ninguna parte: sacalo.`) : "",
       p.length ? (en ? `You pasted a CV bullet verbatim ("${p[0]}"): tell that achievement in the summary's own voice.` : `Pegaste una viñeta tal cual («${p[0]}»): contá ese logro con la voz del resumen.`) : "",
       v.length ? (en ? `Another bullet already opens with "${v[0]}": open with a different verb that says the same.` : `Otra viñeta ya abre con «${v[0]}»: abrí con otro verbo que diga lo mismo.`) : "",
+      sv ? (en ? `Your line carries a slot but no variantWithoutMetric: add the same line without the slot, keeping every figure the original had.` : `Tu línea lleva un hueco y no trae variantWithoutMetric: agregá la misma línea sin el hueco, conservando toda cifra que el original tenía.`) : "",
       fp.length ? (en ? `"${fp[0]}" names nothing this posting asks for and no result: replace it with what the person did that the posting asks, or leave it out.` : `«${fp[0]}» no nombra nada de lo que el aviso pide ni un resultado: cambiala por lo que la persona hizo y el aviso pide, o sacala.`) : "",
       sp.length ? (en ? `The summary has no proof: tell this achievement in the summary's voice, with its result and its figure exactly as the CV states them — "${sp[0]}".` : `El resumen no trae prueba: contá este logro con la voz del resumen, con su resultado y su cifra tal cual los dice el CV — «${sp[0]}».`) : "",
       en_.length ? (en ? `"${en_[0]}" lists posting terms: name them inside what the person did, or leave them out.` : `«${en_[0]}» enumera términos del aviso: nombralos dentro de lo que la persona hizo, o sacalos.`) : "",
@@ -1965,6 +1973,13 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     const sanas = delPuesto.length >= 2 ? delPuesto : sinDefecto
     if (sanas.length >= 1 && sanas.length < oraciones.length) first = { ...first, text: sanas.join(" ") }
   }
+  // Si ni el reintento trajo la versión sin cifra, la salida es la línea tal
+  // como está: «no tengo ese dato» nunca puede quedar sin opción.
+  if (sinVariante(first)) first = { ...first, variantWithoutMetric: original }
+  // Una tecnología o nombre propio que la persona afirma y el reintento siguió
+  // soltando: reemplazarla altera un hecho suyo (medido: «RESTful» → «GraphQL»).
+  const nombresPerdidos = isSummary ? [] : droppedNames(original, first.text)
+  if (nombresPerdidos.length > 0) return { ok: false, verdict: { ok: false, reason: "declined", detail: nombresPerdidos.join(", ") }, calls }
   // Un término prometido que tampoco llegó en el reintento: ver `faltan`.
   if (faltan(first).length > 0) return { ...negada, calls }
   /**

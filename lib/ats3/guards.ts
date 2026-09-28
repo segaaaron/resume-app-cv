@@ -792,6 +792,27 @@ function separarRepetidos(text: string): string {
 }
 
 /**
+ * LOS NOMBRES PROPIOS DEL ORIGINAL QUE LA REESCRITURA SOLTÓ: tecnologías,
+ * productos, siglas (Angular, TypeScript, RESTful, iOS). Cambiar uno por otro
+ * altera un hecho de la persona. La primera palabra de cada oración lleva
+ * mayúscula por gramática, no por nombre, y no cuenta.
+ */
+export function droppedNames(original: string, rewritten: string): string[] {
+  const dicho = normalize(rewritten).split(" ")
+  // Por raíz de cuatro, como el resto del motor: «REST» sigue diciendo lo que
+  // decía «RESTful»; «GraphQL», no. Las siglas cortas se comparan enteras.
+  const sigue = (w: string) => {
+    const x = normalize(w)
+    return dicho.some((d) => d === x || (x.length >= 4 && d.length >= 4 && d.slice(0, 4) === x.slice(0, 4)))
+  }
+  return [...new Set(original
+    .split(/(?<=[.!?])\s+/)
+    .flatMap((o) => o.split(/\s+/).slice(1))
+    .map((w) => w.replace(/[^\p{L}\p{N}+#]/gu, ""))
+    .filter((w) => w.length >= 2 && /\p{Lu}/u.test(w) && !sigue(w)))]
+}
+
+/**
  * LO QUE LA PROPUESTA DEJÓ DE DECIR. No rechaza: el motor lo pide una vez más.
  *
  * Es la pregunta que `drops_content` contestaba con un rechazo, con la misma
@@ -803,6 +824,8 @@ function separarRepetidos(text: string): string {
 export function lostContent(s: Suggestion, ctx: GuardContext): string[] {
   if (!s.changed || !s.text.trim()) return []
   const lost = droppedTerms(ctx.original, s.text, ctx.index)
+  // Y los nombres propios que el CV afirma: ver `droppedNames`.
+  lost.push(...droppedNames(ctx.original, s.text))
   const precargadas = new Set(Object.values(figureSlots(ctx.original, s)).map((c) => c.replace(/^\$/, "")))
   lost.push(...droppedFigures(ctx.original, s.text.replace(HUECO, " ")).filter((c) => !precargadas.has(c)))
   if (ctx.mustKeep?.length) {

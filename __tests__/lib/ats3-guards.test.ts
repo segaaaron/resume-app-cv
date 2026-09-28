@@ -571,3 +571,18 @@ describe("la antigüedad no es una cifra que se pierde", () => {
     expect(droppedFigures("Cajera con 3 años de experiencia", "Cajera con 4 años")).toEqual([])
   })
 })
+
+describe("una reescritura no suelta una tecnología que el CV afirma", () => {
+  it("«RESTful» cambiado por «GraphQL» cuenta como pérdida; la mayúscula de una oración no", async () => {
+    const { lostContent } = await import("@/lib/ats3/guards")
+    const ctx = { original: "Created web apps with Angular and TypeScript, integrating RESTful APIs. Improved load time.", index: buildTermIndex([]), ledger: {} as Ledger }
+    const s = { changed: true, text: "Integrated GraphQL data into web apps using Angular and TypeScript. Improved load time.", placeholders: [] } as unknown as Suggestion
+    const perdido = lostContent(s, ctx as never)
+    expect(perdido).toContain("RESTful")
+    expect(perdido).not.toContain("Improved")
+    expect(perdido).not.toContain("Angular")
+    // «REST» sigue diciendo lo que decía «RESTful»: no es una pérdida.
+    const conRest = { changed: true, text: "Created web apps with Angular and TypeScript, integrating REST APIs. Improved load time.", placeholders: [] } as unknown as Suggestion
+    expect(lostContent(conRest, ctx as never)).not.toContain("RESTful")
+  })
+})

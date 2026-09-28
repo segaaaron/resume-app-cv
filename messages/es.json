@@ -1627,6 +1627,7 @@
       "gloss_fit": "No se ata a esta vacante.",
       "similar_to": "Esta propuesta se parece mucho a una línea que ya tenés: «{line}». Revisala antes de confirmar: podrían quedar dos renglones contando lo mismo.",
       "done_dropped": "Sacada del CV",
+      "done_undo": "Deshacer",
       "done_dismissed": "Descartada por vos",
       "skills_plan_title": "Tus habilidades, en el orden en que esta vacante las lee",
       "skills_plan_sub": "Tenés {total}. Van primero las que este puesto pide y tu CV sostiene, y después las tuyas en tu orden. No se borra ninguna. Las plantillas ATS muestran sólo las primeras {max}, así que el orden decide cuáles se leen.",

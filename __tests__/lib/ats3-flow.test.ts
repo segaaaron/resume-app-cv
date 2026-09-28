@@ -45,7 +45,7 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
 
     let focoVisto: string | undefined
     let sibsVistos = 0
-    const propuestas = ["Mantuve la arquitectura MVVM del proyecto", "Integré Combine con Swift y SwiftUI para sincronizar el estado con la API"]
+    const propuestas = ["Mantuve la arquitectura MVVM del proyecto", "Integré Combine en apps iOS con Swift y SwiftUI para sincronizar el estado con la API"]
     let n = 0
     const ai: AtsAi = {
       parseJob: async () => SPEC, audit: async () => audit,
@@ -671,5 +671,45 @@ describe("una oración con su acción no es una lista de términos", () => {
     })
     expect(pedido).toContain("«También Swift, SwiftUI y Combine.» enumera")
     expect(pedido).not.toContain("«Migré flujos a Swift y SwiftUI.» enumera")
+  })
+})
+
+describe("un hueco de cifra siempre tiene salida", () => {
+  it("sin versión sin cifra, se pide y, si no llega, la salida es la línea original", async () => {
+    const tree = buildTree(RAW)
+    let pedido = ""
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => {
+        pedido = input.nudge ?? pedido
+        return { bulletId: input.bulletId, changed: true, text: "Construí apps iOS con Swift y SwiftUI para [n] equipos de producto", actionVerb: "Construí",
+          keywordsUsed: [], claim: "", metricType: "SCALE", variantWithoutMetric: null, measurableAspect: "equipos", declineBasis: null,
+          placeholders: [{ token: "[n]", type: "SCALE", label: "equipos", hint: "un aproximado alcanza", evidenceNeeded: "", required: true }] } as Suggestion
+      },
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(pedido).toContain("variantWithoutMetric")
+    expect(r.ok && r.suggestion.variantWithoutMetric).toBe("Desarrollé apps iOS con Swift y SwiftUI")
+  })
+})
+
+describe("una tecnología que el CV afirma no se reemplaza por otra", () => {
+  it("si el reintento sigue soltando «RESTful», no se entrega", async () => {
+    const tree = buildTree({ ...RAW, workExperience: [{ ...RAW.workExperience![0], description: "• Integré RESTful APIs en apps iOS con Swift" }] })
+    const ai: AtsAi = {
+      parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
+      rewriteSummary: async () => ({}) as Suggestion,
+      rewriteBullet: async (input) => ({ bulletId: input.bulletId, changed: true, text: "Integré GraphQL en apps iOS con Swift para sincronizar datos del backend", actionVerb: "Integré",
+        keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null }) as Suggestion,
+    }
+    const r = await runRewrite({
+      tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
+    })
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.detail).toContain("RESTful")
   })
 })

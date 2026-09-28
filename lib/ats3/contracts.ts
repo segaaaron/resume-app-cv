@@ -232,7 +232,8 @@ export const PROMPT_VERSION = {
   // p4-19 (2026-09-28): los ejes prometidos viajan estructurados, la persona puede
   // contar el resultado en la tarjeta, y el modelo declara `newBasis` de su línea.
   // p4-20 (CEO, 2026-09-28): la IA escribe resultado, método y términos; sólo las cifras son del candidato.
-  P4: "p4-20", // reescritura de viñeta
+  // p4-21 (2026-09-28): lo que la línea ya nombra se queda; el término prometido va al lado.
+  P4: "p4-21", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.

@@ -1627,6 +1627,7 @@
       "gloss_fit": "It does not tie itself to this job.",
       "similar_to": "This rewrite is very close to a line you already have: “{line}”. Check it before confirming — you could end up with two lines saying the same thing.",
       "done_dropped": "Removed from the CV",
+      "done_undo": "Undo",
       "done_dismissed": "You dismissed it",
       "skills_plan_title": "Your skills, in the order this job reads them",
       "skills_plan_sub": "You have {total}. First go the ones this job asks for and your CV backs, then yours in your order. None is deleted. ATS templates show only the first {max}, so the order decides which ones get read.",

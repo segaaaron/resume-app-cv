@@ -672,6 +672,30 @@ describe("el puntaje se mueve mientras trabajás", () => {
     expect(texto()).toContain("done_dismissed")
   })
 
+  it("«Deshacer» devuelve la línea a lo que decía antes", async () => {
+    const conRegistro = {
+      ...ACTS[2],
+      resolved: [{
+        findingId: "viejo1", nodeId: NODE_ID, nodeHashAtResolution: "h",
+        resolvedBy: "AI_SUGGESTION", resolvedAt: "2026-09-08T10:00:00.000Z",
+        title: "Le falta la cifra", kind: "applied",
+        before: "Atendí a los clientes", after: "Atendí a 60 clientes por turno",
+      }],
+    }
+    ;(storeState.sectionData.workExperience[0] as { description: string }).description =
+      "• Atendí a 60 clientes por turno\n• Ordené la góndola al cierre"
+    apiFetch.mockResolvedValueOnce(ndjsonResponse([ACTS[0], ACTS[1], conRegistro]))
+    await mount()
+    await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
+    await click("Analizar compatibilidad")
+    await click("Arreglar con Tailor")
+    updateSectionData.mockClear()
+    await click("done_undo")
+    const escrito = updateSectionData.mock.calls.find((c) => c[0] === "workExperience")
+    expect((escrito![1] as { description: string }[])[0].description).toContain("Atendí a los clientes")
+    expect((escrito![1] as { description: string }[])[0].description).not.toContain("60 clientes")
+  })
+
   it("«Ahora dice» no se muestra si el CV no lo dice: se aplicó y no se guardó", async () => {
     const conRegistro = {
       ...ACTS[2],

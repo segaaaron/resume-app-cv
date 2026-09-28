@@ -556,7 +556,9 @@ export default function TailorPanel({
               Una tarjeta que se esfuma al resolverla le saca al usuario la
               confirmación de que su clic hizo algo — y con ella el único lugar
               donde puede releer lo que se escribió en su CV. */}
-          {visiblesResueltas.map((h) => <DoneCard key={h.id} entry={h} t={t} ta={ta} />)}
+          {visiblesResueltas.map((h) => (
+            <DoneCard key={h.id} entry={h} t={t} ta={ta} onUndo={h.kind === "applied" && h.before && h.after ? () => a.undo(h.before!, h.after!) : undefined} />
+          ))}
 
           {/* UN FILTRO QUE NO MUESTRA NADA TIENE QUE DECIRLO.
               La condición miraba `done` en vez de mirar lo que ESTA vista pinta:
@@ -962,8 +964,11 @@ function DoneCard({
   entry,
   t,
   ta,
+  onUndo,
 }: {
   entry: DoneEntry
+  /** Vuelve la línea a su «antes». Sólo lo aplicado tiene vuelta atrás. */
+  onUndo?: () => void
   t: (k: string, v?: Record<string, string | number>) => string
   ta: (k: string, v?: Record<string, string | number>) => string
 }) {
@@ -1011,6 +1016,13 @@ function DoneCard({
                 {entry.before}
               </Note>
             )
+          )}
+          {onUndo && (
+            <div className="mt-2.5 flex justify-end">
+              <Btn variant="quiet" onClick={onUndo}>
+                {t("done_undo")}
+              </Btn>
+            </div>
           )}
         </div>
       </div>

@@ -21,7 +21,7 @@ import { applySuggestion, buildTree, coverageOf, termsOf, writeBack, writeInto, 
 import { openLedger } from "@/lib/ats3/ledger"
 import { findNode } from "@/lib/ats3/guards"
 import { buildTermIndex, detailParts, nodeHash, normalize } from "@/lib/ats3/contracts"
-import type { AnchoredSuggestion, Axis, Finding, JobSpec, Resolution } from "@/lib/ats3/contracts"
+import type { AnchoredSuggestion, Axis, Finding, JobSpec, Resolution, ResumeTree } from "@/lib/ats3/contracts"
 import { scoreResume, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 export type FailureReason = string
@@ -485,6 +485,55 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * los huecos — NUNCA la propuesta cruda del modelo. Aplicar `preview` cuando
    * el usuario ya lo editó es escribir algo que nadie aceptó.
    */
+  /**
+   * ESCRIBE UN ÁRBOL EN EL CV: el resumen o los puestos, nunca todo. Un solo
+   * lugar para aplicar y para deshacer, así las dos cosas escriben igual.
+   */
+  const persistir = useCallback(
+    (nuevo: ResumeTree, raw: RawResume, nodeId: string) => {
+      const written = writeBack(nuevo, raw)
+      if (nodeId === "summary") updateSectionData("summary", written.summary ?? "")
+      else {
+        // Sólo los puestos: escribir el CV entero pisaría lo que el usuario
+        // tenga a medio tipear en cualquier otra sección.
+        const roles: WorkExperienceItem[] = (sectionData.workExperience ?? []).map((role, i) => ({
+          ...role,
+          description: written.workExperience?.[i]?.description ?? role.description,
+        }))
+        updateSectionData("workExperience", roles)
+      }
+    },
+    [sectionData.workExperience, updateSectionData],
+  )
+
+  /**
+   * DESHACER LO APLICADO (2026-09-28). «Hechas» enseñaba el antes/después y no
+   * tenía vuelta atrás: la única salida era editar la línea a mano. Se busca la
+   * línea que HOY dice el «después» —por texto, porque el id sale del texto— y
+   * vuelve al «antes». Al cambiar, «Hechas» la retira sola (se deriva del CV
+   * vivo) y el registro deja de suprimir el hallazgo: vuelve en el próximo
+   * análisis, medido sobre lo que quedó.
+   */
+  const undo = useCallback(
+    (before: string, after: string): boolean => {
+      const raw = payloadResume()
+      const tree = buildTree(raw)
+      const nodo = [tree.summary, ...tree.roles.flatMap((r) => r.bullets)].find((n) => n.text.trim() === after.trim())
+      if (!nodo || !before.trim()) {
+        setError("stale_node")
+        return false
+      }
+      const nuevo = writeInto(tree, nodo.id, before)
+      persistir(nuevo, raw, nodo.id === tree.summary.id ? "summary" : nodo.id)
+      if (state.spec && state.audit) {
+        const puntaje = scoreResume(nuevo, state.spec, state.audit, state.checks, state.weights)
+        setState((st) => ({ ...st, score: puntaje }))
+      }
+      return true
+    },
+    [payloadResume, persistir, state.audit, state.checks, state.spec, state.weights],
+  )
+
   const accept = useCallback(
     (s: AnchoredSuggestion, finalText: string, registro?: DoneRecord) => {
       const raw = payloadResume()
@@ -530,18 +579,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
 
       // Sin los insumos de la medición se escribe igual: el CV del usuario nunca
       // depende de que hayamos podido recalcular su puntaje.
-      const escrito = writeInto(tree, s.bulletId, finalText)
-      const written = writeBack(medido ? medido.tree : escrito, raw)
-      if (s.bulletId === "summary") updateSectionData("summary", written.summary ?? "")
-      else {
-        // Sólo los puestos: escribir el CV entero pisaría lo que el usuario
-        // tenga a medio tipear en cualquier otra sección.
-        const roles: WorkExperienceItem[] = (sectionData.workExperience ?? []).map((role, i) => ({
-          ...role,
-          description: written.workExperience?.[i]?.description ?? role.description,
-        }))
-        updateSectionData("workExperience", roles)
-      }
+      persistir(medido ? medido.tree : writeInto(tree, s.bulletId, finalText), raw, s.bulletId)
       setPending(null)
       registrarResuelto(s.bulletId, finalText, "AI_SUGGESTION", pendingFinding ?? undefined, registro)
       /**
@@ -585,7 +623,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         return olvidar(cerrada, { nodeId: s.bulletId })
       })
     },
-    [payloadResume, pendingFinding, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, state.weights, updateSectionData],
+    [payloadResume, pendingFinding, persistir, registrarResuelto, state.audit, state.checks, state.covered, state.spec, state.weights],
   )
 
   /**
@@ -749,6 +787,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     tree,
     weights: state.weights,
     accept,
+    undo,
     dismiss,
     textOf,
     previewGain,
