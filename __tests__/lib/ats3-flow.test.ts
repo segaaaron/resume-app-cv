@@ -83,92 +83,6 @@ describe("de punta a punta: la tarjeta, el modelo, el guard y el CV", () => {
   })
 })
 
-/**
- * ESCRIBIR UNA LÍNEA NUEVA (CEO, 2026-09-09).
- *
- * «Un máximo de 6 viñetas por experiencia y 3 como mínimo.» El máximo ya lo
- * sabía hacer el motor; el mínimo no, porque no sabía CREAR una línea — y
- * emitir «te faltan dos» sin un botón es el reproche que este panel no hace.
- *
- * Lo que hace honesto el caso: la línea no sale de la nada. El usuario confirma
- * el tema ANTES de que se pida nada, y ese tema es el original contra el que los
- * guards juzgan la redacción. El modelo redacta lo que la persona dijo que hizo.
- */
-describe("agregar una viñeta a un puesto que tiene pocas", () => {
-  const arbol = () =>
-    buildTree({
-      summary: "Secretaria",
-      workExperience: [{
-        jobTitle: "Secretaria", employer: "Consultorio", startDate: "2021-03", endDate: "2024-06",
-        description: "• Gestioné la agenda del consultorio",
-      }],
-      skills: [],
-    })
-
-  const motor = (texto: string): AtsAi => ({
-    parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
-    rewriteSummary: async () => ({}) as Suggestion,
-    rewriteBullet: async (input) => ({
-      bulletId: input.bulletId, changed: true, text: texto, actionVerb: texto.split(" ")[0],
-      keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null,
-      measurableAspect: null, declineBasis: null,
-    }) as Suggestion,
-  })
-
-  const pedir = async (texto: string, tema = "Atendí el teléfono y derivé las consultas") => {
-    const tree = arbol()
-    const r = await runRewrite({
-      tree, nodeId: tree.roles[0].bullets[0].id, addToRole: tree.roles[0].id, focus: tema,
-      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
-      language: "es", model: "m", jdKey: "jd", ai: motor(texto), store: new Store(),
-    })
-    return { tree, r }
-  }
-
-  it("sin el tema que el usuario confirmó NO se pide nada al modelo", async () => {
-    const tree = arbol()
-    const r = await runRewrite({
-      tree, nodeId: tree.roles[0].bullets[0].id, addToRole: tree.roles[0].id,
-      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
-      language: "es", model: "m", jdKey: "jd", ai: motor("x"), store: new Store(),
-    })
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.calls).toBe(0)
-  })
-
-  it("si la redacción se va del tema que él confirmó, se pide UNA vez más y llega igual", async () => {
-    const tree = arbol()
-    const ai = motor("Coordiné reuniones con proveedores internacionales")
-    const nudges: string[] = []
-    const base = ai.rewriteBullet
-    ai.rewriteBullet = async (input) => {
-      nudges.push(input.nudge ?? "")
-      return base(input)
-    }
-    const r = await runRewrite({
-      tree, nodeId: tree.roles[0].bullets[0].id, addToRole: tree.roles[0].id, focus: "Atendí el teléfono y derivé las consultas",
-      spec: SPEC, ledger: openLedger(tree, SPEC, new Set()), index: buildTermIndex(termsOf(SPEC, tree)),
-      language: "es", model: "m", jdKey: "jd", ai, store: new Store(),
-    })
-    expect(nudges).toHaveLength(2)
-    expect(nudges[1]).toMatch(/tel[eé]fono/)
-    expect(r.ok).toBe(true)
-  })
-
-  it("se AGREGA al final, sin tocar la que ya estaba", async () => {
-    const { tree, r } = await pedir("Atendí el teléfono del consultorio y derivé las consultas al profesional")
-    expect(r.ok).toBe(true)
-    if (!r.ok) return
-    expect(r.suggestion.addToRole).toBe(tree.roles[0].id)
-    const ap = applySuggestion(tree, r.suggestion, SPEC, {
-      bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: [], softCoverage: [],    } as unknown as AuditFacts, readableChecks(tree), openLedger(tree, SPEC, new Set()), {})
-    expect(ap.ok).toBe(true)
-    expect(ap.tree.roles[0].bullets).toHaveLength(2)
-    expect(ap.tree.roles[0].bullets[0].text).toBe("Gestioné la agenda del consultorio")
-    expect(ap.tree.roles[0].bullets[1].text).toContain("Atendí el teléfono")
-  })
-})
 
 
 /**
@@ -386,7 +300,7 @@ describe("una promesa incumplida no se entrega como si cerrara la tarjeta", () =
   })
 })
 
-describe("los ejes prometidos: el resultado que sólo la persona puede dar", () => {
+describe("los ejes prometidos: la IA los escribe, la persona puede aportar contexto", () => {
   const pedir = async (newBasis: { hasActionVerb: boolean; hasResult: boolean; hasMethod: boolean } | null, told?: string) => {
     const tree = buildTree(RAW)
     let primera: { axes?: string[]; told?: string } = {}
@@ -411,10 +325,10 @@ describe("los ejes prometidos: el resultado que sólo la persona puede dar", () 
     const { primera } = await pedir({ hasActionVerb: true, hasResult: true, hasMethod: true }, "bajó la fila")
     expect(primera).toEqual({ axes: ["resultado"], told: "bajó la fila" })
   })
-  it("sin el dato de la persona no se llama al modelo: se le pide", async () => {
-    const { r } = await pedir({ hasActionVerb: true, hasResult: true, hasMethod: true })
-    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("needs_fact")
-    expect(r.calls).toBe(0)
+  it("sin el dato de la persona la IA escribe igual el resultado (CEO, 2026-09-28)", async () => {
+    const { r, primera } = await pedir({ hasActionVerb: true, hasResult: true, hasMethod: true })
+    expect(r.ok).toBe(true)
+    expect(primera.axes).toEqual(["resultado"])
   })
   it("con el dato, una línea que declara no tener el resultado es una negativa", async () => {
     const { r } = await pedir({ hasActionVerb: true, hasResult: false, hasMethod: true }, "bajó la fila")
@@ -444,7 +358,7 @@ describe("una declaración de ejes que el texto desmiente no vale", () => {
       tree, nodeId: tree.roles[0].bullets[1].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
       index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(), axes: ["método"],
     })
-    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("needs_fact")
+    expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("declined")
   })
 })
 

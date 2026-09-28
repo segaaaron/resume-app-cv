@@ -126,8 +126,6 @@ const rewriteSchema = z.object({
   axes: z.array(z.enum(["verbo", "resultado", "método"])).max(3).optional().catch(undefined),
   /** Lo que la persona contó en la tarjeta: va al prompt, así que se acota. */
   told: z.string().max(300).optional().catch(undefined),
-  /** El puesto al que se agrega una línea NUEVA, con el tema en `focus`. */
-  addToRole: z.string().max(64).optional().catch(undefined),
 })
 
 /**
@@ -371,7 +369,6 @@ export async function POST(req: Request) {
         wantsSize: d.wantsSize,
         axes: d.axes,
         told: d.told,
-        addToRole: d.addToRole,
         ai,
         store,
       })

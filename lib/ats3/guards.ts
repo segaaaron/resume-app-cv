@@ -47,7 +47,6 @@ export type GuardReason =
   | "stale" // se pensó sobre una versión que ya no existe
   | "empty" // no hay texto que entregar
   | "declined" // la tarjeta prometía algo y el modelo no encontró cómo escribirlo sin agregar lo que el CV no dice
-  | "needs_fact" // la tarjeta prometía un eje (resultado, método) que sólo la persona puede contar
   /**
    * ── ACÁ VIVÍAN CUATRO RECHAZOS MÁS (CEO, 2026-09-11) ───────────────────────
    *
@@ -572,13 +571,11 @@ export function retryNudge(v: GuardVerdict, language: "es" | "en"): string {
     stale: `La línea cambió desde que la leíste.`,
     empty: `Devolviste una reescritura vacía.`,
     declined: `Declinaste una línea que todavía tiene algo que arreglar.`,
-    needs_fact: `A tu línea le falta un eje que no se puede escribir sin un dato de la persona.`,
   }
   const en: Record<GuardReason, string> = {
     stale: `The line changed since you read it.`,
     empty: `You returned an empty rewrite.`,
     declined: `You declined a line that still has something to fix.`,
-    needs_fact: `Your line lacks an axis that cannot be written without a fact from the person.`,
   }
   return (language === "en" ? en : es)[v.reason]
 }

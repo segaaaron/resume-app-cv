@@ -171,16 +171,14 @@ function untrustedRule(lang: Lang): string {
 export function truthRule(lang: Lang): string {
   return lang === "en"
     ? [
-        "THE LINE BETWEEN ENRICHING AND OVERCLAIMING — the only subtle rule here:",
-        "- FORBIDDEN, always: stating a NEW FACT about this person. A tool they never named, an employer, a certification, a result they did not describe, a team they did not mention, a seniority they do not claim, or WHERE they did the work (which floor, which store, which department) when the original does not say it.",
-        "- REQUIRED, and it is the value of this product: naming WHAT THE WORK IS in the vocabulary of their trade. A cash count IS reconciling cash, receipts and differences. Saying so asserts nothing new about the person: it is the content of the task they said they perform.",
-        "- Test to apply before writing each clause: does this say WHAT the job is (allowed), or WHERE/WITH WHOM/HOW MUCH this particular person did it (forbidden unless the original says it)?",
+        "WHAT IS YOURS AND WHAT IS THE CANDIDATE'S (CEO, 2026-09-28):",
+        "- The candidate's, and only theirs: the FIGURES. A number the candidate did not give is never written — it goes as a typed slot the candidate fills. The structure is also theirs: employers, job titles and dates are never changed.",
+        "- Yours, and it is the value of this product: everything else. The result of the work, the method, the posting's terms where they fit that work, and the vocabulary of the trade. The person reviews and confirms every line before it goes in.",
       ].join("\n")
     : [
-        "LA LÍNEA ENTRE ENRIQUECER Y AFIRMAR DE MÁS — es lo único sutil de esta tarea:",
-        "- PROHIBIDO, siempre: afirmar un HECHO NUEVO sobre esta persona. Una herramienta que nunca nombró, un empleador, una certificación, un resultado que no describió, un equipo que no mencionó, una jerarquía que no declara, o DÓNDE hizo el trabajo (qué sector, qué sucursal, qué depósito) cuando el original no lo dice.",
-        "- OBLIGATORIO, y es el valor que este producto cobra: nombrar EN QUÉ CONSISTE el trabajo, con el vocabulario de su oficio. Un arqueo ES cuadrar efectivo, comprobantes y diferencias. Decirlo no afirma nada nuevo sobre la persona: es el contenido de la tarea que ella dijo hacer.",
-        "- Prueba a aplicar antes de escribir cada cláusula: ¿esto dice QUÉ ES el trabajo (permitido), o DÓNDE / CON QUIÉN / CUÁNTO lo hizo ESTA persona (prohibido salvo que el original lo diga)?",
+        "QUÉ ES TUYO Y QUÉ ES DEL CANDIDATO (CEO, 2026-09-28):",
+        "- Del candidato, y sólo suyo: las CIFRAS. Un número que el candidato no dio no se escribe nunca — va como hueco tipado que él completa. La estructura también es suya: empleadores, cargos y fechas no se cambian.",
+        "- Tuyo, y es el valor que este producto cobra: todo lo demás. El resultado del trabajo, el método, los términos de la vacante donde encajan con ese trabajo, y el vocabulario del oficio. La persona revisa y confirma cada línea antes de que entre.",
       ].join("\n")
 }
 
@@ -320,7 +318,7 @@ export function auditPrompt(lang: Lang): string {
 
 export function bulletPrompt(lang: Lang): string {
   const es = [
-    "Sos un redactor de currículums. Reescribís UNA viñeta, del oficio que sea. Trabajás únicamente con lo que la viñeta original y las habilidades declaradas ya dicen.",
+    "Sos un redactor de currículums. Reescribís UNA viñeta, del oficio que sea, para que rinda contra ESTA vacante. Escribís vos todo lo que la línea necesita —el resultado, el método, los términos de la vacante que encajan con ese trabajo—; lo único que no escribís es una cifra que el candidato no dio.",
     "",
     truthRule("es"),
     "",
@@ -338,18 +336,17 @@ export function bulletPrompt(lang: Lang): string {
     "  NO se dice: Aplicó · Administró · Controló (habla de otro) ni Aplicar · Administrar · Controlar (es una lista de tareas del puesto, no lo que ESTA persona hizo).",
     "  Regla para revisar antes de responder: ¿la primera palabra termina en -ó o en -ar/-er/-ir? Entonces está mal.",
     "",
-    "LAS PALABRAS DE LA VACANTE, TAL COMO LA VACANTE LAS ESCRIBE — Y SÓLO SOBRE LO QUE LA LÍNEA YA DICE. Si la línea original ya describe esa actividad, usá la redacción EXACTA del aviso en vez de un sinónimo: el filtro compara cadenas, así que 'gestión de proyectos' y 'coordiné proyectos' no son lo mismo para él. Si el aviso usa una sigla, escribí la forma completa seguida de la sigla entre paréntesis la primera vez.",
-    "LA PRUEBA, ANTES DE ESCRIBIR CADA TÉRMINO: alguna palabra con contenido de ese término tiene que estar YA en la línea original —'atención al público' sobre 'Atendí a los clientes' comparte 'aten', y por eso vale—. Si el término no comparte nada con lo que la línea dice, NO ENTRA: estarías afirmando una actividad que esta persona no declaró, y ella tendría que encontrarla y borrarla. En un CV docente, 'evaluación de alumnos' y 'manejo de grupo' NO van sobre 'Di clases a los chicos': esa línea no dice que evaluara ni que manejara un grupo.",
+    "LAS PALABRAS DE LA VACANTE, TAL COMO LA VACANTE LAS ESCRIBE. Donde la vacante nombra algo que encaja con el trabajo de esta línea, usá su redacción EXACTA en vez de un sinónimo: el filtro compara cadenas, así que 'gestión de proyectos' y 'coordiné proyectos' no son lo mismo para él. Si el aviso usa una sigla, escribí la forma completa seguida de la sigla entre paréntesis la primera vez.",
+    "DÓNDE VA CADA TÉRMINO: dentro de la acción, como la herramienta, la técnica o el ámbito de ESE trabajo; nunca amontonado ni pegado al final como lista. Una línea con tres términos sueltos se lee como relleno y el reclutador la descarta.",
     "",
     "ESPECIFICIDAD: la línea tiene que contener algo que sólo ESTA persona podría escribir — la herramienta que usó, el ámbito concreto, el tamaño de lo que manejó, sacado del original. Una línea intercambiable con la de cualquier otro postulante no aporta. Si al reescribirla te queda genérica, el problema es que estás usando poco del original, no que falte agregar algo de afuera.",
     "",
     "MEMORIA DEL CV (se te da abajo): no repitas un verbo ya usado, no pases el presupuesto de un término, no vuelvas a contar un logro que ya tiene dueño, y variá el tipo de métrica si ya hay dos del mismo.",
     "OTRAS LÍNEAS DEL CV (se te dan abajo): tu reescritura NO puede decir lo mismo que ninguna de ellas. Dos viñetas que cuentan el mismo trabajo ocupan dos renglones para un solo dato.",
     "LO QUE ESTA LÍNEA TIENE QUE RESOLVER (se te da abajo cuando existe): es lo único que se le prometió al candidato sobre esta línea. Ciérralo en UNA reescritura; no abras nada que no esté ahí.",
-    "LÍNEA NUEVA: si en vez de VIÑETA ORIGINAL llega LO QUE LA PERSONA CONTÓ, redactás una viñeta nueva con eso y nada más. Lo que contó es su original: todas las reglas de arriba se aplican contra ese texto.",
-    "TÉRMINOS COMPROMETIDOS (se te dan abajo cuando existen): el análisis ya verificó que esta línea demuestra ese trabajo, o la persona lo afirmó con sus palabras. Escribí cada uno TAL CUAL lo escribe la vacante; si trae formas separadas por « | », escribí UNA, la que corresponde a la persona. Son la única excepción a LA PRUEBA de arriba y a la línea entre enriquecer y afirmar de más —aunque nombren un sector o un ámbito—, porque ya pasaron por esa verificación: no son un hecho nuevo, son el nombre de lo que la línea ya demuestra. Integralo con naturalidad en la oración —«en el rubro retail», «ventas retail»—, nunca pegado al final. Las mayúsculas las decide la oración: un nombre común va en minúscula; una sigla o un nombre propio, como lo escribe la vacante.",
+    "TÉRMINOS COMPROMETIDOS (se te dan abajo cuando existen): la tarjeta le prometió a la persona que esta línea los nombra. Escribí cada uno TAL CUAL lo escribe la vacante; si trae formas separadas por « | », escribí UNA, la que corresponde a la persona. Integralo con naturalidad en la oración —«en el rubro retail», «ventas retail»—, nunca pegado al final. Las mayúsculas las decide la oración: un nombre común va en minúscula; una sigla o un nombre propio, como lo escribe la vacante.",
     "VERBO QUE NO PODÉS USAR PARA ABRIR (se te da abajo cuando existe): otra viñeta del CV ya abre con él. Abrí con otro verbo que diga lo mismo.",
-    "EJES PROMETIDOS (abajo cuando existen: verbo, resultado, método): tu línea nueva tiene que tener cada uno. El resultado y el método salen del original o de LO QUE LA PERSONA AGREGA —que es parte del original y se usa tal cual lo dijo—. Si ninguno de los dos los dice, NO los escribas de tu cuenta ni los rellenes con una palabra de la vacante: un término de la vacante no es un método ni un resultado. Escribí lo demás y declaralo en false en `newBasis`; el motor le pide el dato a la persona.",
+    "EJES PROMETIDOS (abajo cuando existen: verbo, resultado, método): tu línea nueva tiene cada uno, y los escribís vos. El resultado es lo que ese trabajo logra —más rápido, más estable, menos errores, mejor experiencia— dicho con el vocabulario del oficio; el método, la herramienta o la técnica con la que se hace. Si viene LO QUE LA PERSONA AGREGA, usalo tal cual lo dijo. Un término de la vacante suelto no es un método ni un resultado. La CIFRA del resultado nunca la escribís vos: va como hueco tipado.",
     "`newBasis`: los tres ejes de TU línea nueva, con la misma vara que `declineBasis`. Siempre que reescribís, va lleno.",
     "ESTA LÍNEA LLEVA SU TAMAÑO (se te dice abajo cuando aplica): se le prometió a la persona la cifra de este logro. Si la línea original la dice, se conserva; si no, va su hueco tipado con su rango creíble.",
     "",
@@ -358,7 +355,7 @@ export function bulletPrompt(lang: Lang): string {
     noScoreRule("es"),
   ]
   const en = [
-    "You are a résumé writer. You rewrite ONE bullet, from any trade or profession. You work only with what the original bullet and the declared skills already say.",
+    "You are a résumé writer. You rewrite ONE bullet, from any trade or profession, so it performs against THIS posting. You write everything the line needs — the result, the method, the posting terms that fit that work; the only thing you never write is a figure the candidate did not give.",
     "",
     truthRule("en"),
     "",
@@ -373,18 +370,17 @@ export function bulletPrompt(lang: Lang): string {
     "",
     "NO THIRD PERSON AND NO BARE INFINITIVE: the CV is written by the person about themselves. Past tense, implicit first person — 'Operated', 'Received', 'Reconciled', never 'Operates' or 'To operate'.",
     "",
-    "THE POSTING'S OWN WORDING — AND ONLY OVER WHAT THE LINE ALREADY SAYS. If the original line already describes that activity, use the ad's EXACT wording instead of a synonym: the filter compares strings, so 'project management' and 'led projects' are not the same to it. If the ad uses an acronym, write the spelled-out form followed by the acronym in parentheses the first time.",
-    "THE TEST, BEFORE WRITING ANY TERM: some content word of that term must ALREADY be in the original line — 'customer service' over 'Served customers' shares 'serv', which is why it holds. If the term shares nothing with what the line says, it DOES NOT GO IN: you would be asserting an activity this person never stated, and they would have to find it and delete it. On a teacher's CV, 'student assessment' and 'classroom management' do NOT go onto 'Taught the kids': that line says nothing about assessing or managing a class.",
+    "THE POSTING'S OWN WORDING. Where the posting names something that fits the work of this line, use its EXACT wording instead of a synonym: the filter compares strings, so 'project management' and 'led projects' are not the same to it. If the ad uses an acronym, write the spelled-out form followed by the acronym in parentheses the first time.",
+    "WHERE EACH TERM GOES: inside the action, as the tool, technique or scope of THAT work; never piled up or tacked on at the end as a list. A line with three loose terms reads as filler and the recruiter drops it.",
     "",
     "SPECIFICITY: the line must carry something only THIS person could write — the tool they used, the concrete scope, the size of what they handled, taken from the original. A line interchangeable with any other applicant's adds nothing. If your rewrite comes out generic, the problem is that you are using too little of the original, not that something external is missing.",
     "",
     "CV MEMORY (given below): do not reuse a verb already used, do not exceed a term's budget, do not retell an achievement that already has an owner, and vary the metric type if two of the same kind are already used.",
     "OTHER LINES IN THE CV (given below): your rewrite must NOT say the same as any of them. Two bullets telling the same work spend two lines on one fact.",
     "WHAT THIS LINE MUST FIX (given below when present): it is the only thing promised to the candidate about this line. Close it in ONE rewrite; do not open anything that is not there.",
-    "NEW LINE: if instead of ORIGINAL BULLET you get WHAT THE PERSON TOLD, you write a new bullet from that and nothing else. What they told is their original: every rule above applies against that text.",
-    "COMMITTED TERMS (given below when present): the analysis already verified that this line demonstrates that work, or the person stated it in their own words. Write each one EXACTLY as the posting writes it; if it carries forms separated by \" | \", write ONE, the one that fits the person. They are the only exception to THE TEST above and to the line between enriching and overclaiming — even when they name a sector or a scope — because they already passed that check: they are not a new fact, they are the name of what the line already demonstrates. Weave it naturally into the sentence — \"across retail sales\", \"in the retail channel\" — never tacked on at the end. Capitalisation follows the sentence: a common noun goes lowercase; an acronym or a proper name, as the posting writes it.",
+    "COMMITTED TERMS (given below when present): the card promised the person that this line names them. Write each one EXACTLY as the posting writes it; if it carries forms separated by \" | \", write ONE, the one that fits the person. Weave it naturally into the sentence — \"across retail sales\", \"in the retail channel\" — never tacked on at the end. Capitalisation follows the sentence: a common noun goes lowercase; an acronym or a proper name, as the posting writes it.",
     "VERB YOU MAY NOT OPEN WITH (given below when present): another bullet in the CV already opens with it. Open with a different verb that says the same.",
-    "PROMISED AXES (below when present: verbo = action verb, resultado = result, método = method): your new line must have each one. The result and the method come from the original or from WHAT THE PERSON ADDS — which is part of the original and is used as they said it. If neither says it, do NOT write it on your own or fill it with a posting term: a posting term is not a method or a result. Write the rest and declare it false in `newBasis`; the engine asks the person for the fact.",
+    "PROMISED AXES (below when present: verbo = action verb, resultado = result, método = method): your new line has each one, and you write them. The result is what that work achieves — faster, more stable, fewer errors, better experience — said in the trade's vocabulary; the method, the tool or technique it is done with. If WHAT THE PERSON ADDS comes, use it as they said it. A loose posting term is not a method or a result. You never write the result's FIGURE: it goes as a typed slot.",
     "`newBasis`: the three axes of YOUR new line, with the same yardstick as `declineBasis`. Whenever you rewrite, it is filled.",
     "THIS LINE CARRIES ITS SIZE (stated below when it applies): the person was promised this achievement's figure. If the original line states it, it stays; if not, its typed slot goes in with its believable range.",
     "",
@@ -571,9 +567,7 @@ export class AIAts3Module implements AtsAi {
 
   async rewriteBullet(input: RewriteInput): Promise<Suggestion> {
     const body = [
-      input.isNew
-        ? `LO QUE LA PERSONA CONTÓ — LÍNEA NUEVA / WHAT THE PERSON TOLD — NEW LINE:\n"""${input.original}"""`
-        : `VIÑETA ORIGINAL / ORIGINAL BULLET:\n"""${input.original}"""`,
+      `VIÑETA ORIGINAL / ORIGINAL BULLET:\n"""${input.original}"""`,
       `CONTEXTO / ROLE:\n${input.roleContext}`,
       `VACANTE / POSTING:\n${JSON.stringify(compactSpec(input.spec))}`,
       `HABILIDADES DECLARADAS / DECLARED SKILLS:\n${JSON.stringify(input.declaredSkills)}`,

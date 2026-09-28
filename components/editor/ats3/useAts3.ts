@@ -17,7 +17,7 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAtsPostingStore } from "@/stores/atsPostingStore"
-import { appendBullet, applySuggestion, buildTree, coverageOf, termsOf, writeBack, writeInto, type RawResume } from "@/lib/ats3/engine"
+import { applySuggestion, buildTree, coverageOf, termsOf, writeBack, writeInto, type RawResume } from "@/lib/ats3/engine"
 import { openLedger } from "@/lib/ats3/ledger"
 import { findNode } from "@/lib/ats3/guards"
 import { buildTermIndex, detailParts, nodeHash, normalize } from "@/lib/ats3/contracts"
@@ -43,7 +43,6 @@ export type FailureReason = string
  */
 export interface Promesa {
   focus?: string
-  addToRole?: string
   mustWrite?: string[]
   avoidOpener?: string
   wantsSize?: boolean
@@ -345,7 +344,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      * Se dice una vez, en un solo lugar, y los dos leen lo mismo.
      */
     async (nodeId: string, findingId: string | undefined, promesa: Promesa = {}) => {
-      const { focus, addToRole, mustWrite, avoidOpener, wantsSize, axes, told } = promesa
+      const { focus, mustWrite, avoidOpener, wantsSize, axes, told } = promesa
       if (!state.spec) return
       setBusyNode(nodeId)
       setPendingFinding(findingId ?? null)
@@ -375,7 +374,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
              */
             covered: state.covered,
             focus,
-            addToRole,
             mustWrite,
             avoidOpener,
             wantsSize,
@@ -501,13 +499,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * documento. Silencio es la peor respuesta posible: el usuario cree que su
        * CV cambió y descarga un PDF que no cambió.
        */
-      // Una línea NUEVA no tiene nodo que buscar: lo que tiene que existir es el
-      // puesto donde se escribe. Si el usuario lo borró entre pedir y aceptar,
-      // no hay dónde ponerla y se dice, en vez de escribir en el puesto de al lado.
-      const destinoValido = s.addToRole
-        ? tree.roles.some((r) => r.id === s.addToRole)
-        : Boolean(findNode(tree, s.bulletId))
-      if (!destinoValido) {
+      if (!findNode(tree, s.bulletId)) {
         setError("stale_node")
         return
       }
@@ -538,9 +530,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
 
       // Sin los insumos de la medición se escribe igual: el CV del usuario nunca
       // depende de que hayamos podido recalcular su puntaje.
-      const escrito = s.addToRole
-        ? appendBullet(tree, s.addToRole, finalText)
-        : writeInto(tree, s.bulletId, finalText)
+      const escrito = writeInto(tree, s.bulletId, finalText)
       const written = writeBack(medido ? medido.tree : escrito, raw)
       if (s.bulletId === "summary") updateSectionData("summary", written.summary ?? "")
       else {
@@ -590,11 +580,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         // La tarjeta que pidió la propuesta se cierra por su id. La de un
         // término lleva sujeto y `olvidar` por línea la deja viva a propósito,
         // así que respondías «¿tenés Keychain?», la línea entraba al CV y la
-        // pregunta seguía abierta (medido el 2026-09-28). Y una línea NUEVA no
-        // reescribe su ancla: borrar lo que se decía de ella era tirar tarjetas
-        // de una viñeta que nadie tocó.
+        // pregunta seguía abierta (medido el 2026-09-28).
         const cerrada = pendingFinding ? olvidar(st, { findingId: pendingFinding }) : st
-        return s.addToRole && pendingFinding ? cerrada : olvidar(cerrada, { nodeId: s.bulletId })
+        return olvidar(cerrada, { nodeId: s.bulletId })
       })
     },
     [payloadResume, pendingFinding, registrarResuelto, sectionData.workExperience, state.audit, state.checks, state.covered, state.spec, state.weights, updateSectionData],
@@ -734,17 +722,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
      */
     cvSinCambios: analizado === JSON.stringify(payloadResume()),
     /**
-     * LOS PUESTOS DEL CV, para que el usuario elija dónde va una línea nueva.
-     *
-     * El motor RECOMIENDA uno —el de la tarjeta— y la pantalla lo deja marcado,
-     * pero la decisión es suya: «preguntar al usuario dónde sería un mejor
-     * match, pero siempre recomendando uno en específico» (CEO, 2026-09-09).
-     */
-    roles: buildTree(payloadResume()).roles.map((r) => ({
-      id: r.id,
-      label: [r.title, r.company].filter(Boolean).join(" — "),
-    })),
-    /**
      * DÓNDE CAE ESTE CAMBIO: el puesto y el número de línea.
      *
      * ── LO PEDIDO (CEO, 2026-08-27, y repetido el 2026-09-09) ────────────────
@@ -767,12 +744,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       }
       return null
     },
-    /** Una viñeta cualquiera de ese puesto: el ancla del pedido de agregar. */
-    anclaDe: (roleId: string) =>
-      buildTree(payloadResume()).roles.find((r) => r.id === roleId)?.bullets[0]?.id ?? null,
-    /** A qué puesto pertenece una viñeta: el que el motor recomienda. */
-    roleOf: (nodeId: string) =>
-      buildTree(payloadResume()).roles.find((r) => r.bullets.some((b) => b.id === nodeId))?.id ?? "",
     /** Las habilidades que el CV declara HOY. La lista viva, no la del análisis. */
     declaredSkills: (sectionData.skills ?? []).map((s) => s.name ?? "").filter(Boolean),
     tree,

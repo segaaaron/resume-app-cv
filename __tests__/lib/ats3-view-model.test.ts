@@ -240,13 +240,15 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
 })
 
 describe("cada tarjeta con sujeto se titula por lo que es", () => {
-  it("el cargo conserva su título; la pregunta y la credencial nombran su término", () => {
+  it("el cargo conserva su título; el requisito y la credencial nombran su término", () => {
     const cargo = checkOf(finding({ type: "title_mismatch", component: "title", subject: "Senior iOS Engineer", detail: "Senior iOS Engineer" }))
     expect(cargo.titleKey).toBe("type_title_mismatch")
     expect(cargo.params).toEqual({ cargo: "Senior iOS Engineer" })
-    const pregunta = checkOf(finding({ type: "missing_requirement", component: "must", remedy: "ask", subject: "Keychain" }))
-    expect(pregunta.titleKey).toBe("type_missing_requirement_ask")
-    expect(pregunta.params).toEqual({ term: "Keychain" })
+    // Sin rastro en el CV también lo escribe la IA (CEO, 2026-09-28): la tarjeta
+    // es la del requisito, con su término en el título.
+    const requisito = checkOf(finding({ type: "missing_requirement", component: "must", remedy: "rewrite", subject: "Keychain", detail: "Keychain" }))
+    expect(requisito.titleKey).toBe("type_missing_requirement")
+    expect(requisito.params).toEqual({ count: 1, term: "Keychain" })
     const credencial = checkOf(finding({ type: "missing_requirement", component: "must", remedy: "none", subject: "Licencia B" }))
     expect(credencial.titleKey).toBe("type_missing_requirement_credential")
   })

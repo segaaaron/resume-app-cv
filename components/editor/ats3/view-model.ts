@@ -257,18 +257,13 @@ export function checkOf(
     section: SECTION_OF.get(f.component) ?? "tips",
     state: f.gain >= CRITICAL_GAIN ? "crit" : "warn",
     weight: Number(f.gain.toFixed(1)),
-    // Diez preguntas con el mismo título obligaban a leer el cuerpo de cada una
-    // para saber de qué requisito hablaba. La pregunta nombra su término.
-    titleKey:
-      f.remedy === "ask"
-        ? `type_${f.type}_ask`
-        : esCredencial(f)
-          ? `type_${f.type}_credential`
-          : // Nueve chequeos distintos con un título común se leían como la misma
-            // tarjeta repetida: el título nombra el chequeo que falló.
-            f.type === "parse_risk"
-            ? `type_parse_risk_${detalleDe(f, "parse_risk")}`
-            : `type_${f.type}`,
+    titleKey: esCredencial(f)
+      ? `type_${f.type}_credential`
+      : // Nueve chequeos distintos con un título común se leían como la misma
+        // tarjeta repetida: el título nombra el chequeo que falló.
+        f.type === "parse_risk"
+        ? `type_parse_risk_${detalleDe(f, "parse_risk")}`
+        : `type_${f.type}`,
     /**
      * CUÁNTOS REQUISITOS CIERRA ESTA TARJETA.
      *
@@ -289,7 +284,7 @@ export function checkOf(
      * donde va la copia.
      */
     params:
-      f.remedy === "ask" || esCredencial(f)
+      esCredencial(f)
         ? { term: f.subject ?? "" }
         : f.type === "missing_requirement"
         ? (() => {
@@ -329,10 +324,7 @@ export function checkOf(
      * cada hallazgo. `detail` sigue diciendo el caso concreto (qué eje falta,
      * qué término), y viaja aparte en la evidencia.
      */
-    // Una pregunta no promete escribir «donde tu trabajo ya lo sostiene»: nada
-    // lo sostiene. Su explicación dice lo que de verdad va a pasar.
-    detailKey:
-      f.remedy === "ask" ? `type_${f.type}_ask_detail` : esCredencial(f) ? `type_${f.type}_credential_detail` : `type_${f.type}_detail`,
+    detailKey: esCredencial(f) ? `type_${f.type}_credential_detail` : `type_${f.type}_detail`,
     /**
      * QUÉ señala el hallazgo, no dónde aterrizó.
      *

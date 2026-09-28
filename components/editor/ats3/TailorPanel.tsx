@@ -32,7 +32,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { createPortal } from "react-dom"
 import SuggestionDiffModal from "@/components/editor/SuggestionDiffModal"
-import { ArrowUpRight, Check, EyeOff, HelpCircle, Minus, PencilLine, Sparkles, X } from "lucide-react"
+import { ArrowUpRight, Check, EyeOff, Minus, PencilLine, Sparkles, X } from "lucide-react"
 import { Z_MODAL } from "@/lib/ui/z-layers"
 import { skillPlan } from "@/lib/ats3/engine"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
@@ -493,14 +493,11 @@ export default function TailorPanel({
               suggestion={a.pending}
               onCancel={() => a.setPending(null)}
               onAccept={(text) => {
-                // Una línea NUEVA no tiene «antes»: su original es lo que la
-                // persona contó para pedirla, no algo que estuviera en el CV.
-                const cambio = { before: a.pending!.addToRole ? "" : a.pending!.originalText, after: text }
+                const cambio = { before: a.pending!.originalText, after: text }
                 marcarPorNodo(a.pending!.bulletId, cambio)
                 a.accept(a.pending!, text, registroDe(a.pending!.bulletId, "applied", cambio))
               }}
               donde={a.dondeCae(a.pending.bulletId)}
-              esNueva={Boolean(a.pending.addToRole)}
               t={t}
             />
           )}
@@ -541,17 +538,6 @@ export default function TailorPanel({
                     told,
                   })
               }}
-              onAsk={(roleId, hecho) => {
-                // El tema es lo que la persona afirmó, con el término del aviso
-                // adelante: es el «original» contra el que se juzga la línea.
-                const f = nodoDe(check.id)
-                if (!f) return
-                const tema = `${check.subject ?? ""}: ${hecho}`
-                const ancla = a.anclaDe(roleId) ?? f.nodeId
-                a.requestRewrite(ancla, check.id, { focus: tema, addToRole: roleId, mustWrite: check.subject ? [check.subject] : undefined })
-              }}
-              roles={a.roles}
-              suggestedRole={a.roleOf(nodoDe(check.id)?.nodeId ?? "")}
               onDismiss={() => {
                 // Entra en «Hechas» como «Descartada por vos», en tono neutro y
                 // sin el tilde de «Aplicado»: es una decisión suya, no un
@@ -616,7 +602,6 @@ function SuggestionSheet({
   onCancel,
   onAccept,
   donde,
-  esNueva,
   t,
 }: {
   suggestion: AnchoredSuggestion
@@ -624,8 +609,6 @@ function SuggestionSheet({
   onAccept: (finalText: string) => void
   /** El puesto y la línea donde cae. `null` en el resumen, que es uno solo. */
   donde: { puesto: string; linea: number } | null
-  /** Una línea NUEVA no reemplaza a nadie: se dice, para no leerlo como un cambio. */
-  esNueva: boolean
   t: (k: string, v?: Record<string, string | number>) => string
 }) {
   /**
@@ -703,17 +686,14 @@ function SuggestionSheet({
       onConfirm={() => onAccept(finalText)}
       suggestion={{
         field: suggestion.bulletId === "summary" ? "summary" : "workExperience.description",
-        type: esNueva ? "append" : "replace",
+        type: "replace",
         preview: suggestion.text,
         reason: "",
       }}
-      currentValue={esNueva ? "" : suggestion.originalText}
+      currentValue={suggestion.originalText}
       afterOverride={finalText}
       blocked={blocked}
-      /* Una viñeta NUEVA no lleva número de línea: `donde` es el ancla del
-         pedido, no el lugar donde va a quedar, y numerarla señalaba una línea
-         que el cambio no toca. */
-      where={donde ? { jobTitle: donde.puesto, line: esNueva ? undefined : donde.linea } : undefined}
+      where={donde ? { jobTitle: donde.puesto, line: donde.linea } : undefined}
       /* SÓLO LOS HUECOS. El modal ya dibuja el título, el antes/después y los
          botones: pasarle la hoja entera pintaba el mismo diff dos veces, una
          encima de la otra. Visto en pantalla. */
@@ -805,10 +785,7 @@ function FixCard({
   busy,
   writing,
   onSolve,
-  onAsk,
   onDismiss,
-  roles,
-  suggestedRole,
   t,
   ta,
 }: {
@@ -821,26 +798,17 @@ function FixCard({
   writing: boolean
   /** `told`: lo que la persona contó sobre esta línea, si la tarjeta se lo preguntó. */
   onSolve: (told?: string) => void
-  /** El requisito que la persona confirmó: en qué puesto y qué hizo. */
-  onAsk: (roleId: string, hecho: string) => void
   onDismiss: () => void
-  roles: { id: string; label: string }[]
-  /** El puesto que el motor recomienda; la persona puede moverlo. */
-  suggestedRole: string
   t: (k: string, v?: Record<string, string | number>) => string
   ta: (k: string, v?: Record<string, string | number>) => string
 }) {
   /* La salida la decide el remedio que el motor declaró: reescribir la línea,
      preguntar por un requisito del que no hay rastro, o nada que la IA pueda
      escribir. */
-  const [puesto, setPuesto] = useState(suggestedRole || roles[0]?.id || "")
-  const [hecho, setHecho] = useState("")
-  /* EL EJE QUE SÓLO LA PERSONA PUEDE DAR. Si a la línea le falta en qué terminó
-     o cómo se hizo, nadie más lo sabe: el campo es opcional, y si queda vacío
-     Tailor no lo inventa —lo pide— en vez de rellenar con una palabra del aviso. */
+  /* CONTEXTO OPCIONAL PARA LA IA. El resultado y el método los redacta Tailor
+     (CEO, 2026-09-28: la IA escribe, la persona sólo pone las cifras); si la
+     persona quiere contar en qué terminó, la línea sale con su versión. */
   const pideDato = check.remedy === "rewrite" && (check.axes ?? []).some((e) => e !== "verbo")
-  // El resultado no se escribe sin ella: el botón espera su respuesta.
-  const pideResultado = check.remedy === "rewrite" && Boolean(check.axes?.includes("resultado"))
   const [dato, setDato] = useState("")
   const preguntaDato = check.axes?.includes("resultado")
     ? check.axes.includes("método")
@@ -934,65 +902,6 @@ function FixCard({
         </div>
       )}
 
-      {/* ── LA PREGUNTA, CUANDO EL CV NO TIENE RASTRO DEL REQUISITO ──────────
-          El hecho lo pone la persona: si lo tiene, dice en qué puesto y qué
-          hizo, y recién ahí se redacta una línea NUEVA con eso. Sin respuesta no hay nada que escribir, así
-          que el botón espera el texto. */}
-      {check.remedy === "ask" && (
-        <div
-          className="mx-3.5 mt-3 flex flex-col gap-3 rounded-xl p-3.5"
-          style={{
-            background: "linear-gradient(180deg, var(--a-accent-soft), var(--a-surface))",
-            border: "1px solid color-mix(in srgb, var(--a-accent-ink) 30%, transparent)",
-          }}
-        >
-          <p className="flex items-start gap-2 text-[12.5px] font-semibold leading-snug" style={{ color: "var(--a-ink)" }}>
-            <HelpCircle aria-hidden className="mt-px h-4 w-4 shrink-0" style={{ color: "var(--a-accent-ink)" }} />
-            <span>{t("ask_have_it", { term: check.subject ?? "" })}</span>
-          </p>
-          {roles.length > 1 && (
-            <div>
-              <label htmlFor={`${check.id}-puesto`} className="text-[11px] font-semibold" style={{ color: "var(--a-muted)" }}>
-                {t("add_where")}
-              </label>
-              <select
-                id={`${check.id}-puesto`}
-                value={puesto}
-                onChange={(e) => setPuesto(e.target.value)}
-                className={`mt-1 ${FIELD_CLASS}`}
-                style={FIELD_STYLE}
-              >
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div>
-            <label htmlFor={`${check.id}-hecho`} className="text-[11px] font-semibold" style={{ color: "var(--a-muted)" }}>
-              {t("ask_what_you_did", { term: check.subject ?? "" })}
-            </label>
-            <textarea
-              id={`${check.id}-hecho`}
-              value={hecho}
-              onChange={(e) => setHecho(e.target.value)}
-              rows={3}
-              maxLength={300}
-              aria-describedby={`${check.id}-ayuda`}
-              placeholder={t("ask_placeholder")}
-              className={`mt-1 resize-y ${FIELD_CLASS}`}
-              style={FIELD_STYLE}
-            />
-            <p id={`${check.id}-ayuda`} className="mt-1 flex justify-between gap-2 text-[10.5px]" style={{ color: "var(--a-muted-2)" }}>
-              <span>{t("ask_help")}</span>
-              <span className="tabular-nums">{hecho.length}/300</span>
-            </p>
-          </div>
-        </div>
-      )}
-
       {pideDato && (
         <div className="mx-3.5 mt-3">
           <label htmlFor={`${check.id}-dato`} className="text-[11px] font-semibold" style={{ color: "var(--a-muted)" }}>
@@ -1010,7 +919,7 @@ function FixCard({
             style={FIELD_STYLE}
           />
           <p id={`${check.id}-dato-ayuda`} className="mt-1 flex justify-between gap-2 text-[10.5px]" style={{ color: "var(--a-muted-2)" }}>
-            <span>{t(pideResultado ? "told_help_required" : "told_help")}</span>
+            <span>{t("told_help")}</span>
             <span className="tabular-nums">{dato.length}/300</span>
           </p>
         </div>
@@ -1021,15 +930,9 @@ function FixCard({
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
         {check.remedy === "rewrite" && (
-          <Btn tone="ai" disabled={busy || (pideResultado && dato.trim().length < 3)} onClick={() => onSolve(dato.trim() || undefined)}>
+          <Btn tone="ai" disabled={busy} onClick={() => onSolve(dato.trim() || undefined)}>
             <Sparkles className="h-3 w-3" />
             {writing ? t("writing") : t("fix_it")}
-          </Btn>
-        )}
-        {check.remedy === "ask" && (
-          <Btn tone="ai" disabled={busy || hecho.trim().length < 3} onClick={() => onAsk(puesto, hecho.trim())}>
-            <Sparkles className="h-3 w-3" />
-            {writing ? t("writing") : t("ask_write")}
           </Btn>
         )}
         {/* `none`: se arregla en el dato del CV —las fechas, el orden—, no con

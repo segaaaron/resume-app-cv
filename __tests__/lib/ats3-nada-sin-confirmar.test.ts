@@ -37,7 +37,7 @@ describe("nada se escribe en el CV sin confirmación", () => {
     /* Y una viñeta NUEVA va SIN número de línea: `donde` es el ancla del pedido,
        no el lugar donde va a quedar. Numerarla señalaba una línea que el cambio
        no toca. */
-    expect(panel).toContain("line: esNueva ? undefined : donde.linea")
+    expect(panel).toContain("line: donde.linea")
   })
 
   it("no se confirma con una petición del modelo en vuelo", () => {

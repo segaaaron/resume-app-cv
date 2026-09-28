@@ -231,7 +231,8 @@ export const PROMPT_VERSION = {
   // p4-18: el término comprometido se integra con naturalidad y con la mayúscula de la oración.
   // p4-19 (2026-09-28): los ejes prometidos viajan estructurados, la persona puede
   // contar el resultado en la tarjeta, y el modelo declara `newBasis` de su línea.
-  P4: "p4-19", // reescritura de viñeta
+  // p4-20 (CEO, 2026-09-28): la IA escribe resultado, método y términos; sólo las cifras son del candidato.
+  P4: "p4-20", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
@@ -251,7 +252,8 @@ export const PROMPT_VERSION = {
   // p5-13: la prueba elegida se exige con su cifra.
   // p5-14: la prueba llega en su propia sección, no mezclada en una lista.
   // p5-15: la antigüedad del resumen viejo no se exige conservar (se escribe la medida).
-  P5: "p5-15", // resumen
+  // p5-16: la regla de verdad compartida (truthRule) ahora deja a la IA escribir todo salvo las cifras.
+  P5: "p5-16", // resumen
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -888,7 +890,7 @@ export interface Finding {
    *   none — lo arregla un dato del documento (las fechas, el orden), no una
    *          redacción. El botón de la tarjeta de fechas reescribía el RESUMEN.
    */
-  remedy: "rewrite" | "ask" | "none"
+  remedy: "rewrite" | "none"
   /**
    * DE QUÉ habla, cuando no habla de la línea.
    *
@@ -1086,16 +1088,6 @@ export interface AnchoredSuggestion extends Suggestion {
   basedOnHash: string
   /** El texto que reemplaza. Sin esto, "aplicar" escribe sobre la línea de al lado. */
   originalText: string
-  /**
-   * EL PUESTO AL QUE SE AGREGA, cuando la línea es NUEVA.
-   *
-   * Un puesto con menos de tres viñetas no se entiende, y hasta hoy el motor no
-   * tenía cómo decirlo: podía señalar lo que sobra y no lo que falta, porque no
-   * sabía crear una línea. Con esto sí, y con la única regla que lo hace
-   * honesto: el HECHO lo pone el usuario —confirma el tema antes de que se
-   * escriba nada— y el modelo sólo lo redacta.
-   */
-  addToRole?: string
   /**
    * LA LÍNEA DEL CV A LA QUE ESTA PROPUESTA SE PARECE, si se parece.
    *

@@ -1391,7 +1391,7 @@ describe("una pregunta, una respuesta — lo medido en producción", () => {
     expect(readableChecks(puestos(["2015-01", "2016-01"], ["2016-10", "2020-01"])).trayectoria_continua).toBe(false)
   })
 
-  it("el remedio sale de la evidencia: sin rastro se PREGUNTA, con cita se reescribe, un dato del documento no tiene botón", () => {
+  it("el remedio sale de la evidencia: con o sin cita lo escribe la IA, un dato del documento no tiene botón", () => {
     const tree = buildTree({
       ...cvIos,
       workExperience: [
@@ -1405,7 +1405,10 @@ describe("una pregunta, una respuesta — lo medido en producción", () => {
     const index = buildTermIndex(termsOf(spec, tree))
     const hallazgos = findingsOf(tree, audit, scoreResume(tree, spec, audit, readableChecks(tree)), index, spec)
     const deTermino = (t: string) => hallazgos.find((f) => f.type === "missing_requirement" && f.detail.includes(t))!
-    expect(deTermino("Keychain")).toMatchObject({ remedy: "ask", subject: "Keychain" })
+    // Sin rastro también lo escribe la IA (CEO, 2026-09-28), en la línea donde
+    // mejor encaja y fusionado con su tarjeta: sin sujeto.
+    expect(deTermino("Keychain")).toMatchObject({ remedy: "rewrite" })
+    expect(deTermino("Keychain").subject).toBeUndefined()
     expect(deTermino("Combine")).toMatchObject({ remedy: "rewrite", nodeId: linea })
   })
 
@@ -1500,13 +1503,13 @@ describe("una credencial se tiene: no se redacta como viñeta ni se agrega a Hab
     { skill: "Salesforce", raw: "Salesforce", years: null, category: null, kind: "capability" as const },
   ], niceToHave: [] } as JobSpec
 
-  it("sin rastro, la credencial sale sin botón de IA y la capacidad pregunta", () => {
+  it("sin rastro, la credencial sale sin botón de IA y la capacidad la escribe la IA", () => {
     const tree = buildTree(RAW)
     const audit = { ...fakeAudit(tree), coverage: [] }
     const index = buildTermIndex(termsOf(spec, tree))
     const hallazgos = findingsOf(tree, audit, scoreResume(tree, spec, audit, readableChecks(tree)), index, spec)
     expect(hallazgos.find((f) => f.subject === "Licencia de conducir B")?.remedy).toBe("none")
-    expect(hallazgos.find((f) => f.subject === "Salesforce")?.remedy).toBe("ask")
+    expect(hallazgos.find((f) => f.type === "missing_requirement" && f.detail.includes("Salesforce"))?.remedy).toBe("rewrite")
   })
 
   it("demostrada en una línea, una credencial NO entra a Habilidades; una capacidad sí", () => {

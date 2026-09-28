@@ -79,12 +79,12 @@ describe("las reglas que no pueden faltar", () => {
     expect(bulletPrompt("en")).toContain(figureRule("en").split("\n")[0])
   })
 
-  it("el ALCANCE está prohibido: es la causa medida de la última invención", () => {
-    // "…en depósito y sala de ventas" dice DÓNDE trabajaba esta persona. El
-    // modelo lo escribía sin faltar a ninguna regla porque la lista de
-    // prohibidos no lo nombraba.
-    expect(truthRule("es").toLowerCase()).toContain("dónde")
-    expect(truthRule("en").toLowerCase()).toContain("where")
+  it("sólo las cifras son del candidato; todo lo demás lo escribe la IA (CEO, 2026-09-28)", () => {
+    expect(truthRule("es")).toMatch(/Del candidato, y sólo suyo: las CIFRAS/)
+    expect(truthRule("en")).toMatch(/only theirs: the FIGURES/)
+    // La estructura tampoco se toca: empleadores, cargos y fechas.
+    expect(truthRule("es")).toMatch(/empleadores, cargos y fechas/)
+    expect(truthRule("en")).toMatch(/employers, job titles and dates/)
   })
 
   it("el resumen NO admite huecos, en los dos idiomas", () => {
@@ -297,7 +297,7 @@ describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas"
     // El filtro tradicional compara CADENAS: «project management» y «led
     // projects» no son lo mismo para él. Medido por la práctica documentada de
     // los parsers, no por opinión nuestra.
-    expect(bulletPrompt("es")).toMatch(/redacción EXACTA del aviso/)
+    expect(bulletPrompt("es")).toMatch(/redacción EXACTA en vez de un sinónimo/)
     expect(bulletPrompt("en")).toMatch(/EXACT wording/)
     // Y la sigla con su forma completa la primera vez.
     expect(bulletPrompt("es")).toMatch(/sigla/)
@@ -455,18 +455,17 @@ describe("el pedido lleva lo prometido desde la primera llamada", () => {
   const ledger = { verbsUsed: [], keywordBudget: {}, metricTypesUsed: [], claimsMade: [] } as never
   const spec = JSON.parse(SPEC_JSON) as JobSpec
 
-  it("viñeta: términos comprometidos, verbo a evitar, tamaño y línea nueva", async () => {
+  it("viñeta: términos comprometidos, verbo a evitar, tamaño y ejes", async () => {
     const client = new ScriptedClient(vacia)
     await mod(client).rewriteBullet({
       original: "SIN: emití facturas", bulletId: "b", roleContext: "Cajera", spec, ledger, declaredSkills: [],
-      mustWrite: ["SIN"], avoidOpener: "Atendí", wantsSize: true, isNew: true, axes: ["resultado"], told: "bajó la fila en caja",
+      mustWrite: ["SIN"], avoidOpener: "Atendí", wantsSize: true, axes: ["resultado"], told: "bajó la fila en caja",
     })
     const pedido = String(client.lastParams!.messages[1].content)
     expect(pedido).toContain('TÉRMINOS COMPROMETIDOS / COMMITTED TERMS:\n["SIN"]')
     expect(pedido).toContain("VERB YOU MAY NOT OPEN WITH:\nAtendí")
     expect(pedido).toContain("ESTA LÍNEA LLEVA SU TAMAÑO")
-    expect(pedido).toContain("LO QUE LA PERSONA CONTÓ — LÍNEA NUEVA")
-    expect(pedido).not.toContain("VIÑETA ORIGINAL")
+    expect(pedido).toContain("VIÑETA ORIGINAL")
     expect(pedido).toContain('EJES PROMETIDOS / PROMISED AXES:\n["resultado"]')
     expect(pedido).toContain('LO QUE LA PERSONA AGREGA / WHAT THE PERSON ADDS:\n"""bajó la fila en caja"""')
   })
