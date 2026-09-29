@@ -1805,6 +1805,8 @@
       "fix_replace_with": "Write one about {term}",
       "section_open_no_score": "{count} open · no score change",
       "type_missing_requirement_detail": "The posting asks for it by name and your CV doesn't say it in those words. The filter compares strings: if it isn't written, it doesn't count. Tailor writes it into the line where your work already backs it, and you confirm before it goes in.",
+      "type_missing_requirement_unsupported": "The posting asks for “{term}” and your CV shows no experience with it",
+      "type_missing_requirement_unsupported_detail": "None of your bullets talks about this work, so Tailor does not write it: adding it would claim experience the CV does not back, and a recruiter would ask about it in the interview. The score counts it as missing.",
       "type_missing_requirement_credential": "The posting asks for “{term}” and your CV does not show it",
       "type_missing_requirement_credential_detail": "It is something you have, not something you do in a role: a licence, a degree, a certification or a language. If you have it, add it to its section in Content — the filter reads it there. It is not written as a bullet.",
       "type_no_result_detail": "A bullet stands on three things: the action it opens with, how it ended, and how you got there. This one is missing at least one — the detail says which. Without them it reads as a task list, not as work someone did.",

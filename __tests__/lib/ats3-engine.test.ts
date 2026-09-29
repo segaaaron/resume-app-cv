@@ -21,7 +21,7 @@ import {
   type CacheKind,
   type RawResume,
 } from "@/lib/ats3/engine"
-import { buildTermIndex, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion } from "@/lib/ats3/contracts"
+import { SIN_RESPALDO, buildTermIndex, nodeHash, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion } from "@/lib/ats3/contracts"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { experienceYears, scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
 
@@ -453,10 +453,10 @@ describe("el análisis se entrega en actos", () => {
     expect(conRequisito?.type).toBe("missing_requirement")
   })
 
-  it("cada requisito que falta aterriza en la línea que MÁS se le parece", () => {
-    // Antes: `bestHomeFor` ignoraba la habilidad y mandaba TODOS los requisitos
-    // faltantes a la misma línea. Con la regla de fusión terminaban en una sola
-    // tarjeta, y el usuario leía "te falta todo" sobre una viñeta al azar.
+  it("cada requisito aterriza en la línea que P2 citó como evidencia; sin rastro, no se escribe", () => {
+    // Quién decide si una línea sostiene un requisito es la auditoría, no el
+    // parecido de palabras: por raíces el motor escribió «Core ML» en la línea
+    // de Core Data (medido contra la API el 2026-09-28).
     const tree = buildTree({
       summary: "Cajera",
       workExperience: [
@@ -479,8 +479,8 @@ describe("el análisis se entrega en actos", () => {
       bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true })),
       summary: { identity: true, proof: true, fit: true, extra: true },
       coverage: [
-        { skill: "Control de inventario", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null },
-        { skill: "Medios de pago", requirement: "MUST" as const, status: "NOT_FOUND" as const, evidenceNodeId: null },
+        { skill: "Control de inventario", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: tree.roles[0].bullets[0].id },
+        { skill: "Medios de pago", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: tree.roles[0].bullets[1].id },
       ],
       softCoverage: [],
     }
@@ -496,6 +496,13 @@ describe("el análisis se entrega en actos", () => {
     expect(inventario!.nodeId).not.toBe(pagos!.nodeId)
     expect(inventario!.nodeText).toContain("inventario")
     expect(pagos!.nodeText).toContain("pagos")
+    expect(inventario!.remedy).toBe("rewrite")
+
+    // La misma vacante sin evidencia citada: se informa, ninguna línea lo recibe.
+    const sinRastro = { ...audit, coverage: audit.coverage.map((c) => ({ ...c, status: "NOT_FOUND" as const, evidenceNodeId: null })) }
+    const nada = findingsOf(tree, sinRastro, scoreResume(tree, spec2, sinRastro, CHECKS), index)
+    const inv2 = nada.find((f) => f.detail.includes("Control de inventario"))
+    expect(inv2).toMatchObject({ remedy: "none", nodeId: tree.summary.id })
   })
 
   it("dice qué términos de la vacante YA están cubiertos", async () => {
@@ -952,7 +959,7 @@ const auditSkills = {
  * debilidad valía 0,01: una línea fuerte con una palabra más de afinidad le
  * ganaba SIEMPRE a la débil. Era un desempate, no una prioridad.
  */
-describe("un requisito aterriza en la viñeta que menos aporta", () => {
+describe("una blanda aterriza en la viñeta que menos aporta", () => {
   it("gana la floja, no la que ya trae más términos del aviso", () => {
     const tree = buildTree({
       summary: "Cajera",
@@ -965,15 +972,16 @@ describe("un requisito aterriza en la viñeta que menos aporta", () => {
       }],
       skills: [],
     })
-    const spec = { ...SPEC, mustHave: [{ skill: "Arqueo de caja", raw: "arqueo de caja", years: null, category: null }] }
+    const spec = { ...SPEC, mustHave: [{ skill: "Conciliación", raw: "conciliación", years: null, category: null }], softSignals: ["Orden en el arqueo"] }
     const index = buildTermIndex(termsOf(spec, tree))
     const audit: AuditFacts = {
       ...fakeAudit(),
       bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true, specificity: 0.5 })),
-      coverage: [{ skill: "Arqueo de caja", requirement: "MUST", status: "NOT_FOUND", evidenceNodeId: null }],
+      coverage: [],
+      softCoverage: [{ signal: "Orden en el arqueo", status: "ABSENT", evidenceNodeId: null }],
     }
     const score = scoreResume(tree, spec, audit, {})
-    const req = findingsOf(tree, audit, score, index).find((f) => f.merged.includes("missing_requirement"))
+    const req = findingsOf(tree, audit, score, index, spec).find((f) => f.merged.includes("soft_not_shown"))
     // Las dos pueden sostenerlo; la segunda es la que menos aporta.
     expect(req?.nodeId).toBe(tree.roles[0].bullets[1].id)
   })
@@ -1405,10 +1413,10 @@ describe("una pregunta, una respuesta — lo medido en producción", () => {
     const index = buildTermIndex(termsOf(spec, tree))
     const hallazgos = findingsOf(tree, audit, scoreResume(tree, spec, audit, readableChecks(tree)), index, spec)
     const deTermino = (t: string) => hallazgos.find((f) => f.type === "missing_requirement" && f.detail.includes(t))!
-    // Sin rastro también lo escribe la IA (CEO, 2026-09-28), en la línea donde
-    // mejor encaja y fusionado con su tarjeta: sin sujeto.
-    expect(deTermino("Keychain")).toMatchObject({ remedy: "rewrite" })
-    expect(deTermino("Keychain").subject).toBeUndefined()
+    // Sin ninguna línea que lo sostenga NO se escribe (CEO, 2026-09-28: «no quiero
+    // errores de información»): la tarjeta lo informa, con su sujeto, sin botón.
+    expect(deTermino("Keychain")).toMatchObject({ remedy: "none", subject: "Keychain" })
+    expect(deTermino("Keychain").detail).toBe(`${SIN_RESPALDO}:Keychain`)
     expect(deTermino("Combine")).toMatchObject({ remedy: "rewrite", nodeId: linea })
   })
 
@@ -1509,7 +1517,18 @@ describe("una credencial se tiene: no se redacta como viñeta ni se agrega a Hab
     const index = buildTermIndex(termsOf(spec, tree))
     const hallazgos = findingsOf(tree, audit, scoreResume(tree, spec, audit, readableChecks(tree)), index, spec)
     expect(hallazgos.find((f) => f.subject === "Licencia de conducir B")?.remedy).toBe("none")
-    expect(hallazgos.find((f) => f.type === "missing_requirement" && f.detail.includes("Salesforce"))?.remedy).toBe("rewrite")
+    // Salesforce no aparece en ninguna viñeta: se informa, no se inventa.
+    expect(hallazgos.find((f) => f.type === "missing_requirement" && f.detail.includes("Salesforce"))?.remedy).toBe("none")
+  })
+
+  it("una capacidad que una viñeta sostiene la escribe la IA en esa viñeta", () => {
+    const tree = buildTree({ ...RAW, workExperience: [{ jobTitle: "Vendedor", employer: "X", startDate: "2020-01", endDate: "2023-01", description: "• Registré las oportunidades de venta en el CRM de Salesforce del equipo" }] })
+    const spec2 = { ...spec, mustHave: [{ skill: "Salesforce CRM", raw: "Salesforce CRM", years: null, category: null, kind: "capability" as const }] } as JobSpec
+    const audit = { ...fakeAudit(tree), coverage: [{ skill: "Salesforce CRM", requirement: "MUST" as const, status: "IMPLIED" as const, evidenceNodeId: tree.roles[0].bullets[0].id }] }
+    const index = buildTermIndex(termsOf(spec2, tree))
+    const hallazgos = findingsOf(tree, audit, scoreResume(tree, spec2, audit, readableChecks(tree)), index, spec2)
+    const f = hallazgos.find((x) => x.merged.includes("missing_requirement"))
+    expect(f).toMatchObject({ remedy: "rewrite", nodeId: tree.roles[0].bullets[0].id })
   })
 
   it("demostrada en una línea, una credencial NO entra a Habilidades; una capacidad sí", () => {
@@ -1559,6 +1578,30 @@ describe("lo que no cambió conserva su juicio", () => {
     const nueva = despues.roles[0].bullets[2].id
     expect(fijarJuicios(despues, juicio(despues, true, "IMPLIED", vieja), primero.juicios, "jd").audit.coverage[0].status).toBe("NOT_FOUND")
     expect(fijarJuicios(despues, juicio(despues, true, "IMPLIED", nueva), primero.juicios, "jd").audit.coverage[0].status).toBe("IMPLIED")
+  })
+
+  it("la línea que escribió Tailor hereda los ejes de la que reemplazó y no descubre requisitos", () => {
+    const antes = buildTree(RAW)
+    const primero = fijarJuicios(antes, juicio(antes, true, "NOT_FOUND", null), JUICIOS_VACIOS, "jd")
+    const vieja = antes.roles[0].bullets[0]
+    const escrita = `${vieja.text} en [n] releases`
+    const despues = buildTree({ ...RAW, workExperience: [{ ...RAW.workExperience![0], description: RAW.workExperience![0].description!.replace(vieja.text, escrita) }] })
+    const nueva = despues.roles[0].bullets.find((b) => b.text === escrita)!.id
+    const log = [{ findingId: "f", nodeId: vieja.id, nodeHashAtResolution: nodeHash(escrita), resolvedBy: "AI_SUGGESTION" as const, resolvedAt: "", kind: "applied" as const, before: vieja.text, after: escrita }]
+    const segundo = fijarJuicios(despues, juicio(despues, false, "IMPLIED", nueva), primero.juicios, "jd", log)
+    expect(segundo.audit.bullets.find((b) => b.id === nueva)?.hasResult).toBe(true)
+    expect(segundo.audit.coverage[0].status).toBe("NOT_FOUND")
+    // Sin el registro, la misma línea es de la persona: juicio de hoy.
+    const sinLog = fijarJuicios(despues, juicio(despues, false, "IMPLIED", nueva), primero.juicios, "jd")
+    expect(sinLog.audit.bullets.find((b) => b.id === nueva)?.hasResult).toBe(false)
+    expect(sinLog.audit.coverage[0].status).toBe("IMPLIED")
+  })
+
+  it("una cita al resumen queda fijada como cualquier otra", () => {
+    const tree = buildTree(RAW)
+    const primero = fijarJuicios(tree, juicio(tree, true, "IMPLIED", tree.summary.id), JUICIOS_VACIOS, "jd")
+    const otra = fijarJuicios(tree, juicio(tree, true, "IMPLIED", tree.roles[0].bullets[0].id), primero.juicios, "jd")
+    expect(otra.audit.coverage[0].evidenceNodeId).toBe(tree.summary.id)
   })
 
   it("el análisis guarda los juicios y los respeta en la corrida siguiente", async () => {

@@ -233,7 +233,7 @@ export const PROMPT_VERSION = {
   // contar el resultado en la tarjeta, y el modelo declara `newBasis` de su línea.
   // p4-20 (CEO, 2026-09-28): la IA escribe resultado, método y términos; sólo las cifras son del candidato.
   // p4-21 (2026-09-28): lo que la línea ya nombra se queda; el término prometido va al lado.
-  P4: "p4-21", // reescritura de viñeta
+  P4: "p4-25", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
@@ -352,13 +352,52 @@ function normalizeKeepCase(raw: string): string {
     .replace(/\s+/g, " ")
 }
 
+/**
+ * CUÁNTOS TÉRMINOS DE LA VACANTE SUMA UNA VIÑETA (CEO, 2026-09-28).
+ *
+ * Una sola respuesta para el motor —cuántos requisitos le asigna a una línea— y
+ * para el prompt —cuántos puede agregar—. Medido en producción: una viñeta de
+ * Rappi recibió siete («…for AI/ML, automation pipelines, Kanban, agentic AI
+ * workflows, CallKit, PushKit, and messaging») y en el banco de oficios el
+ * modelo metía los cuatro términos del aviso en cada línea. Los reclutadores y
+ * los ATS actuales castigan el relleno de palabras clave.
+ */
+export const TERMS_PER_BULLET = 2
+
+/**
+ * Marca del `detail` de un requisito que NINGUNA viñeta sostiene: la tarjeta lo
+ * informa y Tailor no lo escribe, porque sería experiencia que el CV no tiene.
+ * La leen el motor (`findingsOf`) y la pantalla (`view-model`).
+ */
+export const SIN_RESPALDO = "sin_respaldo"
+
 export function buildTermIndex(terms: TermVariants[]): TermIndex {
   const byKey = new Map<string, string>()
   const ordered: { canonical: string; needle: string }[] = []
   for (const t of terms) {
-    for (const raw of [t.canonical, ...t.variants]) {
+    /**
+     * UN NOMBRE PEGADO ES EL MISMO NOMBRE (2026-09-28, medido en producción):
+     * la vacante pedía «CoreData» y el CV decía «Core Data» cinco veces; el panel
+     * lo daba por faltante. Sólo se parte en la costura minúscula→Mayúscula entre
+     * dos palabras de 3+ letras: «SwiftUI», «iOS» y «GraphQL» no se tocan.
+     */
+    const pegados = [t.canonical, ...t.variants]
+      .map((raw) => raw.replace(/([a-z]{3,})([A-Z][a-z]{2,})/g, "$1 $2"))
+      .filter((x, i) => x !== [t.canonical, ...t.variants][i])
+    for (const raw of [t.canonical, ...t.variants, ...pegados]) {
       const needle = normalize(raw)
       if (!needle) continue
+      /**
+       * EL PLURAL ES EL MISMO TÉRMINO (2026-09-28, medido contra la API): el
+       * aviso pedía «API» y el CV decía «RESTful APIs»; la tarjeta pedía
+       * escribirlo y la IA, que lo veía escrito, se negaba. Se suma la forma con
+       * «s» final, que cuenta para el mismo canónico.
+       */
+      const plural = /[a-z]$/.test(needle) && !needle.endsWith("s") ? `${needle}s` : null
+      if (plural && !ordered.some((o) => o.needle === plural && o.canonical === t.canonical)) {
+        // Sin marca de sigla: «APIs» no está entero en mayúsculas y la sigla exacta ya la cubre su propia entrada.
+        ordered.push({ canonical: t.canonical, needle: plural })
+      }
       const key = termKey(raw)
       if (!byKey.has(key)) byKey.set(key, t.canonical)
       if (!ordered.some((o) => o.needle === needle && o.canonical === t.canonical)) {
@@ -427,6 +466,29 @@ export function termCounts(index: TermIndex, text: string): Map<string, number> 
         counts.set(canonical, (counts.get(canonical) ?? 0) + 1)
       }
       from = at + 1
+    }
+    /**
+     * UNA SIGLA CON SU SUFIJO ES LA SIGLA (2026-09-28, medido contra la API): el
+     * aviso pedía «REST» y el CV decía «RESTful APIs»; el panel lo daba por
+     * faltante y la IA, que lo veía escrito, se negaba a agregarlo — la tarjeta
+     * quedaba sin salida. Sólo en mayúsculas y con un sufijo corto en minúsculas.
+     */
+    if (sigla && comparable && !counts.has(canonical)) {
+      const conSufijo = new RegExp(`(?<=\\s)${needle.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[a-z]{2,4}(?=\\s)`, "g")
+      const n = (conMayusculas.match(conSufijo) ?? []).length
+      if (n > 0) counts.set(canonical, n)
+    }
+    // Y si la sigla abre un término más largo: «RESTful APIs» dice «REST API».
+    // Sin esto la IA tenía que escribir «REST API and RESTful APIs» (medido el
+    // 2026-09-28) para que el panel lo diera por escrito.
+    const [primera, ...resto] = needle.split(" ")
+    const siglaInicial = canonical.split(/\s+/)[0]
+    if (resto.length && comparable && !counts.has(canonical) && /^[A-Z]{2,5}$/.test(siglaInicial) && normalize(siglaInicial) === primera) {
+      let n = 0
+      for (const m of conMayusculas.matchAll(new RegExp(`(?<=\\s)${siglaInicial}[a-z]{2,4}(?= )`, "g"))) {
+        if (hay.startsWith(` ${resto.join(" ")} `, (m.index ?? 0) + m[0].length)) n++
+      }
+      if (n > 0) counts.set(canonical, n)
     }
   }
   return counts

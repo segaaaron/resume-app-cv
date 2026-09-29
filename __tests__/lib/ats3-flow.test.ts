@@ -345,18 +345,18 @@ describe("los ejes prometidos: la IA los escribe, la persona puede aportar conte
 })
 
 describe("una declaración de ejes que el texto desmiente no vale", () => {
-  it("agregar sólo términos de la vacante no es un método, aunque se declare", async () => {
+  it("el término que la tarjeta prometió no es además el método, aunque se declare", async () => {
     const tree = buildTree(RAW)
     const ai: AtsAi = {
       parseJob: async () => SPEC, audit: async () => ({}) as AuditFacts,
       rewriteSummary: async () => ({}) as Suggestion,
-      rewriteBullet: async (input) => ({ bulletId: input.bulletId, changed: true, text: "Mantuve la arquitectura MVVM del proyecto con Swift, SwiftUI y Combine", actionVerb: "Mantuve",
+      rewriteBullet: async (input) => ({ bulletId: input.bulletId, changed: true, text: "Mantuve la arquitectura MVVM del proyecto con Combine Framework", actionVerb: "Mantuve",
         keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null, declineBasis: null,
         newBasis: { hasActionVerb: true, hasResult: true, hasMethod: true } }) as Suggestion,
     }
     const r = await runRewrite({
       tree, nodeId: tree.roles[0].bullets[1].id, spec: SPEC, ledger: openLedger(tree, SPEC, new Set()),
-      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(), axes: ["método"],
+      index: buildTermIndex(termsOf(SPEC, tree)), language: "es", model: "m", jdKey: "jd", ai, store: new Store(), axes: ["método"], mustWrite: ["Combine Framework"],
     })
     expect(!r.ok && "verdict" in r && r.verdict.ok === false && r.verdict.reason).toBe("declined")
   })

@@ -18,7 +18,7 @@
 // nada.
 
 import type { Axis, Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
-import { buildTermIndex, detailParts, normalize, termCounts, termKey } from "@/lib/ats3/contracts"
+import { buildTermIndex, detailParts, normalize, SIN_RESPALDO, termCounts, termKey } from "@/lib/ats3/contracts"
 import { cvTextOf, SCORED_COMPONENTS, termsOf } from "@/lib/ats3/score"
 import type { ComponentKey, Score } from "@/lib/ats3/score"
 
@@ -234,8 +234,12 @@ export function checkOf(
     remedy: f.remedy,
     subject: f.subject,
     requirements: detailParts(f)
-      .filter((p) => p.type === "missing_requirement" || p.type === "title_mismatch")
-      .map((p) => (p.type === "title_mismatch" ? marcaYDato(p.detail).dato : p.detail))
+      // La blanda también: la tarjeta promete tejerla en esta línea, y si Tailor
+      // no la escribe el análisis siguiente la vuelve a pedir sobre la línea
+      // recién arreglada (medido el 2026-09-28 con «high-quality»).
+      .filter((p) => p.type === "missing_requirement" || p.type === "title_mismatch" || p.type === "soft_not_shown")
+      // Sin la marca de «sin respaldo»: la cabecera pinta estos nombres tal cual.
+      .map((p) => (p.type === "title_mismatch" || marcaYDato(p.detail).marca === SIN_RESPALDO ? marcaYDato(p.detail).dato : p.detail))
       .filter(Boolean),
     wantsSize: detailParts(f).some((p) => p.type === "no_metric") || undefined,
     // Los ejes que falta cerrar, estructurados: el motor comprueba que la
@@ -257,7 +261,9 @@ export function checkOf(
     section: SECTION_OF.get(f.component) ?? "tips",
     state: f.gain >= CRITICAL_GAIN ? "crit" : "warn",
     weight: Number(f.gain.toFixed(1)),
-    titleKey: esCredencial(f)
+    titleKey: sinRespaldo(f)
+      ? `type_${f.type}_unsupported`
+      : esCredencial(f)
       ? `type_${f.type}_credential`
       : // Nueve chequeos distintos con un título común se leían como la misma
         // tarjeta repetida: el título nombra el chequeo que falló.
@@ -284,7 +290,7 @@ export function checkOf(
      * donde va la copia.
      */
     params:
-      esCredencial(f)
+      esCredencial(f) || sinRespaldo(f)
         ? { term: f.subject ?? "" }
         : f.type === "missing_requirement"
         ? (() => {
@@ -324,7 +330,11 @@ export function checkOf(
      * cada hallazgo. `detail` sigue diciendo el caso concreto (qué eje falta,
      * qué término), y viaja aparte en la evidencia.
      */
-    detailKey: esCredencial(f) ? `type_${f.type}_credential_detail` : `type_${f.type}_detail`,
+    detailKey: sinRespaldo(f)
+      ? `type_${f.type}_unsupported_detail`
+      : esCredencial(f)
+        ? `type_${f.type}_credential_detail`
+        : `type_${f.type}_detail`,
     /**
      * QUÉ señala el hallazgo, no dónde aterrizó.
      *
@@ -346,7 +356,12 @@ export function checkOf(
  * `RequirementSchema.kind`). Tener sujeto no alcanza: el cargo también lo lleva.
  */
 function esCredencial(f: Finding): boolean {
-  return f.type === "missing_requirement" && f.remedy === "none"
+  return f.type === "missing_requirement" && f.remedy === "none" && !sinRespaldo(f)
+}
+
+/** Requisito que ninguna viñeta sostiene: se informa y no se escribe (ver `SIN_RESPALDO`). */
+function sinRespaldo(f: Finding): boolean {
+  return f.type === "missing_requirement" && f.remedy === "none" && marcaYDato(f.detail).marca === SIN_RESPALDO
 }
 
 /** Los tipos cuyo `detail` es vocabulario del motor y no texto del CV. */
@@ -437,7 +452,8 @@ function evidenciaDe(
       ? p.detail.split(/\s*,\s*/).filter(Boolean).map(decir)
       : FRASE_DE.has(p.type)
         ? [decir(p.detail)]
-        : [p.detail],
+        : // El requisito sin respaldo lleva su marca en el dato: se muestra el término.
+          [marcaYDato(p.detail).marca === SIN_RESPALDO ? marcaYDato(p.detail).dato : p.detail],
   )
   const focus = glosados.join(" · ")
   // Sólo una tarjeta que REESCRIBE su línea la muestra como «tu línea». En una

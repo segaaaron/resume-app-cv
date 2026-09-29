@@ -616,8 +616,8 @@ export function similarNudge(line: string, language: "es" | "en"): string {
 /** Lo que se le dice al modelo cuando su propuesta perdió algo de la línea. */
 export function lossNudge(lost: string[], language: "es" | "en"): string {
   return language === "en"
-    ? `You dropped information the original had: ${lost.join(", ")}. Keep it — a figure the original states is copied exactly, never turned into a slot.`
-    : `Perdiste información que el original tenía: ${lost.join(", ")}. Conservala — una cifra que el original ya dice se copia tal cual, nunca se vuelve un hueco.`
+    ? `You dropped information the original had: ${lost.join(", ")}. Keep it — nothing the line named is replaced: a new term goes NEXT TO it, both written (e.g. "Agile teams using Scrum"), and a figure the original states is copied exactly, never turned into a slot.`
+    : `Perdiste información que el original tenía: ${lost.join(", ")}. Conservala — nada de lo que la línea nombraba se reemplaza: un término nuevo va AL LADO, escritos los dos (p. ej. «equipos ágiles con Scrum»), y una cifra que el original ya dice se copia tal cual, nunca se vuelve un hueco.`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -799,11 +799,17 @@ function separarRepetidos(text: string): string {
  */
 export function droppedNames(original: string, rewritten: string): string[] {
   const dicho = normalize(rewritten).split(" ")
+  // «Core Data» escrito «CoreData», como lo escribe el aviso, sigue diciendo
+  // «Data» (medido contra la API el 2026-09-28): se busca también pegado.
+  const pegado = normalize(rewritten).replace(/ /g, "")
   // Por raíz de cuatro, como el resto del motor: «REST» sigue diciendo lo que
   // decía «RESTful»; «GraphQL», no. Las siglas cortas se comparan enteras.
   const sigue = (w: string) => {
     const x = normalize(w)
-    return dicho.some((d) => d === x || (x.length >= 4 && d.length >= 4 && d.slice(0, 4) === x.slice(0, 4)))
+    return (
+      dicho.some((d) => d === x || (x.length >= 4 && d.length >= 4 && d.slice(0, 4) === x.slice(0, 4))) ||
+      (x.length >= 4 && pegado.includes(x))
+    )
   }
   return [...new Set(original
     .split(/(?<=[.!?])\s+/)

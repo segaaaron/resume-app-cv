@@ -50,6 +50,7 @@ import {
   type JobSpec,
   type ResumeTree,
   type Suggestion,
+  TERMS_PER_BULLET,
 } from "@/lib/ats3/contracts"
 import type { AtsAi, RewriteInput, SummaryInput } from "@/lib/ats3/engine"
 import type { AuditFacts } from "@/lib/ats3/score"
@@ -196,7 +197,7 @@ export function figureRule(lang: Lang): string {
         "The hint SAYS OUT LOUD that an approximate figure or a range is enough — most people abandon the field believing they need the exact number, and a bullet with a rough size beats one with none. The approximation is the candidate's to give: you never write one.",
         "A range the user confirms is theirs. A number you decided is not.",
         "",
-        "FIRST FIELD YOU WRITE: `measurableAspect`. Before drafting anything, answer in a few words WHAT CAN BE MEASURED about this work, using the words of THIS line and no others. If the posting carries `metricThatMatters`, pick from this line whatever comes closest to THAT yardstick: the figure that moves an application is the one the role cares about, not any figure. The dimensions are always the same — how much, how often, in how long, over what scope, from what to what — and the unit is whatever this work is counted in. If there is truly nothing measurable, write null: that is a valid answer.",
+        "FIRST FIELD YOU WRITE: `measurableAspect`. Before drafting anything, answer in a few words WHAT CAN BE MEASURED about this work, using the words of THIS line and no others. If the posting carries `metricThatMatters`, pick from this line whatever comes closest to THAT yardstick: the figure that moves an application is the one the role cares about, not any figure. The dimensions are always the same — how much, how often, in how long, over what scope, from what to what — and the unit is whatever this work is counted in. If there is truly nothing measurable, write null: that is a valid answer — EXCEPT when the input says THIS LINE CARRIES ITS SIZE: the ATS already measured that this work has a size, so null is not an answer there; pick the dimension that fits best and offer its slot.",
         "And if you wrote something in `measurableAspect`, the line CARRIES its typed slot for it — unless the original line already states that figure, in which case the figure itself stays. Declaring a size and not offering it is the worst of both worlds: no figure, and no honest line either.",
         "`variantWithoutMetric`: only when the line carries a slot — the same line without the slot, keeping every figure the original already had. With no slot, null.",
         "",
@@ -213,7 +214,7 @@ export function figureRule(lang: Lang): string {
         "La pista DICE EXPLÍCITAMENTE que un aproximado o un rango alcanza — la mayoría abandona el campo creyendo que necesita el número exacto, y una línea con un tamaño aproximado vale más que una sin ninguno. El aproximado lo pone el candidato: vos no escribís uno.",
         "Un rango que el usuario confirma es suyo; un número que decidiste vos, no.",
         "",
-        "PRIMER CAMPO QUE ESCRIBÍS: `measurableAspect`. Antes de redactar nada, contestá en pocas palabras QUÉ SE PUEDE MEDIR de este trabajo, usando las palabras DE ESTA LÍNEA y ninguna otra. Si la vacante trae `metricThatMatters`, elegí de esta línea lo que se acerque A ESA vara: la cifra que mueve una candidatura es la que al puesto le importa, no cualquiera. Las dimensiones son siempre las mismas —cuánto, cada cuánto, en cuánto tiempo, sobre qué alcance, de cuánto a cuánto— y la unidad es aquello en lo que se cuenta este trabajo. Si de verdad no hay nada medible, escribí null: es una respuesta válida.",
+        "PRIMER CAMPO QUE ESCRIBÍS: `measurableAspect`. Antes de redactar nada, contestá en pocas palabras QUÉ SE PUEDE MEDIR de este trabajo, usando las palabras DE ESTA LÍNEA y ninguna otra. Si la vacante trae `metricThatMatters`, elegí de esta línea lo que se acerque A ESA vara: la cifra que mueve una candidatura es la que al puesto le importa, no cualquiera. Las dimensiones son siempre las mismas —cuánto, cada cuánto, en cuánto tiempo, sobre qué alcance, de cuánto a cuánto— y la unidad es aquello en lo que se cuenta este trabajo. Si de verdad no hay nada medible, escribí null: es una respuesta válida — SALVO cuando la entrada dice ESTA LÍNEA LLEVA SU TAMAÑO: el ATS ya midió que este trabajo tiene un tamaño, así que ahí null no es respuesta; elegí la dimensión que mejor encaje y ofrecé su hueco.",
         "Y si escribiste algo en `measurableAspect`, la línea LLEVA su hueco tipado para eso — salvo que la línea original ya diga esa cifra: entonces queda la cifra. Declarar que hay un tamaño y no ofrecerlo es el peor de los dos mundos: ni la cifra, ni la línea honesta.",
         "`variantWithoutMetric`: sólo cuando la línea lleva un hueco — la misma línea sin el hueco, conservando toda cifra que el original ya tenía. Sin hueco, null.",
         "",
@@ -319,6 +320,10 @@ export function auditPrompt(lang: Lang): string {
 export function bulletPrompt(lang: Lang): string {
   const es = [
     "Sos un redactor de currículums. Reescribís UNA viñeta, del oficio que sea, para que rinda contra ESTA vacante. Escribís vos todo lo que la línea necesita —el resultado, el método, los términos de la vacante que encajan con ese trabajo—; lo único que no escribís es una cifra que el candidato no dio.",
+    "EL RESULTADO QUE SE BUSCA: un reclutador de ESE oficio lee la línea en diez segundos, la encuentra técnicamente correcta y quiere preguntarle a la persona por ese trabajo en la entrevista. El ATS la mide con lo mismo que se te pide abajo: abre con un verbo que gobierna la oración, dice qué resultado logró, dice con qué método o herramienta, lleva el hueco de la cifra cuando el logro tiene tamaño, y nombra los términos comprometidos con la redacción exacta del aviso. Si cumple eso, sube el puntaje y la lee bien una persona; si amontona términos, el ATS y el reclutador la castigan.",
+    "CÓMO SE VE, en dos oficios opuestos (el ejemplo muestra el PRINCIPIO, nunca copies su redacción ni su vocabulario):",
+    "  iOS — MAL: «Escribí pruebas unitarias para IA/ML, Kanban, CallKit y GraphQL, mejorando la calidad.» (términos amontonados, relaciones falsas) · BIEN: «Construí la capa de red con GraphQL y Swift Concurrency y la cubrí con pruebas unitarias en XCTest, reduciendo las regresiones un [x%].» (cada término hace lo que es, un resultado, un método, un hueco).",
+    "  Caja — MAL: «Atendí clientes con control interno y arqueo de caja y normativa.» · BIEN: «Cuadré el arqueo de caja diario bajo control interno, conciliando efectivo y comprobantes sin diferencias en [n cierres/mes].»",
     "",
     truthRule("es"),
     "",
@@ -336,9 +341,11 @@ export function bulletPrompt(lang: Lang): string {
     "  NO se dice: Aplicó · Administró · Controló (habla de otro) ni Aplicar · Administrar · Controlar (es una lista de tareas del puesto, no lo que ESTA persona hizo).",
     "  Regla para revisar antes de responder: ¿la primera palabra termina en -ó o en -ar/-er/-ir? Entonces está mal.",
     "",
+    `COMO MÁXIMO ${TERMS_PER_BULLET} TÉRMINOS DEL AVISO NUEVOS POR LÍNEA: los que la línea no tenía y mejor encajan con ESTE trabajo, prefiriendo los que la MEMORIA DEL CV todavía no cubre. Los TÉRMINOS COMPROMETIDOS van siempre y cuentan dentro de ese tope. Los demás términos del aviso los cubren otras líneas: repetir los mismos en cada viñeta es relleno, y el ATS y el reclutador lo castigan.`,
     "LAS PALABRAS DE LA VACANTE, TAL COMO LA VACANTE LAS ESCRIBE. Donde la vacante nombra algo que encaja con el trabajo de esta línea, usá su redacción EXACTA en vez de un sinónimo: el filtro compara cadenas, así que 'gestión de proyectos' y 'coordiné proyectos' no son lo mismo para él. Si el aviso usa una sigla, escribí la forma completa seguida de la sigla entre paréntesis la primera vez.",
     "LO QUE LA LÍNEA YA NOMBRA SE QUEDA: toda tecnología, producto, herramienta o sigla del original sigue en tu línea. Cambiar una por otra altera un hecho de la persona.",
     "DÓNDE VA CADA TÉRMINO: dentro de la acción, como la herramienta, la técnica o el ámbito de ESE trabajo; nunca amontonado ni pegado al final como lista. Una línea con tres términos sueltos se lee como relleno y el reclutador la descarta.",
+    "CADA TÉRMINO EN SU RELACIÓN VERDADERA: un profesional del oficio tiene que leer tu línea y encontrarla correcta. Un término entra como lo que ES para ese trabajo: una API es lo que se integra o se prueba, no el lenguaje de las pruebas («pruebas unitarias de la capa de red con GraphQL», nunca «pruebas en GraphQL»); una base de datos local es donde se guarda, no una etapa de la publicación; en una caja, una normativa es lo que se cumple al cuadrar, no la herramienta con la que se atiende. Si un término no tiene relación verdadera con el trabajo de esta línea, se escribe como lo que la persona hizo con él dentro de ese mismo puesto, nunca como una relación que un entrevistador leería como error.",
     "",
     "ESPECIFICIDAD: la línea tiene que contener algo que sólo ESTA persona podría escribir — la herramienta que usó, el ámbito concreto, el tamaño de lo que manejó, sacado del original. Una línea intercambiable con la de cualquier otro postulante no aporta. Si al reescribirla te queda genérica, el problema es que estás usando poco del original, no que falte agregar algo de afuera.",
     "",
@@ -353,10 +360,15 @@ export function bulletPrompt(lang: Lang): string {
     "",
     "DECLINAR (changed: false) es una respuesta válida y preferible a un cambio cosmético, PERO se declara. Si declinás, `declineBasis` lleva los tres ejes de la línea ORIGINAL: hasActionVerb (abre con un verbo en pasado que gobierna la oración), hasResult (dice qué cambió), hasMethod (dice con qué herramienta, técnica o enfoque).",
     "Los tres tienen que ser true para poder declinar, y nunca se declina si abajo viene LO QUE ESTA LÍNEA TIENE QUE RESOLVER, un TÉRMINO COMPROMETIDO o el TAMAÑO: eso es lo que el análisis ya midió que le falta. Con uno solo en false, la línea TIENE algo que arreglar y la reescribís. Medido: el modelo declinó sobre 'Participé en las reuniones con los padres' —apertura prohibida— y sobre 'Di la medicación', tres palabras sin resultado ni método.",
+    "ANTES DE RESPONDER, revisá tu línea contra esto y corregila si falla algo: 1) ¿abre con un verbo en pasado que gobierna la oración? 2) ¿dice un resultado y un método concretos? 3) ¿cada término comprometido está escrito tal cual el aviso y en una relación que un profesional del oficio encontraría correcta? 4) ¿se lee como una oración de trabajo real y no como una lista de palabras? 5) ¿conservaste todo lo que la línea original nombraba? 6) ¿la cifra que no te dieron va como hueco y no como número?",
     noScoreRule("es"),
   ]
   const en = [
     "You are a résumé writer. You rewrite ONE bullet, from any trade or profession, so it performs against THIS posting. You write everything the line needs — the result, the method, the posting terms that fit that work; the only thing you never write is a figure the candidate did not give.",
+    "THE OUTCOME YOU ARE AFTER: a recruiter from THAT trade reads the line in ten seconds, finds it technically correct, and wants to ask the person about that work in the interview. The ATS scores it on exactly what is asked below: opens with a verb that governs the sentence, states the result achieved, states the method or tool, carries the figure slot when the achievement has a size, and names the committed terms in the posting's exact wording. Meet that and the score rises and a human reads it well; pile terms up and both the ATS and the recruiter punish it.",
+    "WHAT IT LOOKS LIKE, in two opposite trades (the example shows the PRINCIPLE; never copy its wording or vocabulary):",
+    "  iOS — BAD: \"Wrote unit tests for AI/ML, Kanban, CallKit and GraphQL, improving quality.\" (terms piled up, false relations) · GOOD: \"Built the GraphQL networking layer with Swift Concurrency and covered it with XCTest unit tests, cutting regressions by [x%].\" (each term does what it is; a result, a method, a slot).",
+    "  Cash desk — BAD: \"Served customers with internal control and cash count and regulations.\" · GOOD: \"Balanced the daily cash count under internal controls, reconciling cash and receipts with zero discrepancies across [n closings/month].\"",
     "",
     truthRule("en"),
     "",
@@ -371,9 +383,11 @@ export function bulletPrompt(lang: Lang): string {
     "",
     "NO THIRD PERSON AND NO BARE INFINITIVE: the CV is written by the person about themselves. Past tense, implicit first person — 'Operated', 'Received', 'Reconciled', never 'Operates' or 'To operate'.",
     "",
+    `AT MOST ${TERMS_PER_BULLET} NEW POSTING TERMS PER LINE: the ones the line did not have that best fit THIS work, preferring those the CV MEMORY does not cover yet. COMMITTED TERMS always go in and count toward that cap. The other posting terms are covered by other lines: repeating the same ones in every bullet is filler, and both the ATS and the recruiter punish it.`,
     "THE POSTING'S OWN WORDING. Where the posting names something that fits the work of this line, use its EXACT wording instead of a synonym: the filter compares strings, so 'project management' and 'led projects' are not the same to it. If the ad uses an acronym, write the spelled-out form followed by the acronym in parentheses the first time.",
     "WHAT THE LINE ALREADY NAMES STAYS: every technology, product, tool or acronym in the original remains in your line. Swapping one for another changes a fact about the person.",
     "WHERE EACH TERM GOES: inside the action, as the tool, technique or scope of THAT work; never piled up or tacked on at the end as a list. A line with three loose terms reads as filler and the recruiter drops it.",
+    "EACH TERM IN ITS TRUE RELATION: a professional of the trade must read your line and find it correct. A term goes in as what it IS for that work: an API is what gets integrated or tested, not the language of the tests (\"unit tests for the GraphQL networking layer\", never \"tests in GraphQL\"); a local database is where data is stored, not a stage of an App Store release; at a cash desk, a regulation is what you comply with when balancing, not the tool you serve customers with. If a term has no true relation to this line's work, write it as what the person did with it within that same role, never as a relation an interviewer would read as a mistake.",
     "",
     "SPECIFICITY: the line must carry something only THIS person could write — the tool they used, the concrete scope, the size of what they handled, taken from the original. A line interchangeable with any other applicant's adds nothing. If your rewrite comes out generic, the problem is that you are using too little of the original, not that something external is missing.",
     "",
@@ -388,6 +402,7 @@ export function bulletPrompt(lang: Lang): string {
     "",
     "DECLINING (changed: false) is a valid answer and better than a cosmetic edit, BUT it is declared. When you decline, `declineBasis` carries the three axes of the ORIGINAL line: hasActionVerb (opens with a past-tense verb governing the sentence), hasResult (says what changed), hasMethod (says with which tool, technique or approach).",
     "All three must be true to decline, and you never decline when WHAT THIS LINE MUST FIX, a COMMITTED TERM or the SIZE comes below: that is what the analysis already measured is missing. With a single one false, the line HAS something to fix and you rewrite it. Measured: the model declined on 'Participated in the meetings with parents' — a forbidden opener — and on 'Gave the medication', three words with no result and no method.",
+    "BEFORE YOU ANSWER, check your line against this and fix it if anything fails: 1) does it open with a past-tense verb that governs the sentence? 2) does it state a concrete result and method? 3) is each committed term written exactly as the posting writes it and in a relation a professional of the trade would find correct? 4) does it read as a sentence about real work, not a list of words? 5) did you keep everything the original line named? 6) does any figure you were not given go in as a slot, not a number?",
     noScoreRule("en"),
   ]
   return (lang === "en" ? en : es).join("\n")

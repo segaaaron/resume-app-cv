@@ -1805,6 +1805,8 @@
       "fix_replace_with": "Escribir una sobre {term}",
       "section_open_no_score": "{count} abiertos · no mueven el puntaje",
       "type_missing_requirement_detail": "La vacante lo pide por su nombre y tu CV no lo dice con esas palabras. El filtro compara cadenas: si no está escrito, no cuenta. Tailor lo escribe dentro de la línea donde tu trabajo ya lo sostiene, y vos confirmás antes de que entre.",
+      "type_missing_requirement_unsupported": "La vacante pide «{term}» y tu CV no muestra experiencia con eso",
+      "type_missing_requirement_unsupported_detail": "Ninguna de tus viñetas habla de este trabajo, así que Tailor no lo escribe: agregarlo sería afirmar una experiencia que el CV no respalda, y un reclutador lo preguntaría en la entrevista. El puntaje lo cuenta como faltante.",
       "type_missing_requirement_credential": "La vacante pide «{term}» y tu CV no lo muestra",
       "type_missing_requirement_credential_detail": "Es algo que se tiene, no algo que se hace en un puesto: una licencia, un título, una certificación o un idioma. Si lo tenés, agregalo en su sección de Contenido — el filtro lo lee ahí. No se escribe como viñeta.",
       "type_no_result_detail": "Una viñeta se sostiene en tres cosas: con qué acción abre, en qué terminó y cómo lo lograste. A ésta le falta al menos una — el detalle dice cuál. Sin ellas se lee como una lista de tareas, no como trabajo hecho por alguien.",

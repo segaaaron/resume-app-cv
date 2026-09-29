@@ -22,6 +22,8 @@
 
 import {
   PROMPT_VERSION,
+  SIN_RESPALDO,
+  TERMS_PER_BULLET,
   detailParts,
   encodeDetail,
   RUBRIC_VERSION,
@@ -557,8 +559,14 @@ export function findingsOf(
       if (!facts) continue
       if (!facts.hasResult || !facts.hasMethod || !facts.hasActionVerb) {
         push("no_result", "xyz", b.id, b.text, gainOf(score, "xyz"), missingParts(facts))
-        continue
       }
+      /**
+       * LA CIFRA VA EN LA MISMA TARJETA QUE LOS EJES (2026-09-28, medido con el
+       * CV del CEO contra BairesDev). Un `continue` acá callaba la cifra mientras
+       * faltara un eje: Tailor cerraba el resultado y el análisis siguiente pedía
+       * el tamaño SOBRE LA LÍNEA RECIÉN ARREGLADA — dos vueltas para una línea,
+       * leídas como el ATS desdiciéndose. Todo lo que le falta se pide junto.
+       */
       if (!statesQuantity(b.text)) {
         // Un token, como los ejes de la viñeta: el motor no escribe prosa. Salía
         // «el logro admite un tamaño…» en castellano sobre una pantalla en inglés.
@@ -575,6 +583,18 @@ export function findingsOf(
   // no de la foto que trajo la auditoría: una tarjeta no puede pedir un término
   // que el puntaje ya cuenta.
   const cobertura = spec ? coverageOf(spec, audit, tree, index) : audit.coverage
+  /**
+   * CUÁNTOS TÉRMINOS DE LA VACANTE LLEVA YA CADA VIÑETA (CEO, 2026-09-28).
+   *
+   * Todo requisito sin sujeto se fusiona en la tarjeta de su línea, y la
+   * reescritura tiene que escribirlos todos. Medido en producción: una viñeta
+   * de Rappi recibió siete —«…for AI/ML, automation pipelines, Kanban, agentic
+   * AI workflows, CallKit, PushKit, and messaging»—. Una línea sostiene uno o
+   * dos términos con sentido; el resto va a otra línea o a su nota.
+   */
+  const terminosPorLinea = new Map<NodeId, number>()
+  const anotar = (id: NodeId) => terminosPorLinea.set(id, (terminosPorLinea.get(id) ?? 0) + 1)
+  const llenas = () => new Set([...terminosPorLinea].filter(([, n]) => n >= TERMS_PER_BULLET).map(([id]) => id))
   for (const c of cobertura) {
     if (c.status === "FOUND") continue
     const key = c.requirement === "MUST" ? "must" : "nice"
@@ -585,21 +605,19 @@ export function findingsOf(
      * no lo nombra. Se escribe el término ahí, que es donde la evidencia vive:
      * la reescritura nombra lo que la línea ya demuestra.
      *
-     * `NOT_FOUND` — no hay rastro. Antes se anclaba igual en «la mejor casa»
-     * (una heurística de palabras compartidas) y se pedía reescribir esa línea.
-     * Medido en producción: el modelo escribió «applying security best practices
-     * for fintech apps» sobre un puesto de 2015 que no era fintech, y la
-     * tarjeta prometía escribirlo «donde tu trabajo ya lo respalda». Nada lo
-     * respaldaba. Ahora se PREGUNTA —¿lo tenés?, ¿en qué puesto?— y la línea se
-     * redacta con lo que la persona contesta, como una línea nueva en ese puesto.
-     * El hallazgo habla del TÉRMINO, así que lleva sujeto: tarjeta propia, que
-     * no se fusiona con la de ninguna línea. El nodo sólo sugiere el puesto.
+     * `NOT_FOUND` — no hay rastro: nota sin botón, ver abajo.
      */
     if (c.status === "IMPLIED" && c.evidenceNodeId) {
+      /**
+       * UNA LÍNEA LLENA NO RECIBE UN TÉRMINO MÁS. El requisito ya está demostrado
+       * ahí —P2 lo citó— y `skillPlan` lo suma a Habilidades, donde el filtro lo
+       * lee: no hace falta una tarjeta que amontone un tercer término.
+       */
+      if (llenas().has(c.evidenceNodeId)) continue
+      anotar(c.evidenceNodeId)
       push("missing_requirement", key, c.evidenceNodeId, textOf(tree, c.evidenceNodeId), gainOf(score, key), c.skill, "rewrite")
       continue
     }
-    const puesto = bestHomeFor(tree, c.skill, index)
     /**
      * UNA CREDENCIAL NO SE REDACTA EN UNA VIÑETA.
      *
@@ -611,16 +629,18 @@ export function findingsOf(
     const credencial = [...(spec?.mustHave ?? []), ...(spec?.niceToHave ?? [])].some(
       (r) => normalize(r.skill) === normalize(c.skill) && r.kind === "credential",
     )
-    // LA IA ESCRIBE; LA PERSONA SÓLO PONE LAS CIFRAS (CEO, 2026-09-28). Sin
-    // rastro en el CV, el término se escribe en la línea donde mejor encaja y
-    // la persona confirma en el antes/después. Preguntarle «¿lo tenés?» le
-    // devolvía el trabajo que el producto existe para hacer.
-    // Sin sujeto, como el implícito: se fusiona con la tarjeta de esa línea, y
-    // UNA reescritura aterriza todo. Con sujeto, la línea recibía dos tarjetas
-    // que la reescribían y la segunda pisaba a la primera. La credencial sí
-    // lleva el suyo: no reescribe nada, es su propia nota.
-    if (credencial) push("missing_requirement", key, puesto, textOf(tree, puesto), gainOf(score, key), c.skill, "none", c.skill)
-    else push("missing_requirement", key, puesto, textOf(tree, puesto), gainOf(score, key), c.skill, "rewrite")
+    /**
+     * SIN RASTRO EN EL CV, NO SE ESCRIBE (CEO, 2026-09-28 — «no quiero errores
+     * de información»). Quién decide si una línea sostiene un requisito es P2,
+     * que lee el trabajo descrito: IMPLIED con la línea citada, y su regla 3
+     * prohíbe el parecido de nombre. Acá lo decidía el código por raíces
+     * compartidas, y medido contra la API con el CV del CEO eso escribió
+     * «Implemented Core Data and Core ML…» (por «Core»), «Managed the App Store
+     * release process…» (por «storage») y CallKit/PushKit en la viñeta de TCA:
+     * experiencia que el CV no tiene, con el ATS diciendo que sí. La tarjeta lo
+     * informa, con lo que pesa, y Tailor no inventa.
+     */
+    push("missing_requirement", key, tree.summary.id, textOf(tree, tree.summary.id), gainOf(score, key), credencial ? c.skill : `${SIN_RESPALDO}:${c.skill}`, "none", c.skill)
   }
 
   /**
@@ -834,10 +854,27 @@ function missingParts(f: { hasActionVerb: boolean; hasResult: boolean; hasMethod
  * hace que "inventario" encuentre "inventarios" y "pagos" encuentre "pagos"—, y
  * el empate lo desempata la línea más floja: la que menos pierde al reescribirse.
  */
+
+/**
+ * La viñeta donde escribir el término. `llenas`: las que ya llevan su tope de
+ * términos de la vacante (ver `terminosPorLinea`) — no son candidatas.
+ */
 function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId {
-  const palabras = normalize(skill)
-    .split(" ")
-    .filter((w) => w.length >= 4)
+  /**
+   * UNA PALABRA GENÉRICA NO ES RELACIÓN (2026-09-28, medido contra la API con el
+   * CV del CEO): «Integrated RESTful APIs…» tomaba «AI/ML Integration» por la
+   * raíz de «integration», y la IA escribió «…with AI/ML Integration across
+   * backend services». Cuentan todas las palabras del término —las cortas por
+   * igualdad, «ai», «ml», «ui»—, y una línea lo sostiene sólo si comparte al
+   * menos la mitad.
+   */
+  // Las siglas cuentan («AI», «ML»); los artículos («de», «of») no.
+  const palabras = skill
+    .split(/[^\p{L}\p{N}+#]+/u)
+    .filter((w) => w.length >= 4 || /^[A-Z0-9]{2,3}$/.test(w))
+    .map(normalize)
+    .filter(Boolean)
+  const coincide = (p: string, t: string) => (p.length >= 4 ? sameRoot(p, t) : p === t)
 
   /**
    * ── LA AFINIDAD DECIDE QUIÉN ES CANDIDATA; LA DEBILIDAD, QUIÉN GANA ────────
@@ -862,7 +899,7 @@ function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId 
       // Lo que decide: cuántas palabras del requisito ya viven en esta línea.
       // Sigue primero porque una línea que no puede sostener el término no es
       // candidata por más floja que esté: ahí el término se cae en el guard.
-      const afinidad = palabras.filter((p) => texto.some((t) => sameRoot(p, t))).length
+      const afinidad = palabras.filter((p) => texto.some((t) => coincide(p, t))).length
       /**
        * ENTRE DOS QUE PUEDEN SOSTENERLO, GANA LA MÁS DÉBIL (CEO, 2026-09-09).
        *
@@ -875,9 +912,8 @@ function bestHomeFor(tree: ResumeTree, skill: string, index: TermIndex): NodeId 
       candidatas.push({ id: b.id, afinidad, peso: peso(b.text, index) })
     }
   }
+  const sostienen = candidatas.filter((c) => c.afinidad > 0 && c.afinidad * 2 >= palabras.length)
   if (candidatas.length === 0) return tree.summary.id
-
-  const sostienen = candidatas.filter((c) => c.afinidad > 0)
   // Entre las que pueden sostenerlo, la más débil. Si ninguna puede, la que más
   // se le acerca: es la única con alguna chance de pasar el guard.
   const elegidas = sostienen.length > 0 ? sostienen : candidatas
@@ -1116,7 +1152,8 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   // Un juicio sólo cambia si cambió el texto que lo sostiene. Ver `fijarJuicios`.
   const lockKey = cacheKey.lock(input.resumeId, input.model)
   const previos = ((await input.store.read("ats3-lock", lockKey)) as Juicios | null) ?? JUICIOS_VACIOS
-  const fijado = fijarJuicios(tree, audit, previos, jdKey)
+  const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
+  const fijado = fijarJuicios(tree, audit, previos, jdKey, log)
   audit = fijado.audit
   if (JSON.stringify(fijado.juicios) !== JSON.stringify(previos)) await input.store.write("ats3-lock", lockKey, fijado.juicios)
 
@@ -1157,7 +1194,6 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   }
 
   // ── los hallazgos, filtrados por lo que el usuario ya resolvió ────────────
-  const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
   const all = findingsOf(tree, audit, score, index, spec)
   for (const [nombre, ok] of Object.entries(checks)) {
     // Un chequeo que falla y no genera hallazgo es un punto perdido que el
@@ -1228,19 +1264,80 @@ export function fijarJuicios(
   audit: AuditFacts,
   previos: Juicios,
   jdKey: string,
+  log: Resolution[] = [],
 ): { audit: AuditFacts; juicios: Juicios } {
   const lineas = tree.roles.flatMap((r) => r.bullets)
-  const hashDe = new Map(lineas.map((b) => [b.id, b.hash]))
-  const idDe = new Map(lineas.map((b) => [b.hash, b.id]))
-  const vistas = new Set(Object.keys(previos.lineas))
-  const nueva = (id: string | null) => Boolean(id && hashDe.has(id) && !vistas.has(hashDe.get(id)!))
+  // El resumen también puede ser la evidencia que P2 cita: sin él en el mapa,
+  // una cita al resumen se guardaba como «sin evidencia» y el requisito saltaba
+  // a otra línea en el análisis siguiente (medido el 2026-09-28 con Coforge).
+  const citables = [...lineas, tree.summary]
+  const hashDe = new Map(citables.map((b) => [b.id, b.hash]))
+  const idDe = new Map(citables.map((b) => [b.hash, b.id]))
+  const vistas = new Set([...Object.keys(previos.lineas), ...Object.keys(previos.resumen).map((k) => k.slice(jdKey.length + 1))])
+  /**
+   * LO QUE EL ATS YA ACEPTÓ DE UNA LÍNEA NO SE PIERDE AL REESCRIBIRLA CON TAILOR
+   * (2026-09-28, medido con el CV del CEO contra BairesDev). La tarjeta pedía
+   * sólo el tamaño; Tailor escribió «…across 10 releases» y al reanalizar P2
+   * leyó el texto nuevo desde cero y dijo «no dice en qué terminó», algo que
+   * sobre la línea vieja había aceptado. Tailor no puede soltar contenido (lo
+   * impide `drops_content`), así que un eje que la línea tenía lo sigue teniendo:
+   * la línea escrita por Tailor hereda los ejes de la que reemplazó, y P2 sólo
+   * puede sumar. El hash viejo sale del registro de lo aplicado (`before`);
+   * si Tailor reescribió dos veces sin analizar en medio, se sigue la cadena.
+   */
+  const reemplazo = new Map<string, string>()
+  for (const r of log) {
+    if (r.resolvedBy === "AI_SUGGESTION" && r.kind !== "dropped" && r.before) reemplazo.set(r.nodeHashAtResolution, nodeHash(r.before))
+  }
+  /**
+   * Y LO QUE LA TARJETA PROMETIÓ, TAILOR YA LO CUMPLIÓ. Una línea sólo se
+   * entrega si cada eje que su tarjeta pedía pasó `ejesFaltan` —declarado por
+   * el modelo y con palabras nuevas que el código ve—, y la tarjeta de una línea
+   * junta TODO lo que le falta. Lo que no pedía, la línea vieja ya lo tenía.
+   * Re-juzgarla desde cero era el ATS desdiciendo su propia entrega (medido:
+   * «no dice en qué terminó» sobre la línea que Tailor acababa de cerrar).
+   */
+  const heredar = (h: string, nuevo: Ejes): Ejes => {
+    let viejo = reemplazo.get(h)
+    for (let i = 0; viejo && !previos.lineas[viejo] && i < 10; i++) viejo = reemplazo.get(viejo)
+    return viejo && previos.lineas[viejo] ? { hasActionVerb: true, hasResult: true, hasMethod: true } : nuevo
+  }
+
+  /**
+   * Y UNA LÍNEA DE TAILOR NO ES EVIDENCIA NUEVA (medido el mismo día con
+   * Coforge): Tailor escribió «Clean Architecture» en la viñeta de TCA y al
+   * reanalizar P2 citó esa línea como prueba de «Mobile Architecture», que antes
+   * era «sin rastro» — una tarjeta nueva sobre la línea recién arreglada, nacida
+   * de la redacción de la IA y no de un hecho de la persona. Para descubrir un
+   * requisito, cuenta la línea que la persona escribió o editó; la de Tailor
+   * hereda lo que valía la que reemplazó.
+   */
+  // La blanda es otra cosa: la tarjeta le pidió a Tailor tejerla en esa línea,
+  // así que ahí la línea de Tailor SÍ es la prueba que se buscaba.
+  const nueva = (id: string | null, deTailorVale = false) =>
+    Boolean(id && hashDe.has(id) && !vistas.has(hashDe.get(id)!) && (deTailorVale || !reemplazo.has(hashDe.get(id)!)))
+  const sucesor = new Map([...reemplazo].map(([nuevo, viejo]) => [viejo, nuevo]))
+  const vigente = (h: string) => {
+    let x: string | undefined = h
+    for (let i = 0; x && !idDe.has(x) && i < 10; i++) x = sucesor.get(x)
+    return x ? idDe.get(x) : undefined
+  }
 
   // Sólo se guardan las líneas que el CV tiene hoy: el registro no crece sin fin.
   const ejes: Record<string, Ejes> = {}
+  const textoDe = new Map(lineas.map((b) => [b.id, b.text]))
   const bullets = audit.bullets.map((b) => {
     const h = hashDe.get(b.id)
     if (!h) return b
-    const fijo = previos.lineas[h] ?? { hasActionVerb: b.hasActionVerb, hasResult: b.hasResult, hasMethod: b.hasMethod }
+    const leido = previos.lineas[h] ?? heredar(h, { hasActionVerb: b.hasActionVerb, hasResult: b.hasResult, hasMethod: b.hasMethod })
+    /**
+     * UN PORCENTAJE ESCRITO ES UN RESULTADO (2026-09-28, medido contra la API con
+     * el CV del CEO). P2 juzgó «…contributing to a reduction in crash rates by
+     * 20%» como sin resultado; la tarjeta pedía escribirlo y la IA de Tailor, que
+     * lo veía escrito, se negaba: el ATS y Tailor contradiciéndose sobre la misma
+     * línea. Lo que el texto prueba, el código lo fija.
+     */
+    const fijo = { ...leido, hasResult: leido.hasResult || /\d+(?:[.,]\d+)?\s?%/.test(textoDe.get(b.id) ?? "") }
     ejes[h] = fijo
     return { ...b, ...fijo }
   })
@@ -1249,11 +1346,11 @@ export function fijarJuicios(
   const summary = previos.resumen[claveResumen] ?? audit.summary
 
   /** El mismo criterio para requisitos y blandas: la prueba manda. */
-  const fijar = <S extends string>(clave: string, nuevo: Estado<S> & { id: string | null }, guardados: Record<string, Estado<S>>) => {
+  const fijar = <S extends string>(clave: string, nuevo: Estado<S> & { id: string | null }, guardados: Record<string, Estado<S>>, deTailorVale = false) => {
     const antes = guardados[clave]
-    const lineaDeAntes = antes?.evidencia ? idDe.get(antes.evidencia) : undefined
+    const lineaDeAntes = antes?.evidencia ? vigente(antes.evidencia) : undefined
     if (antes && lineaDeAntes) return { status: antes.status, id: lineaDeAntes }
-    if (antes && !antes.evidencia && !nueva(nuevo.id)) return { status: antes.status, id: null }
+    if (antes && !antes.evidencia && !nueva(nuevo.id, deTailorVale)) return { status: antes.status, id: null }
     return { status: nuevo.status, id: nuevo.id }
   }
   const requisitos = { ...previos.requisitos }
@@ -1266,7 +1363,7 @@ export function fijarJuicios(
   const blandas = { ...previos.blandas }
   const softCoverage = audit.softCoverage.map((s) => {
     const clave = `${jdKey}:${normalize(s.signal)}`
-    const r = fijar(clave, { status: s.status, evidencia: null, id: s.evidenceNodeId }, previos.blandas)
+    const r = fijar(clave, { status: s.status, evidencia: null, id: s.evidenceNodeId }, previos.blandas, true)
     blandas[clave] = { status: r.status, evidencia: r.id ? (hashDe.get(r.id) ?? null) : null }
     return { ...s, status: r.status, evidenceNodeId: r.id }
   })
@@ -1449,12 +1546,19 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * viñeta textual. Lo que la tarjeta pide escribir no cuenta como ajeno.
    */
   const enElCv = termsIn(req.index, cvTextOf(req.tree))
+  /**
+   * Y LA VIÑETA TAMPOCO (2026-09-28, medido contra la API con el CV del CEO): una
+   * tarjeta que sólo pedía la cifra volvió con «…partnering with Agile teams in
+   * Scrum and Kanban», y el CV no dice Kanban en ningún lado. Lo que la tarjeta
+   * del ATS pidió escribir sí va: el ATS ya lo ancló donde el trabajo lo sostiene.
+   */
   const ajenos = (s: Suggestion) =>
-    isSummary
-      ? [...termsIn(req.index, s.text)].filter(
-          (t) => !enElCv.has(t) && !(req.mustWrite ?? []).some((m) => normalize(m) === normalize(t)),
-        )
-      : []
+    [...termsIn(req.index, s.text)].filter(
+      (t) =>
+        !enElCv.has(t) &&
+        !termsIn(req.index, original).has(t) &&
+        !(req.mustWrite ?? []).some((m) => normalize(m) === normalize(t)),
+    )
   /**
    * NI COPIA LAS TAREAS DEL AVISO COMO SI FUERAN SUYAS. Medido el 2026-09-28:
    * «Ajuste a registrar ventas, realizar arqueo de caja al cierre, atender
@@ -1480,6 +1584,9 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * y casi nada más es relleno de palabras clave, no una oración.
    */
   const terminosDelAviso = [...req.index.ordered.map((o) => o.needle), ...(req.spec.softSignals ?? []).map(normalize)].filter(Boolean)
+  const delAviso = new Set(
+    [...(req.spec.mustHave ?? []), ...(req.spec.niceToHave ?? [])].map((r) => req.index.byKey.get(termKey(r.skill)) ?? r.skill),
+  )
   const enumera = (s: Suggestion) =>
     isSummary
       ? s.text.split(/(?<=[.!?])\s+/).filter((o) => {
@@ -1491,7 +1598,17 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           // tiene su acción y no es una lista.
           return n >= 3 && n >= 2 * resto.split(" ").filter((w) => w.length >= 4).length
         })
-      : []
+      : (() => {
+          /**
+           * UNA VIÑETA SUMA COMO MUCHO `TERMS_PER_BULLET` TÉRMINOS DEL AVISO QUE NO
+           * TENÍA — la misma vara que el motor usa al repartir requisitos y que el
+           * prompt le dice al modelo. Medido el 2026-09-28 en el banco de oficios:
+           * el modelo metía los cuatro términos del aviso en cada línea de la docente.
+           */
+          const antes = termsIn(req.index, original)
+          const nuevos = [...termsIn(req.index, s.text)].filter((t) => delAviso.has(t) && !antes.has(t))
+          return nuevos.length > TERMS_PER_BULLET ? nuevos : []
+        })()
   /**
    * LA PRUEBA LLEVA SU RESULTADO. Medido el 2026-09-28: con «20% reduction in
    * crash rates» entre los logros, tres resúmenes seguidos salieron sin una sola
@@ -1574,6 +1691,23 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * no podía ofrecer «no tengo ese dato» — el botón de confirmar quedaba
    * apagado para quien no sabe el número.
    */
+  /**
+   * UN HUECO DICE DE QUÉ ES EL NÚMERO (2026-09-28, banco de oficios contra la API):
+   * «evitar paradas en [n]» y «[n] discrepancies per [n 2] counts». La persona no
+   * sabe qué escribir y el ATS lee una línea rota. Vale un token con su unidad
+   * adentro («[n piezas]», «[x%]», «[n/semana]») o «[n]» seguido de la palabra
+   * que cuenta («[n] reviews»).
+   */
+  const TOKEN_OK = /^\[(x%|n|x|\$x|de x a y|from x to y|x\/y|n\/\p{L}+|n [\p{L}/ ]+)\]$/u
+  const huecoMudo = (s: Suggestion) =>
+    [...s.text.matchAll(/\[[^\]]*\]/g)]
+      .filter((m) => {
+        const tok = m[0]
+        if (!TOKEN_OK.test(tok)) return true
+        if (tok !== "[n]" && tok !== "[x]") return false
+        return !/^\s+\p{L}{3,}/u.test(s.text.slice((m.index ?? 0) + tok.length))
+      })
+      .map((m) => m[0])
   const sinVariante = (s: Suggestion) => (!isSummary && s.placeholders.length > 0 && !s.variantWithoutMetric?.trim() ? 1 : 0)
   /**
    * LA LÍNEA NUEVA NO ABRE CON UNA TAREA. La tarjeta prometía «abrí con lo que
@@ -1603,8 +1737,12 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   const conocidas = normalize(original).split(" ").filter((w) => w.length >= 4)
   const aporta = (s: Suggestion) => {
     let texto = ` ${normalize(s.text)} `
-    // Todo lo que la vacante nombra —duras, deseables, blandas— y lo declarado.
-    const terminos = [...req.index.ordered.map((o) => o.needle), ...(req.spec.softSignals ?? []).map(normalize)]
+    // Lo que la tarjeta prometió escribir y las blandas: ésos son los que
+    // rellenan un eje sin decir nada («con atención al cliente»). Una
+    // herramienta que el CV declara SÍ es un método —«with XCTest unit
+    // tests»—: descontarla negaba la línea que la IA escribió bien (medido con
+    // BairesDev el 2026-09-28). La que el CV no declara ya la saca `ajenos`.
+    const terminos = [...(req.mustWrite ?? []).flatMap(titleForms).map(normalize), ...(req.spec.softSignals ?? []).map(normalize)]
     for (const t of terminos) if (t) texto = texto.split(` ${t} `).join(" ")
     return texto.split(" ").filter((w) => w.length >= 4 && !conocidas.some((c) => sameRoot(w, c))).length >= 2
   }
@@ -1647,12 +1785,17 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     return isSummary ? [...new Set((s.text.match(/\p{L}{3,}ó(?!\p{L})/gu) ?? []).filter((w) => w !== w.toUpperCase()))] : []
   }
   const problemas = (s: Suggestion) =>
-    faltan(s).length + ajenos(s).length + pegadas(s).length + repite(s).length + sinTamano(s) + debil(s) + terceraPersona(s).length + copiaAviso(s).length + sueltas(s).length + ejesFaltan(s).length + comenta(s).length + enumera(s).length + sinPrueba(s).length + fueraDelPuesto(s).length + sinVariante(s)
+    faltan(s).length + ajenos(s).length + pegadas(s).length + repite(s).length + sinTamano(s) + debil(s) + terceraPersona(s).length + copiaAviso(s).length + sueltas(s).length + ejesFaltan(s).length + comenta(s).length + enumera(s).length + sinPrueba(s).length + fueraDelPuesto(s).length + sinVariante(s) + huecoMudo(s).length
 
   const guardada = (await req.store.read("ats3-fix", key)) as Suggestion | null
   // Sólo una reescritura tiene una línea a la que superar: al agregar, parecerse
   // al tema confirmado no es «no aporta».
-  const parecidaA = (s: Suggestion) => similarTo(s, ctx, true)
+  // Escribir lo que la tarjeta prometió —el término que la línea no nombraba—
+  // ES la mejora, aunque el resto quede igual: la regla del 90% es contra el
+  // cambio cosmético. Medido el 2026-09-28: «Conducted unit testing and UI
+  // testing…» cerraba la tarjeta y se descartaba por parecida al original.
+  const cierraPromesa = (s: Suggestion) => (req.mustWrite ?? []).length > 0 && faltan(s).length === 0
+  const parecidaA = (s: Suggestion) => similarTo(s, ctx, !cierraPromesa(s))
   const cached = guardada ? repairSuggestion(guardada) : null
   // Lo guardado pasa también por el ciclo de corrección: con problemas, no se sirve.
   if (cached && checkSuggestion(cached, ctx).ok && problemas(cached) === 0) {
@@ -1772,8 +1915,8 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     if (falta.length === 0) return { ok: false, alreadyGood: true, calls }
     first = await ask(
       req.language === "en"
-        ? `You declined, yet this line still needs: ${falta.join(" · ")}. It has something to fix — rewrite it, keeping strictly to what the original says.`
-        : `Declinaste, pero a esta línea todavía le falta: ${falta.join(" · ")}. TIENE algo que arreglar — reescribila, ciñéndote a lo que el original dice.`,
+        ? `You declined, yet this line still needs: ${falta.join(" · ")}. It has something to fix — rewrite it. You write what is missing: the result that work achieves and the method, tool or technique it is done with in this trade. Keep every fact the original states, drop nothing, and add no figure the candidate did not give.`
+        : `Declinaste, pero a esta línea todavía le falta: ${falta.join(" · ")}. TIENE algo que arreglar — reescribila. Lo que falta lo escribís vos: el resultado que logra ese trabajo y el método, la herramienta o la técnica con que se hace en este oficio. Conservá todo hecho del original, no sueltes nada y no agregues ninguna cifra que el candidato no dio.`,
     )
     calls++
     if (!first.changed) return { ...negada, calls }
@@ -1798,16 +1941,24 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   /** Lo que falta, lo ajeno, lo pegado y el verbo repetido, dicho en UN pedido. */
   const correccion = (s: Suggestion): string => {
     const [f, a, p, v, t, d, tp, ca, su, ej, co, en_, sp, fp, sv] = [faltan(s), ajenos(s), pegadas(s), repite(s), sinTamano(s), debil(s), terceraPersona(s), copiaAviso(s), sueltas(s), ejesFaltan(s), comenta(s), enumera(s), sinPrueba(s), fueraDelPuesto(s), sinVariante(s)]
+    const hm = huecoMudo(s)
     const en = req.language === "en"
     return [
-      f.length ? (en ? `The card promised to write ${f.map((t) => titleForms(t).map((x) => `"${x}"`).join(" or ")).join(", ")} exactly as the posting writes it, and your text does not. Add it next to what the line already names, dropping nothing.` : `La tarjeta prometió escribir ${f.map((t) => titleForms(t).map((x) => `«${x}»`).join(" o ")).join(", ")} tal cual lo escribe la vacante, y tu texto no lo dice. Agregalo al lado de lo que la línea ya nombra, sin soltar nada.`) : "",
+      hm.length ? (en ? `The slot ${hm.map((x) => `"${x}"`).join(", ")} does not say what the number counts: put the unit inside it ("[n reviews/week]") or right after it ("[n] reviews").` : `El hueco ${hm.map((x) => `«${x}»`).join(", ")} no dice qué cuenta el número: poné la unidad adentro («[n piezas/día]») o justo después («[n] piezas»).`) : "",
+      f.length ? (en ? `The card promised to write ${f.map((t) => titleForms(t).map((x) => `"${x}"`).join(" or ")).join(", ")} exactly as the posting writes it — those words together and in that order — and your text does not. Add it next to what the line already names, dropping nothing.` : `La tarjeta prometió escribir ${f.map((t) => titleForms(t).map((x) => `«${x}»`).join(" o ")).join(", ")} tal cual lo escribe la vacante —esas palabras juntas y en ese orden— y tu texto no lo dice. Agregalo al lado de lo que la línea ya nombra, sin soltar nada.`) : "",
       a.length ? (en ? `The CV never says ${a.map((t) => `"${t}"`).join(", ")}: remove it.` : `El CV no dice ${a.map((t) => `«${t}»`).join(", ")} en ninguna parte: sacalo.`) : "",
       p.length ? (en ? `You pasted a CV bullet verbatim ("${p[0]}"): tell that achievement in the summary's own voice.` : `Pegaste una viñeta tal cual («${p[0]}»): contá ese logro con la voz del resumen.`) : "",
       v.length ? (en ? `Another bullet already opens with "${v[0]}": open with a different verb that says the same.` : `Otra viñeta ya abre con «${v[0]}»: abrí con otro verbo que diga lo mismo.`) : "",
       sv ? (en ? `Your line carries a slot but no variantWithoutMetric: add the same line without the slot, keeping every figure the original had.` : `Tu línea lleva un hueco y no trae variantWithoutMetric: agregá la misma línea sin el hueco, conservando toda cifra que el original tenía.`) : "",
       fp.length ? (en ? `"${fp[0]}" names nothing this posting asks for and no result: replace it with what the person did that the posting asks, or leave it out.` : `«${fp[0]}» no nombra nada de lo que el aviso pide ni un resultado: cambiala por lo que la persona hizo y el aviso pide, o sacala.`) : "",
       sp.length ? (en ? `The summary has no proof: tell this achievement in the summary's voice, with its result and its figure exactly as the CV states them — "${sp[0]}".` : `El resumen no trae prueba: contá este logro con la voz del resumen, con su resultado y su cifra tal cual los dice el CV — «${sp[0]}».`) : "",
-      en_.length ? (en ? `"${en_[0]}" lists posting terms: name them inside what the person did, or leave them out.` : `«${en_[0]}» enumera términos del aviso: nombralos dentro de lo que la persona hizo, o sacalos.`) : "",
+      en_.length
+        ? isSummary
+          ? en ? `"${en_[0]}" lists posting terms: name them inside what the person did, or leave them out.` : `«${en_[0]}» enumera términos del aviso: nombralos dentro de lo que la persona hizo, o sacalos.`
+          : en
+            ? `You added ${en_.length} posting terms (${en_.join(", ")}): keep at most ${TERMS_PER_BULLET}, the ones that best fit this work, and drop the rest.`
+            : `Sumaste ${en_.length} términos del aviso (${en_.join(", ")}): dejá como máximo ${TERMS_PER_BULLET}, los que mejor encajan con este trabajo, y sacá el resto.`
+        : "",
       co.length ? (en ? `You wrote about the CV ("${co[0]}"): the summary is the printed text itself, never a comment about the document.` : `Hablaste del CV («${co[0]}»): el resumen es el texto impreso, nunca un comentario sobre el documento.`) : "",
       ej.length ? (en ? `The card promised this line would have: ${ej.join(", ")}, and your newBasis says it does not. Use what the original and the person say; if they do not say it, keep it false — never fill it with a posting term.` : `La tarjeta prometió que esta línea tendría: ${ej.join(", ")}, y tu newBasis dice que no. Usá lo que dicen el original y la persona; si no lo dicen, dejalo en false — nunca lo rellenes con un término de la vacante.`) : "",
       su.length ? (en ? `${su.map((x) => `"${x}"`).join(", ")} is a loose datum: fold it into a complete sentence or leave it out.` : `${su.map((x) => `«${x}»`).join(", ")} es un dato suelto: integralo en una oración completa o sacalo.`) : "",
@@ -1822,7 +1973,12 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     ].filter(Boolean).join(" ")
   }
   // Lo prometido pesa más que una palabra perdida y menos que repetir otra línea.
-  const costo = (s: Suggestion) => (parecidaA(s) ? 1000 : 0) + problemas(s) * 10 + lostContent(s, ctx).length
+  // Lo que al final NIEGA la tarjeta —un nombre del CV soltado, un término
+  // prometido que no está— pesa como fatal: entre dos respuestas, una que se
+  // puede entregar le gana siempre a una que se va a negar (medido el
+  // 2026-09-28: el reintento arreglaba la cifra, soltaba «Agile» y ganaba).
+  const niega = (s: Suggestion) => (!isSummary && droppedNames(original, s.text).length > 0) || faltan(s).length > 0 || enumera(s).length > 0
+  const costo = (s: Suggestion) => (niega(s) ? 500 : 0) + (parecidaA(s) ? 1000 : 0) + problemas(s) * 10 + lostContent(s, ctx).length
   const parecida = verdict.ok ? parecidaA(first) : null
   const perdido = verdict.ok ? lostContent(first, ctx) : []
 
@@ -1917,11 +2073,23 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    */
   const prometeTamano = Boolean(first.measurableAspect?.trim())
   const yaTieneCifra = /\d/.test(original)
-  if (prometeTamano && first.placeholders.length === 0 && !yaTieneCifra) {
+  /**
+   * Y SI LA TARJETA LO PROMETIÓ, TAMBIÉN (2026-09-28, medido con Coforge): una
+   * tarjeta «falta el tamaño + este término» se entregaba con el término y sin
+   * hueco, y el análisis siguiente volvía a pedir el tamaño sobre la línea
+   * recién arreglada. El ATS ya decidió que el trabajo tiene tamaño: el
+   * modelo no puede contestar que no.
+   */
+  const debeTamano = Boolean(req.wantsSize) && !statesQuantity(first.text)
+  if ((prometeTamano || debeTamano) && first.placeholders.length === 0 && !yaTieneCifra) {
     const segunda = await ask(
-      req.language === "en"
-        ? `You wrote that this work can be measured in "${first.measurableAspect}" and then offered no slot for it. Add the typed slot with its believable range for this trade — or set measurableAspect to null if there is truly nothing to measure.`
-        : `Escribiste que este trabajo se mide en "${first.measurableAspect}" y después no ofreciste el hueco. Agregá el hueco tipado con su rango creíble para este oficio — o poné measurableAspect en null si de verdad no hay nada que medir.`,
+      debeTamano
+        ? req.language === "en"
+          ? `The card promised the size of this achievement and your line has no slot. Keep the line exactly as you wrote it and add ONE typed slot for what this work is counted in (how much, how often, in how long, over what scope), with the unit inside or right after it, plus variantWithoutMetric.`
+          : `La tarjeta prometió el tamaño de este logro y tu línea no trae hueco. Dejá la línea tal como la escribiste y agregá UN hueco tipado para aquello en lo que se cuenta este trabajo (cuánto, cada cuánto, en cuánto tiempo, sobre qué alcance), con la unidad adentro o justo después, y su variantWithoutMetric.`
+        : req.language === "en"
+          ? `You wrote that this work can be measured in "${first.measurableAspect}" and then offered no slot for it. Add the typed slot with its believable range for this trade — or set measurableAspect to null if there is truly nothing to measure.`
+          : `Escribiste que este trabajo se mide en "${first.measurableAspect}" y después no ofreciste el hueco. Agregá el hueco tipado con su rango creíble para este oficio — o poné measurableAspect en null si de verdad no hay nada que medir.`,
     )
     calls++
     const conHueco = preparar(segunda)
