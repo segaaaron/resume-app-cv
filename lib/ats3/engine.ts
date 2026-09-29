@@ -22,6 +22,7 @@
 
 import {
   PROMPT_VERSION,
+  MAL_ESCRITO,
   SIN_RESPALDO,
   TERMS_PER_BULLET,
   detailParts,
@@ -51,7 +52,7 @@ import { namedCliches } from "@/lib/services/ai/shared/cliches"
 import { isEmptyPhrasing, opensWeakly } from "@/lib/services/ai/shared/empty-phrasing"
 import { afterAccept, BULLETS_PER_ROLE_MAX, ledgerSignature, openLedger, releaseOpener, SKILLS_MAX, type Ledger } from "@/lib/ats3/ledger"
 import { checkSuggestion, droppedNames, findNode, isStale, lossNudge, lostContent, loyalty, repairSuggestion, retryNudge, similarNudge, similarTo, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
-import { ABIERTO, coverageOf, cvTextOf, deltaOf, experienceYears, FECHA_ABIERTA, gainOf, mes, postingWeights, scoreResume, softCoverageOf, statesQuantity, titleForms, termsOf, titleWritten, type AuditFacts, type ComponentKey, type Mes, type ParseChecks, type Score } from "@/lib/ats3/score"
+import { ABIERTO, coverageOf, cvTextOf, deltaOf, experienceYears, FECHA_ABIERTA, formaPosible, gainOf, mes, postingWeights, scoreResume, softCoverageOf, statesQuantity, titleForms, termsOf, titleWritten, type AuditFacts, type ComponentKey, type Mes, type ParseChecks, type Score } from "@/lib/ats3/score"
 // Viven con quien mide; se re-exportan porque el motor es la puerta de siempre.
 export { coverageOf, cvTextOf, termsOf } from "@/lib/ats3/score"
 
@@ -422,6 +423,13 @@ export function findingsOf(
    * compararlo—.
    */
   spec?: JobSpec,
+  /**
+   * Las líneas que Tailor escribió y la persona aceptó. Su cifra ya se pidió:
+   * si quedó sin número —el modelo no dio el hueco, o la persona apretó «no
+   * tengo ese dato»— volver a pedirla sobre esa misma línea es el bucle que
+   * este motor existe para no tener (medido el 2026-09-28 con el CV del CEO).
+   */
+  cifraYaPedida?: ReadonlySet<NodeId>,
 ): Finding[] {
   const out: Finding[] = []
   /**
@@ -567,7 +575,7 @@ export function findingsOf(
        * el tamaño SOBRE LA LÍNEA RECIÉN ARREGLADA — dos vueltas para una línea,
        * leídas como el ATS desdiciéndose. Todo lo que le falta se pide junto.
        */
-      if (!statesQuantity(b.text)) {
+      if (!statesQuantity(b.text) && !cifraYaPedida?.has(b.id)) {
         // Un token, como los ejes de la viñeta: el motor no escribe prosa. Salía
         // «el logro admite un tamaño…» en castellano sobre una pantalla en inglés.
         push("no_metric", "metric", b.id, b.text, gainOf(score, "metric"), "tamaño")
@@ -607,6 +615,10 @@ export function findingsOf(
      *
      * `NOT_FOUND` — no hay rastro: nota sin botón, ver abajo.
      */
+    // Implícito sin línea: el CV lo tiene con otro nombre en una sección que no
+    // es una viñeta. `skillPlan` escribe el nombre del aviso; no hay línea que
+    // reescribir ni nada que informar como faltante.
+    if (c.status === "IMPLIED" && !c.evidenceNodeId) continue
     if (c.status === "IMPLIED" && c.evidenceNodeId) {
       /**
        * UNA LÍNEA LLENA NO RECIBE UN TÉRMINO MÁS. El requisito ya está demostrado
@@ -640,7 +652,10 @@ export function findingsOf(
      * experiencia que el CV no tiene, con el ATS diciendo que sí. La tarjeta lo
      * informa, con lo que pesa, y Tailor no inventa.
      */
-    push("missing_requirement", key, tree.summary.id, textOf(tree, tree.summary.id), gainOf(score, key), credencial ? c.skill : `${SIN_RESPALDO}:${c.skill}`, "none", c.skill)
+    // Mal escrito en el CV: no es falta de experiencia, es un error que el
+    // filtro no perdona. Se dice cuál, sin corregirlo solo.
+    const marca = credencial ? c.skill : c.match === "MISSPELLED" && c.cvWording ? `${MAL_ESCRITO}:${c.cvWording}` : `${SIN_RESPALDO}:${c.skill}`
+    push("missing_requirement", key, tree.summary.id, textOf(tree, tree.summary.id), gainOf(score, key), marca, "none", c.skill)
   }
 
   /**
@@ -988,7 +1003,9 @@ export function skillPlan(
    * nombrarlo en la lista, sí.
    */
   const demostradas = new Set(
-    audit.coverage.filter((c) => c.status !== "NOT_FOUND" && c.evidenceNodeId).map((c) => normalize(c.skill)),
+    // Y lo que el CV tiene con otro nombre del oficio («Git» por «version
+    // control»): el nombre del aviso entra a la lista al lado del suyo.
+    audit.coverage.filter((c) => c.status !== "NOT_FOUND" && (c.evidenceNodeId || c.match === "EQUIVALENT")).map((c) => normalize(c.skill)),
   )
   // Una credencial no se agrega a Habilidades: vive en su sección (Idiomas,
   // Educación, Certificaciones). Si la persona ya la listó ahí, se respeta.
@@ -1110,7 +1127,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     await input.store.write("ats3-jd", jdKey, spec)
   }
 
-  const index = buildTermIndex(termsOf(spec, tree))
+  let index = buildTermIndex(termsOf(spec, tree))
 
   // ── acto 3: la auditoría ──────────────────────────────────────────────────
   const auditKey = cacheKey.audit(treeHash(tree), jdKey, input.model)
@@ -1157,6 +1174,12 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   audit = fijado.audit
   if (JSON.stringify(fijado.juicios) !== JSON.stringify(previos)) await input.store.write("ats3-lock", lockKey, fijado.juicios)
 
+  // Lo que el CV escribe distinto y la auditoría reconoció como lo mismo pasa a
+  // ser variante del requisito: desde acá lo cuentan igual el puntaje, la tabla
+  // y Tailor. Ver `conFormasDelCv`.
+  spec = conFormasDelCv(spec, audit, tree)
+  index = buildTermIndex(termsOf(spec, tree))
+
   // El modelo aporta la cita; el estado de cada requisito lo decide el código
   // sobre el CV entero. Ver `coverageOf`.
   audit = { ...audit, coverage: coverageOf(spec, audit, tree, index), softCoverage: softCoverageOf(spec, audit, tree) }
@@ -1194,7 +1217,8 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   }
 
   // ── los hallazgos, filtrados por lo que el usuario ya resolvió ────────────
-  const all = findingsOf(tree, audit, score, index, spec)
+  const escritas = new Set(log.filter((r) => r.resolvedBy === "AI_SUGGESTION" && r.kind !== "dropped").map((r) => r.nodeHashAtResolution))
+  const all = findingsOf(tree, audit, score, index, spec, new Set(tree.roles.flatMap((r) => r.bullets).filter((b) => escritas.has(b.hash)).map((b) => b.id)))
   for (const [nombre, ok] of Object.entries(checks)) {
     // Un chequeo que falla y no genera hallazgo es un punto perdido que el
     // usuario no puede recuperar porque nadie le dijo qué arreglar.
@@ -1250,7 +1274,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
  * por acá: no oscila.
  */
 type Ejes = { hasActionVerb: boolean; hasResult: boolean; hasMethod: boolean }
-type Estado<S> = { status: S; evidencia: string | null }
+type Estado<S> = { status: S; evidencia: string | null; forma?: { cvWording: string; match: "SAME" | "EQUIVALENT" | "MISSPELLED" } }
 export interface Juicios {
   lineas: Record<string, Ejes>
   resumen: Record<string, AuditFacts["summary"]>
@@ -1258,6 +1282,28 @@ export interface Juicios {
   blandas: Record<string, Estado<AuditFacts["softCoverage"][number]["status"]>>
 }
 export const JUICIOS_VACIOS: Juicios = { lineas: {}, resumen: {}, requisitos: {}, blandas: {} }
+
+/**
+ * LO MISMO ESCRITO DISTINTO CUENTA COMO ESCRITO (CEO, 2026-09-28: «la IA
+ * debería saber todo esto»). El comparador cuenta palabras juntas y en orden, y
+ * tu «CoreData» no era «Core Data» ni «SOLID design principles» era «SOLID
+ * principles»: el panel pedía lo que ya tenías. Quien sabe que es lo mismo es
+ * la auditoría (`match: SAME`); el código sólo comprueba que ese texto esté de
+ * verdad en el CV, y lo agrega como variante del requisito. Sin listas a mano.
+ */
+export function conFormasDelCv(spec: JobSpec, audit: AuditFacts, tree: ResumeTree): JobSpec {
+  const texto = cvTextOf(tree)
+  const formas = new Map<string, string>()
+  for (const c of audit.coverage) {
+    if (c.match === "SAME" && c.cvWording && formaPosible(c.skill, c.cvWording, c.match, texto)) formas.set(normalize(c.skill), c.cvWording.trim())
+  }
+  if (formas.size === 0) return spec
+  const con = (r: JobSpec["mustHave"][number]) => {
+    const w = formas.get(normalize(r.skill))
+    return w ? { ...r, cvForms: [w] } : r
+  }
+  return { ...spec, mustHave: spec.mustHave.map(con), niceToHave: spec.niceToHave.map(con) }
+}
 
 export function fijarJuicios(
   tree: ResumeTree,
@@ -1351,14 +1397,32 @@ export function fijarJuicios(
     const lineaDeAntes = antes?.evidencia ? vigente(antes.evidencia) : undefined
     if (antes && lineaDeAntes) return { status: antes.status, id: lineaDeAntes }
     if (antes && !antes.evidencia && !nueva(nuevo.id, deTailorVale)) return { status: antes.status, id: null }
+    // Sin juicio guardado —la auditoría omitió ese requisito la vez anterior—
+    // la línea de Tailor tampoco es evidencia nueva (medido el 2026-09-28:
+    // «Scrum | Kanban» apareció sobre «…agile team collaboration…», que había
+    // escrito Tailor). Queda como estaba, o sin encontrar.
+    if (!deTailorVale && nuevo.id && hashDe.has(nuevo.id) && reemplazo.has(hashDe.get(nuevo.id)!)) {
+      return { status: (antes?.status ?? "NOT_FOUND") as S, id: null }
+    }
     return { status: nuevo.status, id: nuevo.id }
   }
   const requisitos = { ...previos.requisitos }
+  const texto = cvTextOf(tree)
   const coverage = audit.coverage.map((c) => {
     const clave = `${jdKey}:${normalize(c.skill)}`
     const r = fijar(clave, { status: c.status, evidencia: null, id: c.evidenceNodeId }, previos.requisitos)
-    requisitos[clave] = { status: r.status, evidencia: r.id ? (hashDe.get(r.id) ?? null) : null }
-    return { ...c, status: r.status, evidenceNodeId: r.id }
+    /**
+     * CÓMO LO ESCRIBE EL CV, TAMBIÉN FIJADO (medido el 2026-09-28 con Coforge):
+     * la auditoría reconoció «RESTful APIs» como «external APIs» y en el
+     * análisis siguiente contestó distinto — el requisito volvía como faltante
+     * sobre la línea que Tailor acababa de arreglar. Lo reconocido se conserva
+     * mientras ese texto siga en el CV; si ya no está, vale lo de hoy.
+     */
+    const antes = previos.requisitos[clave]?.forma
+    const nueva = c.cvWording && c.match && formaPosible(c.skill, c.cvWording, c.match, texto) ? { cvWording: c.cvWording, match: c.match } : undefined
+    const forma = antes && formaPosible(c.skill, antes.cvWording, antes.match, texto) ? antes : nueva
+    requisitos[clave] = { status: r.status, evidencia: r.id ? (hashDe.get(r.id) ?? null) : null, ...(forma ? { forma } : {}) }
+    return { ...c, status: r.status, evidenceNodeId: r.id, cvWording: forma?.cvWording ?? null, match: forma?.match ?? null }
   })
   const blandas = { ...previos.blandas }
   const softCoverage = audit.softCoverage.map((s) => {

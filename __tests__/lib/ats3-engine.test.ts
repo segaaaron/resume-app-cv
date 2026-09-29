@@ -16,14 +16,15 @@ import {
   openLedger,
   fijarJuicios,
   JUICIOS_VACIOS,
+  conFormasDelCv,
   type AtsAi,
   type AtsStore,
   type CacheKind,
   type RawResume,
 } from "@/lib/ats3/engine"
-import { SIN_RESPALDO, buildTermIndex, nodeHash, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion } from "@/lib/ats3/contracts"
+import { MAL_ESCRITO, SIN_RESPALDO, buildTermIndex, nodeHash, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion } from "@/lib/ats3/contracts"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
-import { experienceYears, scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
+import { experienceYears, formaPosible, scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
 
 /**
  * El motor, ejecutado de punta a punta con un modelo y un almacenamiento falsos.
@@ -1597,6 +1598,17 @@ describe("lo que no cambió conserva su juicio", () => {
     expect(sinLog.audit.coverage[0].status).toBe("IMPLIED")
   })
 
+  it("tampoco descubre requisitos si la auditoría anterior no los juzgó", () => {
+    const antes = buildTree(RAW)
+    const primero = fijarJuicios(antes, { ...juicio(antes, true, "NOT_FOUND", null), coverage: [] }, JUICIOS_VACIOS, "jd")
+    const vieja = antes.roles[0].bullets[0]
+    const escrita = `${vieja.text} en [n] releases`
+    const despues = buildTree({ ...RAW, workExperience: [{ ...RAW.workExperience![0], description: RAW.workExperience![0].description!.replace(vieja.text, escrita) }] })
+    const nueva = despues.roles[0].bullets.find((b) => b.text === escrita)!.id
+    const log = [{ findingId: "f", nodeId: vieja.id, nodeHashAtResolution: nodeHash(escrita), resolvedBy: "AI_SUGGESTION" as const, resolvedAt: "", kind: "applied" as const, before: vieja.text, after: escrita }]
+    expect(fijarJuicios(despues, juicio(despues, true, "IMPLIED", nueva), primero.juicios, "jd", log).audit.coverage[0].status).toBe("NOT_FOUND")
+  })
+
   it("una cita al resumen queda fijada como cualquier otra", () => {
     const tree = buildTree(RAW)
     const primero = fijarJuicios(tree, juicio(tree, true, "IMPLIED", tree.summary.id), JUICIOS_VACIOS, "jd")
@@ -1664,5 +1676,100 @@ describe("lo esencial de un ATS, medido por el código", () => {
     const largo = fs.find((f) => f.type === "role_too_long")
     // Con la empresa: tres puestos pueden llamarse igual y la tarjeta tiene que decir cuál.
     expect(largo?.detail).toBe("largo:Puesto 0 — E0/7/6")
+  })
+})
+
+
+/**
+ * CÓMO LO ESCRIBE EL CV: lo decide la auditoría, el código sólo comprueba que
+ * el texto exista (CEO, 2026-09-28: «la IA debería saber todo esto»).
+ */
+describe("lo que el CV escribe distinto cuenta según lo que la auditoría reconoció", () => {
+  const cv = buildTree({ ...RAW, skills: [{ name: "CoreData" }, { name: "Git" }, { name: "Objetive-C" }] })
+  const spec = { ...SPEC, mustHave: [
+    { skill: "Core Data", raw: "Core Data", years: null, category: null },
+    { skill: "version control", raw: "version control", years: null, category: null },
+    { skill: "Objective-C", raw: "Objective-C", years: null, category: null },
+    { skill: "Kotlin", raw: "Kotlin", years: null, category: null },
+  ], niceToHave: [] } as JobSpec
+  const juicio = (inventa = false): AuditFacts => ({ ...fakeAudit(cv), coverage: [
+    { skill: "Core Data", requirement: "MUST", status: "FOUND", evidenceNodeId: null, cvWording: "CoreData", match: "SAME" },
+    { skill: "version control", requirement: "MUST", status: "IMPLIED", evidenceNodeId: null, cvWording: "Git", match: "EQUIVALENT" },
+    { skill: "Objective-C", requirement: "MUST", status: "NOT_FOUND", evidenceNodeId: null, cvWording: "Objetive-C", match: "MISSPELLED" },
+    { skill: "Kotlin", requirement: "MUST", status: "FOUND", evidenceNodeId: null, cvWording: inventa ? "Kotlin Multiplatform" : null, match: inventa ? "SAME" : null },
+  ] })
+
+  it("SAME entra como forma del requisito y cuenta escrito; EQUIVALENT es implícito sin tarjeta; MISSPELLED avisa", () => {
+    const s2 = conFormasDelCv(spec, juicio(), cv)
+    const index = buildTermIndex(termsOf(s2, cv))
+    const cob = coverageOf(s2, juicio(), cv, index)
+    const de = (k: string) => cob.find((c) => c.skill === k)!
+    expect(de("Core Data").status).toBe("FOUND")
+    expect(de("version control").status).toBe("IMPLIED")
+    expect(de("Objective-C").status).toBe("NOT_FOUND")
+    expect(de("Kotlin").status).toBe("NOT_FOUND")
+    const audit = { ...juicio(), coverage: cob }
+    const hallazgos = findingsOf(cv, audit, scoreResume(cv, s2, audit, readableChecks(cv)), index, s2)
+    const req = (k: string) => hallazgos.find((f) => f.type === "missing_requirement" && f.subject === k)
+    expect(req("version control")).toBeUndefined()
+    expect(req("Objective-C")?.detail).toBe(`${MAL_ESCRITO}:Objetive-C`)
+    expect(req("Kotlin")?.detail).toBe(`${SIN_RESPALDO}:Kotlin`)
+    expect(skillPlan(cv.declaredSkills, s2, audit, {}).add).toContain("version control")
+  })
+
+  it("lo reconocido queda fijado aunque el análisis siguiente conteste distinto", () => {
+    const primero = fijarJuicios(cv, juicio(), JUICIOS_VACIOS, "jd")
+    const olvida = { ...juicio(), coverage: juicio().coverage.map((c) => ({ ...c, cvWording: null, match: null })) }
+    const segundo = fijarJuicios(cv, olvida, primero.juicios, "jd")
+    expect(segundo.audit.coverage.find((c) => c.skill === "Core Data")).toMatchObject({ cvWording: "CoreData", match: "SAME" })
+  })
+
+  it("un texto que el CV no tiene no se acepta aunque la auditoría lo diga", () => {
+    const s2 = conFormasDelCv(spec, juicio(true), cv)
+    expect(s2.mustHave.find((r) => r.skill === "Kotlin")).not.toHaveProperty("cvForms")
+  })
+})
+
+
+describe("la cifra se pide una vez por línea", () => {
+  it("una línea que Tailor escribió sin número no vuelve a pedir el tamaño", () => {
+    const tree = buildTree(RAW)
+    const audit = { ...fakeAudit(tree), bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true })) }
+    const score = scoreResume(tree, SPEC, audit, readableChecks(tree))
+    const index = buildTermIndex(termsOf(SPEC, tree))
+    const linea = tree.roles[0].bullets[0].id
+    const cifra = (ya?: Set<string>) => findingsOf(tree, audit, score, index, SPEC, ya).some((f) => f.nodeId === linea && f.merged.includes("no_metric"))
+    expect(cifra()).toBe(true)
+    expect(cifra(new Set([linea]))).toBe(false)
+  })
+})
+
+
+describe("una alternativa del aviso es un solo requisito", () => {
+  it("«Scrum | Kanban» se cumple con cualquiera de las dos", () => {
+    const tree = buildTree({ ...RAW, skills: [{ name: "Kanban" }] })
+    const spec = { ...SPEC, mustHave: [{ skill: "Scrum | Kanban", raw: "Scrum or Kanban", years: null, category: null }], niceToHave: [] } as JobSpec
+    const cob = coverageOf(spec, fakeAudit(tree), tree, buildTermIndex(termsOf(spec, tree)))
+    expect(cob[0].status).toBe("FOUND")
+  })
+})
+
+
+describe("el código descarta lo que la auditoría no puede tener razón", () => {
+  const cv = "Skills: CoreData, Git, Objetive-C, Exel, JavaScript básico, SwiftUI, cajas registradoras, SOLID design principles, Atención al público"
+  it.each([
+    ["Objective-C", "Objetive-C", "MISSPELLED", true],
+    ["Microsoft Excel", "Exel", "MISSPELLED", true],
+    ["Java", "JavaScript básico", "MISSPELLED", false],
+    ["Java", "JavaScript básico", "EQUIVALENT", false],
+    ["Swift", "SwiftUI", "SAME", false],
+    ["Core Data", "CoreData", "SAME", true],
+    ["caja registradora", "cajas registradoras", "SAME", true],
+    ["version control", "Git", "EQUIVALENT", true],
+    ["SOLID principles", "SOLID design principles", "SAME", true],
+    ["Kotlin", "Kotlin Multiplatform", "SAME", false],
+    ["Kotlin", "Kotlin", "SAME", false],
+  ])("%s ← «%s» (%s) → %s", (req, dice, match, ok) => {
+    expect(formaPosible(req, dice, match, match === "SAME" && dice === "Kotlin" ? "sin eso" : cv)).toBe(ok)
   })
 })

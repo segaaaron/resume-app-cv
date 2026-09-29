@@ -167,7 +167,7 @@ export const PROMPT_VERSION = {
   // p1-14: un nombre que ya vive dentro de un requisito («Excel» en «Excel
   // avanzado») no se agrega otra vez. Lo guardado con p1-13 los duplicaba.
   // p1-15: un término vive en una sola lista (ver `JobSpecSchema`).
-  P1: "p1-15", // parser de vacante
+  P1: "p1-16", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -191,7 +191,7 @@ export const PROMPT_VERSION = {
   // p2-9 (2026-09-28): una viñeta que abre con «Ayudé con…»/«Participé en…» ya
   // no cuenta como verbo de acción (`opensWeakly` corrige el juicio).
   // p2-10 (2026-09-28): IMPLIED exige la línea citada; hasActionVerb cita `WEAK_OPENERS`; la blanda demostrada cita una viñeta, nunca el resumen.
-  P2: "p2-10", // auditoría
+  P2: "p2-11", // auditoría
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -370,6 +370,12 @@ export const TERMS_PER_BULLET = 2
  * La leen el motor (`findingsOf`) y la pantalla (`view-model`).
  */
 export const SIN_RESPALDO = "sin_respaldo"
+/**
+ * Marca del `detail` de un requisito que el CV nombra MAL ESCRITO («Objetive-C»
+ * por «Objective-C»): un filtro no lo cuenta y la persona no lo sabe. La tarjeta
+ * se lo dice; nadie lo corrige solo. Detalle: `mal_escrito:<como lo escribe el CV>`.
+ */
+export const MAL_ESCRITO = "mal_escrito"
 
 export function buildTermIndex(terms: TermVariants[]): TermIndex {
   const byKey = new Map<string, string>()
@@ -515,7 +521,16 @@ export function specTerms(spec: JobSpec): TermVariants[] {
     // coincide, y por match maximal le ROBA el tramo a sus vecinos: medido el
     // 2026-09-28, «Integrate REST and GraphQL APIs» (raw de REST) dejaba GraphQL
     // en «no lo pude contar», y «…CI/CD pipelines with Fastlane» se comía CI/CD.
-    const variants = ` ${normalize(r.raw)} `.includes(` ${normalize(r.skill)} `) ? [] : [r.raw]
+    // «Scrum | Kanban» es UN requisito con dos salidas (P1, regla 1b): tener
+    // cualquiera lo cumple, así que cada opción es variante. Con « | » y no con
+    // « / »: medido el 2026-09-28, pedirle barras hacía que el modelo escribiera
+    // «async / await» y «AI / ML», que se leerían como alternativas falsas.
+    const opciones = r.skill.split(/\s*\|\s*/).filter((o) => o.trim())
+    const variants = [
+      ...(` ${normalize(r.raw)} `.includes(` ${normalize(r.skill)} `) ? [] : [r.raw]),
+      ...("cvForms" in r && r.cvForms ? r.cvForms : []),
+      ...(opciones.length > 1 ? opciones : []),
+    ]
     const previo = out.find((o) => normalize(o.canonical) === normalize(r.skill))
     if (previo) previo.variants.push(...variants)
     else out.push({ canonical: r.skill, variants })
@@ -560,6 +575,14 @@ export const RequirementSchema = z.object({
    * caso de siempre—.
    */
   kind: z.enum(["capability", "credential"]).optional().catch(undefined),
+  /**
+   * CÓMO LO ESCRIBE ESTE CV, cuando es lo mismo escrito distinto («CoreData»
+   * por «Core Data», «SOLID design principles» por «SOLID principles»). No
+   * viene del aviso: lo juzga la auditoría y el motor lo agrega sólo después de
+   * comprobar que ese texto está en el CV. Es variante del índice como `raw`,
+   * así el puntaje, la tabla y Tailor cuentan lo mismo. Ver `conFormasDelCv`.
+   */
+  cvForms: z.array(z.string().max(80)).max(4).optional().catch(undefined),
 })
 
 export const JobSpecSchema = z.object({

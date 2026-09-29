@@ -439,8 +439,8 @@ describe("la auditoría habla de la lista de la vacante, y de nada más", () => 
   it("traduce la referencia al nombre de la vacante y descarta lo que no está en la lista", async () => {
     const a = await mod(new ScriptedClient(respuesta)).audit(tree, spec)
     expect(a.coverage).toEqual([
-      { skill: "Arqueo de caja", requirement: "MUST", status: "IMPLIED", evidenceNodeId: "summary" },
-      { skill: "Excel", requirement: "NICE", status: "NOT_FOUND", evidenceNodeId: null },
+      { skill: "Arqueo de caja", requirement: "MUST", status: "IMPLIED", evidenceNodeId: "summary", cvWording: null, match: null },
+      { skill: "Excel", requirement: "NICE", status: "NOT_FOUND", evidenceNodeId: null, cvWording: null, match: null },
     ])
     expect(a.softCoverage).toEqual([{ signal: "trabajo en equipo", status: "DEMONSTRATED", evidenceNodeId: "summary" }])
   })

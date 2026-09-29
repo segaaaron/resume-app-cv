@@ -150,6 +150,10 @@ export interface AuditFacts {
     status: "FOUND" | "IMPLIED" | "NOT_FOUND"
     /** DÓNDE lo demuestra. Sin esto no se distingue lo cubierto de lo enterrado. */
     evidenceNodeId: string | null
+    /** Cómo lo nombra el CV cuando no lo escribe como el aviso, y qué relación
+     *  tiene: lo mismo escrito distinto, otro nombre del oficio, o mal escrito. */
+    cvWording?: string | null
+    match?: "SAME" | "EQUIVALENT" | "MISSPELLED" | null
   }[]
   /**
    * LAS BLANDAS QUE EL AVISO PIDE, JUZGADAS.
@@ -342,6 +346,10 @@ export function titleForms(raw: string): string[] {
     const base = genero[1]
     return [base, /[aeo]$/i.test(base) ? base.replace(/[aeo]$/i, genero[2]) : base + genero[2]]
   }
+  // Alternativas del aviso («Scrum | Kanban», ver P1 regla 1b): cada una es su
+  // propio nombre y escribir cualquiera cumple.
+  const opciones = t.split(/\s*\|\s*/).filter(Boolean)
+  if (opciones.length > 1) return opciones
   const partes = t.split(/\s+\/\s+/)
   if (partes.length !== 2) return [t]
   const [a, b] = partes.map((p) => p.split(/\s+/))
@@ -502,6 +510,46 @@ export function cvTextOf(tree: ResumeTree): string {
  *               trabajo lo demuestra.
  *   NOT_FOUND — ninguna de las dos. Lo que el auditor no afirmó, no está.
  */
+/**
+ * ¿PUEDE SER CIERTO LO QUE LA AUDITORÍA DICE DE CÓMO ESCRIBE EL CV UN REQUISITO?
+ *
+ * La IA decide si «CoreData» es «Core Data» o si «Git» es «control de
+ * versiones»; el código sólo descarta lo que puede probar imposible. Medido el
+ * 2026-09-28 con un caso que el prompt no vio: «JavaScript básico» salió como
+ * otro nombre de «Java» y como «Java mal escrito» — las dos cosas falsas, y la
+ * primera sumaba Java a las habilidades de alguien que no lo sabe.
+ *   - el texto tiene que estar en el CV;
+ *   - «mal escrito» es una o dos letras de diferencia contra el requisito o una
+ *     de sus palabras («Exel» por «Microsoft Excel»), no otro nombre;
+ *   - «lo mismo» u «otro nombre» no vale si una palabra es la otra con algo
+ *     pegado (Java/JavaScript, Swift/SwiftUI): así se ven dos cosas distintas.
+ *     Un plural sí vale («caja»/«cajas»).
+ */
+export function formaPosible(skill: string, cvWording: string | null | undefined, match: string | null | undefined, cvTexto: string): boolean {
+  const w = normalize(cvWording ?? "")
+  if (!w || !match || !` ${normalize(cvTexto)} `.includes(` ${w} `)) return false
+  const req = normalize(skill).split(" ").filter(Boolean)
+  const suyo = w.split(" ").filter(Boolean)
+  if (match === "MISSPELLED") {
+    const tramos = req.flatMap((_, i) => req.slice(i).map((__, j) => req.slice(i, i + j + 1).join(" ")))
+    return tramos.some((t) => t !== w && distancia(t, w) <= Math.min(2, Math.floor(Math.max(t.length, w.length) / 4)))
+  }
+  // Sin espacios idénticos es la misma palabra, pegada o separada («CoreData»).
+  if (req.join("") === suyo.join("")) return true
+  const pegado = (a: string, b: string) => a !== b && b.startsWith(a) && !/^(e?s)$/.test(b.slice(a.length))
+  return !req.some((a) => suyo.some((b) => pegado(a, b) || pegado(b, a)))
+}
+
+function distancia(a: string, b: string): number {
+  let fila = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const nueva = [i]
+    for (let j = 1; j <= b.length; j++) nueva[j] = Math.min(fila[j] + 1, nueva[j - 1] + 1, fila[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+    fila = nueva
+  }
+  return fila[b.length]
+}
+
 export function coverageOf(
   spec: JobSpec,
   audit: AuditFacts,
@@ -526,7 +574,22 @@ export function coverageOf(
     }
     const m = delModelo.get(llave)
     const cita = m && m.status !== "NOT_FOUND" && m.evidenceNodeId && lineas.some((l) => l.id === m.evidenceNodeId) ? m.evidenceNodeId : null
-    out.push({ skill, requirement, status: cita ? "IMPLIED" : "NOT_FOUND", evidenceNodeId: cita })
+    /**
+     * OTRO NOMBRE DEL OFICIO, EN CUALQUIER SECCIÓN (2026-09-28). «Git» por
+     * «version control» en Habilidades no tiene línea que citar, y la respuesta
+     * del auditor se tiraba: salía «falta» algo que la persona tiene. Un filtro
+     * literal tampoco lo cuenta, así que NO suma como escrito: queda implícito y
+     * el plan de habilidades escribe el nombre del aviso al lado del suyo.
+     * El texto que el auditor cita tiene que estar en el CV, o no vale.
+     */
+    const valida = m ? formaPosible(skill, m.cvWording, m.match, cvTextOf(tree)) : false
+    const equivalente = !cita && valida && m?.match === "EQUIVALENT"
+    out.push({
+      skill, requirement,
+      status: cita || equivalente ? "IMPLIED" : "NOT_FOUND",
+      evidenceNodeId: cita,
+      ...(valida ? { cvWording: m!.cvWording, match: m!.match ?? null } : {}),
+    })
   }
   for (const r of spec.mustHave ?? []) juzgar(r.skill, "MUST")
   for (const r of spec.niceToHave ?? []) juzgar(r.skill, "NICE")

@@ -1805,6 +1805,8 @@
       "fix_replace_with": "Escribir una sobre {term}",
       "section_open_no_score": "{count} abiertos · no mueven el puntaje",
       "type_missing_requirement_detail": "La vacante lo pide por su nombre y tu CV no lo dice con esas palabras. El filtro compara cadenas: si no está escrito, no cuenta. Tailor lo escribe dentro de la línea donde tu trabajo ya lo sostiene, y vos confirmás antes de que entre.",
+      "type_missing_requirement_misspelled": "La vacante pide «{term}» y tu CV lo escribe «{wrote}»",
+      "type_missing_requirement_misspelled_detail": "«{wrote}» está mal escrito: un filtro compara el texto tal cual y no lo va a contar como «{term}», aunque lo tengas. Corregilo en tu CV y el puntaje lo cuenta.",
       "type_missing_requirement_unsupported": "La vacante pide «{term}» y tu CV no muestra experiencia con eso",
       "type_missing_requirement_unsupported_detail": "Ninguna de tus viñetas habla de este trabajo, así que Tailor no lo escribe: agregarlo sería afirmar una experiencia que el CV no respalda, y un reclutador lo preguntaría en la entrevista. El puntaje lo cuenta como faltante.",
       "type_missing_requirement_credential": "La vacante pide «{term}» y tu CV no lo muestra",

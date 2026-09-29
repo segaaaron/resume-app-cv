@@ -1805,6 +1805,8 @@
       "fix_replace_with": "Write one about {term}",
       "section_open_no_score": "{count} open · no score change",
       "type_missing_requirement_detail": "The posting asks for it by name and your CV doesn't say it in those words. The filter compares strings: if it isn't written, it doesn't count. Tailor writes it into the line where your work already backs it, and you confirm before it goes in.",
+      "type_missing_requirement_misspelled": "The posting asks for “{term}” and your CV writes “{wrote}”",
+      "type_missing_requirement_misspelled_detail": "“{wrote}” is misspelled: a filter compares the text as written and will not count it as “{term}”, even though you have it. Fix it in your CV and the score counts it.",
       "type_missing_requirement_unsupported": "The posting asks for “{term}” and your CV shows no experience with it",
       "type_missing_requirement_unsupported_detail": "None of your bullets talks about this work, so Tailor does not write it: adding it would claim experience the CV does not back, and a recruiter would ask about it in the interview. The score counts it as missing.",
       "type_missing_requirement_credential": "The posting asks for “{term}” and your CV does not show it",
