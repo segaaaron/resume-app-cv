@@ -637,7 +637,11 @@ export const JobSpecSchema = z.object({
    * ya estaba escrita en el prompt («no repite algo que ya pusiste»): un prompt
    * es una petición, esto es el contrato.
    */
-  const llaves = (rs: { skill: string; raw: string }[]) => new Set(rs.flatMap((r) => [termKey(r.skill), termKey(r.raw)]))
+  // Cada opción de una alternativa («LLM-based services | Core ML») es también
+  // su llave: si el aviso ya la acepta como obligatoria, no se repite abajo
+  // como deseable (medido el 2026-09-29: «Core ML» salía en las dos listas).
+  const llaves = (rs: { skill: string; raw: string }[]) =>
+    new Set(rs.flatMap((r) => [termKey(r.skill), termKey(r.raw), ...r.skill.split(/\s*\|\s*/).map(termKey)]))
   const exigidos = llaves(crudo.mustHave)
   const niceToHave = crudo.niceToHave.filter(
     (r, i, xs) => !exigidos.has(termKey(r.skill)) && xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i,

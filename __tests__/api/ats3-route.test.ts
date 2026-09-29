@@ -38,6 +38,7 @@ vi.mock("@/lib/ai-client", () => ({ AI_MODEL_PROSE: "modelo-de-prueba", logAIUsa
 vi.mock("@/lib/services/ai/OpenAIClientAdapter", () => ({ OpenAIClientAdapter: class {} }))
 
 const llamadas = { jd: 0, audit: 0 }
+const falla = { audit: false }
 vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
   AIAts3Module: class {
     constructor(readonly deps: { onUsage?: (u: { promptTokens: number; completionTokens: number; cachedTokens: number }) => void }) {}
@@ -57,6 +58,7 @@ vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
     async audit(tree: { roles: { bullets: { id: string }[] }[] }) {
       this.deps.onUsage?.({ promptTokens: 500, completionTokens: 50, cachedTokens: 0 })
       llamadas.audit++
+      if (falla.audit) throw new Error("timeout del modelo")
       return {
         bullets: tree.roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true }))),
         summary: { identity: true, proof: true, fit: true, extra: true },
@@ -211,6 +213,18 @@ describe("la ruta del motor v3", () => {
    * modelo se gastaron y se facturan; la ranura de su cuota mide trabajo
    * entregado, no intentos.
    */
+  it("un análisis que falla devuelve la ranura y anota lo gastado", async () => {
+    falla.audit = true
+    try {
+      const res = await POST(req(CUERPO))
+      expect(res.status).toBe(500)
+      expect(refundDailyQuota).toHaveBeenCalledWith("u1", "ats3", "PRO")
+      expect(logAIUsage).toHaveBeenCalled()
+    } finally {
+      falla.audit = false
+    }
+  })
+
   it("un rechazo devuelve la ranura de la cuota", async () => {
     const res = await POST(
       req({

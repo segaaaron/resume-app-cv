@@ -625,3 +625,20 @@ export function headlineOf(score: Score | null, sections: readonly PanelSection[
     recoverable: score ? Math.round(Math.min(suma, Math.max(0, 100 - score.total))) : 0,
   }
 }
+
+/**
+ * QUÉ LE DECIMOS A LA PERSONA CUANDO ALGO FALLA — la única respuesta.
+ *
+ * El panel traducía el error con el diccionario de OTRO módulo (`editor.ai`) y
+ * lo que no estaba ahí se pintaba crudo: «Falló · ai_error», «stale_node»,
+ * «http_502» (QA, 2026-09-29). Todo código que el ATS puede recibir —del
+ * servidor, de la red o del propio motor— cae en una de cuatro clases con su
+ * frase, y ninguno llega a la pantalla sin traducir.
+ */
+export type ErrorKey = "error_quota" | "error_plan" | "error_stale" | "error_ai"
+export function errorKeyOf(code: string): ErrorKey {
+  if (/^(daily_cap_reached|free_quota_exhausted|rate_limit_exceeded|http_429)$/.test(code)) return "error_quota"
+  if (/^(feature_pro_only|pro_only|http_403)$/.test(code)) return "error_plan"
+  if (/^(stale_node|stale)$/.test(code)) return "error_stale"
+  return "error_ai"
+}

@@ -354,7 +354,16 @@ export async function POST(req: Request) {
       const d = parsed.data
       const tree = buildTree(d.resume as RawResume)
       const index = buildTermIndex(termsOf(d.spec, tree))
-      const result = await runRewrite({
+      /**
+       * UNA EXCEPCIÓN TAMPOCO COBRA LA RANURA (QA, 2026-09-29). Un timeout o una
+       * respuesta ilegible del modelo lanzaba antes de `bill()` y del reembolso:
+       * la cuota quedaba descontada por nada y el gasto no llegaba al panel. Se
+       * factura lo gastado, se devuelve la ranura y el error sigue su camino
+       * hasta `handleError`, que lo registra.
+       */
+      let result: Awaited<ReturnType<typeof runRewrite>>
+      try {
+        result = await runRewrite({
         tree,
         nodeId: d.nodeId,
         spec: d.spec,
@@ -372,6 +381,11 @@ export async function POST(req: Request) {
         ai,
         store,
       })
+      } catch (e) {
+        bill()
+        await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
+        throw e
+      }
       bill()
       if (result.ok) {
         if (result.calls === 0) await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
@@ -427,11 +441,14 @@ export async function POST(req: Request) {
     try {
       first = await gen.next()
     } catch (e) {
+      // Sin análisis no se cobra la ranura: la regla de la reescritura vale acá.
       bill()
+      await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
       throw e
     }
     if (first.done) {
       bill()
+      await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
       return apiError(502, "ai_error", { req })
     }
 
@@ -457,8 +474,14 @@ export async function POST(req: Request) {
         } catch (e) {
           // Un fallo después del primer byte no puede cambiar el estado HTTP: se
           // dice en la línea, para que el cliente deje de esperar un acto que no
-          // va a llegar en vez de quedarse en blanco para siempre.
-          write({ act: "error", error: e instanceof Error ? e.message : "ai_error" })
+          // va a llegar en vez de quedarse en blanco para siempre. Y se registra
+          // como cualquier otra falla (`handleError` escribe el panel de Service
+          // Errors; su respuesta HTTP ya no se puede mandar y se descarta). Al
+          // cliente va el código, no el mensaje interno. Sin análisis completo no
+          // se cobra la ranura.
+          handleError(e, { req, userId: authResult.userId, userEmail: authResult.user.email, payload: { resumeId: parsed.data.resumeId } })
+          await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan).catch(() => undefined)
+          write({ act: "error", error: "ai_error" })
         }
         bill()
         controller.close()

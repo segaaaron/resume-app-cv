@@ -298,7 +298,9 @@ describe("el vocabulario del motor no tiene piezas muertas", () => {
     // Un tipo declarado y sin emisor es vocabulario muerto: tiene clave i18n y
     // sección asignada, y promete una tarjeta que no puede existir. Se lee el
     // motor, porque el defecto es una AUSENCIA y no hay nada que ejecutar.
-    const motor = readFileSync(join(process.cwd(), "lib/ats3/engine.ts"), "utf8")
+    // Los emisores viven en dos módulos: los hallazgos en `findings`, los del
+    // documento (lectura) en el orquestador.
+    const motor = ["lib/ats3/findings.ts", "lib/ats3/engine.ts"].map((f) => readFileSync(join(process.cwd(), f), "utf8")).join("\n")
     const huerfanos = FINDING_TYPES.filter((t) => !motor.includes(`"${t}"`))
     expect(huerfanos, `sin emisor: ${huerfanos.join(", ")}`).toEqual([])
   })

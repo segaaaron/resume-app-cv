@@ -1644,6 +1644,10 @@
       "gloss_contacto_telefono": "There is no phone number an automated reader recognizes: write it with its area code in Personal details.",
       "gloss_motivo_frase": "“{dato}” says nothing that is yours",
       "gloss_vacia": "It claims a quality instead of reporting work.",
+      "error_quota": "You've reached today's limit for this feature. It renews tomorrow.",
+      "error_plan": "This feature is part of the PRO plan.",
+      "error_stale": "Your CV changed while this was being prepared. Ask again on the current text.",
+      "error_ai": "The AI did not respond properly this time. Try again in a moment.",
       "write_failed": "The proposal could not be written"
     },
     "ats": {

@@ -20,6 +20,9 @@ const messages: Record<string, string> = {
   posting_placeholder: "Pegá el aviso",
   analyzing: "Analizando…",
   failed: "No se pudo",
+  write_failed: "No se pudo escribir la propuesta",
+  error_stale: "Tu CV cambió mientras se preparaba esto. Volvé a pedirlo sobre el texto actual.",
+  error_ai: "La IA no respondió bien esta vez. Probá de nuevo en un momento.",
   score_caption: "Preparación para esta vacante",
   pillar_parse: "Se lee bien",
   pillar_relevance: "Sirve para el puesto",
@@ -495,7 +498,9 @@ describe("la cifra la escribe el candidato", () => {
     // Un botón que marca "hecho" justo cuando no hace nada es el defecto que
     // este proyecto ya pagó: el usuario descarga un PDF que no cambió.
     expect(updateSectionData).not.toHaveBeenCalled()
-    expect(texto()).toContain("stale_node")
+    // Con su motivo en palabras: el código crudo no es un mensaje.
+    expect(texto()).toContain("Tu CV cambió mientras se preparaba esto")
+    expect(texto()).not.toContain("stale_node")
   })
 
   it("un rechazo del motor se dice, con su motivo", async () => {
@@ -519,7 +524,8 @@ describe("la cifra la escribe el candidato", () => {
     await click("Analizar compatibilidad")
     // Un 500 leído como NDJSON no coincidía con ningún acto: el usuario veía un
     // aviso genérico arriba y el panel exactamente igual que antes de apretar.
-    expect(texto()).toContain("server_error")
+    expect(texto()).toContain("La IA no respondió bien esta vez")
+    expect(texto()).not.toContain("server_error")
   })
 
   it("el botón de la fila pide la reescritura de ESA línea, no de otra", async () => {

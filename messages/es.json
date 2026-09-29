@@ -1644,6 +1644,10 @@
       "gloss_contacto_telefono": "No hay un teléfono que un lector automático reconozca: escribilo con su código de área en Información personal.",
       "gloss_motivo_frase": "«{dato}» no dice nada que sea tuyo",
       "gloss_vacia": "Declara una cualidad en vez de contar un trabajo.",
+      "error_quota": "Llegaste al límite de hoy para esta función. Se renueva mañana.",
+      "error_plan": "Esta función es del plan PRO.",
+      "error_stale": "Tu CV cambió mientras se preparaba esto. Volvé a pedirlo sobre el texto actual.",
+      "error_ai": "La IA no respondió bien esta vez. Probá de nuevo en un momento.",
       "write_failed": "No se pudo escribir la propuesta"
     },
     "ats": {

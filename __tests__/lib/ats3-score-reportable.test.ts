@@ -19,7 +19,8 @@ import { SCORED_COMPONENTS } from "@/lib/ats3/score"
  * número.
  */
 describe("el puntaje no cobra nada que el panel no reporte", () => {
-  const engine = readFileSync("lib/ats3/engine.ts", "utf8")
+  // Los emisores: los hallazgos (`findings`) y los chequeos de lectura (orquestador).
+  const engine = ["lib/ats3/findings.ts", "lib/ats3/engine.ts"].map((f) => readFileSync(f, "utf8")).join("\n")
 
   /** Los componentes que algún emisor declara, leídos del motor. */
   const reportados = new Set<string>([

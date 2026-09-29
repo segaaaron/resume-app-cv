@@ -22,7 +22,7 @@ import {
   type CacheKind,
   type RawResume,
 } from "@/lib/ats3/engine"
-import { MAL_ESCRITO, SIN_RESPALDO, buildTermIndex, nodeHash, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion } from "@/lib/ats3/contracts"
+import { JobSpecSchema, MAL_ESCRITO, SIN_RESPALDO, buildTermIndex, nodeHash, type JobSpec, type ResumeTree, type Suggestion, type AnchoredSuggestion } from "@/lib/ats3/contracts"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { experienceYears, formaPosible, scoreResume, type AuditFacts, type ParseChecks } from "@/lib/ats3/score"
 
@@ -1746,6 +1746,16 @@ describe("la cifra se pide una vez por línea", () => {
 
 
 describe("una alternativa del aviso es un solo requisito", () => {
+  it("una opción que el aviso ya acepta como obligatoria no se repite como deseable", () => {
+    const req = (skill: string) => ({ skill, raw: skill, years: null, category: null })
+    const spec = JobSpecSchema.parse({
+      roleTitleRaw: "iOS", roleTitleCanonical: "iOS", language: "en", metricThatMatters: null,
+      mustHave: [req("LLM-based services | Core ML")], niceToHave: [req("Core ML"), req("CallKit")],
+      responsibilities: [], softSignals: [], namedTools: [],
+    })
+    expect(spec.niceToHave.map((r) => r.skill)).toEqual(["CallKit"])
+  })
+
   it("«Scrum | Kanban» se cumple con cualquiera de las dos", () => {
     const tree = buildTree({ ...RAW, skills: [{ name: "Kanban" }] })
     const spec = { ...SPEC, mustHave: [{ skill: "Scrum | Kanban", raw: "Scrum or Kanban", years: null, category: null }], niceToHave: [] } as JobSpec

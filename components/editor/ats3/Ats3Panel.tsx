@@ -27,13 +27,12 @@ import type { ResumeSections } from "@/types/resume"
 import { ScoreDial, ReportSectionCard, CheckRow, TermTable } from "./report-ui"
 import { Btn, Card, Chip, Note } from "./ui"
 import TailorPanel, { pendingCount, type DoneEntry } from "./TailorPanel"
-import { sectionsOf, termsOfSpec, headlineOf } from "./view-model"
+import { sectionsOf, termsOfSpec, headlineOf, errorKeyOf } from "./view-model"
 
 
 export default function Ats3Panel() {
   const t = useTranslations("editor.ats3")
   /** Los errores de la IA ya tienen su copia (cuota diaria, límite por hora). */
-  const tai = useTranslations("editor.ai")
   /** La copia de la pantalla de entrada, que el producto ya tenía escrita. */
   const tv = useTranslations("editor.ats")
   // El CV y su idioma salen del store, no de props: quien monta el panel no
@@ -181,7 +180,7 @@ export default function Ats3Panel() {
 
       {a.error && (
         <Note ref={errorRef} tone="bad" role="alert">
-          {tai.has(a.error) ? tai(a.error) : `${t("failed")} · ${a.error}`}
+          {t("failed")}. {t(errorKeyOf(a.error))}
         </Note>
       )}
 

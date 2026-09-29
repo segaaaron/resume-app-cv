@@ -40,6 +40,7 @@ import { figureSlots, fillSlot } from "@/lib/ats3/guards"
 import type { AnchoredSuggestion, Finding, Placeholder } from "@/lib/ats3/contracts"
 import { Btn, Card, Chip, Diff, FIELD_CLASS, FIELD_STYLE, Label, Note, PRESSABLE, Writing } from "./ui"
 import type { PanelCheck, PanelSection, PanelSectionId } from "./view-model"
+import { errorKeyOf } from "./view-model"
 import type { useAts3 } from "./useAts3"
 
 type Ats3 = ReturnType<typeof useAts3>
@@ -144,7 +145,6 @@ export default function TailorPanel({
    *  su propio espacio: traerla copiada sería la misma frase en dos lugares. */
   const ta = useTranslations("editor.ats")
   /** Los errores de la IA ya tienen su copia (cuota diaria, límite por hora). */
-  const tai = useTranslations("editor.ai")
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -415,7 +415,7 @@ export default function TailorPanel({
           <div ref={respuestaRef} className="flex flex-col gap-3 empty:hidden">
           {a.error && (
             <Note tone="bad" role="alert">
-              {tai.has(a.error) ? tai(a.error) : `${t("write_failed")} · ${a.error}`}
+              {t("write_failed")}. {t(errorKeyOf(a.error))}
             </Note>
           )}
           {a.rejected && (
