@@ -198,10 +198,10 @@ describe("identidad de los nodos", () => {
   })
 
   it("el id de un hallazgo es el mismo dentro de tres semanas", () => {
-    const one = findingId("b_abc123", "soft_not_shown")
-    const two = findingId("b_abc123", "soft_not_shown")
+    const one = findingId("b_abc123", "improve_bullet")
+    const two = findingId("b_abc123", "improve_bullet")
     expect(one).toBe(two)
-    expect(findingId("b_abc123", "missing_requirement")).not.toBe(one)
+    expect(findingId("b_abc123", "remove_bullet")).not.toBe(one)
   })
 })
 
@@ -307,34 +307,17 @@ describe("el vocabulario del motor no tiene piezas muertas", () => {
 })
 
 /**
- * LO QUE EL AVISO NOMBRA NO PUEDE QUEDAR FUERA (medido contra la API, 2026-09-24).
- *
- * En dos corridas el modelo dejó GraphQL, Clean Architecture y Crashlytics fuera
- * de las listas aunque el aviso los nombraba. Ahora los DECLARA en `namedTools`
- * y el contrato completa lo que falte.
+ * UN TÉRMINO VIVE EN UNA SOLA LISTA: lo exigido sale de deseables y de blandas.
+ * (El agregado automático de nombres propios del aviso como requisitos se
+ * retiró el 2026-09-29: metía nombres sueltos del aviso como si fueran
+ * requisitos, y el CEO pidió que el ATS lea la vacante, no la cuente.)
  */
-describe("la vacante trae todo lo que el aviso nombra", () => {
+describe("la vacante no se contradice", () => {
   const base = {
     roleTitleRaw: "iOS", roleTitleCanonical: "iOS", language: "en",
     mustHave: [{ skill: "Swift", raw: "Swift" }, { skill: "CI/CD", raw: "CI/CD" }],
     niceToHave: [], responsibilities: [], softSignals: [],
   }
-
-  it("un nombre declarado que ninguna lista trae entra como deseable, una sola vez", () => {
-    const r = JobSpecSchema.parse({ ...base, namedTools: ["GraphQL", "Swift", "ci-cd", "GraphQL", "Clean Architecture"] })
-    expect(r.niceToHave.map((x) => x.skill)).toEqual(["GraphQL", "Clean Architecture"])
-    expect(r.mustHave.map((x) => x.skill)).toEqual(["Swift", "CI/CD"])
-    expect("namedTools" in r).toBe(false)
-  })
-
-  it("un nombre que ya vive dentro de un requisito no se agrega otra vez", () => {
-    const r = JobSpecSchema.parse({
-      ...base,
-      mustHave: [{ skill: "Excel avanzado", raw: "Excel avanzado (tablas dinámicas)" }],
-      namedTools: ["Excel", "tablas dinámicas", "Salesforce"],
-    })
-    expect(r.niceToHave.map((x) => x.skill)).toEqual(["Salesforce"])
-  })
 
   it("un término vive en una sola lista: lo exigido sale de deseables y de blandas", () => {
     const r = JobSpecSchema.parse({
@@ -348,7 +331,9 @@ describe("la vacante trae todo lo que el aviso nombra", () => {
     expect(r.softSignals).toEqual(["trabajo en equipo"])
   })
 
-  it("sin el campo, la vacante queda igual", () => {
-    expect(JobSpecSchema.parse(base).niceToHave).toEqual([])
+  it("un campo que el modelo agregue de más no se cuela", () => {
+    const r = JobSpecSchema.parse({ ...base, namedTools: ["GraphQL"] })
+    expect(r.niceToHave).toEqual([])
+    expect("namedTools" in r).toBe(false)
   })
 })

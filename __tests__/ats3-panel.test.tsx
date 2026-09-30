@@ -98,7 +98,8 @@ const messages: Record<string, string> = {
   placeholder: "Pega aquí el texto completo de la vacante...",
   hint: "Copia y pega el texto de la oferta tal como aparece.",
   analyze: "Analizar compatibilidad",
-  type_missing_requirement: "Falta un requisito del aviso",
+  type_improve_bullet: "Mejorar esta viñeta",
+  ask_write: "Escribirlo",
 }
 
 vi.mock("next-intl", () => ({
@@ -204,9 +205,9 @@ const ACTS = [
     // volver a medir cuando el usuario arregla algo.
     audit: {
       bullets: [],
+      hard: [{ skill: "Excel", requirement: "NICE", status: "listed", evidenceNodeId: null, writeIn: null, question: null }],
+      soft: [],
       summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: [],
-      softCoverage: [],
     },
     checks: {},
   },
@@ -229,12 +230,14 @@ const ACTS = [
     findings: [
       {
         id: "f1",
-        type: "missing_requirement",
+        type: "improve_bullet",
         // El motor SIEMPRE declara cómo se cierra un hallazgo: la tarjeta
         // dibuja la salida de su remedio y no otra.
         remedy: "rewrite",
         component: "nice",
-        merged: ["missing_requirement"],
+        reason: "No dice con qué cuadraba la caja.",
+        instruction: "Decí que cuadrabas la caja en Excel.",
+        terms: ["Excel"],
         nodeId: NODE_ID,
         nodeText: "Atendí a los clientes en la línea de cajas",
         nodeHash: "h1",
@@ -336,7 +339,9 @@ async function mount() {
 const texto = () => document.body.textContent ?? ""
 
 function botón(nombre: string): HTMLButtonElement {
-  const b = [...document.body.querySelectorAll("button")].find((x) => x.textContent?.trim() === nombre)
+  // El último: Tailor abre en un portal al final del body, y la fila del informe
+  // que lleva a Tailor puede decir lo mismo que el botón de la tarjeta.
+  const b = [...document.body.querySelectorAll("button")].filter((x) => x.textContent?.trim() === nombre).at(-1)
   if (!b) throw new Error(`sin botón "${nombre}" · hay: ${[...document.body.querySelectorAll("button")].map((x) => x.textContent).join(" | ")}`)
   return b as HTMLButtonElement
 }
@@ -396,7 +401,7 @@ describe("el panel pinta lo que el motor midió", () => {
   it("la fila del hallazgo muestra la ganancia MEDIDA, no una promesa del modelo", async () => {
     await analyze()
     expect(texto()).toContain("1.9p")
-    expect(texto()).toContain("Falta un requisito del aviso")
+    expect(texto()).toContain("Mejorar esta viñeta")
   })
 
   it("el hallazgo cae en su sección, y la sección dice cuánto cubre", async () => {
@@ -542,25 +547,20 @@ describe("la cifra la escribe el candidato", () => {
     expect(body.nodeId).toBe(NODE_ID)
     // Y la vacante ya parseada vuelve con el pedido: no se re-pregunta.
     expect(body.spec).toBeTruthy()
-    /**
-     * LO QUE LA TARJETA PROMETIÓ VIAJA CON EL PEDIDO, Y ES LA MISMA FRASE.
-     *
-     * El modelo reescribía a ciegas: recibía el CV, la vacante y el ledger, y
-     * NADA de lo que el panel le había prometido al usuario sobre esa línea. Y
-     * cuando empezó a viajar, iba el token crudo del motor —«resultado»— que
-     * además es castellano aunque el CV esté en inglés. Va la frase que el
-     * usuario leyó: una glosa, dos consumidores.
-     */
-    expect(body.focus).toBeTruthy()
-    expect(texto()).toContain(body.focus)
+    // LO QUE EL ATS DECIDIÓ VIAJA CON EL PEDIDO, y es lo mismo que la tarjeta dice.
+    expect(body.reason).toBe("No dice con qué cuadraba la caja.")
+    expect(body.instruction).toBe("Decí que cuadrabas la caja en Excel.")
+    expect(body.terms).toEqual(["Excel"])
+    expect(texto()).toContain(body.instruction)
   })
 
-  it("la tarjeta sin resultado pregunta en qué terminó, y lo contado viaja con los ejes", async () => {
+  it("una skill sin rastro pregunta, y la respuesta viaja a la línea del puesto donde ese trabajo vive", async () => {
     const sinResultado = {
       ...ACTS[2],
       findings: [{
-        id: "r1", type: "no_result", remedy: "rewrite", component: "xyz", merged: ["no_result"],
-        nodeId: NODE_ID, nodeText: "Atendí a los clientes en la línea de cajas", nodeHash: "h1", gain: 1.5, detail: "resultado",
+        id: "r1", type: "missing_skill", remedy: "ask", component: "must", subject: "Arqueo de caja",
+        question: "¿Hacías el arqueo de caja?",
+        nodeId: "summary", nodeText: "", nodeHash: "h1", gain: 1.5, detail: "missing",
       }],
     }
     apiFetch.mockResolvedValueOnce(ndjsonResponse([ACTS[0], ACTS[1], sinResultado, ACTS[3]]))
@@ -568,12 +568,16 @@ describe("la cifra la escribe el candidato", () => {
     await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
     await click("Analizar compatibilidad")
     await click("Arreglar con Tailor")
-    await escribir("#r1-dato", "bajó la fila en hora pico")
+    // La tarjeta no le pregunta a la persona: la IA propone, el dato es opcional.
+    expect(texto()).not.toContain("¿Hacías el arqueo de caja?")
+    await escribir("#r1-ask", "cuadraba la góndola y la caja al cierre")
     apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
-    await click("Escribirla mejor")
+    await click("Escribirlo")
     const body = JSON.parse((apiFetch.mock.calls[1][1] as { body: string }).body)
-    expect(body.axes).toEqual(["resultado"])
-    expect(body.told).toBe("bajó la fila en hora pico")
+    expect(body.terms).toEqual(["Arqueo de caja"])
+    expect(body.told).toBe("cuadraba la góndola y la caja al cierre")
+    // La línea del puesto que más comparte con lo contado: la de la góndola.
+    expect(body.nodeId).not.toBe(NODE_ID)
   })
 
   it("«no me interesa» cierra el hallazgo sin gastar una consulta, y lo RECUERDA", async () => {
@@ -596,7 +600,8 @@ describe("la cifra la escribe el candidato", () => {
     // o 3»—. Descartar es una decisión suya y el registro es de lo que HIZO, no
     // sólo de lo que se escribió; por eso no lleva el tilde de «Aplicado».
     expect(texto()).toContain("done_dismissed")
-    expect(texto()).not.toContain("Escribirla mejor")
+    // La tarjeta ya no está entre las pendientes.
+    expect(texto()).not.toContain("card_ats_says")
   })
 })
 
@@ -765,7 +770,7 @@ describe("el puntaje se mueve mientras trabajás", () => {
       ...ACTS[0],
       audit: {
         ...(ACTS[0] as { audit: Record<string, unknown> }).audit,
-        coverage: [{ skill: "Arqueo de caja", requirement: "MUST", status: "FOUND", evidenceNodeId: NODE_ID }],
+        hard: [{ skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: NODE_ID, writeIn: null, question: null }],
       },
     }
     apiFetch.mockResolvedValueOnce(ndjsonResponse([conCobertura, ACTS[1], ACTS[2]]))

@@ -34,7 +34,7 @@ vi.mock("@/lib/db", () => ({
   },
 }))
 const logAIUsage = vi.fn()
-vi.mock("@/lib/ai-client", () => ({ AI_MODEL_PROSE: "modelo-de-prueba", logAIUsage: (...a: unknown[]) => logAIUsage(...a) }))
+vi.mock("@/lib/ai-client", () => ({ AI_MODEL_PROSE: "modelo-de-prueba", AI_MODEL_BULLETS: "modelo-de-vinetas", logAIUsage: (...a: unknown[]) => logAIUsage(...a) }))
 vi.mock("@/lib/services/ai/OpenAIClientAdapter", () => ({ OpenAIClientAdapter: class {} }))
 
 const llamadas = { jd: 0, audit: 0 }
@@ -60,11 +60,15 @@ vi.mock("@/lib/services/ai/modules/AIAts3Module", () => ({
       llamadas.audit++
       if (falla.audit) throw new Error("timeout del modelo")
       return {
-        bullets: tree.roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true }))),
+        bullets: tree.roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, decision: "keep", reason: "", instruction: null, needsFigure: false }))),
         summary: { identity: true, proof: true, fit: true, extra: true },
-        coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [],      }
+        hard: [{ skill: "Arqueo", requirement: "MUST", status: "demonstrated", evidenceNodeId: null, writeIn: null, question: null }], soft: [],
+      }
     }
     /** Devuelve una reescritura CALCADA al original: el guard la rechaza. */
+    async matchTools() {
+      return []
+    }
     async rewriteBullet(input: { bulletId: string; original: string }) {
       this.deps.onUsage?.({ promptTokens: 300, completionTokens: 40, cachedTokens: 0 })
       return {
@@ -124,7 +128,7 @@ describe("la ruta del motor v3", () => {
     expect(res.headers.get("Cache-Control")).toContain("no-transform")
 
     const salida = await actos(res)
-    expect(salida.map((a) => a.act)).toEqual(["score", "job", "covered", "findings", "done"])
+    expect(salida.map((a) => a.act)).toEqual(["score", "job", "findings", "done"])
     const score = salida[0].score as { total: number }
     expect(score.total).toBeGreaterThan(0)
     expect(score.total).toBeLessThanOrEqual(100)
@@ -164,7 +168,8 @@ describe("la ruta del motor v3", () => {
       } }
       if (kind === "ats3-audit") return { payload: {
         bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
-        coverage: [{ skill: "Arqueo", requirement: "MUST", status: "FOUND", evidenceNodeId: null }], softCoverage: [],      } }
+        hard: [{ skill: "Arqueo", requirement: "MUST", status: "demonstrated", evidenceNodeId: null, writeIn: null, question: null }], soft: [],
+      } }
       return null
     }) as never)
 
@@ -239,7 +244,6 @@ describe("la ruta del motor v3", () => {
           seniority: null, yearsRequired: null, domain: null, workMode: null, language: "es",
           mustHave: [], niceToHave: [], responsibilities: [], softSignals: [],
         },
-        covered: [],
       }),
     )
     const body = (await res.json()) as { ok: boolean }

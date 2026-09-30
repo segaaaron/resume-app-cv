@@ -4,7 +4,7 @@
 // mide lo que un lector automático puede leer, y se escribe de vuelta sin tocar
 // lo que no cambió.
 
-import { bulletIdFor, nodeHash, roleIdFor, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
+import { bulletIdFor, nodeHash, rolDeNueva, roleIdFor, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
 import { ABIERTO, FECHA_ABIERTA, mes, type Mes, type ParseChecks } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -226,6 +226,12 @@ function ordenCronologico(roles: ResumeTree["roles"]): boolean | null {
 export function writeInto(tree: ResumeTree, nodeId: NodeId, text: string): ResumeTree {
   if (nodeId === tree.summary.id) {
     return { ...tree, summary: { ...tree.summary, text, hash: nodeHash(text), origin: "AI_ACCEPTED" } }
+  }
+  // La viñeta nueva entra al final de su puesto.
+  const rol = rolDeNueva(nodeId)
+  if (rol) {
+    const nueva = { id: `b_nueva_${nodeHash(text).slice(0, 10)}`, text, hash: nodeHash(text), origin: "AI_ACCEPTED" as const }
+    return { ...tree, roles: tree.roles.map((r) => (r.id === rol ? { ...r, bullets: [...r.bullets, nueva] } : r)) }
   }
   return {
     ...tree,

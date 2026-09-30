@@ -67,8 +67,11 @@ describe("las reglas que no pueden faltar", () => {
     expect(jobPrompt("en").toLowerCase()).toContain("untrusted")
   })
 
-  it("la línea entre enriquecer e inventar viaja en los dos prompts que escriben", () => {
-    for (const build of [bulletPrompt, summaryPrompt]) {
+  it("la línea entre enriquecer e inventar viaja en el resumen; la viñeta es edición mínima", () => {
+    // La viñeta NO la lleva: «tuyo es el resultado y el método» le daba permiso para agregar lo que no se pidió.
+    expect(bulletPrompt("es")).toMatch(/EDICIÓN MÍNIMA/)
+    expect(bulletPrompt("en")).toMatch(/MINIMAL EDIT/)
+    for (const build of [summaryPrompt]) {
       expect(build("es")).toContain(truthRule("es").split("\n")[0])
       expect(build("en")).toContain(truthRule("en").split("\n")[0])
     }
@@ -185,13 +188,13 @@ describe("los cuatro modos de fallo se distinguen", () => {
   })
 
   it("esquema: JSON válido que no cumple el contrato", async () => {
-    const client = new ScriptedClient(JSON.stringify({ coverage: "no es un arreglo" }))
+    const client = new ScriptedClient(JSON.stringify({ summary: "no es un objeto" }))
     await expect(mod(client).audit(tree, spec)).rejects.toMatchObject({ kind: "schema" })
   })
 
   it("los cuatro son el mismo síntoma para el usuario, y por eso se nombran distinto", async () => {
     const kinds = new Set<string>()
-    for (const reply of ["", "no json", JSON.stringify({ coverage: 1 })]) {
+    for (const reply of ["", "no json", JSON.stringify({ summary: 1 })]) {
       try {
         await mod(new ScriptedClient(reply)).audit(tree, spec)
       } catch (e) {
@@ -293,23 +296,18 @@ describe("cada prompt viaja con su versión", () => {
 })
 
 describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas", () => {
-  it("la reescritura usa la redacción del aviso, no un sinónimo — en los dos idiomas", () => {
-    // El filtro tradicional compara CADENAS: «project management» y «led
-    // projects» no son lo mismo para él. Medido por la práctica documentada de
-    // los parsers, no por opinión nuestra.
-    expect(bulletPrompt("es")).toMatch(/redacción EXACTA en vez de un sinónimo/)
-    expect(bulletPrompt("en")).toMatch(/EXACT wording/)
-    // Y la sigla con su forma completa la primera vez.
-    expect(bulletPrompt("es")).toMatch(/sigla/)
-    expect(bulletPrompt("en")).toMatch(/acronym/)
+  it("las skills a escribir van tal cual las escribe el aviso", () => {
+    expect(bulletPrompt("es")).toMatch(/tal cual la escribe el aviso/)
+    expect(bulletPrompt("en")).toMatch(/exactly as the posting writes it/)
   })
 
-  it("una línea intercambiable con la de cualquiera no aporta, y no se arregla inventando", () => {
-    for (const p of [bulletPrompt("es"), bulletPrompt("en")]) {
-      expect(p).toMatch(/ESPECIFICIDAD|SPECIFICITY/)
-      // La salvedad es lo que impide que esta regla se lea como licencia.
-      expect(p).toMatch(/poco del original|too little of the original/)
-    }
+  it("Tailor ejecuta al ATS sin cambiar hechos ni subir el rol", () => {
+    expect(bulletPrompt("es")).toMatch(/Cada HECHO de la línea original se queda/)
+    expect(bulletPrompt("en")).toMatch(/Every FACT of the original line stays/)
+    expect(bulletPrompt("es")).toMatch(/nivel de participación es un hecho/)
+    expect(bulletPrompt("en")).toMatch(/level of involvement is a fact/)
+    expect(bulletPrompt("es")).toMatch(/casi lo mismo que la original ni que ninguna de OTRAS LÍNEAS/)
+    expect(bulletPrompt("en")).toMatch(/nearly the same as the original nor as any of the OTHER LINES/)
   })
 
   it("el hueco dice que un aproximado alcanza, y que lo pone el candidato", () => {
@@ -320,20 +318,21 @@ describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas"
   })
 
   it("la vacante NO parte una sigla en dos requisitos", () => {
-    // «CI/CD» y «integración continua» en el mismo aviso son UNA exigencia. En
-    // dos, el denominador del puntaje crece con una fila fantasma y el candidato
-    // aparece cubriendo la mitad de algo que cubre entero.
     expect(jobPrompt("es")).toMatch(/UN solo requisito, no dos/)
     expect(jobPrompt("en")).toMatch(/ONE requirement, not two/)
     expect(jobPrompt("es")).toMatch(/NUNCA deduzcas la expansión/)
     expect(jobPrompt("en")).toMatch(/NEVER derive the expansion/)
   })
 
-  it("FOUND es lo que el filtro puede ver, no lo que el modelo entiende", () => {
-    // Marcar cubierto por comprensión propia es el peor error que puede cometer
-    // la auditoría: le dice a alguien que pasa un filtro que lo va a descartar.
-    expect(auditPrompt("es")).toMatch(/lo que el filtro puede ver|lo que el filtro puede ver/i)
-    expect(auditPrompt("en")).toMatch(/what the filter can see/i)
+  it("el ATS decide por viñeta sirve o sobra, con topes, sin instrucciones libres", () => {
+    for (const lang of ["es", "en"] as const) {
+      const p = auditPrompt(lang)
+      expect(p).toMatch(/keep —/)
+      expect(p).toMatch(/remove —/)
+      // Lo que se agrega a una línea lo deciden P3 y el código: el diagnóstico no escribe instrucciones.
+      expect(p).toMatch(/`instruction`: (siempre null|always null)/)
+      expect(p).not.toMatch(/improve —/)
+    }
   })
 
   it("el resumen prueba con un resultado, no con cualidades declaradas", () => {
@@ -343,9 +342,8 @@ describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas"
 })
 
 /**
- * Los tres esquemas que viven en el módulo de prompts, contra el mismo peor
- * caso: TODOS los campos en null. La auditoría es el que más importa — corre en
- * cada análisis, así que si muere, muere la corrida entera.
+ * Los esquemas del módulo, contra el peor caso: TODOS los campos en null. El
+ * diagnóstico es el que más importa — corre en cada análisis.
  */
 describe("tampoco mueren los esquemas del módulo", () => {
   const responde = (payload: unknown): IAIClient => ({
@@ -355,26 +353,24 @@ describe("tampoco mueren los esquemas del módulo", () => {
     async embed() { return [] },
   })
   const mod = (c: IAIClient) => new AIAts3Module({ client: c, model: "m", language: "es" })
+  const linea = (id: string, text: string) => ({ id, text, hash: id, origin: "USER" as const })
+  const tree = {
+    roles: [{ id: "r", title: "Cajera", company: "X", startDate: "2023-01", endDate: "", bullets: [linea("a", "Hice el inventario mensual"), linea("b", "Cuadré la caja al cierre")] }],
+    summary: linea("summary", ""),
+    declaredSkills: [],
+    otherText: "",
+  } as unknown as ResumeTree
 
-  it("la auditoría (P2) sobrevive a una respuesta con todo en null", async () => {
-    const c = responde({ coverage: null, softCoverage: null })
-    const r = await mod(c).audit({ roles: [], summary: { id: "summary", text: "", hash: "h", origin: "USER" }, declaredSkills: [], otherText: "" } as ResumeTree, {} as JobSpec)
-    // Lo que el auditor no pudo afirmar NO cuenta como cubierto.
-    expect(r.coverage).toEqual([])
-    expect(r.softCoverage).toEqual([])
+  it("el diagnóstico (P2) sobrevive a una respuesta con todo en null", async () => {
+    const r = await mod(responde({ bullets: null, hard: null, soft: null, summary: null })).audit(tree, {} as JobSpec)
+    expect(r.bullets).toEqual([])
+    expect(r.hard).toEqual([])
+    expect(r.soft).toEqual([])
   })
 
-  it("«Ayudé con…» no cuenta como verbo de acción aunque el modelo diga que sí", async () => {
-    const linea = (id: string, text: string) => ({ id, text, hash: id, origin: "USER" as const })
-    const tree = {
-      roles: [{ id: "r", title: "Cajera", company: "X", startDate: "2023-01", endDate: null, bullets: [linea("a", "Ayudé con el inventario mensual de la tienda"), linea("b", "Cuadré la caja al cierre del turno")] }],
-      summary: linea("summary", ""),
-      declaredSkills: [],
-      otherText: "",
-    } as unknown as ResumeTree
-    const verbo = { hasActionVerb: true, hasResult: false, hasMethod: false }
-    const r = await mod(responde({ bullets: [{ id: "a", ...verbo }, { id: "b", ...verbo }] })).audit(tree, {} as JobSpec)
-    expect(r.bullets.map((b) => b.hasActionVerb)).toEqual([false, true])
+  it("una línea que el CV no tiene no existe, y una decisión ilegible es «mantener»", async () => {
+    const r = await mod(responde({ bullets: [{ id: "a", decision: "rehacer" }, { id: "zzz", decision: "remove" }] })).audit(tree, {} as JobSpec)
+    expect(r.bullets.map((b) => [b.id, b.decision])).toEqual([["a", "keep"]])
   })
 
   it("la vacante se pide ORDENADA por peso, y dice qué número le importa al puesto", () => {
@@ -384,25 +380,19 @@ describe("tampoco mueren los esquemas del módulo", () => {
     }
   })
 
-  it("las blandas se juzgan con su logro, en los dos idiomas", () => {
-    expect(auditPrompt("es")).toMatch(/DEMONSTRATED \(una viñeta de experiencia —nunca el resumen— la evidencia con un logro/)
-    expect(auditPrompt("en")).toMatch(/DEMONSTRATED \(an experience bullet — never the summary — evidences it with an achievement/)
-    // Sin id de línea nunca es demostrada: la misma vara que rige a las duras.
-    expect(auditPrompt("es")).toMatch(/Sin id de línea, nunca es DEMONSTRATED/)
-    expect(auditPrompt("en")).toMatch(/With no line id, it is never DEMONSTRATED/)
+  it("una soft se demuestra con un logro de una viñeta, nunca con el resumen", () => {
+    expect(auditPrompt("es")).toMatch(/nunca el resumen/)
+    expect(auditPrompt("en")).toMatch(/never the summary/)
   })
 })
 
 /**
- * LA AUDITORÍA CONTESTA POR REFERENCIA (2026-09-24).
- *
- * Medido en producción: la vacante pedía tres blandas —que no se le mandaban al
- * modelo— y volvieron cinco con otros nombres, «crash rate» entre ellas. El
- * puntaje daba 5/3 = 100% y la tabla pintaba las tres pedidas como faltantes.
+ * EL DIAGNÓSTICO CONTESTA POR REFERENCIA: lo que no es de la lista de la
+ * vacante no tiene dónde caer, y una línea que no existe no es evidencia.
  */
-describe("la auditoría habla de la lista de la vacante, y de nada más", () => {
+describe("el diagnóstico habla de la lista de la vacante, y de nada más", () => {
   const tree: ResumeTree = {
-    roles: [],
+    roles: [{ id: "r", title: "Cajera", company: "X", startDate: "2023-01", endDate: "", bullets: [{ id: "b1", text: "Cuadré la caja", hash: "h", origin: "USER" }] }],
     summary: { id: "summary", text: "Cajera", hash: "h", origin: "USER" },
     declaredSkills: [],
     otherText: "",
@@ -415,15 +405,15 @@ describe("la auditoría habla de la lista de la vacante, y de nada más", () => 
   const respuesta = JSON.stringify({
     bullets: [],
     summary: { identity: true, proof: false, fit: false, extra: false },
-    coverage: [
-      { ref: "M1", status: "IMPLIED", evidenceNodeId: "summary" },
-      { ref: "M1", status: "NOT_FOUND", evidenceNodeId: null }, // repetida
-      { ref: "M9", status: "FOUND", evidenceNodeId: null }, // no existe
-      { ref: "n1", status: "NOT_FOUND", evidenceNodeId: null },
+    hard: [
+      { ref: "M1", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null },
+      { ref: "M1", status: "missing" }, // repetida
+      { ref: "M9", status: "demonstrated" }, // no existe
+      { ref: "n1", status: "missing", writeIn: "no-existe", question: "¿Usaste Excel?" },
     ],
-    softCoverage: [
-      { ref: "S1", status: "DEMONSTRATED", evidenceNodeId: "summary" },
-      { ref: "S7", status: "DEMONSTRATED", evidenceNodeId: "summary" }, // inventada
+    soft: [
+      { ref: "S1", status: "demonstrated", evidenceNodeId: "summary" },
+      { ref: "S7", status: "demonstrated", evidenceNodeId: "b1" }, // inventada
     ],
   })
 
@@ -438,42 +428,40 @@ describe("la auditoría habla de la lista de la vacante, y de nada más", () => 
 
   it("traduce la referencia al nombre de la vacante y descarta lo que no está en la lista", async () => {
     const a = await mod(new ScriptedClient(respuesta)).audit(tree, spec)
-    expect(a.coverage).toEqual([
-      { skill: "Arqueo de caja", requirement: "MUST", status: "IMPLIED", evidenceNodeId: "summary", cvWording: null, match: null },
-      { skill: "Excel", requirement: "NICE", status: "NOT_FOUND", evidenceNodeId: null, cvWording: null, match: null },
+    expect(a.hard).toEqual([
+      { skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null },
+      { skill: "Excel", requirement: "NICE", status: "missing", evidenceNodeId: null, writeIn: null, question: "¿Usaste Excel?" },
     ])
-    expect(a.softCoverage).toEqual([{ signal: "trabajo en equipo", status: "DEMONSTRATED", evidenceNodeId: "summary" }])
+    // Una soft «demostrada» en el resumen no tiene logro detrás: la cita se cae.
+    expect(a.soft).toEqual([{ signal: "trabajo en equipo", status: "demonstrated", evidenceNodeId: null, writeIn: null }])
   })
 })
 
-/**
- * LO QUE LA TARJETA PROMETE LLEGA EN LA PRIMERA LLAMADA (2026-09-28).
- * Viajaba sólo en el reintento: el modelo fallaba siempre una vez.
- */
-describe("el pedido lleva lo prometido desde la primera llamada", () => {
+/** LO QUE EL ATS DECIDIÓ SOBRE LA LÍNEA LLEGA A TAILOR TAL CUAL. */
+describe("el pedido a Tailor lleva la decisión del ATS", () => {
   const vacia = JSON.stringify({ changed: true, text: "Emití facturas electrónicas ante el SIN", bulletId: "b", actionVerb: "Emití", keywordsUsed: [], claim: "", metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null })
-  const ledger = { verbsUsed: [], keywordBudget: {}, metricTypesUsed: [], claimsMade: [] } as never
   const spec = JSON.parse(SPEC_JSON) as JobSpec
 
-  it("viñeta: términos comprometidos, verbo a evitar, tamaño y ejes", async () => {
+  it("viñeta: motivo, instrucción, skills, cifra, respuesta y los hechos del puesto", async () => {
     const client = new ScriptedClient(vacia)
     await mod(client).rewriteBullet({
-      original: "SIN: emití facturas", bulletId: "b", roleContext: "Cajera", spec, ledger, declaredSkills: [],
-      mustWrite: ["SIN"], avoidOpener: "Atendí", wantsSize: true, axes: ["resultado"], told: "bajó la fila en caja",
+      original: "SIN: emití facturas", bulletId: "b", roleContext: "Cajera — X", language: "es",
+      reason: "Sirve, pero no dice el sistema.", instruction: "Decí que facturabas ante el SIN.", terms: ["SIN"], needsFigure: true,
+      told: "bajó la fila en caja", roleLines: ["Cuadré la caja"], siblings: ["Cuadré la caja"],
     })
     const pedido = String(client.lastParams!.messages[1].content)
-    expect(pedido).toContain('TÉRMINOS COMPROMETIDOS / COMMITTED TERMS:\n["SIN"]')
-    expect(pedido).toContain("VERB YOU MAY NOT OPEN WITH:\nAtendí")
+    // La instrucción libre del ATS no viaja: Tailor sólo inserta lo verificable.
+    expect(pedido).not.toContain("LO QUE PIDE EL ATS")
+    expect(pedido).toContain('SKILLS A ESCRIBIR / SKILLS TO WRITE:\n["SIN"]')
     expect(pedido).toContain("ESTA LÍNEA LLEVA SU TAMAÑO")
-    expect(pedido).toContain("VIÑETA ORIGINAL")
-    expect(pedido).toContain('EJES PROMETIDOS / PROMISED AXES:\n["resultado"]')
-    expect(pedido).toContain('LO QUE LA PERSONA AGREGA / WHAT THE PERSON ADDS:\n"""bajó la fila en caja"""')
+    expect(pedido).toContain('LO QUE LA PERSONA CONTÓ / WHAT THE PERSON TOLD:\n"""bajó la fila en caja"""')
+    expect(pedido).toContain('ESTE PUESTO YA DICE / THIS ROLE ALREADY SAYS:\n["Cuadré la caja"]')
   })
 
   it("resumen: los años medidos y los términos comprometidos", async () => {
     const client = new ScriptedClient(vacia)
     await mod(client).rewriteSummary({
-      current: "Cajera", cvLines: [], otherSections: "", spec, topBullets: [], ledger, declaredSkills: [],
+      current: "Cajera", cvLines: [], otherSections: "", spec, topBullets: [], declaredSkills: [],
       mustWrite: ["Cajera de Supermercado"], yearsOfExperience: 4, provenTerms: ["Arqueo de caja"],
     })
     const pedido = String(client.lastParams!.messages[1].content)

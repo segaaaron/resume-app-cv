@@ -4,8 +4,7 @@
 // claves con que el almacén guarda cada respuesta. El motor no importa el
 // módulo de IA: recibe estos contratos, y así se prueba sin red (ver engine.ts).
 
-import { PROMPT_VERSION, RUBRIC_VERSION, normalize, sha256, type Axis, type JobSpec, type NodeId, type ResumeTree, type Suggestion } from "@/lib/ats3/contracts"
-import { type Ledger } from "@/lib/ats3/ledger"
+import { PROMPT_VERSION, RUBRIC_VERSION, normalize, sha256, type JobSpec, type NodeId, type ResumeTree, type Suggestion } from "@/lib/ats3/contracts"
 import { type AuditFacts } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -15,49 +14,54 @@ import { type AuditFacts } from "@/lib/ats3/score"
 /** Las seis preguntas que sólo un modelo puede contestar. Ya validadas. */
 export interface AtsAi {
   parseJob(jdText: string, language: "es" | "en"): Promise<JobSpec>
-  audit(tree: ResumeTree, spec: JobSpec): Promise<AuditFacts>
+  /**
+   * `alreadyFixed`: las líneas que Tailor ya escribió siguiendo al ATS. El ATS
+   * no vuelve a pedir lo que él mismo mandó hacer.
+   */
+  audit(tree: ResumeTree, spec: JobSpec, alreadyFixed?: string[], nudge?: string): Promise<AuditFacts>
+  /**
+   * Las herramientas de las habilidades de la persona que cada viñeta usó y no
+   * nombra. Ya verificadas: están en su lista y la línea no las dice.
+   */
+  /** Y las que afirman un resultado sin decir cuánto: ahí va la cifra de la persona. */
+  matchTools(tree: ResumeTree): Promise<{ id: NodeId; tools: string[]; sinTamano?: boolean; sinLogro?: boolean }[]>
   rewriteBullet(input: RewriteInput): Promise<Suggestion>
   rewriteSummary(input: SummaryInput): Promise<Suggestion>
 }
 
+/**
+ * LO QUE TAILOR RECIBE PARA UNA VIÑETA (CEO, 2026-09-29): la decisión del ATS
+ * tal cual, la línea, los hechos de ese puesto y lo que contó la persona.
+ */
 export interface RewriteInput {
   original: string
-  /**
-   * LO QUE ESTA LÍNEA TIENE QUE RESOLVER, dicho UNA vez.
-   *
-   * Es el `detail` de la tarjeta que apretó el usuario — la única tarjeta que
-   * esa línea puede tener— con todo adentro: el eje que falta, el término
-   * enterrado, la blanda sin demostrar. Antes el modelo reescribía A CIEGAS:
-   * recibía el CV, la vacante y el ledger, y NADA de lo que el panel le había
-   * prometido al usuario. Por eso podía volver con una línea que no cerraba lo
-   * que la tarjeta decía, y el usuario leía el panel contradiciéndose.
-   *
-   * Va acá y en ningún otro lado: una sola tarjeta, una sola instrucción, una
-   * sola reescritura.
-   */
-  focus?: string
   bulletId: NodeId
+  /** Cargo y empresa del puesto. */
   roleContext: string
-  /** Las otras viñetas del CV: no puede devolver ninguna calcada. */
+  /** Las otras viñetas de ESE puesto: hechos de la persona que se pueden usar. */
+  roleLines?: string[]
+  /** Todas las demás viñetas del CV: la nueva no puede ser casi igual a ninguna. */
   siblings?: string[]
-  spec: JobSpec
-  ledger: Ledger
-  declaredSkills: string[]
-  /**
-   * LO QUE LA TARJETA PROMETIÓ, EN LA PRIMERA LLAMADA Y NO SÓLO EN EL REINTENTO.
-   *
-   * Viajaban nada más como corrección del reintento: el modelo no sabía en la
-   * primera llamada que tenía que escribir el término, esquivar un verbo o
-   * dejar el hueco de la cifra, así que fallaba siempre una vez y se pagaba una
-   * segunda llamada por algo que nadie le había dicho (2026-09-28).
-   */
-  mustWrite?: string[]
-  avoidOpener?: string
-  wantsSize?: boolean
-  /** Los ejes que la tarjeta dice que faltan: la línea nueva tiene que tenerlos. */
-  axes?: Axis[]
-  /** Lo que la persona contó en la tarjeta sobre esta línea (en qué terminó, cómo). */
+  /** Por qué el ATS pide mejorarla. */
+  reason?: string
+  /** Qué tiene que decir la línea nueva, según el ATS. */
+  instruction?: string
+  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
+  facts?: string[]
+  /** Las skills del puesto que el ATS decidió escribir en esta línea. */
+  terms?: string[]
+  /** Este puesto necesita la cifra de este logro: va el hueco para la persona. */
+  needsFigure?: boolean
+  /** Lo que la persona contestó a la pregunta del ATS, si la hubo. */
   told?: string
+  /** Skill que pide la vacante y el CV no muestra: la IA escribe el trabajo con ella en esta línea; la persona confirma si es verdad. */
+  propone?: boolean
+  /** La línea dice qué se hizo y no qué logró: se escribe el logro con el hueco de su cifra. */
+  logro?: boolean
+  /** Viñeta nueva: no hay línea original que conservar (se agrega o reemplaza a la señalada). */
+  nueva?: boolean
+  /** Idioma del CV. */
+  language: "es" | "en"
   /** Qué falló del intento anterior. Vacío la primera vez. */
   nudge?: string
 }
@@ -86,7 +90,6 @@ export interface SummaryInput {
   topBullets: string[]
   /** Lo que la vacante pide y el CV ya demuestra, en su orden de peso (`provenTermsOf`). */
   provenTerms: string[]
-  ledger: Ledger
   declaredSkills: string[]
   nudge?: string
 }
@@ -122,21 +125,17 @@ export const cacheKey = {
    * precio de la pieza completa es el mismo que el de una sola.
    */
   audit: (nodeHashValue: string, jdHash: string, model: string) =>
-    sha256(nodeHashValue, jdHash, RUBRIC_VERSION, PROMPT_VERSION.P2, model),
+    sha256(nodeHashValue, jdHash, RUBRIC_VERSION, PROMPT_VERSION.P2, PROMPT_VERSION.P3, model),
 
-  /** Lleva la firma del ledger: si otra viñeta gastó ese verbo, esto ya no vale. */
-  fix: (nodeId: NodeId, nodeHashValue: string, jdHash: string, ledgerSig: string, model: string, focus = "") =>
-    // El foco entra a la clave porque entra al prompt: sin él, pedir «le falta
-    // el método» y «tejé este término» sobre la misma línea devolvía la primera
-    // respuesta guardada para las dos.
-    // Las dos versiones: el resumen lo escribe P5 y se guarda acá igual que una
-    // viñeta. Sólo con P4, un cambio del prompt del resumen no llegaba nunca —
-    // se servía el resumen viejo (medido el 2026-09-28).
-    sha256(nodeId, nodeHashValue, jdHash, ledgerSig, PROMPT_VERSION.P4, PROMPT_VERSION.P5, model, focus),
+  /** La reescritura: la línea, la vacante y TODO lo que la tarjeta le pasa a Tailor. */
+  fix: (nodeId: NodeId, nodeHashValue: string, jdHash: string, model: string, pedido = "") =>
+    // Las dos versiones: el resumen lo escribe P5 y se guarda acá igual que una viñeta.
+    sha256(nodeId, nodeHashValue, jdHash, PROMPT_VERSION.P4, PROMPT_VERSION.P5, model, pedido),
 
   /** El registro de lo resuelto, por CV y vacante. */
   log: (resumeId: string, jdHash: string) => sha256(resumeId, jdHash),
 
-  /** Los juicios fijados al texto que los sostiene, por CV. Ver `fijarJuicios`. */
-  lock: (resumeId: string, model: string) => sha256("lock", resumeId, RUBRIC_VERSION, PROMPT_VERSION.P2, model),
+  /** Las viñetas que el ATS ya decidió conservar para este CV y esta vacante. */
+  lock: (resumeId: string, jdHash: string) => sha256("lock", resumeId, jdHash),
+
 }

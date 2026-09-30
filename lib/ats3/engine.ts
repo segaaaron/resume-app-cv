@@ -20,24 +20,21 @@
 // nada de eso cambió, la respuesta guardada sigue siendo válida por definición,
 // y reanalizar cuesta cero.
 
-import { buildTermIndex, findingId, nodeHash, sha256, type AnchoredSuggestion, type Finding, type JobSpec, type Resolution, type ResumeTree } from "@/lib/ats3/contracts"
-import { afterAccept, type Ledger } from "@/lib/ats3/ledger"
+import { buildTermIndex, findingId, nodeHash, normalize, sha256, termsIn, type AnchoredSuggestion, type Finding, type JobSpec, type Resolution, type ResumeTree } from "@/lib/ats3/contracts"
 import { isStale, loyalty, type GuardVerdict } from "@/lib/ats3/guards"
-import { coverageOf, cvTextOf, deltaOf, gainOf, postingWeights, scoreResume, softCoverageOf, termsOf, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
+import { cvTextOf, deltaOf, gainOf, scoreResume, statesQuantity, termsOf, titleForms, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 import { type RawResume, buildTree, readableChecks, writeInto } from "@/lib/ats3/cv"
-import { findingsOf } from "@/lib/ats3/findings"
-import { JUICIOS_VACIOS, type Juicios, conFormasDelCv, fijarJuicios } from "@/lib/ats3/judgments"
+import { findingsOf, hayTrabajo, respaldadoEnCv, trabajoPorViñeta } from "@/lib/ats3/findings"
+import { BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN } from "@/lib/ats3/ledger"
 import { type AtsAi, type AtsStore, cacheKey } from "@/lib/ats3/ports"
 // Viven con quien mide; se re-exportan porque el motor es la puerta de siempre.
-export { coverageOf, cvTextOf, termsOf } from "@/lib/ats3/score"
+export { cvTextOf, termsOf } from "@/lib/ats3/score"
 // Cada módulo del motor, por la misma puerta: quien ya importa de acá no cambia.
 export { cacheKey } from "@/lib/ats3/ports"
 export type { AtsAi, AtsStore, CacheKind, RewriteInput, SummaryInput } from "@/lib/ats3/ports"
 export { buildTree, readBullets, readableChecks, writeBack, writeInto } from "@/lib/ats3/cv"
 export type { RawResume } from "@/lib/ats3/cv"
-export { findingsOf, sameRoot, skillPlan } from "@/lib/ats3/findings"
-export { JUICIOS_VACIOS, conFormasDelCv, fijarJuicios } from "@/lib/ats3/judgments"
-export type { Juicios } from "@/lib/ats3/judgments"
+export { findingsOf, skillPlan } from "@/lib/ats3/findings"
 export { runRewrite } from "@/lib/ats3/rewrite"
 export type { RewriteRequest, RewriteResult } from "@/lib/ats3/rewrite"
 
@@ -59,10 +56,8 @@ export type Act =
    * cero lógica de puntaje en la interfaz, y ningún número que el código no
    * pueda probar.
    */
-  | { act: "score"; score: Score; tree: ResumeTree; audit: AuditFacts; checks: ParseChecks; weights: Record<string, number> }
+  | { act: "score"; score: Score; tree: ResumeTree; audit: AuditFacts; checks: ParseChecks }
   | { act: "job"; spec: JobSpec }
-  /** Lo que la vacante pide y el CV ya demuestra: guía dónde gastar términos. */
-  | { act: "covered"; terms: string[] }
   /**
    * `resolved` es EL REGISTRO DE LO QUE EL USUARIO YA CERRÓ, y viaja acá.
    *
@@ -104,28 +99,34 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     await input.store.write("ats3-jd", jdKey, spec)
   }
 
-  let index = buildTermIndex(termsOf(spec, tree))
+  /**
+   * LO QUE TAILOR YA ESCRIBIÓ SIGUIENDO AL ATS, Y SIGUE EN EL CV (CEO, 2026-09-29).
+   *
+   * Una línea reescrita cambia de id —el id sale del texto—, así que el
+   * registro por id no la reconoce. Viaja al ATS por su texto: lo que él mismo
+   * mandó hacer queda en «mantener», y el panel no vuelve a pedirlo.
+   */
+  const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
+  const lineas = new Set(tree.roles.flatMap((r) => r.bullets.map((b) => b.text.trim())))
+  const arregladas = [...new Set(log.filter((r) => r.kind === "applied" && r.after && lineas.has(r.after.trim())).map((r) => r.after!.trim()))]
 
-  // ── acto 3: la auditoría ──────────────────────────────────────────────────
-  const auditKey = cacheKey.audit(treeHash(tree), jdKey, input.model)
+  // ── acto 3: el diagnóstico ────────────────────────────────────────────────
+  const auditKey = cacheKey.audit(sha256(treeHash(tree), ...arregladas), jdKey, input.model)
   let audit = (await input.store.read("ats3-audit", auditKey)) as AuditFacts | null
   if (audit) {
     telemetry.served.audit = true
   } else {
-    audit = await input.ai.audit(tree, spec)
-    telemetry.calls++
+    const [primera, herramientas] = await Promise.all([
+      input.ai.audit(tree, spec, arregladas),
+      // Si falla, el diagnóstico sigue: las herramientas son un plus, no la base.
+      input.ai.matchTools(tree).catch(() => [] as { id: string; tools: string[]; sinTamano?: boolean; sinLogro?: boolean }[]),
+    ])
+    audit = primera
+    telemetry.calls += 2
     /**
-     * CADA VIÑETA TIENE SU JUICIO, O LA PANTALLA NO PUEDE DECIR «12/12».
-     *
-     * ── MEDIDO EN PRODUCCIÓN (2026-09-24) ─────────────────────────────────────
-     * Sobre un CV de 42 viñetas la auditoría devolvió 12. Las otras 30 no
-     * recibieron hallazgo ni cuenta, y el cuadro dijo «12/12 abren con acción»:
-     * el usuario leyó que su CV entero estaba revisado. Rellenar lo que falta
-     * sería inventar un juicio; callarlo, mentir por omisión.
-     *
-     * Lo que faltó se pide UNA vez más, sólo esas líneas, dentro de la misma
-     * petición: la cuota del usuario no cambia. Lo que tampoco vuelva queda sin
-     * juicio, y la pantalla lo cuenta contra el total de líneas del CV.
+     * CADA VIÑETA TIENE SU DECISIÓN. Lo que faltó se pide UNA vez más, sólo esas
+     * líneas, dentro de la misma petición: la cuota no cambia. Lo que tampoco
+     * vuelva queda sin decisión y no se cuenta.
      */
     const juzgadas = new Set(audit.bullets.map((b) => b.id))
     const faltan = new Set(tree.roles.flatMap((r) => r.bullets).filter((b) => !juzgadas.has(b.id)).map((b) => b.id))
@@ -136,82 +137,174 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
           .map((r) => ({ ...r, bullets: r.bullets.filter((b) => faltan.has(b.id)) }))
           .filter((r) => r.bullets.length > 0),
       }
-      const segunda = await input.ai.audit(resto, spec)
+      const segunda = await input.ai.audit(resto, spec, arregladas)
       telemetry.calls++
       audit = { ...audit, bullets: [...audit.bullets, ...segunda.bullets.filter((b) => faltan.has(b.id))] }
+    }
+    /**
+     * LOS TOPES DE VIÑETAS POR PUESTO: el prompt los pide y el código los valida
+     * (CEO, 2026-09-29). Medido contra la API: dejó 11 en un puesto con tope 6 y
+     * vació otro entero. Se le pide UNA vez más nombrando el puesto; el código no
+     * elige qué viñeta va o se queda.
+     */
+    const fuera = rangoDeViñetas(tree, audit)
+    if (fuera.length > 0) {
+      const otra = await input.ai.audit(tree, spec, arregladas, fuera.join("\n"))
+      telemetry.calls++
+      if (rangoDeViñetas(tree, otra).length < fuera.length && otra.bullets.length >= audit.bullets.length) audit = otra
+    }
+    // Las herramientas que cada trabajo usó viajan como hechos de esa viñeta.
+    // Un requisito del aviso no es una herramienta que agregar: ése lo cubren las skills.
+    const delAviso = new Set([...spec.mustHave, ...spec.niceToHave].flatMap((r) => r.skill.split(/\s*\|\s*/)).map(normalize))
+    const deViñeta = new Map(
+      herramientas.map((h) => [h.id, h.tools.filter((t) => !delAviso.has(normalize(t)))] as const).filter(([, t]) => t.length > 0),
+    )
+    // Y las que afirman un resultado sin decir cuánto piden la cifra de la persona.
+    const sinTamano = new Set(herramientas.filter((h) => h.sinTamano).map((h) => h.id))
+    // Y las que dicen qué se hizo sin qué se logró: X-Y-Z, el logro con el hueco de su cifra.
+    const sinLogro = new Set(herramientas.filter((h) => h.sinLogro).map((h) => h.id))
+    audit = {
+      ...audit,
+      bullets: audit.bullets.map((b) =>
+        b.decision === "remove" ? b : { ...b, ...(deViñeta.has(b.id) ? { facts: deViñeta.get(b.id) } : {}), ...(sinTamano.has(b.id) || sinLogro.has(b.id) ? { needsFigure: true } : {}), ...(sinLogro.has(b.id) ? { needsOutcome: true } : {}) },
+      ),
     }
     await input.store.write("ats3-audit", auditKey, audit)
   }
 
-  // Un juicio sólo cambia si cambió el texto que lo sostiene. Ver `fijarJuicios`.
-  const lockKey = cacheKey.lock(input.resumeId, input.model)
-  const previos = ((await input.store.read("ats3-lock", lockKey)) as Juicios | null) ?? JUICIOS_VACIOS
-  const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
-  const fijado = fijarJuicios(tree, audit, previos, jdKey, log)
-  audit = fijado.audit
-  if (JSON.stringify(fijado.juicios) !== JSON.stringify(previos)) await input.store.write("ats3-lock", lockKey, fijado.juicios)
-
-  // Lo que el CV escribe distinto y la auditoría reconoció como lo mismo pasa a
-  // ser variante del requisito: desde acá lo cuentan igual el puntaje, la tabla
-  // y Tailor. Ver `conFormasDelCv`.
-  spec = conFormasDelCv(spec, audit, tree)
-  index = buildTermIndex(termsOf(spec, tree))
-
-  // El modelo aporta la cita; el estado de cada requisito lo decide el código
-  // sobre el CV entero. Ver `coverageOf`.
-  audit = { ...audit, coverage: coverageOf(spec, audit, tree, index), softCoverage: softCoverageOf(spec, audit, tree) }
-
-  // ── acto 1: el puntaje, que no cuesta una sola llamada ────────────────────
-  //
-  // ── UN SOLO DUEÑO PARA «¿ESTE CV SE LEE BIEN?» (CEO, 2026-09-09) ──────────
-  //
-  // Acá se fusionaba lo que el motor mide con lo que mandara el CLIENTE, y el
-  // cliente ganaba: `{ ...readableChecks(tree), ...input.checks }`. La idea era
-  // dejar lugar a una medición futura sobre el PDF renderizado — pero esa
-  // medición no existe, el panel manda `{}`, y mientras tanto la pregunta tenía
-  // dos dueños con el de afuera decidiendo. El borde aceptaba cualquier clave
-  // con cualquier booleano y pisaba lo que el motor había leído del documento.
-  //
-  // El motor lee el CV: es el único que lo tiene entero delante. Si algún día se
-  // mide el PDF de verdad, esa medición entra como un chequeo MÁS de
-  // `readableChecks`, no como alguien que le corrige la respuesta desde afuera.
-  const checks = readableChecks(tree)
   /**
-   * Los pesos salen del TEXTO del aviso, no del modelo: la misma vacante da
-   * siempre el mismo peso. Viajan con el puntaje porque la pantalla vuelve a
-   * medir al aplicar y no recibe el aviso — un puntaje que cambia según quién
-   * lo calcula es peor que uno más grueso.
+   * LO QUE TAILOR YA ARREGLÓ SIGUIENDO AL ATS QUEDA EN «MANTENER». El ATS lo
+   * recibe dicho, y el código lo garantiza: volver a pedir mejorar la línea que
+   * él mismo mandó escribir es el bucle que este motor existe para no tener.
    */
-  const weights = postingWeights(spec, input.jdText)
-  const score = scoreResume(tree, spec, audit, checks, weights)
-  yield { act: "score", score, tree, audit, checks, weights }
-  yield { act: "job", spec }
-  yield {
-    act: "covered",
-    // DEMOSTRADO es escrito DENTRO de una línea: la misma vara que la tabla usa
-    // para separar «probado» de «sólo en la lista».
-    terms: audit.coverage.filter((c) => c.status === "FOUND" && c.evidenceNodeId).map((c) => c.skill),
+  // Una skill «demostrada» o «listada» cuyo nombre el CV no respalda no está en el CV: falta.
+  audit = {
+    ...audit,
+    hard: audit.hard.map((h) => (h.status !== "missing" && !respaldadoEnCv(tree, h.skill) ? { ...h, status: "missing" as const, evidenceNodeId: null } : h)),
+  }
+  /**
+   * LO QUE TAILOR ESCRIBIÓ QUEDA PROBADO (CEO, 2026-09-30): si una línea que la
+   * persona confirmó nombra la skill, esa línea es su prueba. Sin esto el modelo
+   * podía volver a leerla «sólo en la lista» y abrir otra tarjeta para escribirla
+   * de nuevo.
+   */
+  {
+    const deTailor = tree.roles.flatMap((r) => r.bullets).filter((b) => arregladas.includes(b.text.trim()))
+    const prueba = <T extends { status: string; evidenceNodeId: string | null }>(x: T, nombre: string): T => {
+      if (x.status === "demonstrated") return x
+      const indice = buildTermIndex([{ canonical: nombre, variants: titleForms(nombre) }])
+      const linea = deTailor.find((b) => termsIn(indice, b.text).size > 0)
+      return linea ? { ...x, status: "demonstrated", evidenceNodeId: linea.id } : x
+    }
+    audit = { ...audit, hard: audit.hard.map((h) => prueba(h, h.skill)), soft: audit.soft.map((x) => prueba(x, x.signal)) }
+  }
+  /**
+   * LA DECISIÓN QUE SE VE ES LA QUE SE PUEDE HACER: «mejorar» si hay algo
+   * verificable que agregar, «sirve» si no. Si no, la anatomía decía «18 hay que
+   * mejorarlas» y Tailor no tenía ni una tarjeta para ellas (visto en local).
+   */
+  /**
+   * SACAR «POR REPETIDA» SE COMPRUEBA (CEO, 2026-09-29). Medido con el CV real: el
+   * ATS sacó «Refactored the lunch box module…» citándose a sí misma, y «Resolved
+   * critical bugs… 20%» para dejar «Improved app stability…» sin ningún número.
+   * Una línea que cita a otra como la que queda sólo se saca si la citada existe,
+   * es otra, y no deja atrás una cifra que la citada no tiene.
+   */
+  {
+    // Si el ATS dijo «son repetidas» pero sacaba la que tiene cifra, se queda ésa y
+    // se va la citada: el juicio de repetición es suyo, cuál es más fuerte se prueba.
+    const todas = tree.roles.flatMap((r) => r.bullets)
+    const sacar = new Map<string, string>()
+    const quedan = new Set<string>()
+    for (const b of audit.bullets) {
+      if (b.decision !== "remove") continue
+      const v = sacarSeSostiene(tree, b.id, b.reason)
+      if (v === true) continue
+      quedan.add(b.id)
+      if (typeof v === "string" && !quedan.has(v)) {
+        const esta = todas.find((x) => x.id === b.id)?.text ?? ""
+        sacar.set(v, `Dice lo mismo que «${esta.split(/\s+/).slice(0, 6).join(" ")}…», que trae la cifra.`)
+      }
+    }
+    audit = {
+      ...audit,
+      bullets: audit.bullets.map((b) =>
+        quedan.has(b.id) ? { ...b, decision: "keep" as const } : sacar.has(b.id) ? { ...b, decision: "remove" as const, reason: sacar.get(b.id)! } : b,
+      ),
+    }
+  }
+  /**
+   * UNA LÍNEA QUE TAILOR YA CERRÓ NO RECIBE MÁS ENCARGOS. Ni cifra, ni herramienta,
+   * ni una skill para escribir ahí: medido el 2026-09-29, el reanálisis mandaba
+   * escribir «mobile application lifecycle» en la línea que Tailor acababa de
+   * escribir. La skill que falta se le pregunta a la persona.
+   */
+  const yaArregladas = new Set(arregladas)
+  const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text.trim()] as const)))
+  const cerradas = new Set(audit.bullets.filter((b) => yaArregladas.has(textoDe.get(b.id) ?? "")).map((b) => b.id))
+  audit = {
+    ...audit,
+    bullets: audit.bullets.map((b) => (cerradas.has(b.id) ? { ...b, decision: "keep" as const, instruction: null, needsFigure: false, needsOutcome: false, facts: [], cerrada: true } : b)),
+  }
+  /**
+   * EL RANGO DE VIÑETAS POR PUESTO LO GARANTIZA EL CÓDIGO (CEO, 2026-09-29): el
+   * prompt lo pide y el modelo igual vaciaba puestos (Salamanca quedó con 0 de 9).
+   * Si un puesto queda por debajo del mínimo, vuelven las que traen cifra y
+   * después las primeras del CV; si queda por encima del máximo, se van las
+   * últimas sin cifra. Es la regla de `ledger.ts`, en un solo lugar.
+   */
+  /**
+   * LO QUE EL ATS YA DECIDIÓ CONSERVAR NO SE VUELVE A DISCUTIR (CEO, 2026-09-29).
+   * Medido en local: después de aplicar lo que el ATS sacó, el reanálisis del CV
+   * ya recortado quería sacar 6 viñetas más que la pasada anterior había
+   * conservado. Cada vuelta recortaba otra vez. Una viñeta conservada cuyo texto
+   * no cambió se sigue conservando para este CV y esta vacante; se juzga de nuevo
+   * sólo lo que cambió.
+   */
+  const lockKey = cacheKey.lock(input.resumeId, jdKey)
+  const conservadas = new Set(((await input.store.read("ats3-lock", lockKey)) as string[] | null) ?? [])
+  const textoNorm = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, normalize(b.text)] as const)))
+  audit = {
+    ...audit,
+    bullets: audit.bullets.map((b) => (b.decision === "remove" && conservadas.has(textoNorm.get(b.id) ?? "") ? { ...b, decision: "keep" as const } : b)),
+  }
+  /**
+   * NO SE SACA LA PRUEBA DE LO QUE PIDE LA VACANTE (CEO, 2026-09-30): «me pediste
+   * sacar viñetas y el score bajó». La línea que demuestra una skill del aviso vale
+   * en el puntaje (demostrada 1, nombrada 0,6): sacarla nunca es «no aporta».
+   */
+  const pruebas = new Set([...audit.hard, ...audit.soft].flatMap((x) => (x.status === "demonstrated" && x.evidenceNodeId ? [x.evidenceNodeId] : [])))
+  audit = { ...audit, bullets: audit.bullets.map((b) => (b.decision === "remove" && pruebas.has(b.id) ? { ...b, decision: "keep" as const } : b)) }
+  audit = { ...audit, bullets: ajustarAlRango(tree, spec, audit.bullets, pruebas) }
+  const quedan = audit.bullets.filter((b) => b.decision !== "remove").map((b) => textoNorm.get(b.id) ?? "").filter(Boolean)
+  await input.store.write("ats3-lock", lockKey, [...new Set([...conservadas, ...quedan])])
+  const trabajo = trabajoPorViñeta(tree, audit)
+  audit = {
+    ...audit,
+    bullets: audit.bullets.map((b) =>
+      b.decision === "remove" ? b : hayTrabajo(trabajo.get(b.id)) ? { ...b, decision: "improve" as const } : { ...b, decision: "keep" as const, instruction: null },
+    ),
   }
 
-  // ── los hallazgos, filtrados por lo que el usuario ya resolvió ────────────
-  const escritas = new Set(log.filter((r) => r.resolvedBy === "AI_SUGGESTION" && r.kind !== "dropped").map((r) => r.nodeHashAtResolution))
-  const all = findingsOf(tree, audit, score, index, spec, new Set(tree.roles.flatMap((r) => r.bullets).filter((b) => escritas.has(b.hash)).map((b) => b.id)))
+  // ── acto 1: el puntaje, que no cuesta una sola llamada ────────────────────
+  // La lectura del documento la mide el motor: es el único que tiene el CV entero.
+  const checks = readableChecks(tree)
+  const score = scoreResume(tree, spec, audit, checks)
+  yield { act: "score", score, tree, audit, checks }
+  yield { act: "job", spec }
+
+  // ── las tarjetas: la decisión del ATS, una por viñeta ─────────────────────
+  const all = findingsOf(tree, audit, score, spec)
   for (const [nombre, ok] of Object.entries(checks)) {
-    // Un chequeo que falla y no genera hallazgo es un punto perdido que el
-    // usuario no puede recuperar porque nadie le dijo qué arreglar.
+    // Un chequeo que falla y no genera tarjeta es un punto perdido que nadie
+    // le dijo al usuario cómo recuperar. Se arregla en el documento: sin IA.
     if (ok === false) {
       all.push({
-        // El matiz es el chequeo: sin él los siete comparten huella y cerrar
-        // uno acusa a los demás de una regresión que nadie provocó.
+        // El matiz es el chequeo: sin él los siete comparten id.
         id: findingId(tree.summary.id, "parse_risk", nombre),
         type: "parse_risk",
         component: "checks",
-        // Lo que un lector automático no extrae bien se arregla en el documento,
-        // no reescribiendo una línea: la tarjeta lo dice y no ofrece botón. El
-        // comentario lo prometía y el campo decía «rewrite»: el botón de la
-        // tarjeta de fechas reescribía el RESUMEN (medido el 2026-09-24).
         remedy: "none",
-        merged: ["parse_risk"],
         nodeId: tree.summary.id,
         nodeText: nombre,
         nodeHash: nodeHash(nombre),
@@ -225,6 +318,99 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   yield { act: "findings", findings: seen.shown, suppressed: seen.suppressed.length, regressed: seen.regressed, resolved: log }
 
   return telemetry
+}
+
+/**
+ * ¿Se sostiene sacar esta viñeta? Si el motivo cita otra línea del CV («…» o "…"),
+ * la citada tiene que existir, ser otra, y tener cifra si la que se va la tiene.
+ * Si no cita ninguna (otra tecnología, otra tarea), decide el ATS.
+ */
+function sacarSeSostiene(tree: ResumeTree, id: string, reason: string): true | false | string {
+  const todas = tree.roles.flatMap((r) => r.bullets)
+  const esta = todas.find((b) => b.id === id)
+  if (!esta) return true
+  const citas = [...reason.matchAll(/[«"“]([^»"”]{12,})[»"”]/g)].map((m) => normalize(m[1].replace(/…$/, "")).slice(0, 40))
+  if (citas.length === 0) return true
+  const citadas = todas.filter((b) => b.id !== id && citas.some((c) => c.length >= 12 && normalize(b.text).startsWith(c)))
+  // Se cita a sí misma, o cita algo que no está: no se saca.
+  if (citadas.length === 0) return false
+  // Sacaba la que tiene cifra para dejar una sin cifra: se queda ésta y se va la citada.
+  if (statesQuantity(esta.text) && citadas.every((b) => !statesQuantity(b.text))) return citadas[0].id
+  return true
+}
+
+/**
+ * LA VIÑETA QUE MENOS APORTA A ESTA VACANTE en un puesto, con la misma vara que
+ * el rango: nunca la que prueba una skill del aviso, después la que menos
+ * requisitos nombra y sin cifra. Es la que se reemplaza cuando el puesto está lleno.
+ */
+export function menosAporta(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, roleId: string): string | null {
+  const role = tree.roles.find((r) => r.id === roleId)
+  if (!role || role.bullets.length === 0) return null
+  const pruebas = new Set([...audit.hard, ...audit.soft].flatMap((x) => (x.status === "demonstrated" && x.evidenceNodeId ? [x.evidenceNodeId] : [])))
+  const indice = buildTermIndex(termsOf(spec, tree))
+  const peso = (b: { id: string; text: string }) => (pruebas.has(b.id) ? 100 : 0) + termsIn(indice, b.text).size * 2 + (statesQuantity(b.text) ? 1 : 0)
+  // Empate: la de más abajo, que es la que menos se lee.
+  return [...role.bullets].map((b, i) => ({ b, i })).sort((x, y) => peso(x.b) - peso(y.b) || y.i - x.i)[0].b.id
+}
+
+function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bullets"], pruebas: ReadonlySet<string> = new Set()): AuditFacts["bullets"] {
+  const decision = new Map(bullets.map((b) => [b.id, b]))
+  /**
+   * CUÁL VUELVE O CUÁL SE VA: primero lo que prueba el puesto —cuántos requisitos
+   * del aviso nombra, con el mismo índice que usa el puntaje—, después la cifra,
+   * después el orden del CV. Sin la relevancia, Salamanca recuperaba Angular y
+   * Flutter antes que sus líneas de iOS con cifra (medido 2026-09-29).
+   */
+  const indice = buildTermIndex(termsOf(spec, tree))
+  // La prueba de una skill del aviso va primero: sacarla baja el puntaje.
+  const peso = (b: { id: string; text: string }) => (pruebas.has(b.id) ? 100 : 0) + termsIn(indice, b.text).size * 2 + (statesQuantity(b.text) ? 1 : 0)
+  const porPeso = <T extends { id: string; text: string }>(xs: T[]): T[] => xs.map((b, i) => ({ b, i })).sort((x, y) => peso(y.b) - peso(x.b) || x.i - y.i).map((x) => x.b)
+  const cambios = new Map<string, "keep" | "remove">()
+  const todas = tree.roles.flatMap((r) => r.bullets)
+  /**
+   * SÓLO SE SACA LO QUE ES EL CASO (CEO, 2026-09-30): «es preferible mostrar
+   * experiencia en cosas que quizás no pidan que mostrar sólo 1 o 2 viñetas». Una
+   * viñeta se va si repite a otra que queda (la cita y existe) o si el puesto pasa
+   * del máximo; «no le sirve a este puesto» sola no alcanza.
+   */
+  const repetida = (id: string, reason: string) => {
+    const citas = [...reason.matchAll(/[«"“]([^»"”]{12,})[»"”]/g)].map((m) => normalize(m[1].replace(/…$/, "")).slice(0, 40))
+    return citas.some((c) => todas.some((x) => x.id !== id && normalize(x.text).startsWith(c)))
+  }
+  for (const b of bullets) if (b.decision === "remove" && !repetida(b.id, b.reason)) cambios.set(b.id, "keep")
+  const sale = (id: string) => (cambios.get(id) ?? decision.get(id)!.decision) === "remove"
+  for (const r of tree.roles) {
+    const juzgadas = r.bullets.filter((b) => decision.has(b.id))
+    const quedan = juzgadas.filter((b) => !sale(b.id))
+    const minimo = Math.min(BULLETS_PER_ROLE_MIN, juzgadas.length)
+    if (quedan.length < minimo) {
+      const sacadas = juzgadas.filter((b) => sale(b.id))
+      for (const b of porPeso(sacadas).slice(0, minimo - quedan.length)) cambios.set(b.id, "keep")
+    } else if (quedan.length > BULLETS_PER_ROLE_MAX) {
+      const sobran = quedan.length - BULLETS_PER_ROLE_MAX
+      for (const b of porPeso(quedan).reverse().slice(0, sobran)) cambios.set(b.id, "remove")
+    }
+  }
+  return bullets.map((b) =>
+    cambios.get(b.id) === "keep"
+      ? { ...b, decision: "keep" as const }
+      : cambios.get(b.id) === "remove"
+        ? { ...b, decision: "remove" as const, reason: b.reason || "Supera el máximo de viñetas que se leen por puesto." }
+        : b,
+  )
+}
+
+/** Los puestos que quedan fuera del rango de viñetas que se leen, dicho para el ATS. */
+function rangoDeViñetas(tree: ResumeTree, audit: AuditFacts): string[] {
+  const decision = new Map(audit.bullets.map((b) => [b.id, b.decision]))
+  return tree.roles.flatMap((r) => {
+    const quedan = r.bullets.filter((b) => decision.get(b.id) !== "remove").length
+    const minimo = Math.min(BULLETS_PER_ROLE_MIN, r.bullets.length)
+    if (quedan > BULLETS_PER_ROLE_MAX) return [`${r.title} — ${r.company}: quedan ${quedan} viñetas; el máximo es ${BULLETS_PER_ROLE_MAX}. Marcá remove las que menos prueban de este puesto.`]
+    if (quedan < minimo) return [`${r.title} — ${r.company}: quedan ${quedan} viñetas; el mínimo es ${minimo}. Dejá las ${minimo} que más prueban de este puesto.`]
+    return []
+  })
 }
 
 /**
@@ -255,6 +441,9 @@ function treeHash(tree: ResumeTree): string {
     // puede producir la misma huella que el caso donde están intercambiadas.
     "skills",
     ...tree.declaredSkills,
+    // Idiomas, certificaciones, educación: el ATS también los lee.
+    "other",
+    tree.otherText,
   ).slice(0, 16)
 }
 
@@ -265,66 +454,21 @@ function treeHash(tree: ResumeTree): string {
 export interface ApplyResult {
   ok: boolean
   tree: ResumeTree
-  ledger: Ledger
   delta: number
   reason?: GuardVerdict
 }
 
-// Acá vivía una `resolution` que nadie leía, y además mentía: armaba su id con
-// el tipo quemado en "no_result", así que para un `no_metric` o un requisito —que
-// lleva sujeto en su clave— habría anotado un hallazgo distinto del que se
-// cerró. La resolución buena la arma el cliente con los ids que el motor ya le
-// entregó, que son los únicos que `loyalty` puede emparejar.
-
 /**
- * Aplica una sugerencia y devuelve cuánto sumó DE VERDAD.
- *
- * El orden importa y es el del documento v3: copia → recálculo → delta → recién
- * ahí el árbol real y el ledger. Si algo falla en el medio, el CV del usuario
- * nunca se tocó.
+ * Aplica una sugerencia y devuelve cuánto sumó DE VERDAD: copia → recálculo →
+ * delta → recién ahí el árbol real. Si algo falla en el medio, el CV del
+ * usuario nunca se tocó.
  */
-export function applySuggestion(
-  tree: ResumeTree,
-  s: AnchoredSuggestion,
-  spec: JobSpec,
-  audit: AuditFacts,
-  checks: ParseChecks,
-  ledger: Ledger,
-  /**
-   * LOS MISMOS PESOS CON LOS QUE SE PINTA EL DIAL.
-   *
-   * ── LO QUE ESTO NO ARREGLA, MEDIDO ─────────────────────────────────────────
-   * Hoy no cambia ni un decimal, y conviene que quede escrito para que nadie lo
-   * "verifique" con una sonda que mide otra cosa. La auditoría es la MISMA antes
-   * y después —esta función sólo reescribe un texto— y los pesos entran
-   * únicamente en `must`/`nice`, que salen de `audit.coverage`. Lo que sí cambia
-   * al reescribir —`metric`, `verbs`— se pondera con `COMPONENT_WEIGHT`, que es
-   * fijo. Medido sobre un aviso que repite SAP tres veces: delta 6,5625 con
-   * pesos y 6,5625 sin ellos.
-   *
-   * Se pasan igual, y por una sola razón: el número que esta función promete y
-   * el que la pantalla pinta después tienen que salir de los MISMOS insumos, no
-   * coincidir de casualidad. Hoy coinciden porque ningún componente que dependa
-   * del árbol usa los pesos; el día que uno lo haga, esto ya está bien y nadie
-   * tiene que acordarse.
-   */
-  termWeights: Record<string, number> = {},
-): ApplyResult {
+export function applySuggestion(tree: ResumeTree, s: AnchoredSuggestion, spec: JobSpec, audit: AuditFacts, checks: ParseChecks): ApplyResult {
   if (isStale(s.basedOnHash, s.bulletId, tree)) {
-    return { ok: false, tree, ledger, delta: 0, reason: { ok: false, reason: "stale", detail: s.bulletId } }
+    return { ok: false, tree, delta: 0, reason: { ok: false, reason: "stale", detail: s.bulletId } }
   }
-
-  const before = scoreResume(tree, spec, audit, checks, termWeights)
-  // Sobre la COPIA, como todo acá: si algo falla, el CV del usuario no se tocó.
+  const before = scoreResume(tree, spec, audit, checks)
   const copy = writeInto(tree, s.bulletId, s.text)
-  const after = scoreResume(copy, spec, audit, checks, termWeights)
-
-  return {
-    ok: true,
-    tree: copy,
-    ledger: afterAccept(ledger, s),
-    delta: deltaOf(before, after),
-  }
+  const after = scoreResume(copy, spec, audit, checks)
+  return { ok: true, tree: copy, delta: deltaOf(before, after) }
 }
-
-export { openLedger } from "@/lib/ats3/ledger"

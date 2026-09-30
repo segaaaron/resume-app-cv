@@ -67,7 +67,7 @@ describe("analyzeWriting", () => {
     const sd = {
       workExperience: [
         { id: "w1", jobTitle: "Engineer", startDate: "01/2020", endDate: "06/2022",
-          description: "• Built the billing service in Go\n• Cut checkout latency 30%\n• Mentored two juniors" },
+          description: "• Built the billing service in Go\n• Cut checkout latency 30%\n• Mentored two juniors\n• Automated the release pipeline with GitHub Actions" },
       ],
     }
     const r = analyzeWriting(sd)

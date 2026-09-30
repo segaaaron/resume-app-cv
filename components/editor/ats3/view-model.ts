@@ -17,10 +17,10 @@
 // "probar" leyendo que la línea existía, y un test que lee el código no prueba
 // nada.
 
-import type { Axis, Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
-import { buildTermIndex, detailParts, MAL_ESCRITO, normalize, SIN_RESPALDO, termCounts, termKey } from "@/lib/ats3/contracts"
+import type { Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
+import { mismaRaiz, buildTermIndex, normalize, nuevaEn, termCounts, termKey } from "@/lib/ats3/contracts"
 import { cvTextOf, SCORED_COMPONENTS, termsOf } from "@/lib/ats3/score"
-import type { ComponentKey, Score } from "@/lib/ats3/score"
+import type { AuditFacts, ComponentKey, Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LO QUE LA PANTALLA NECESITA SABER, DECLARADO ACÁ
@@ -97,12 +97,21 @@ export interface PanelCheck {
    * una frase leída como si fuera un requisito.
    */
   requirements: string[]
-  /** El verbo que la tarjeta promete dejar de repetir, si lo promete. */
-  avoidOpener?: string
-  /** La tarjeta promete el tamaño del logro: una cifra o su hueco. */
-  wantsSize?: boolean
-  /** Los ejes de la viñeta que la tarjeta promete cerrar. */
-  axes?: Axis[]
+  /** Por qué, dicho por el ATS en el idioma del CV. */
+  reason?: string
+  /** Qué tiene que decir la línea nueva, según el ATS: lo que Tailor ejecuta. */
+  instruction?: string
+  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
+  facts?: string[]
+  /** Las skills que el ATS decidió escribir en esta línea. */
+  terms?: string[]
+  /** La línea abre con una fórmula de tarea: Tailor la cambia por un verbo de acción. */
+  weakOpener?: boolean
+  /** Este puesto necesita la cifra de este logro. */
+  needsFigure?: boolean
+  needsOutcome?: boolean
+  /** `ask`: la pregunta del ATS a la persona. */
+  question?: string
 }
 
 export interface PanelSection {
@@ -165,7 +174,7 @@ const COMPONENTS_OF: Record<PanelSectionId, ComponentKey[]> = {
    * verbos que se repiten y el resumen. Es parte del análisis, no un consejo
    * aparte (CEO, 2026-09-28).
    */
-  tips: ["xyz", "metric", "verbs", "summary"],
+  tips: ["bullets", "metric", "summary"],
 }
 
 /** La sección de un componente. Se deriva del mapa de arriba: no hay segunda lista. */
@@ -194,285 +203,65 @@ function pctOf(score: Score, keys: ComponentKey[]): number | null {
 }
 
 /**
- * Un hallazgo del motor, dicho como fila de chequeo.
- *
- * `weight` es la ganancia MEDIDA recalculando sobre una copia del CV, no una
- * promesa del modelo: es el mismo número que el dial suma como recuperable, así
- * que el panel no puede prometer puntos que el puntaje no vaya a dar.
+ * Una tarjeta del motor, dicha como fila de chequeo. No decide nada: la decisión
+ * y el motivo son del ATS; el peso, del puntaje.
  */
 export function checkOf(
   f: Finding,
-  /**
-   * QUÉ DICE ESA LÍNEA HOY.
-   *
-   * `f.nodeText` es lo que el motor LEYÓ al analizar, y la pantalla lo pintaba
-   * como si fuera el texto actual: apenas el usuario editaba algo, la tarjeta
-   * hablaba de un renglón que ya no existía. Una sola pregunta, una sola
-   * respuesta — y la que corresponde es la del CV que la persona tiene delante,
-   * porque es sobre ése que va a decidir.
-   *
-   * Sin resolutor se cae en la lectura del motor: es lo que había, y una
-   * pantalla que no puede preguntar no debe quedarse muda.
-   */
+  /** El texto vivo de una línea: la tarjeta habla del CV que la persona tiene delante. */
   textoVivo?: (nodeId: string) => string,
-  /**
-   * CÓMO SE DICE EN CASTELLANO LO QUE EL MOTOR NOMBRA CON UN TOKEN.
-   *
-   * `detail` de tres tipos —el chequeo de lectura que falló, el eje que le
-   * falta a la viñeta, la función que el resumen no cumple— es vocabulario del
-   * motor: `trayectoria_continua`, `resultado`, `identity`. Se pintaba CRUDO en
-   * la tarjeta, reportado con captura: «trayectoria_continua, qué mierdas es
-   * eso». El motor no escribe prosa —ni debe—, así que el nombre humano sale
-   * del diccionario, que es su dueño natural. Sin traductor se cae al token: es
-   * lo que había, y una pantalla que no puede preguntar no debe quedarse muda.
-   */
+  /** El nombre humano de un token del motor (el chequeo que falló, la función del resumen). */
   glosa?: (token: string, params?: Record<string, string>) => string,
 ): PanelCheck {
   const linea = textoVivo?.(f.nodeId) || f.nodeText
+  const deLinea = f.type === "improve_bullet" || f.type === "remove_bullet"
+  const tokens = f.type === "parse_risk" || f.type === "summary_gap" ? f.detail.split(/\s*,\s*/).filter(Boolean) : []
+  const [tiene, pide] = f.type === "years_short" ? f.detail.split("/") : []
+  const params: Record<string, string | number> | undefined =
+    f.type === "missing_skill"
+      ? { term: f.subject ?? "" }
+      : f.type === "eligibility"
+        ? { term: f.subject ?? "", cv: f.reason ?? "" }
+      : f.type === "title_mismatch"
+        ? { cargo: f.subject ?? f.detail }
+        : f.type === "years_short"
+          ? { tiene: tiene ?? "", pide: pide ?? "" }
+          : undefined
+  const evidence = [...tokens.map((t) => glosa?.(t) ?? t), ...(f.terms ?? [])].filter((x) => x.trim())
   return {
     id: f.id,
     remedy: f.remedy,
     subject: f.subject,
-    requirements: detailParts(f)
-      // La blanda también: la tarjeta promete tejerla en esta línea, y si Tailor
-      // no la escribe el análisis siguiente la vuelve a pedir sobre la línea
-      // recién arreglada (medido el 2026-09-28 con «high-quality»).
-      .filter((p) => p.type === "missing_requirement" || p.type === "title_mismatch" || p.type === "soft_not_shown")
-      // Sin la marca de «sin respaldo»: la cabecera pinta estos nombres tal cual.
-      .map((p) => (p.type === "title_mismatch" || marcaYDato(p.detail).marca === SIN_RESPALDO ? marcaYDato(p.detail).dato : marcaYDato(p.detail).marca === MAL_ESCRITO ? f.subject ?? "" : p.detail))
-      .filter(Boolean),
-    wantsSize: detailParts(f).some((p) => p.type === "no_metric") || undefined,
-    // Los ejes que falta cerrar, estructurados: el motor comprueba que la
-    // línea nueva los tenga, y la tarjeta le pregunta a la persona el que sólo
-    // ella puede dar.
-    axes: (() => {
-      const ejes = detailParts(f)
-        .filter((p) => p.type === "no_result")
-        .flatMap((p) => p.detail.split(/,\s*/))
-        .filter((e): e is Axis => e === "verbo" || e === "resultado" || e === "método")
-      return ejes.length ? [...new Set(ejes)] : undefined
-    })(),
-    avoidOpener: (() => {
-      const v = detailParts(f).find((p) => p.type === "verb_repeated")
-      return v ? marcaYDato(v.detail).dato : undefined
-    })(),
-    // La sección sale del componente del que el motor sacó la ganancia, no de
-    // una lista de tipos escrita a mano acá.
     section: SECTION_OF.get(f.component) ?? "tips",
     state: f.gain >= CRITICAL_GAIN ? "crit" : "warn",
     weight: Number(f.gain.toFixed(1)),
-    titleKey: malEscrito(f)
-      ? `type_${f.type}_misspelled`
-      : sinRespaldo(f)
-      ? `type_${f.type}_unsupported`
-      : esCredencial(f)
-      ? `type_${f.type}_credential`
-      : // Nueve chequeos distintos con un título común se leían como la misma
-        // tarjeta repetida: el título nombra el chequeo que falló.
-        f.type === "parse_risk"
-        ? `type_parse_risk_${detalleDe(f, "parse_risk")}`
-        : `type_${f.type}`,
-    /**
-     * CUÁNTOS REQUISITOS CIERRA ESTA TARJETA.
-     *
-     * Dos requisitos que caen en la misma línea se fusionan a propósito: UNA
-     * reescritura los aterriza a los dos, y abrir dos tarjetas sobre la misma
-     * viñeta sería pedir dos consultas para el mismo trabajo y que la segunda
-     * pise a la primera.
-     *
-     * Pero el título seguía diciendo «falta un requisito» en singular llevando
-     * tres adentro, y la tabla del informe contaba 7 mientras el botón ofrecía
-     * 4: dos números ciertos que juntos se leen como una mentira. La tarjeta
-     * dice cuántos cierra y los nombra de a uno.
-     */
-    /**
-     * Lo que el título necesita nombrar, sacado del `detail` del propio
-     * hallazgo. Sin esto la tarjeta pinta el marcador crudo —«{cargo}»— que es
-     * el mismo defecto que los tokens del motor: un dato del código escrito
-     * donde va la copia.
-     */
-    params:
-      malEscrito(f)
-        ? { term: f.subject ?? "", wrote: marcaYDato(f.detail).dato }
-        : esCredencial(f) || sinRespaldo(f)
-        ? { term: f.subject ?? "" }
-        : f.type === "missing_requirement"
-        ? (() => {
-            // El título NOMBRA el requisito: «falta un requisito» a secas obligaba
-            // a abrir la tarjeta para saber cuál (medido el 2026-09-28).
-            const reqs = detailParts(f).filter((p) => p.type === "missing_requirement").map((p) => p.detail)
-            return { count: reqs.length, term: reqs.join(", ") }
-          })()
-        : f.type === "title_mismatch"
-          ? { cargo: marcaYDato(detalleDe(f, "title_mismatch")).dato }
-          : f.type === "soft_not_shown"
-            ? { term: detalleDe(f, "soft_not_shown") }
-            : f.type === "verb_repeated"
-              ? { verbo: marcaYDato(detalleDe(f, "verb_repeated")).dato }
-              : f.type === "years_short"
-                ? (() => {
-                    const [tiene, pide] = marcaYDato(detalleDe(f, "years_short")).dato.split("/")
-                    return { tiene, pide }
-                  })()
-                : f.type === "role_too_long"
-                  ? (() => {
-                      // El cargo puede tener barras («Marketing / Community»):
-                      // los dos números son siempre los dos últimos pedazos.
-                      const partes = marcaYDato(detalleDe(f, "role_too_long")).dato.split("/")
-                      const max = partes.pop() ?? ""
-                      const n = partes.pop() ?? ""
-                      return { puesto: partes.join("/"), n, max }
-                    })()
-                  : undefined,
-    /**
-     * POR QUÉ IMPORTA, y sale del TIPO del hallazgo.
-     *
-     * El campo estaba declarado acá, lo leía la fila del informe y NADIE lo
-     * llenaba: una explicación prometida por el tipo y por la pantalla que
-     * nunca llegaba. El motor no emite prosa —ni debe—, pero el tipo ya dice
-     * exactamente de qué defecto habla, así que la explicación es suya y no de
-     * cada hallazgo. `detail` sigue diciendo el caso concreto (qué eje falta,
-     * qué término), y viaja aparte en la evidencia.
-     */
-    detailKey: malEscrito(f)
-      ? `type_${f.type}_misspelled_detail`
-      : sinRespaldo(f)
-      ? `type_${f.type}_unsupported_detail`
-      : esCredencial(f)
-        ? `type_${f.type}_credential_detail`
-        : `type_${f.type}_detail`,
-    /**
-     * QUÉ señala el hallazgo, no dónde aterrizó.
-     *
-     * En un requisito que falta, la evidencia es EL REQUISITO. La línea que el
-     * motor eligió como mejor destino es sólo el lugar donde se escribiría, y
-     * ponerla acá hacía que la cabecera dijera «lo crítico es: "Atendí a los
-     * clientes…"» — el texto de una viñeta presentado como si fuera el defecto.
-     * En los demás, la línea SÍ es lo señalado.
-     */
-    ...(() => {
-      const { line, evidence, focus } = evidenciaDe(f, linea, glosa)
-      return { line, evidence: evidence.filter((x) => x.trim().length > 0), focus }
-    })(),
+    titleKey: f.type === "parse_risk" ? `type_parse_risk_${f.detail}` : f.type === "missing_skill" && f.detail === "listed" ? "type_missing_skill_listed" : `type_${f.type}`,
+    detailKey: deLinea
+      ? undefined
+      : f.type === "missing_skill" && f.remedy === "none"
+        ? "type_missing_skill_credential_detail"
+        : f.type === "missing_skill" && f.detail === "listed"
+          ? "type_missing_skill_listed_detail"
+          : f.type === "eligibility"
+            ? `type_eligibility_${f.detail === "no" ? "no" : "unknown"}_detail`
+            : `type_${f.type}_detail`,
+    params,
+    // La línea de tu CV que la tarjeta toca: la viñeta, o el resumen cuando se reescribe.
+    line: deLinea || f.remedy === "rewrite" ? linea : undefined,
+    evidence,
+    focus: [f.reason, f.instruction].filter(Boolean).join(" "),
+    requirements: f.type === "missing_skill" || f.type === "title_mismatch" ? [f.subject ?? f.detail] : (f.terms ?? []),
+    // La elegibilidad ya cita lo que dice el CV en su detalle.
+    ...(f.reason && f.type !== "eligibility" ? { reason: f.reason } : {}),
+    ...(f.instruction ? { instruction: f.instruction } : {}),
+    ...(f.facts?.length ? { facts: f.facts } : {}),
+    ...(f.weakOpener ? { weakOpener: true } : {}),
+    ...(f.terms?.length ? { terms: f.terms } : {}),
+    ...(f.needsFigure ? { needsFigure: true } : {}),
+    ...(f.needsOutcome ? { needsOutcome: true } : {}),
+    ...(f.question ? { question: f.question } : {}),
   }
 }
-
-/**
- * Un requisito que falta y se cierra fuera de la IA es una CREDENCIAL (ver
- * `RequirementSchema.kind`). Tener sujeto no alcanza: el cargo también lo lleva.
- */
-function esCredencial(f: Finding): boolean {
-  return f.type === "missing_requirement" && f.remedy === "none" && !sinRespaldo(f) && !malEscrito(f)
-}
-
-/** Requisito que el CV nombra mal escrito: se avisa cuál, sin corregirlo solo (ver `MAL_ESCRITO`). */
-function malEscrito(f: Finding): boolean {
-  return f.type === "missing_requirement" && f.remedy === "none" && marcaYDato(f.detail).marca === MAL_ESCRITO
-}
-
-/** Requisito que ninguna viñeta sostiene: se informa y no se escribe (ver `SIN_RESPALDO`). */
-function sinRespaldo(f: Finding): boolean {
-  return f.type === "missing_requirement" && f.remedy === "none" && marcaYDato(f.detail).marca === SIN_RESPALDO
-}
-
-/** Los tipos cuyo `detail` es vocabulario del motor y no texto del CV. */
-const TIPOS_CON_TOKENS = new Set(["parse_risk", "no_result", "summary_gap", "no_metric"])
-
-/**
- * LOS MOTIVOS QUE SON UN DATO SUELTO, DICHOS COMO FRASE.
- *
- * `verb_repeated` trae el verbo —«developed»— y `title_mismatch` el cargo. Solos
- * en la lista de motivos son una palabra en una caja gris: reportado con
- * captura. El título de la tarjeta ya los nombra bien cuando el hallazgo va
- * solo; el problema aparece cuando se FUSIONA y el título lo pone otro.
- */
-const FRASE_DE = new Set(["verb_repeated", "title_mismatch", "cliche"])
-
-/** Los tipos cuyo dato ya lo dice el título: repetirlo abajo es ruido. */
-const SOLO_TITULO = new Set(["years_short", "role_too_long"])
-
-/**
- * UN MOTIVO MARCADO SE PARTE EN MARCA Y DATO. «verbo:developed» → «developed».
- *
- * El motor marca lo que es un DATO y no un token de su vocabulario. Una sola
- * lectura de esa marca, para los dos consumidores: la evidencia de la tarjeta y
- * el título, que pintaba el token entero —«verbo:developed» abre más de una
- * viñeta— porque leía el detalle crudo.
- */
-function marcaYDato(x: string): { marca?: string; dato: string } {
-  const corte = x.indexOf(":")
-  return corte > 0 ? { marca: x.slice(0, corte), dato: x.slice(corte + 1) } : { dato: x }
-}
-
-/**
- * LO QUE DIJO ESTE TIPO, y no lo que diga la tarjeta que lo absorbió.
- *
- * El título nombra un dato del hallazgo —el cargo, el verbo—, así que tiene que
- * leer la pieza de SU tipo: con la tarjeta fusionada, `detail` es el detalle de
- * todos y pintarlo entero mete ahí el eje de otra pieza.
- */
-function detalleDe(f: Finding, type: Finding["type"]): string {
-  return detailParts(f).find((p) => p.type === type)?.detail ?? f.detail
-}
-
-/**
- * QUÉ SE MUESTRA COMO «lo que disparó esto».
- *
- * `parse_risk` es la excepción y por eso no lleva la línea: los siete chequeos
- * de lectura se anclan en el resumen porque hay que anclarlos en algún lado,
- * pero hablan del DOCUMENTO —las fechas, el orden de los puestos—, así que
- * pintar el resumen debajo era señalar un párrafo que no tiene nada que ver con
- * el defecto.
- */
-function evidenciaDe(
-  f: Finding,
-  linea: string,
-  glosa?: (token: string, params?: Record<string, string>) => string,
-): { line?: string; evidence: string[]; focus: string } {
-  /**
-   * LO QUE HAY QUE ARREGLAR, DICHO UNA VEZ Y EN CASTELLANO — para los dos.
-   *
-   * ── EL DEFECTO QUE ESTO CIERRA ─────────────────────────────────────────────
-   * La pantalla glosaba el token («resultado» → «No dice en qué terminó») y al
-   * MODELO se le mandaba el token crudo: «resultado, método». Dos lecturas del
-   * mismo dato, y la del modelo además en castellano aunque el CV estuviera en
-   * inglés, porque esas palabras las escribe el motor.
-   *
-   * Sale del mismo cálculo que la evidencia: una glosa, dos consumidores.
-   */
-  /**
-   * UN DATO MARCADO SE DICE COMO FRASE, venga solo o fusionado.
-   *
-   * El motor manda `verbo:developed` cuando el motivo es un dato y no un token
-   * del vocabulario. Sin esto, al fusionarse con otra tarjeta el usuario veía
-   * «developed» suelto en una caja gris sin saber qué era — reportado con
-   * captura. La marca sobrevive a la concatenación; el tipo del hallazgo, no.
-   */
-  const decir = (x: string) => {
-    const { marca, dato } = marcaYDato(x)
-    return marca ? (glosa?.(`motivo_${marca}`, { dato }) ?? dato) : (glosa?.(dato) ?? dato)
-  }
-  // CADA PIEZA SE DICE SEGÚN EL TIPO QUE LA DIJO (`detailParts`), no según el
-  // tipo que ganó la tarjeta: fusionada con un requisito, el eje «método»
-  // salía crudo porque la tarjeta ya no era de un tipo con tokens.
-  // El motor une con coma los ejes de la viñeta y las funciones del resumen.
-  const glosados = detailParts(f).flatMap((p) =>
-    SOLO_TITULO.has(p.type)
-      ? []
-      : TIPOS_CON_TOKENS.has(p.type)
-      ? p.detail.split(/\s*,\s*/).filter(Boolean).map(decir)
-      : FRASE_DE.has(p.type)
-        ? [decir(p.detail)]
-        : // El requisito sin respaldo lleva su marca en el dato: se muestra el término.
-          [marcaYDato(p.detail).marca === SIN_RESPALDO || marcaYDato(p.detail).marca === MAL_ESCRITO ? marcaYDato(p.detail).dato : p.detail],
-  )
-  const focus = glosados.join(" · ")
-  // Sólo una tarjeta que REESCRIBE su línea la muestra como «tu línea». En una
-  // pregunta por un requisito, el nodo es apenas el puesto sugerido; en un
-  // chequeo del documento, un ancla cualquiera.
-  return { line: f.remedy === "rewrite" ? linea : undefined, evidence: glosados, focus }
-}
-
 
 /** Las seis secciones, con sus hallazgos adentro y su cobertura medida. */
 export function sectionsOf(
@@ -505,88 +294,35 @@ export function sectionsOf(
  * aviso pegado y el CV—, no se inventan ni se piden al modelo. Es lo que vuelve
  * la tabla auditable: "lo pide 4 veces, tu CV lo dice 0" se comprueba leyendo.
  */
-export function termsOfSpec(
-  spec: JobSpec | null,
-  covered: readonly string[],
-  jdText: string,
-  /**
-   * EL CV COMO LO LEE EL MOTOR, no un texto armado acá.
-   *
-   * La tabla tenía su propio `veces` —palabra exacta, sin la forma literal del
-   * aviso ni el match maximal— sobre un texto sin Idiomas ni Certificaciones.
-   * Medido en producción: «lo decís 0 veces» sobre términos que el puntaje
-   * contaba. Se cuenta con `termCounts` sobre `cvTextOf`, lo mismo que puntúa.
-   */
-  tree: ResumeTree,
-  /**
-   * Lo que la auditoría dictaminó sobre las BLANDAS.
-   *
-   * Una blanda no se demuestra porque la palabra esté escrita —así se cumple
-   * sólo en la lista de adjetivos que el reclutador saltea—, así que su estado
-   * no puede salir de contar apariciones como el de las duras. Sale del juicio,
-   * con el id del logro que la respalda.
-   */
-  soft: readonly { signal: string; status: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT" }[] = [],
-): PanelTerm[] {
+export function termsOfSpec(spec: JobSpec | null, audit: AuditFacts | null, jdText: string, tree: ResumeTree): PanelTerm[] {
   if (!spec) return []
-  const demostrados = new Set(covered.map(normalize))
   const index = buildTermIndex(termsOf(spec, tree))
   const blandas = buildTermIndex((spec.softSignals ?? []).map((x) => ({ canonical: x, variants: [] })))
   const enCv = new Map([...termCounts(index, cvTextOf(tree)), ...termCounts(blandas, cvTextOf(tree))])
   const enAviso = new Map([...termCounts(index, jdText), ...termCounts(blandas, jdText)])
   const canonico = (x: string) => index.byKey.get(termKey(x)) ?? blandas.byKey.get(termKey(x)) ?? x
+  // El estado lo decide el ATS; las cuentas son sólo para leer «lo pide N veces · lo decís M».
+  const estado = new Map<string, "demonstrated" | "listed" | "missing">([
+    ...(audit?.hard ?? []).map((h) => [normalize(h.skill), h.status] as [string, "demonstrated" | "listed" | "missing"]),
+    ...(audit?.soft ?? []).map((x) => [normalize(x.signal), x.status] as [string, "demonstrated" | "listed" | "missing"]),
+  ])
   const filas: PanelTerm[] = []
-  const push = (term: string, raw: string, section: PanelTerm["section"]) => {
-    /**
-     * EL NOMBRE CANÓNICO ES LA IDENTIDAD Y ES LO QUE SE PINTA.
-     *
-     * `raw` es la redacción con la que el aviso lo enunció, y una sola oración
-     * del aviso puede enunciar VARIOS requisitos: medido en producción el
-     * 2026-08-30, P1 devolvió Xcode, Instruments y TestFlight —tres requisitos
-     * distintos— los tres con el mismo `raw`, "Familiarity with Xcode,
-     * Instruments, and TestFlight". La tabla pintaba `raw`, así que mostraba la
-     * misma oración tres veces, y el dedup no las veía porque comparaba contra
-     * el canónico mientras guardaba la oración. Tres filas idénticas, una tabla
-     * ilegible y el usuario sin saber qué habilidad le falta.
-     *
-     * `raw` sigue sirviendo para CONTAR —el filtro compara cadenas y hay avisos
-     * que sólo escriben la forma larga—, pero como respaldo del canónico, no
-     * como su reemplazo: contar la oración entera devuelve siempre 1 en el aviso
-     * y 0 en el CV, que es una medición sin información.
-     */
-    const nombre = (term || raw).trim()
-    if (!nombre) return
-    // Un término no puede estar en dos tablas: entraría dos veces al denominador
-    // de la lectura y se leería como si la vacante lo pidiera dos veces. Se
-    // compara con `termKey`, la misma llave de igualdad que usa el motor, para
-    // que "CI/CD" y "ci-cd" no abran dos filas.
-    if (filas.some((f) => termKey(f.term) === termKey(nombre))) return
-    const cv = enCv.get(canonico(nombre)) ?? 0
-    const probado = demostrados.has(normalize(nombre))
+  const push = (term: string, section: PanelTerm["section"]) => {
+    const nombre = term.trim()
+    if (!nombre || filas.some((f) => termKey(f.term) === termKey(nombre))) return
+    const e = estado.get(normalize(nombre))
     filas.push({
       term: nombre,
       section,
       jd: enAviso.get(canonico(nombre)) ?? 0,
-      cv,
-      listOnly: cv > 0 && !probado,
-      proven: probado,
+      cv: enCv.get(canonico(nombre)) ?? 0,
+      listOnly: e === "listed",
+      proven: e === "demonstrated",
     })
   }
-  // Se defiende de una vacante a medias: la respuesta llega por el stream y una
-  // lista ausente NO puede tumbar la pantalla entera con el análisis ya pagado.
-  for (const r of spec.mustHave ?? []) push(r.skill, r.raw, "hard")
-  for (const r of spec.niceToHave ?? []) push(r.skill, r.raw, "other")
-  const juicio = new Map(soft.map((x) => [normalize(x.signal), x.status]))
-  for (const s of spec.softSignals ?? []) {
-    push(s, s, "soft")
-    const fila = filas[filas.length - 1]
-    const estado = juicio.get(normalize(s))
-    if (fila && estado) {
-      fila.proven = estado === "DEMONSTRATED"
-      // "Sólo declarada" es exactamente eso: escrita, sin un logro detrás.
-      fila.listOnly = estado === "DECLARED_ONLY"
-    }
-  }
+  for (const r of spec.mustHave ?? []) push(r.skill, "hard")
+  for (const r of spec.niceToHave ?? []) push(r.skill, "other")
+  for (const x of spec.softSignals ?? []) push(x, "soft")
   return filas
 }
 
@@ -641,4 +377,48 @@ export function errorKeyOf(code: string): ErrorKey {
   if (/^(feature_pro_only|pro_only|http_403)$/.test(code)) return "error_plan"
   if (/^(stale_node|stale)$/.test(code)) return "error_stale"
   return "error_ai"
+}
+
+/**
+ * DÓNDE ESCRIBIR LO QUE LA PERSONA CONTESTÓ, dentro del puesto que eligió: la
+ * línea del puesto que más comparte con su respuesta, que es donde ese trabajo
+ * ya vive. Sin nada en común, la primera del puesto.
+ */
+export function anclaDeRespuesta(bullets: readonly { id: string; text: string }[], respuesta: string): string | null {
+  return encajaEn(bullets, respuesta) ?? bullets[0]?.id ?? null
+}
+
+/** La línea que comparte palabras con ese trabajo; ninguna si no comparte nada. */
+export function encajaEn(bullets: readonly { id: string; text: string }[], respuesta: string): string | null {
+  // Por raíz, como el resto del motor: «API» y «APIs» son la misma palabra.
+  const dichas = [...new Set(normalize(respuesta).split(" ").filter((w) => w.length >= 3))]
+  let mejor: { id: string } | null = null
+  let puntos = 0
+  for (const b of bullets) {
+    const palabras = normalize(b.text).split(" ")
+    const n = dichas.filter((w) => palabras.some((p) => mismaRaiz(p, w))).length
+    if (n > puntos) {
+      mejor = b
+      puntos = n
+    }
+  }
+  return mejor?.id ?? null
+}
+
+/**
+ * DÓNDE ESCRIBE LA IA UNA SKILL QUE FALTA (CEO, 2026-09-30):
+ *  · el puesto tiene lugar (menos del máximo) → una viñeta NUEVA;
+ *  · está lleno y una línea ya habla de ese trabajo → se escribe DENTRO de ella;
+ *  · está lleno y ninguna encaja → REEMPLAZA a la que menos aporta a esta vacante.
+ */
+export function destinoDeSkill(
+  role: { id: string; bullets: readonly { id: string; text: string }[] },
+  sobre: string,
+  maximo: number,
+  menosAporta: string | null,
+): { nodeId: string; nueva: boolean } | null {
+  if (role.bullets.length < maximo) return { nodeId: nuevaEn(role.id), nueva: true }
+  const encaja = encajaEn(role.bullets, sobre)
+  if (encaja) return { nodeId: encaja, nueva: false }
+  return menosAporta ? { nodeId: menosAporta, nueva: true } : null
 }

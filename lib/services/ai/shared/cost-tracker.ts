@@ -22,6 +22,10 @@ export const MODEL_PRICING: Record<string, { inputPer1M: number; cachedInputPer1
   // without any special handling.
   "gpt-5.4-nano":   { inputPer1M: 0.20,  cachedInputPer1M: 0.02,  outputPer1M: 1.25  },
   "gpt-5.4-mini":   { inputPer1M: 0.75,  cachedInputPer1M: 0.075, outputPer1M: 4.50  },
+  // Luna (OpenAI, rápido y barato). Verificado en developers.openai.com/api/docs/pricing
+  // el 2026-09-30, tarifa estándar de contexto corto (≤272K de entrada).
+  "gpt-5.6-luna":   { inputPer1M: 0.20,  cachedInputPer1M: 0.02,  outputPer1M: 1.20  },
+  "gpt-6-luna":     { inputPer1M: 0.10,  cachedInputPer1M: 0.01,  outputPer1M: 0.50  },
   // Embeddings (semantic ATS recall) — active. La API de embeddings no cachea prompts
   // ni devuelve `cached_tokens`, así que el precio cacheado nunca se aplica: se iguala
   // al de entrada para que un cero accidental no vuelva gratis una llamada real.

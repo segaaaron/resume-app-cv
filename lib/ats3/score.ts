@@ -25,18 +25,7 @@
 // hechos (los deterministas los mide él; los de juicio los trae la auditoría) y
 // los suma. Un CV de soldadura y uno de iOS recorren el mismo código.
 
-import {
-  buildTermIndex,
-  normalize,
-  specTerms,
-  termCounts,
-  termKey,
-  termsIn,
-  type JobSpec,
-  type ResumeTree,
-  type TermIndex,
-  type TermVariants,
-} from "@/lib/ats3/contracts"
+import { normalize, specTerms, type JobSpec, type ResumeTree, type TermVariants } from "@/lib/ats3/contracts"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PESOS
@@ -70,7 +59,12 @@ export const COMPONENT_WEIGHT = {
    * misma proporción (×0,9): el orden entre ellos no cambia.
    */
   relevance: { must: 0.486, nice: 0.198, title: 0.126, soft: 0.09, years: 0.1 },
-  impact: { xyz: 0.45, metric: 0.3, verbs: 0.1, summary: 0.15 },
+  /**
+   * EL IMPACTO LO DECIDE EL ATS (CEO, 2026-09-29): cuántas viñetas ya sirven
+   * para este puesto tal como están, cuántas de las que necesitan cifra la
+   * tienen, y el resumen.
+   */
+  impact: { bullets: 0.55, metric: 0.3, summary: 0.15 },
 } as const
 
 /**
@@ -82,9 +76,8 @@ export type ScoredComponent =
   | "nice"
   | "title"
   | "years"
-  | "xyz"
+  | "bullets"
   | "metric"
-  | "verbs"
   | "summary"
   | "soft"
 
@@ -97,9 +90,8 @@ const PILLAR_OF: Record<ScoredComponent, Pillar> = {
   nice: "relevance",
   title: "relevance",
   years: "relevance",
-  xyz: "impact",
+  bullets: "impact",
   metric: "impact",
-  verbs: "impact",
   summary: "impact",
   soft: "relevance",
 }
@@ -131,54 +123,54 @@ export const SCORED_COMPONENTS = Object.keys(PILLAR_OF) as ScoredComponent[]
  */
 export type ParseChecks = Record<string, boolean | null>
 
-/** Lo que la auditoría (P2) aporta: juicio sobre cada línea, con evidencia. */
+/**
+ * EL DIAGNÓSTICO DEL ATS (P2), tal como lo decide el modelo (CEO, 2026-09-29).
+ *
+ * El código no reinterpreta nada de esto: comprueba que las líneas citadas
+ * existan, lo muestra y puntúa con estos estados.
+ */
 export interface AuditFacts {
+  /** Una decisión por viñeta, contra ESTE puesto. */
   bullets: {
     id: string
-    hasActionVerb: boolean
-    hasResult: boolean
-    hasMethod: boolean
+    /** keep: ya sirve así · improve: sirve y hay que mejorarla · remove: no sirve o repite a otra. */
+    decision: "keep" | "improve" | "remove"
+    /** Por qué, en una frase, en el idioma del CV. */
+    reason: string
+    /** improve: qué tiene que decir la línea nueva, con los hechos del CV a usar. */
+    instruction: string | null
+    /** improve: los hechos nuevos del CV que la línea va a decir, cada uno con su fuente. */
+    facts?: string[]
+    /** Este puesto necesita la cifra de este logro. */
+    needsFigure: boolean
+    /** Tailor ya escribió esta línea siguiendo al ATS: no recibe más encargos. */
+    cerrada?: boolean
+    /** Dice qué se hizo y no qué logró (X-Y-Z): Tailor agrega el logro con su hueco. */
+    needsOutcome?: boolean
+  }[]
+  /** Cada hard skill del puesto, con su estado y dónde vive. */
+  hard: {
+    skill: string
+    requirement: "MUST" | "NICE"
+    /** demonstrated: una viñeta la prueba · listed: sólo está nombrada (habilidades, otra sección) · missing: no está. */
+    status: "demonstrated" | "listed" | "missing"
+    evidenceNodeId: string | null
+    /** Si falta pero hay trabajo relacionado: la viñeta donde escribirla. */
+    writeIn: string | null
+    /** Si no hay rastro: la pregunta para la persona. */
+    question: string | null
+  }[]
+  /** Cada soft skill del puesto, igual. Una soft se demuestra en un logro, no se lista. */
+  soft: {
+    signal: string
+    status: "demonstrated" | "listed" | "missing"
+    evidenceNodeId: string | null
+    writeIn: string | null
   }[]
   /** Las cuatro funciones del resumen, cumplidas o no. */
   summary: { identity: boolean; proof: boolean; fit: boolean; extra: boolean }
-  /** Cobertura por requisito. `IMPLIED` no cuenta como cubierto: se infiere del
-   *  contexto y no hay una línea que lo demuestre. Cuenta a medias sería decidir
-   *  por el reclutador. */
-  coverage: {
-    skill: string
-    requirement: "MUST" | "NICE"
-    status: "FOUND" | "IMPLIED" | "NOT_FOUND"
-    /** DÓNDE lo demuestra. Sin esto no se distingue lo cubierto de lo enterrado. */
-    evidenceNodeId: string | null
-    /** Cómo lo nombra el CV cuando no lo escribe como el aviso, y qué relación
-     *  tiene: lo mismo escrito distinto, otro nombre del oficio, o mal escrito. */
-    cvWording?: string | null
-    match?: "SAME" | "EQUIVALENT" | "MISSPELLED" | null
-  }[]
-  /**
-   * LAS BLANDAS QUE EL AVISO PIDE, JUZGADAS.
-   *
-   * Se extraían de la vacante, se pintaban en una tabla y NADIE las miraba: el
-   * panel le mostraba al candidato una lista contando apariciones literales,
-   * que es justo como NO se demuestra una habilidad blanda. Una blanda no se
-   * cumple porque la palabra esté escrita —así se cumple sólo en la lista de
-   * adjetivos que todo reclutador saltea—: se cumple si hay un logro que la
-   * evidencia, y por eso el estado trae el id de esa línea.
-   *
-   * NO entra al puntaje, y es decisión de producto: sumarlas movería el número
-   * de todos los CVs sin una medición que lo respalde. Informa, no puntúa.
-   */
-  softCoverage: {
-    signal: string
-    status: "DEMONSTRATED" | "DECLARED_ONLY" | "ABSENT"
-    /** La línea que la demuestra. Sin ella, no está demostrada. */
-    evidenceNodeId: string | null
-  }[]
-  /** Alineación del cargo con el que busca la vacante, de 0 a 1. */
-  // Acá vivía `titleAlignment`, un 0..1 que el modelo devolvía para el cargo.
-  // Lo reemplazó `titleWritten`, que mide lo que el filtro mide —si la cadena
-  // está escrita— con la misma función que emite el hallazgo. Un campo que se le
-  // pide al modelo y no lo lee nadie son tokens pagados por nada.
+  /** Las condiciones que filtran (residencia, permiso, idioma): si el CV muestra que se cumplen. */
+  conditions?: { text: string; met: "yes" | "no" | "unknown"; cvSays: string | null }[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -358,15 +350,6 @@ export function titleForms(raw: string): string[] {
   return [a.join(" "), b.join(" ")]
 }
 
-export function distinctOpeners(texts: string[]): number {
-  const openers = new Set<string>()
-  for (const t of texts) {
-    const first = normalize(t).split(" ")[0]
-    if (first) openers.add(first)
-  }
-  return openers.size
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // EL PUNTAJE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -423,42 +406,6 @@ function effectiveWeights(raws: RawComponent[]): Map<ComponentKey, number> {
   return out
 }
 
-/**
- * CUÁNTO PESA CADA REQUISITO, MEDIDO SOBRE EL PROPIO AVISO.
- *
- * ── LA REGLA, DEL CEO ──────────────────────────────────────────────────────
- * «Lo que se repite y lo que abre la descripción pesa más que lo listado al
- * final». No todos los requisitos valen igual, y contarlos por cabeza le dice
- * al candidato que cubrir el que el aviso menciona al pasar vale tanto como
- * cubrir el que repite cuatro veces.
- *
- * ── POR QUÉ SE MIDE ACÁ Y NO SE LE PREGUNTA AL MODELO ──────────────────────
- * El orden que devuelve un modelo puede cambiar entre dos lecturas del MISMO
- * aviso, y este proyecto ya midió lo que eso hace: 19 puntos de diferencia en
- * el mismo CV. Esto se cuenta sobre el texto: la misma vacante da siempre el
- * mismo peso.
- *
- * ── LA ESCALA, Y POR QUÉ ES CORTA ──────────────────────────────────────────
- * Base 1. Nombrado en el cargo que la vacante busca, +0,5 — es lo que el aviso
- * pone en el título. Dicho tres veces o más, +0,25. Techo 1,75: una escala
- * larga convierte el puntaje en una opinión sobre cuánto vale repetir, y lo que
- * se puede probar es sólo que repetir importa, no cuánto.
- */
-export function postingWeights(spec: JobSpec, jdText: string): Record<string, number> {
-  // Se cuenta con `termCounts`, la misma cuenta que la tabla pinta: «lo pide 3
-  // veces» y el peso extra por repetirse no pueden salir de dos lecturas.
-  const index = buildTermIndex(specTerms(spec))
-  const enAviso = termCounts(index, jdText)
-  const enTitulo = termsIn(index, `${spec.roleTitleRaw ?? ""} ${spec.roleTitleCanonical ?? ""}`)
-  const pesos: Record<string, number> = {}
-  for (const r of [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])]) {
-    const termino = index.byKey.get(termKey(r.skill)) ?? r.skill
-    pesos[r.skill] = 1 + (enTitulo.has(termino) ? 0.5 : 0) + ((enAviso.get(termino) ?? 0) >= 3 ? 0.25 : 0)
-  }
-  return pesos
-}
-
-
 /** Los términos en juego: los que la vacante nombra y los que el CV declara. */
 export function termsOf(spec: JobSpec, tree: ResumeTree): TermVariants[] {
   const out = specTerms(spec)
@@ -490,253 +437,67 @@ export function cvTextOf(tree: ResumeTree): string {
   ].join(" . ")
 }
 
-/**
- * ¿EL CV CUBRE CADA REQUISITO? — una respuesta, y la da el código.
- *
- * ── LA CONTRADICCIÓN QUE ESTO CIERRA (2026-09-24, medida en producción) ────
- * La pregunta tenía tres dueños: el modelo escribía un nombre y un estado, el
- * motor degradaba su FOUND buscando el término en un texto sin Habilidades ni
- * Idiomas, y la tabla contaba la palabra exacta por su lado. Se leían tres
- * respuestas en la misma pantalla —«lo decís 1 vez · sólo en la lista» con el
- * puntaje dándolo por faltante—, contra una copia que promete que en la lista
- * «cuenta igual para el filtro».
- *
- * Ahora cada requisito DE LA VACANTE —no cada nombre que el modelo escriba—
- * recibe su estado así:
- *   FOUND     — el término está escrito en el CV, en cualquier sección. Es lo
- *               que el filtro compara, y lo mide `termCounts`, la misma cuenta
- *               que pinta la tabla. Si una línea lo dice, esa es su evidencia.
- *   IMPLIED   — no está escrito, pero el modelo citó una línea real cuyo
- *               trabajo lo demuestra.
- *   NOT_FOUND — ninguna de las dos. Lo que el auditor no afirmó, no está.
- */
-/**
- * ¿PUEDE SER CIERTO LO QUE LA AUDITORÍA DICE DE CÓMO ESCRIBE EL CV UN REQUISITO?
- *
- * La IA decide si «CoreData» es «Core Data» o si «Git» es «control de
- * versiones»; el código sólo descarta lo que puede probar imposible. Medido el
- * 2026-09-28 con un caso que el prompt no vio: «JavaScript básico» salió como
- * otro nombre de «Java» y como «Java mal escrito» — las dos cosas falsas, y la
- * primera sumaba Java a las habilidades de alguien que no lo sabe.
- *   - el texto tiene que estar en el CV;
- *   - «mal escrito» es una o dos letras de diferencia contra el requisito o una
- *     de sus palabras («Exel» por «Microsoft Excel»), no otro nombre;
- *   - «lo mismo» u «otro nombre» no vale si una palabra es la otra con algo
- *     pegado (Java/JavaScript, Swift/SwiftUI): así se ven dos cosas distintas.
- *     Un plural sí vale («caja»/«cajas»).
- */
-export function formaPosible(skill: string, cvWording: string | null | undefined, match: string | null | undefined, cvTexto: string): boolean {
-  const w = normalize(cvWording ?? "")
-  if (!w || !match || !` ${normalize(cvTexto)} `.includes(` ${w} `)) return false
-  const req = normalize(skill).split(" ").filter(Boolean)
-  const suyo = w.split(" ").filter(Boolean)
-  if (match === "MISSPELLED") {
-    const tramos = req.flatMap((_, i) => req.slice(i).map((__, j) => req.slice(i, i + j + 1).join(" ")))
-    return tramos.some((t) => t !== w && distancia(t, w) <= Math.min(2, Math.floor(Math.max(t.length, w.length) / 4)))
-  }
-  // Sin espacios idénticos es la misma palabra, pegada o separada («CoreData»).
-  if (req.join("") === suyo.join("")) return true
-  const pegado = (a: string, b: string) => a !== b && b.startsWith(a) && !/^(e?s)$/.test(b.slice(a.length))
-  return !req.some((a) => suyo.some((b) => pegado(a, b) || pegado(b, a)))
-}
-
-function distancia(a: string, b: string): number {
-  let fila = Array.from({ length: b.length + 1 }, (_, j) => j)
-  for (let i = 1; i <= a.length; i++) {
-    const nueva = [i]
-    for (let j = 1; j <= b.length; j++) nueva[j] = Math.min(fila[j] + 1, nueva[j - 1] + 1, fila[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
-    fila = nueva
-  }
-  return fila[b.length]
-}
-
-export function coverageOf(
-  spec: JobSpec,
-  audit: AuditFacts,
-  tree: ResumeTree,
-  index: TermIndex,
-): AuditFacts["coverage"] {
-  const enElCv = termCounts(index, cvTextOf(tree))
-  const lineas = [tree.summary, ...tree.roles.flatMap((r) => r.bullets)]
-  const canonico = (skill: string) => index.byKey.get(termKey(skill)) ?? skill
-  const delModelo = new Map(audit.coverage.map((c) => [normalize(c.skill), c]))
-  const vistos = new Set<string>()
-  const out: AuditFacts["coverage"] = []
-  const juzgar = (skill: string, requirement: "MUST" | "NICE") => {
-    const llave = normalize(skill)
-    if (!llave || vistos.has(llave)) return
-    vistos.add(llave)
-    const termino = canonico(skill)
-    if (enElCv.has(termino)) {
-      const linea = lineas.find((l) => termsIn(index, l.text).has(termino))
-      out.push({ skill, requirement, status: "FOUND", evidenceNodeId: linea?.id ?? null })
-      return
-    }
-    const m = delModelo.get(llave)
-    const cita = m && m.status !== "NOT_FOUND" && m.evidenceNodeId && lineas.some((l) => l.id === m.evidenceNodeId) ? m.evidenceNodeId : null
-    /**
-     * OTRO NOMBRE DEL OFICIO, EN CUALQUIER SECCIÓN (2026-09-28). «Git» por
-     * «version control» en Habilidades no tiene línea que citar, y la respuesta
-     * del auditor se tiraba: salía «falta» algo que la persona tiene. Un filtro
-     * literal tampoco lo cuenta, así que NO suma como escrito: queda implícito y
-     * el plan de habilidades escribe el nombre del aviso al lado del suyo.
-     * El texto que el auditor cita tiene que estar en el CV, o no vale.
-     */
-    const valida = m ? formaPosible(skill, m.cvWording, m.match, cvTextOf(tree)) : false
-    const equivalente = !cita && valida && m?.match === "EQUIVALENT"
-    out.push({
-      skill, requirement,
-      status: cita || equivalente ? "IMPLIED" : "NOT_FOUND",
-      evidenceNodeId: cita,
-      ...(valida ? { cvWording: m!.cvWording, match: m!.match ?? null } : {}),
-    })
-  }
-  for (const r of spec.mustHave ?? []) juzgar(r.skill, "MUST")
-  for (const r of spec.niceToHave ?? []) juzgar(r.skill, "NICE")
-  return out
-}
-
-/**
- * LA BLANDA, CON LA MISMA VARA QUE LA DURA: EL CÓDIGO DECIDE SOBRE EL TEXTO.
- *
- * Medido el 2026-09-28 sobre un CV de cajera: «honestidad» salía «sólo en la
- * lista» con «lo decís 0» — el modelo la dio por demostrada sin citar línea, la
- * degradación la dejó en declarada y sumaba 0,6 por una palabra que no está en
- * ningún lado. «Declarada» es un hecho del texto, no un juicio: está escrita o
- * no. Demostrada sigue siendo juicio del modelo, y vale sólo si la línea que
- * cita existe.
- */
-export function softCoverageOf(spec: JobSpec, audit: AuditFacts, tree: ResumeTree): AuditFacts["softCoverage"] {
-  const index = buildTermIndex((spec.softSignals ?? []).map((x) => ({ canonical: x, variants: [] })))
-  const escritas = termCounts(index, cvTextOf(tree))
-  // Un logro vive en una viñeta: el resumen afirma, no demuestra (P2, regla 5).
-  const ids = new Set(tree.roles.flatMap((r) => r.bullets).map((l) => l.id))
-  return audit.softCoverage.map((s) => {
-    if (s.status === "DEMONSTRATED" && s.evidenceNodeId && ids.has(s.evidenceNodeId)) return s
-    const escrita = escritas.has(index.byKey.get(termKey(s.signal)) ?? s.signal)
-    return { ...s, status: escrita ? ("DECLARED_ONLY" as const) : ("ABSENT" as const), evidenceNodeId: null }
-  })
-}
-
-export function scoreResume(
-  tree: ResumeTree,
-  spec: JobSpec,
-  audit: AuditFacts,
-  checks: ParseChecks,
-  /**
-   * El peso de cada requisito. Sin él, todos valen 1 y el puntaje es el de
-   * antes: el re-cálculo instantáneo de la pantalla no recibe el aviso, y un
-   * puntaje que cambia según quién lo calcula es peor que uno más grueso.
-   */
-  termWeights: Record<string, number> = {},
-): Score {
+export function scoreResume(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, checks: ParseChecks): Score {
   const checkValues = Object.values(checks).filter((v): v is boolean => v !== null)
 
-  // Cubrir el requisito que el aviso repite vale más que cubrir el que menciona
-  // al pasar. Sin pesos, cada uno vale 1 y esto es la cuenta de siempre.
-  const peso = (skill: string) => termWeights[skill] ?? 1
-  const mustTotal = (spec.mustHave ?? []).reduce((n, r) => n + peso(r.skill), 0)
-  const niceTotal = (spec.niceToHave ?? []).reduce((n, r) => n + peso(r.skill), 0)
   /**
-   * LA COBERTURA SE MIDE SOBRE EL CV QUE SE ESTÁ PUNTUANDO.
-   *
-   * ── EL DEFECTO QUE ESTO CIERRA (2026-09-24) ─────────────────────────────────
-   * Se leía `audit.coverage` tal cual, y la auditoría es la foto del CV que el
-   * modelo leyó. Al aceptar una reescritura que escribe el requisito que
-   * faltaba, `applySuggestion` puntuaba la copia con la MISMA foto: el término
-   * ya estaba en la línea y el dial no se movía, mientras la tarjeta prometía
-   * los puntos. Que el término esté escrito lo decide el texto, y el texto es
-   * éste.
+   * LAS SKILLS, CON LA MISMA VARA PARA DURAS Y BLANDAS: demostrada en un logro
+   * vale 1, sólo nombrada 0,6, ausente 0. Lo decide el ATS; una que el ATS no
+   * contestó cuenta como ausente — lo que no afirmó, no está.
    */
-  const coverage = coverageOf(spec, audit, tree, buildTermIndex(termsOf(spec, tree)))
-  const mustFound = coverage
-    .filter((c) => c.requirement === "MUST" && c.status === "FOUND")
-    .reduce((n, c) => n + peso(c.skill), 0)
-  const niceFound = coverage
-    .filter((c) => c.requirement === "NICE" && c.status === "FOUND")
-    .reduce((n, c) => n + peso(c.skill), 0)
-
-  /**
-   * UNA BLANDA DEMOSTRADA VALE MÁS QUE UNA SÓLO LISTADA.
-   *
-   * La vara ya estaba decidida en este proyecto —demostrada 1,0 · sólo listada
-   * 0,6— y es la única honesta: un término dentro de una viñeta con fecha es
-   * prueba; el mismo término suelto en una lista de adjetivos es una afirmación
-   * que cualquiera puede escribir. Ausente no suma.
-   *
-   * Sale de `softCoverage`, que la auditoría ya juzga en cada análisis: no
-   * cuesta una llamada nueva.
-   */
-  /**
-   * SE CUENTA POR LA LISTA DE LA VACANTE, NO POR LO QUE EL MODELO DEVOLVIÓ.
-   *
-   * Medido en producción el 2026-09-24: la vacante pedía tres blandas, la
-   * auditoría devolvió cinco con otros nombres —«crash rate» entre ellas— y
-   * esto sumaba 5 sobre 3: 100% en el dial, las tres pintadas como faltantes en
-   * la tabla. Una blanda que la vacante no pidió no puede sumar, y una pedida
-   * cuenta una sola vez.
-   */
-  const juicioBlando = new Map(softCoverageOf(spec, audit, tree).map((s) => [normalize(s.signal), s.status]))
+  const VALOR = { demonstrated: 1, listed: 0.6, missing: 0 } as const
+  const lineas = new Set([tree.summary.id, ...tree.roles.flatMap((r) => r.bullets.map((b) => b.id))])
+  const valor = (x: { status: keyof typeof VALOR; evidenceNodeId: string | null }) =>
+    // Demostrada en una línea que ya no existe: queda nombrada, no probada.
+    x.status === "demonstrated" && x.evidenceNodeId && !lineas.has(x.evidenceNodeId) ? VALOR.listed : VALOR[x.status]
+  const suma = (req: "MUST" | "NICE") => {
+    const pedidas = (req === "MUST" ? spec.mustHave : spec.niceToHave) ?? []
+    const juicio = new Map(audit.hard.filter((h) => h.requirement === req).map((h) => [normalize(h.skill), h]))
+    return {
+      total: pedidas.length,
+      found: pedidas.reduce((n, r) => {
+        const h = juicio.get(normalize(r.skill))
+        return n + (h ? valor(h) : 0)
+      }, 0),
+    }
+  }
+  const exigidos = suma("MUST")
+  const deseables = suma("NICE")
+  const juicioBlando = new Map(audit.soft.map((x) => [normalize(x.signal), x]))
   const pedidasBlandas = [...new Set((spec.softSignals ?? []).map(normalize).filter(Boolean))]
-  const softTotal = pedidasBlandas.length
-  const softFound = pedidasBlandas.reduce((n, s) => {
-    const estado = juicioBlando.get(s)
-    return n + (estado === "DEMONSTRATED" ? 1 : estado === "DECLARED_ONLY" ? 0.6 : 0)
+  const softFound = pedidasBlandas.reduce((n, x) => {
+    const j = juicioBlando.get(x)
+    return n + (j ? valor(j) : 0)
   }, 0)
 
-  const bulletTexts = tree.roles.flatMap((r) => r.bullets.map((b) => b.text))
   /**
-   * SÓLO LAS LÍNEAS QUE EL CV TIENE DE VERDAD.
-   *
-   * El juicio por viñeta lo devuelve un modelo, y un modelo puede contestar por
-   * una línea que no existe —un id mal copiado, una que ya se borró—. Contarla
-   * sube el numerador Y el denominador de un pilar entero con una línea que
-   * nadie escribió, y encima el motor la ignora al emitir hallazgos: el puntaje
-   * y la lista de arreglos hablarían de CVs distintos.
+   * LAS VIÑETAS: sólo las que el CV tiene hoy. Una que Tailor ya reescribió o
+   * que se sacó deja de contar en los dos lados, y el número sube; el análisis
+   * siguiente la juzga sobre su texto nuevo.
    */
   const idsReales = new Set(tree.roles.flatMap((r) => r.bullets.map((b) => b.id)))
-  const bullets = audit.bullets.filter((b) => idsReales.has(b.id))
-  const complete = bullets.filter((b) => b.hasActionVerb && b.hasResult && b.hasMethod).length
-  const withQuantity = bulletTexts.filter(statesQuantity).length
-  const summaryDone = [audit.summary.identity, audit.summary.proof, audit.summary.fit, audit.summary.extra].filter(
-    Boolean,
-  ).length
+  const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text] as const)))
+  const juzgadas = audit.bullets.filter((b) => idsReales.has(b.id))
+  const sirven = juzgadas.filter((b) => b.decision === "keep").length
+  const conCifra = juzgadas.filter((b) => b.needsFigure)
+  const cifradas = conCifra.filter((b) => statesQuantity(textoDe.get(b.id) ?? "")).length
+  const summaryDone = [audit.summary.identity, audit.summary.proof, audit.summary.fit, audit.summary.extra].filter(Boolean).length
 
   const raws: RawComponent[] = [
     { key: "checks", numerator: checkValues.filter(Boolean).length, denominator: checkValues.length },
-    { key: "must", numerator: mustFound, denominator: mustTotal },
-    { key: "nice", numerator: niceFound, denominator: niceTotal },
-    // El título es una razón continua: su "denominador" es 1 porque se cubre
-    // entero o en parte, no de a unidades.
-    /**
-     * EL CARGO LO MIDE EL CÓDIGO, NO EL MODELO. Un dueño para una pregunta.
-     *
-     * ── LOS DOS DEFECTOS QUE ESTO CIERRA, MEDIDOS ──────────────────────────
-     * El puntaje usaba `titleAlignment` —un número del modelo entre 0 y 1— y el
-     * hallazgo del cargo usa una comprobación de cadena. Dos respuestas a «¿el
-     * cargo coincide?», y se contradecían:
-     *
-     *   titleAlignment = 1   → la tarjeta salía y prometía 0,0 puntos
-     *   titleAlignment = 0,5 → la tarjeta prometía el peso ENTERO del componente
-     *
-     * Y hay un motivo de fondo para que gane el código: el filtro compara
-     * CADENAS. Que el modelo entienda que «Desarrollador iOS» y «iOS Engineer»
-     * son el mismo puesto no sirve de nada si el filtro no lo ve escrito. Se
-     * mide lo que el filtro mide, con la misma función que emite el hallazgo:
-     * escribir el cargo cierra la tarjeta Y sube el número, por construcción.
-     */
+    { key: "must", numerator: exigidos.found, denominator: exigidos.total },
+    { key: "nice", numerator: deseables.found, denominator: deseables.total },
+    // El cargo lo mide el código: el filtro compara la cadena escrita.
     { key: "title", numerator: titleWritten(tree, spec) ? 1 : 0, denominator: 1 },
-    { key: "soft", numerator: softFound, denominator: softTotal },
-    // Razón continua, como el cargo: con la mitad de los años pedidos, la mitad
-    // del peso. Sin años en el aviso no aplica y su peso se reparte.
+    { key: "soft", numerator: softFound, denominator: pedidasBlandas.length },
+    // Con la mitad de los años pedidos, la mitad del peso. Sin años en el aviso no aplica.
     {
       key: "years",
       numerator: spec.yearsRequired ? Math.min(1, experienceYears(tree) / spec.yearsRequired) : 0,
       denominator: spec.yearsRequired ? 1 : 0,
     },
-    { key: "xyz", numerator: complete, denominator: bullets.length },
-    { key: "metric", numerator: withQuantity, denominator: bulletTexts.length },
-    { key: "verbs", numerator: distinctOpeners(bulletTexts), denominator: bulletTexts.length },
+    { key: "bullets", numerator: sirven, denominator: juzgadas.length },
+    { key: "metric", numerator: cifradas, denominator: conCifra.length },
     { key: "summary", numerator: summaryDone, denominator: 4 },
   ]
 

@@ -52,6 +52,12 @@ export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-5.4-nano") as string
 // rewrites, cover letters). gpt-5.4-mini trades a higher price ($0.75/$4.50) for
 // stronger fluency where the output IS the deliverable. Overridable per deploy.
 export const AI_MODEL_PROSE = (process.env.AI_MODEL_PROSE ?? "gpt-5.4-mini") as string
+// Model for the ATS bullet work: Tailor's minimal edits (P4) and the tools/figure
+// check (P3). Measured 2026-09-30 on the CEO's CV vs DECISION + 3 trades: same or
+// better than gpt-5.4-mini on bullets, ~6x cheaper and faster. NOT used for reading
+// the posting, the diagnosis or the summary: there it read the posting worse and
+// wrote a broken summary. Overridable per deploy, like the others.
+export const AI_MODEL_BULLETS = (process.env.AI_MODEL_BULLETS ?? "gpt-6-luna") as string
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — reproducible results (ats-score)

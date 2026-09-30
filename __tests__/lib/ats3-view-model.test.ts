@@ -1,22 +1,22 @@
 import { describe, it, expect } from "vitest"
-import { checkOf, sectionsOf, termsOfSpec, headlineOf } from "@/components/editor/ats3/view-model"
-import { encodeDetail, type Finding, type JobSpec } from "@/lib/ats3/contracts"
-import type { Score } from "@/lib/ats3/score"
+import { anclaDeRespuesta, destinoDeSkill, checkOf, sectionsOf, termsOfSpec, headlineOf } from "@/components/editor/ats3/view-model"
+import type { Finding, JobSpec } from "@/lib/ats3/contracts"
+import type { AuditFacts, Score } from "@/lib/ats3/score"
 import { buildTree } from "@/lib/ats3/engine"
 
 /** Un CV que dice exactamente ese texto. La tabla cuenta sobre el árbol del motor. */
 const cvDe = (texto: string) => buildTree({ otherText: texto })
 
 /**
- * LA TRADUCCIÓN ENTRE EL MOTOR NUEVO Y LA PANTALLA DE SIEMPRE.
+ * LA TRADUCCIÓN ENTRE EL MOTOR Y LA PANTALLA.
  *
  * Lo que se fija acá es que la pantalla no pueda decir algo que el motor no
- * midió: ni un porcentaje inventado, ni puntos que el puntaje no vaya a dar, ni
- * un hallazgo en dos secciones.
+ * midió ni que el ATS no decidió: ni un porcentaje inventado, ni puntos que el
+ * puntaje no vaya a dar, ni una tarjeta en dos secciones.
  */
 
 const finding = (over: Partial<Finding>): Finding => ({
-  id: "f1", type: "no_metric", component: "metric", remedy: "rewrite", merged: ["no_metric"], nodeId: "b_1",
+  id: "f1", type: "improve_bullet", component: "bullets", remedy: "rewrite", nodeId: "b_1",
   nodeText: "Atendí a los clientes", nodeHash: "h", gain: 4, detail: "", ...over,
 })
 
@@ -26,15 +26,19 @@ const score = (over: Partial<Score> = {}): Score => ({
   components: [
     { key: "must", pillar: "relevance", numerator: 1, denominator: 2, ratio: 0.5, effectiveWeight: 0.27, points: 12, gainPerUnit: 6 },
     { key: "checks", pillar: "parse", numerator: 0, denominator: 0, ratio: 0, effectiveWeight: 0, points: 0, gainPerUnit: 0 },
-    { key: "xyz", pillar: "impact", numerator: 1, denominator: 4, ratio: 0.25, effectiveWeight: 0.16, points: 4, gainPerUnit: 4 },
+    { key: "bullets", pillar: "impact", numerator: 1, denominator: 4, ratio: 0.25, effectiveWeight: 0.16, points: 4, gainPerUnit: 4 },
     { key: "metric", pillar: "impact", numerator: 0, denominator: 4, ratio: 0, effectiveWeight: 0.1, points: 0, gainPerUnit: 2 },
   ],
   ...over,
 })
 
-describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
-  it("un hallazgo cae en UNA sola sección", () => {
-    const secciones = sectionsOf(score(), [finding({}), finding({ id: "f2", type: "missing_requirement", component: "must" })])
+const audit = (over: Partial<AuditFacts> = {}): AuditFacts => ({
+  bullets: [], hard: [], soft: [], summary: { identity: true, proof: true, fit: true, extra: true }, ...over,
+})
+
+describe("la decisión del ATS, dicha en la forma que la pantalla pinta", () => {
+  it("una tarjeta cae en UNA sola sección", () => {
+    const secciones = sectionsOf(score(), [finding({}), finding({ id: "f2", type: "missing_skill", component: "must", remedy: "ask", subject: "Apigee" })])
     const veces = secciones.flatMap((s) => s.checks.map((c) => c.id))
     expect(veces).toHaveLength(new Set(veces).size)
     expect(secciones.find((s) => s.id === "tips")?.checks.map((c) => c.id)).toEqual(["f1"])
@@ -43,22 +47,37 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
 
   it("un componente sin denominador NO se pinta como 0%: no se pudo medir", () => {
     const secciones = sectionsOf(score(), [])
-    // Un 0% se lee como "tu CV falla en esto". Castigar por algo que nadie pudo
-    // mirar es fabricar un defecto.
     expect(secciones.find((s) => s.id === "format")?.coveragePct).toBeNull()
     expect(secciones.find((s) => s.id === "hard")?.coveragePct).toBe(50)
   })
 
-  it("un requisito que falta TIENE puerta: la línea donde el motor lo ancló", () => {
-    // Era un cartel sin botón. El motor ya eligió la viñeta donde ese término
-    // encaja mejor: la puerta existía y estaba tapiada. Si el trabajo descrito
-    // no lo sostiene, lo rechaza un guard y el usuario ve por qué — que es la
-    // respuesta honesta, no un botón que promete lo que no puede cumplir.
-    // La línea la dice el HALLAZGO (`nodeId`), no una copia dentro de la fila:
-    // el mismo dato en dos objetos es como terminan diciendo cosas distintas.
-    const req = checkOf(finding({ type: "missing_requirement", component: "must", nodeId: "b_7" }))
-    expect(req.section).toBe("hard")
-    expect(req.titleKey).toBe("type_missing_requirement")
+  it("la tarjeta de una viñeta trae el motivo y la instrucción del ATS, lo mismo que recibe Tailor", () => {
+    const c = checkOf(
+      finding({ reason: "Sirve, pero no dice la escala.", instruction: "Decí que era la app de pagos (otra viñeta del puesto).", terms: ["REST"], needsFigure: true }),
+      () => "Integré APIs",
+    )
+    expect(c.line).toBe("Integré APIs")
+    expect(c.reason).toBe("Sirve, pero no dice la escala.")
+    expect(c.instruction).toBe("Decí que era la app de pagos (otra viñeta del puesto).")
+    expect(c.terms).toEqual(["REST"])
+    expect(c.needsFigure).toBe(true)
+    expect(c.titleKey).toBe("type_improve_bullet")
+  })
+
+  it("sacar una viñeta muestra la línea que se va y su motivo", () => {
+    const c = checkOf(finding({ type: "remove_bullet", remedy: "remove", reason: "Repite a otra viñeta." }), () => "Hice arqueos")
+    expect(c.remedy).toBe("remove")
+    expect(c.line).toBe("Hice arqueos")
+    expect(c.reason).toBe("Repite a otra viñeta.")
+  })
+
+  it("una skill sin rastro pregunta; una credencial no tiene botón de IA", () => {
+    const ask = checkOf(finding({ type: "missing_skill", component: "must", remedy: "ask", subject: "Apigee", question: "¿Usaste Apigee?" }))
+    expect(ask.params).toEqual({ term: "Apigee" })
+    expect(ask.question).toBe("¿Usaste Apigee?")
+    expect(ask.line).toBeUndefined()
+    const cred = checkOf(finding({ type: "missing_skill", component: "must", remedy: "none", subject: "Licencia B" }))
+    expect(cred.detailKey).toBe("type_missing_skill_credential_detail")
   })
 
   it("los puntos que promete la fila son los que midió el motor", () => {
@@ -66,205 +85,65 @@ describe("el motor v3, dicho en la forma que la pantalla pinta", () => {
   })
 
   it("no promete más puntos de los que quedan por ganar", () => {
-    // Un dial que ofrece +40 sobre un 90 es una promesa que el puntaje no puede
-    // cumplir, y el usuario la cobra como mentira.
     const secciones = sectionsOf(score({ total: 90 }), [finding({ gain: 40 })])
     expect(headlineOf(score({ total: 90 }), secciones).recoverable).toBe(10)
   })
 
-  it("las cuentas de la tabla se MIDEN sobre el aviso y el CV", () => {
-    const spec = {
-      mustHave: [{ skill: "Excel", raw: "Excel", years: null, category: null }],
-      niceToHave: [], softSignals: ["trabajo en equipo"],
-    } as unknown as JobSpec
-    const filas = termsOfSpec(spec, [], "Buscamos Excel avanzado. Excel es clave.", cvDe("Manejo de Excel en planilla"))
+  it("la cabecera dice QUÉ es lo crítico: las skills, no cada línea señalada", () => {
+    const secciones = sectionsOf(score(), [
+      finding({ id: "f1", gain: 9, nodeText: "Atendí a los clientes en la línea de cajas" }),
+      finding({ id: "f2", type: "missing_skill", component: "must", remedy: "ask", gain: 9, subject: "Excel avanzado" }),
+    ])
+    const cab = headlineOf(score(), secciones)
+    expect(cab.criticalCount).toBe(2)
+    expect(cab.detail).toEqual(["Excel avanzado"])
+  })
+})
+
+describe("la tabla de skills: el estado lo decide el ATS, las cuentas se miden", () => {
+  it("las cuentas se MIDEN sobre el aviso y el CV; el estado sale del diagnóstico", () => {
+    const spec = { mustHave: [{ skill: "Excel", raw: "Excel", years: null, category: null }], niceToHave: [], softSignals: ["trabajo en equipo"] } as unknown as JobSpec
+    const diag = audit({ hard: [{ skill: "Excel", requirement: "MUST", status: "listed", evidenceNodeId: null, writeIn: null, question: null }] })
+    const filas = termsOfSpec(spec, diag, "Buscamos Excel avanzado. Excel es clave.", cvDe("Manejo de Excel en planilla"))
     const excel = filas.find((f) => f.term === "Excel")
     expect(excel?.jd).toBe(2)
     expect(excel?.cv).toBe(1)
     expect(excel?.proven).toBe(false)
-    // Está escrito en el CV pero la auditoría no lo dio por demostrado.
     expect(excel?.listOnly).toBe(true)
     expect(filas.find((f) => f.section === "soft")?.term).toBe("trabajo en equipo")
   })
 
-  it("una vacante a medias no tumba la pantalla con el análisis ya pagado", () => {
-    expect(() => termsOfSpec({} as JobSpec, [], "aviso", cvDe("cv"))).not.toThrow()
-  })
-
-  it("la cabecera dice QUÉ es lo crítico: los requisitos, no cada línea señalada", () => {
-    const secciones = sectionsOf(score(), [
-      finding({ id: "f1", gain: 9, nodeText: "Atendí a los clientes en la línea de cajas" }),
-      finding({ id: "f2", type: "missing_requirement", component: "must", gain: 9, detail: "Excel avanzado" }),
-    ])
-    const cab = headlineOf(score(), secciones)
-    expect(cab.criticalCount).toBe(2)
-    // Los dos los cierra el ejecutor, y eso ya no se cuenta aparte: todo crítico
-    // lo cierra, porque el único remedio determinista declara ganancia 0 y un
-    // crítico exige 3. La cifra partida describía un caso sin entrada posible.
-    // Lo que tiene botón ya se explica en su tarjeta: repetirlo acá convierte la
-    // cabecera en una lista de todo el panel.
-    expect(cab.detail).toEqual(["Excel avanzado"])
-    expect(cab.detail).not.toContain("Atendí a los clientes en la línea de cajas")
-  })
-
-  it("una sección con varios componentes muestra el % de su pilar, no el de uno", () => {
-    // «Consejos» junta resultado, cifra, verbo y resumen: pintar el de uno solo
-    // es un número que no habla de lo que la tarjeta lista debajo.
-    const s = sectionsOf(score(), [])
-    expect(s.find((x) => x.id === "tips")?.coveragePct).toBe(57)
-    // Las blandas puntúan: 0,10 del pilar de relevancia. Lo perdió v3 al
-    // construirse de cero y volvió el 2026-09-09.
-    expect(s.find((x) => x.id === "soft")?.scored).toBe(true)
-  })
-
-  /**
-   * UNA BLANDA NO CAE EN LA SECCIÓN DEL RECLUTADOR (CEO, 2026-09-09).
-   *
-   * Salía con el componente `xyz`, que pertenece a «Lo que mira la persona»: la
-   * tarjeta de una blanda aparecía bajo un porcentaje que mide otra cosa, y la
-   * sección «Habilidades blandas» existía sin poder recibir ni una tarjeta.
-   */
-  it("la blanda va a SU sección, y esa sección SÍ puntúa", () => {
-    const secciones = sectionsOf(score(), [finding({ type: "soft_not_shown", component: "soft", gain: 0 })])
-    const soft = secciones.find((x) => x.id === "soft")!
-    expect(soft.checks).toHaveLength(1)
-    expect(secciones.find((x) => x.id === "tips")?.checks).toHaveLength(0)
-    /**
-     * Y PUNTÚA. El motor viejo las pesaba 0,10 (`lib/ats/scoring-config.ts:56`)
-     * y v3 perdió ese peso al construirse de cero: durante diez días el panel
-     * pidió demostrarlas mientras el número no se movía.
-     */
-    expect(soft.scored).toBe(true)
-  })
-
-  /**
-   * TU LÍNEA Y LOS MOTIVOS SON DOS COSAS (CEO, 2026-09-09, con captura).
-   *
-   * Se pintaban en cajas idénticas: el usuario veía tres rectángulos grises —su
-   * viñeta, un motivo y un verbo suelto— y no podía saber cuál era su texto.
-   * «No se ve qué bullet se quiere cambiar», textual.
-   *
-   * Y el verbo salía CRUDO —«developed»— porque al fusionarse el detalle se
-   * concatena y se pierde de qué tipo vino cada pieza. Por eso el motor lo manda
-   * marcado, `verbo:developed`: la marca sobrevive a la fusión, el tipo no.
-   */
-  it("la línea va aparte de los motivos, y un dato suelto se dice como frase", () => {
-    const c = checkOf(
-      finding({ type: "no_result", merged: ["no_result", "verb_repeated"], detail: "método · verbo:developed" }),
-      () => "Atendí a los clientes en la línea de cajas",
-            // El traductor real normaliza la clave; el doble tiene que hacer lo mismo
-      // o esconde justo el camino que la pantalla usa.
-      (k, p) => {
-        const key = k.normalize("NFD").replace(/\p{Diacritic}/gu, "")
-        return key === "metodo" ? "No dice cómo lo lograste" : key === "motivo_verbo" ? `«${p?.dato}» abre otra viñeta` : k
-      },
-    )
-    expect(c.line).toBe("Atendí a los clientes en la línea de cajas")
-    expect(c.evidence).toEqual(["No dice cómo lo lograste", "«developed» abre otra viñeta"])
-    // Y la línea NO se repite entre los motivos.
-    expect(c.evidence).not.toContain(c.line)
-  })
-
-  /**
-   * EL DEFECTO REPORTADO CON CAPTURA (2026-09-11): la tarjeta decía «2
-   * requirements the posting asks for are missing» y el segundo era «método»,
-   * que no es un requisito del aviso sino el eje que le falta a la viñeta. Al
-   * fusionarse en una tarjeta el detalle se concatenaba y se perdía de qué tipo
-   * vino cada pieza.
-   */
-  it("una tarjeta que junta un requisito y un eje cuenta UN requisito, y dice el eje en castellano", () => {
-    const f = finding({
-      type: "missing_requirement",
-      component: "must",
-      merged: ["no_result", "missing_requirement"],
-      detail: encodeDetail([
-        { type: "missing_requirement", detail: "first or early mobile hire at a startup" },
-        { type: "no_result", detail: "método" },
-      ]),
-    })
-    const c = checkOf(f, () => "Designed user-friendly interfaces", (k) =>
-      k.normalize("NFD").replace(/\p{Diacritic}/gu, "") === "metodo" ? "No dice cómo lo lograste" : k)
-    expect(c.params).toEqual({ count: 1, term: "first or early mobile hire at a startup" })
-    expect(c.evidence).toEqual(["first or early mobile hire at a startup", "No dice cómo lo lograste"])
-  })
-
-  /**
-   * MISMA FAMILIA QUE EL DEFECTO DE ARRIBA: el TÍTULO nombra un dato del
-   * hallazgo y leía el detalle crudo, así que pintaba el token del motor
-   * —«verbo:developed»— y, con la tarjeta fusionada, el detalle de las dos
-   * piezas juntas.
-   */
-  it("el título nombra el verbo, no el token del motor, aunque la tarjeta esté fusionada", () => {
-    const solo = checkOf(finding({ type: "verb_repeated", component: "verbs", detail: "verbo:developed" }))
-    expect(solo.params).toEqual({ verbo: "developed" })
-
-    const fusionada = checkOf(finding({
-      type: "verb_repeated",
-      component: "verbs",
-      merged: ["no_result", "verb_repeated"],
-      detail: encodeDetail([
-        { type: "no_result", detail: "método" },
-        { type: "verb_repeated", detail: "verbo:developed" },
-      ]),
-    }))
-    expect(fusionada.params).toEqual({ verbo: "developed" })
-  })
-
-  it("un término demostrado sin decirlo con esas palabras NO se cuenta como escrito", () => {
-    // La tabla promete que sus números se comprueban leyendo: forzar la cuenta
-    // a 1 porque la auditoría lo dio por probado era escribir un dato que el
-    // usuario no puede verificar en su propio CV.
+  it("demostrada sin decirlo con esas palabras: la cuenta dice 0 y el estado dice probada", () => {
     const spec = { mustHave: [{ skill: "Atención al público", raw: "atención al público", years: null, category: null }], niceToHave: [], softSignals: [] } as unknown as JobSpec
-    const [fila] = termsOfSpec(spec, ["Atención al público"], "Se requiere atención al público", cvDe("Recibí y orienté a los visitantes"))
+    const diag = audit({ hard: [{ skill: "Atención al público", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null }] })
+    const [fila] = termsOfSpec(spec, diag, "Se requiere atención al público", cvDe("Recibí y orienté a los visitantes"))
     expect(fila.cv).toBe(0)
     expect(fila.proven).toBe(true)
-    expect(fila.listOnly).toBe(false)
   })
 
-  it("una blanda se demuestra con un LOGRO, no con la palabra escrita", () => {
-    // Contar apariciones es como se cumple una blanda en la lista de adjetivos
-    // que todo reclutador saltea. El estado lo dicta la auditoría, con el id del
-    // logro detrás.
-    const spec = { mustHave: [], niceToHave: [], softSignals: ["Trabajo en equipo", "Liderazgo"] } as unknown as JobSpec
-    const filas = termsOfSpec(spec, [], "Buscamos trabajo en equipo y liderazgo", cvDe("Trabajo en equipo · Liderazgo"), [
-      { signal: "Trabajo en equipo", status: "DEMONSTRATED" },
-      { signal: "Liderazgo", status: "DECLARED_ONLY" },
-    ])
-    const equipo = filas.find((f) => f.term === "Trabajo en equipo")
-    const liderazgo = filas.find((f) => f.term === "Liderazgo")
-    expect(equipo?.proven).toBe(true)
-    // Escrita en el CV, sí. Demostrada, no: eso es lo que el panel tiene que decir.
-    expect(liderazgo?.proven).toBe(false)
-    expect(liderazgo?.listOnly).toBe(true)
+  it("una vacante a medias no tumba la pantalla con el análisis ya pagado", () => {
+    expect(() => termsOfSpec({} as JobSpec, null, "aviso", cvDe("cv"))).not.toThrow()
   })
 })
 
-describe("cada tarjeta con sujeto se titula por lo que es", () => {
-  it("el cargo conserva su título; el requisito y la credencial nombran su término", () => {
-    const cargo = checkOf(finding({ type: "title_mismatch", component: "title", subject: "Senior iOS Engineer", detail: "Senior iOS Engineer" }))
-    expect(cargo.titleKey).toBe("type_title_mismatch")
-    expect(cargo.params).toEqual({ cargo: "Senior iOS Engineer" })
-    // Sin rastro en el CV también lo escribe la IA (CEO, 2026-09-28): la tarjeta
-    // es la del requisito, con su término en el título.
-    const requisito = checkOf(finding({ type: "missing_requirement", component: "must", remedy: "rewrite", subject: "Keychain", detail: "Keychain" }))
-    expect(requisito.titleKey).toBe("type_missing_requirement")
-    expect(requisito.params).toEqual({ count: 1, term: "Keychain" })
-    const credencial = checkOf(finding({ type: "missing_requirement", component: "must", remedy: "none", subject: "Licencia B" }))
-    expect(credencial.titleKey).toBe("type_missing_requirement_credential")
+describe("la respuesta de la persona va a la línea del puesto donde ese trabajo ya vive", () => {
+  it("la que más comparte con lo que contó; sin nada en común, la primera", () => {
+    const b = [{ id: "a", text: "Construí el login" }, { id: "b", text: "Integré los servicios del backend a través del gateway" }]
+    expect(anclaDeRespuesta(b, "enrutábamos los servicios del backend por Apigee como gateway")).toBe("b")
+    expect(anclaDeRespuesta(b, "otra cosa")).toBe("a")
+    expect(anclaDeRespuesta([], "x")).toBeNull()
   })
 })
 
-describe("la cabecera nombra requisitos, no frases", () => {
-  it("una tarjeta que fusiona un requisito con un eje de la viñeta aporta SÓLO el requisito", () => {
-    const fusionada = finding({
-      id: "fx", type: "missing_requirement", component: "must", gain: 9,
-      merged: ["missing_requirement", "no_metric"],
-      detail: encodeDetail([
-        { type: "missing_requirement", detail: "Salesforce" },
-        { type: "no_metric", detail: "tamaño" },
-      ]),
-    })
-    const cab = headlineOf(score(), sectionsOf(score(), [fusionada], undefined, (t) => (t === "tamano" ? "No dice de qué tamaño" : t)))
-    expect(cab.detail).toEqual(["Salesforce"])
+describe("dónde escribe la IA una skill que falta", () => {
+  const seis = Array.from({ length: 6 }, (_, i) => ({ id: `b${i}`, text: i === 2 ? "Integré los servicios REST del backend" : `Tarea ${i} de la app` }))
+  it("con lugar en el puesto, una viñeta nueva", () => {
+    expect(destinoDeSkill({ id: "r1", bullets: seis.slice(0, 5) }, "SDK architecture", 6, "b4")).toEqual({ nodeId: "nuevo:r1", nueva: true })
+  })
+  it("lleno y con una línea de ese trabajo, dentro de ella", () => {
+    expect(destinoDeSkill({ id: "r1", bullets: seis }, "servicios del backend", 6, "b5")).toEqual({ nodeId: "b2", nueva: false })
+  })
+  it("lleno y sin línea que encaje, en lugar de la que menos aporta", () => {
+    expect(destinoDeSkill({ id: "r1", bullets: seis }, "Splunk", 6, "b5")).toEqual({ nodeId: "b5", nueva: true })
   })
 })

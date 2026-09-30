@@ -26,8 +26,12 @@ describe("el puntaje no cobra nada que el panel no reporte", () => {
   const reportados = new Set<string>([
     ...[...engine.matchAll(/push\(\s*"[a-z_]+",\s*"([a-z]+)"/g)].map((m) => m[1]),
     ...[...engine.matchAll(/component:\s*"([a-z]+)"/g)].map((m) => m[1]),
-    // `missing_requirement` lo emite con la clave del requisito: MUST o NICE.
-    ...(engine.includes('push("missing_requirement", key') ? ["must", "nice"] : []),
+    // `missing_skill` lo emite con la clave del requisito: MUST o NICE.
+    ...(/requirement === "MUST" \? "must" : "nice"/.test(engine) && engine.includes("component: key") ? ["must", "nice"] : []),
+    // La cifra que el puesto pide va en la tarjeta de su viñeta y suma a `metric`.
+    ...(engine.includes('gainOf(score, "metric")') ? ["metric"] : []),
+    // La soft que falta se escribe en la viñeta que el ATS eligió (`writeIn`).
+
   ])
 
   it("cada componente medido tiene al menos un hallazgo que lo declare", () => {

@@ -46,7 +46,9 @@ export function isModelUnavailableError(err: unknown): boolean {
 /** True for OpenAI reasoning models (GPT-5 family, o-series) that use a different
  *  request contract than the GPT-4 family. */
 export function isReasoningModel(model: string): boolean {
-  return /^(gpt-5|o[1-9])/i.test(model)
+  // gpt-5 en adelante (gpt-5.x, gpt-6-luna…) y la serie o: todos razonan y rechazan
+  // temperature/max_tokens. Enumerar sólo «gpt-5» dejaba afuera a la generación siguiente.
+  return /^(gpt-([5-9]|\d{2,})|o[1-9])/i.test(model)
 }
 
 /**

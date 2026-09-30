@@ -17,11 +17,10 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAtsPostingStore } from "@/stores/atsPostingStore"
-import { applySuggestion, buildTree, coverageOf, termsOf, writeBack, writeInto, type RawResume } from "@/lib/ats3/engine"
-import { openLedger } from "@/lib/ats3/ledger"
+import { applySuggestion, buildTree, writeBack, writeInto, type RawResume } from "@/lib/ats3/engine"
 import { findNode } from "@/lib/ats3/guards"
-import { buildTermIndex, detailParts, nodeHash, normalize } from "@/lib/ats3/contracts"
-import type { AnchoredSuggestion, Axis, Finding, JobSpec, Resolution, ResumeTree } from "@/lib/ats3/contracts"
+import { nodeHash, normalize, rolDeNueva } from "@/lib/ats3/contracts"
+import type { AnchoredSuggestion, Finding, JobSpec, Resolution, ResumeTree } from "@/lib/ats3/contracts"
 import { scoreResume, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 
 export type FailureReason = string
@@ -41,13 +40,25 @@ export type FailureReason = string
  * final: un llamador que se salteaba uno corría a todos los demás de lugar.
  * Viaja igual de la tarjeta a la ruta y al motor.
  */
-export interface Promesa {
-  focus?: string
-  mustWrite?: string[]
-  avoidOpener?: string
-  wantsSize?: boolean
-  axes?: Axis[]
+export interface Pedido {
+  /** Por qué el ATS pide mejorarla. */
+  reason?: string
+  /** Qué tiene que decir la línea nueva, según el ATS. */
+  instruction?: string
+  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
+  facts?: string[]
+  /** Las skills que el ATS decidió escribir en esta línea (en el resumen, el cargo). */
+  terms?: string[]
+  /** Este puesto necesita la cifra de este logro. */
+  needsFigure?: boolean
+  /** Lo que la persona contestó a la pregunta del ATS. */
   told?: string
+  /** Skill que pide la vacante y el CV no muestra: la IA escribe el trabajo con ella en esta línea; la persona confirma si es verdad. */
+  propone?: boolean
+  /** La línea dice qué se hizo y no qué logró: se escribe el logro con el hueco de su cifra. */
+  logro?: boolean
+  /** Viñeta nueva: no hay línea original que conservar (se agrega o reemplaza a la señalada). */
+  nueva?: boolean
 }
 
 export interface DoneRecord {
@@ -65,8 +76,6 @@ export interface Ats3State {
   suppressed: number
   /** Lo que el usuario ya cerró en corridas anteriores. Sobrevive a recargar. */
   resolved: Resolution[]
-  /** Términos de la vacante que el CV ya demuestra. Guían el presupuesto. */
-  covered: string[]
   /** Llamadas que la última corrida gastó de verdad. Cero = todo del caché. */
   calls: number | null
   /**
@@ -78,8 +87,6 @@ export interface Ats3State {
    */
   audit: AuditFacts | null
   checks: ParseChecks
-  /** El peso de cada requisito, medido sobre el aviso. Sin él, todos valen 1. */
-  weights: Record<string, number>
 }
 
 const EMPTY: Ats3State = {
@@ -89,11 +96,9 @@ const EMPTY: Ats3State = {
   regressed: [],
   suppressed: 0,
   resolved: [],
-  covered: [],
   calls: null,
   audit: null,
   checks: {},
-  weights: {},
 }
 
 import type { ResumeSections, WorkExperienceItem } from "@/types/resume"
@@ -143,6 +148,8 @@ function otherTextOf(d: ResumeSections): string {
   const nivel = (l: string) => (l === "native" ? "Native" : l.toUpperCase())
   return [
     d.personalDetails?.jobTitle ?? "",
+    // Dónde vive la persona: la vacante puede exigir residir en un país.
+    [d.personalDetails?.city, d.personalDetails?.country].filter(Boolean).join(", "),
     ...(d.languages ?? []).map((l) => `${l.name} ${nivel(l.level)}`),
     ...(d.certifications ?? []).map((c) => `${c.name} ${c.issuer}`),
     ...(d.education ?? []).map((e) => `${e.degree} ${e.fieldOfStudy} ${e.institution} ${e.description}`),
@@ -276,9 +283,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             score: act.score as Score,
             audit: act.audit as AuditFacts,
             checks: act.checks as ParseChecks,
-            // La pantalla mide con los MISMOS pesos que el motor: si no, el
-            // número cambiaría según quién lo calculó.
-            weights: (act.weights as Record<string, number>) ?? {},
           }))
           break
         case "job": {
@@ -306,8 +310,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
           })
           break
         }
-        case "covered":
-          setState((s) => ({ ...s, covered: act.terms as string[] }))
           break
         case "findings":
           setState((s) => ({
@@ -335,16 +337,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * CV cuando el usuario lo acepta, y con los huecos ya completados por él.
    */
   const requestRewrite = useCallback(
-    /**
-     * `focus` es LO QUE LA TARJETA PROMETIÓ, y viaja con el pedido.
-     *
-     * La pantalla y el modelo tenían dos ideas distintas de qué hay que arreglar
-     * en esta línea: la tarjeta decía «le falta el método y hay que demostrar
-     * Trabajo en equipo» y al modelo se le mandaba el CV, la vacante y nada más.
-     * Se dice una vez, en un solo lugar, y los dos leen lo mismo.
-     */
-    async (nodeId: string, findingId: string | undefined, promesa: Promesa = {}) => {
-      const { focus, mustWrite, avoidOpener, wantsSize, axes, told } = promesa
+    /** Lo que el ATS decidió sobre esta línea viaja tal cual: Tailor lo ejecuta. */
+    async (nodeId: string, findingId: string | undefined, pedido: Pedido = {}) => {
       if (!state.spec) return
       setBusyNode(nodeId)
       setPendingFinding(findingId ?? null)
@@ -364,21 +358,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             language,
             resume: payloadResume(),
             spec: state.spec,
-            /**
-             * Lo que la vacante pide y el CV YA demuestra.
-             *
-             * Iba vacío, y con eso el ledger marcaba TODOS los términos como
-             * prioritarios: el modelo no tenía forma de saber dónde conviene
-             * gastar el presupuesto de palabras clave, que es justo la decisión
-             * que mueve el puntaje.
-             */
-            covered: state.covered,
-            focus,
-            mustWrite,
-            avoidOpener,
-            wantsSize,
-            axes,
-            told,
+            ...pedido,
           }),
         })
         // Mismo motivo que en el análisis: un 500 devuelve `{error}` y sin este
@@ -398,12 +378,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         setBusyNode(null)
       }
     },
-    // `state.covered` va en la lista: la petición lo MANDA, y sin él la función
-    // se queda con la foto del primer render. A medida que el usuario resuelve
-    // cosas esa lista cambia, y el ledger la usa para decidir dónde conviene
-    // gastar el presupuesto de términos — con la vieja, el modelo prioriza lo
-    // que ya está cubierto.
-    [jd, language, payloadResume, resumeId, state.covered, state.spec],
+    [jd, language, payloadResume, resumeId, state.spec],
   )
 
   /**
@@ -519,19 +494,28 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       const raw = payloadResume()
       const tree = buildTree(raw)
       const nodo = [tree.summary, ...tree.roles.flatMap((r) => r.bullets)].find((n) => n.text.trim() === after.trim())
-      if (!nodo || !before.trim()) {
+      if (!nodo) {
         setError("stale_node")
         return false
       }
-      const nuevo = writeInto(tree, nodo.id, before)
+      // Una viñeta que la IA agregó no tenía «antes»: deshacerla es quitarla.
+      const nuevo = before.trim()
+        ? writeInto(tree, nodo.id, before)
+        : { ...tree, roles: tree.roles.map((r) => ({ ...r, bullets: r.bullets.filter((b) => b.id !== nodo.id) })) }
       persistir(nuevo, raw, nodo.id === tree.summary.id ? "summary" : nodo.id)
       if (state.spec && state.audit) {
-        const puntaje = scoreResume(nuevo, state.spec, state.audit, state.checks, state.weights)
+        const puntaje = scoreResume(nuevo, state.spec, state.audit, state.checks)
         setState((st) => ({ ...st, score: puntaje }))
       }
       return true
     },
-    [payloadResume, persistir, state.audit, state.checks, state.spec, state.weights],
+    [payloadResume, persistir, state.audit, state.checks, state.spec],
+  )
+
+  /** La tarjeta que pidió la propuesta en curso: su decisión del ATS se cierra al aplicar. */
+  const findingActual = useMemo(
+    () => (pendingFinding ? [...state.findings, ...state.regressed].find((f) => f.id === pendingFinding) : undefined),
+    [pendingFinding, state.findings, state.regressed],
   )
 
   const accept = useCallback(
@@ -569,8 +553,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        */
       const medido =
         state.spec && state.audit
-          ? applySuggestion(tree, { ...s, text: finalText }, state.spec, state.audit, state.checks,
-              openLedger(tree, state.spec, new Set(state.covered)), state.weights)
+          ? applySuggestion(tree, { ...s, text: finalText }, state.spec, state.audit, state.checks)
           : null
       if (medido && !medido.ok) {
         setError(medido.reason && !medido.reason.ok ? medido.reason.reason : "stale_node")
@@ -591,8 +574,21 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * mismo en la misma pantalla.
        */
       if (medido && state.spec && state.audit) {
-        const nuevo = scoreResume(medido.tree, state.spec, state.audit, state.checks, state.weights)
-        setState((st) => ({ ...st, score: nuevo }))
+        /**
+         * TAILOR EJECUTÓ LO QUE EL ATS PIDIÓ SOBRE ESTA LÍNEA: la línea pasa a
+         * «mantener» y las skills que la tarjeta escribía, a demostradas. Así el
+         * dial se mueve al aplicar, sin volver a preguntar.
+         */
+        const cerrada = findingActual
+        const escritas = new Set((cerrada?.terms ?? []).map(normalize))
+        const audit: AuditFacts = {
+          ...state.audit,
+          bullets: state.audit.bullets.map((b) => (b.id === s.bulletId ? { ...b, decision: "keep" as const, needsFigure: false, needsOutcome: false } : b)),
+          hard: state.audit.hard.map((h) => (escritas.has(normalize(h.skill)) ? { ...h, status: "demonstrated" as const, evidenceNodeId: null } : h)),
+          soft: state.audit.soft.map((x) => (escritas.has(normalize(x.signal)) ? { ...x, status: "demonstrated" as const, evidenceNodeId: null } : x)),
+        }
+        const nuevo = scoreResume(medido.tree, state.spec, audit, state.checks)
+        setState((st) => ({ ...st, audit, score: nuevo }))
       }
       // La línea se retira de las DOS listas que hablan de ella: sacarla sólo
       // de `findings` dejaba en pantalla el hallazgo REGRESADO sobre la misma
@@ -623,7 +619,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         return olvidar(cerrada, { nodeId: s.bulletId })
       })
     },
-    [payloadResume, pendingFinding, persistir, registrarResuelto, state.audit, state.checks, state.covered, state.spec, state.weights],
+    [findingActual, payloadResume, pendingFinding, persistir, registrarResuelto, state.audit, state.checks, state.spec],
   )
 
   /**
@@ -644,65 +640,12 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             porNombre.get(normalize(nombre)) ?? { id: `sk_${nodeHash(nombre)}`, name: nombre, level: "intermediate" },
         ) as ResumeSections["skills"],
       )
-      /**
-       * Y SE MIDE, como al aceptar una propuesta. El plan puede escribir un
-       * requisito que era una tarjeta abierta —«REST», demostrado en una línea
-       * y ausente de la lista—: el dial quedaba quieto y la tarjeta seguía
-       * pidiendo algo que el CV ya decía (medido el 2026-09-28).
-       */
+      // Y se mide, como al aceptar una propuesta: el dial no se queda quieto.
       if (!state.spec || !state.audit) return
       const tree = buildTree({ ...payloadResume(), skills: final.map((name) => ({ name })) })
-      const escritos = new Set(
-        coverageOf(state.spec, state.audit, tree, buildTermIndex(termsOf(state.spec, tree)))
-          .filter((c) => c.status === "FOUND")
-          .map((c) => normalize(c.skill)),
-      )
-      const cerrado = (f: Finding) =>
-        f.type === "missing_requirement" &&
-        detailParts(f).filter((p) => p.type === "missing_requirement").every((p) => escritos.has(normalize(p.detail)))
-      const score = scoreResume(tree, state.spec, state.audit, state.checks, state.weights)
-      setState((st) => ({
-        ...st,
-        score,
-        findings: st.findings.filter((f) => !cerrado(f)),
-        regressed: st.regressed.filter((f) => !cerrado(f)),
-      }))
+      setState((st) => ({ ...st, score: scoreResume(tree, state.spec!, state.audit!, state.checks) }))
     },
-    [payloadResume, state.audit, state.checks, state.spec, state.weights, updateSectionData],
-  )
-
-  /**
-   * CUÁNTO GANA ESTA REESCRITURA, MEDIDO — no prometido.
-   *
-   * La hoja de confirmación mostraba el antes y el después y nada más: el
-   * usuario tenía que decidir a ojo si le convenía. El motor ya sabe la
-   * respuesta —`applySuggestion` escribe sobre una COPIA, vuelve a puntuar y
-   * resta— y es exactamente el número que el dial va a moverse al aplicar, así
-   * que la pantalla no puede prometer puntos que el puntaje no vaya a dar.
-   *
-   * Se mide sobre el texto FINAL, con los huecos ya completados: el aporte
-   * cambia cuando el candidato escribe su cifra, y enseñarle la ganancia de un
-   * texto que no es el que se va a escribir es la misma mentira de siempre.
-   *
-   * `null` cuando no se pudo medir (sin auditoría todavía, o la línea cambió):
-   * un cero se leería como "no sirve de nada", que es la conclusión opuesta.
-   */
-  const previewGain = useCallback(
-    (s: AnchoredSuggestion, finalText: string): number | null => {
-      if (!state.spec || !state.audit) return null
-      const tree = buildTree(payloadResume())
-      const r = applySuggestion(
-        tree,
-        { ...s, text: finalText },
-        state.spec,
-        state.audit,
-        state.checks,
-        openLedger(tree, state.spec, new Set(state.covered)),
-        state.weights,
-      )
-      return r.ok ? r.delta : null
-    },
-    [payloadResume, state.audit, state.checks, state.covered, state.spec, state.weights],
+    [payloadResume, state.audit, state.checks, state.spec, updateSectionData],
   )
 
   /**
@@ -724,6 +667,54 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     for (const r of tree.roles) for (const b of r.bullets) m.set(b.id, b.text)
     return (nodeId: string): string => m.get(nodeId) ?? ""
   }, [payloadResume])
+
+  /**
+   * SACA UNA VIÑETA QUE EL ATS DECIDIÓ BORRAR (no sirve para este puesto o
+   * repite a otra). La persona lo confirmó en la tarjeta; «Hechas» guarda el
+   * texto y ofrece deshacer.
+   */
+  const dropLine = useCallback(
+    (nodeId: string, findingId: string, registro?: DoneRecord) => {
+      const raw = payloadResume()
+      const tree = buildTree(raw)
+      const linea = tree.roles.flatMap((r) => r.bullets).find((b) => b.id === nodeId)
+      if (!linea) {
+        setError("stale_node")
+        return
+      }
+      const nuevo: ResumeTree = { ...tree, roles: tree.roles.map((r) => ({ ...r, bullets: r.bullets.filter((b) => b.id !== nodeId) })) }
+      persistir(nuevo, raw, nodeId)
+      registrarResuelto(nodeId, "", "AI_SUGGESTION", findingId, registro)
+      if (state.spec && state.audit) setState((st) => ({ ...st, score: scoreResume(nuevo, state.spec!, state.audit!, state.checks) }))
+      setState((st) => olvidar(olvidar(st, { findingId }), { nodeId }))
+    },
+    [payloadResume, persistir, registrarResuelto, state.audit, state.checks, state.spec],
+  )
+
+  /** Devuelve una viñeta sacada a su puesto y a su lugar. */
+  const undoDrop = useCallback(
+    (texto: string, roleId: string, index: number): boolean => {
+      const raw = payloadResume()
+      const tree = buildTree(raw)
+      if (!tree.roles.some((r) => r.id === roleId) || !texto.trim()) {
+        setError("stale_node")
+        return false
+      }
+      const nuevo: ResumeTree = {
+        ...tree,
+        roles: tree.roles.map((r) => {
+          if (r.id !== roleId) return r
+          const bullets = [...r.bullets]
+          bullets.splice(Math.min(index, bullets.length), 0, { id: `${r.id}_back`, text: texto, hash: nodeHash(texto), origin: "USER" })
+          return { ...r, bullets }
+        }),
+      }
+      persistir(nuevo, raw, `${roleId}_back`)
+      if (state.spec && state.audit) setState((st) => ({ ...st, score: scoreResume(nuevo, state.spec!, state.audit!, state.checks) }))
+      return true
+    },
+    [payloadResume, persistir, state.audit, state.checks, state.spec],
+  )
 
   const dismiss = useCallback(
     (nodeId: string, findingId?: string, registro?: DoneRecord) => {
@@ -777,6 +768,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     dondeCae: (nodeId: string): { puesto: string; linea: number } | null => {
       const tree = buildTree(payloadResume())
       for (const r of tree.roles) {
+        // La viñeta nueva cae al final de su puesto.
+        if (rolDeNueva(nodeId) === r.id) return { puesto: [r.title, r.company].filter(Boolean).join(" — "), linea: r.bullets.length + 1 }
         const i = r.bullets.findIndex((b) => b.id === nodeId)
         if (i >= 0) return { puesto: [r.title, r.company].filter(Boolean).join(" — "), linea: i + 1 }
       }
@@ -785,11 +778,11 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     /** Las habilidades que el CV declara HOY. La lista viva, no la del análisis. */
     declaredSkills: (sectionData.skills ?? []).map((s) => s.name ?? "").filter(Boolean),
     tree,
-    weights: state.weights,
     accept,
     undo,
     dismiss,
+    dropLine,
+    undoDrop,
     textOf,
-    previewGain,
   }
 }

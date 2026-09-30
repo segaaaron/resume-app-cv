@@ -1,11 +1,10 @@
 import { describe, it, expect } from "vitest"
 import {
   checkSuggestion,
-  droppedTerms,
+  droppedFigures,
+  droppedNames,
   figureSlots,
-  lostContent,
   repairSuggestion,
-  similarNudge,
   similarTo,
   wrongPerson,
   addsNothing,
@@ -15,8 +14,7 @@ import {
   type GuardContext,
   fillSlot,
 } from "@/lib/ats3/guards"
-import { buildTermIndex, type Suggestion, type ResumeTree, type Finding, type Resolution } from "@/lib/ats3/contracts"
-import type { Ledger } from "@/lib/ats3/ledger"
+import { type Suggestion, type ResumeTree, type Finding, type Resolution } from "@/lib/ats3/contracts"
 
 /**
  * Los guards son lo único que separa la salida de un modelo de la pantalla de
@@ -31,19 +29,8 @@ import type { Ledger } from "@/lib/ats3/ledger"
  * clases acá abajo.
  */
 
-const ledger = (over: Partial<Ledger> = {}): Ledger => ({
-  verbsUsed: [],
-  keywordBudget: {},
-  metricTypesUsed: [],
-  claimsMade: [],
-  bulletsRemaining: 10,
-  ...over,
-})
-
 const ctx = (over: Partial<GuardContext> = {}): GuardContext => ({
   original: "Trabajé en la caja del local",
-  index: buildTermIndex([]),
-  ledger: ledger(),
   ...over,
 })
 
@@ -57,7 +44,7 @@ const sug = (over: Partial<Suggestion> = {}): Suggestion => ({
   metricType: null,
   placeholders: [],
   variantWithoutMetric: null,
-  measurableAspect: null, declineBasis: null,
+  measurableAspect: null,
   ...over,
 })
 
@@ -92,31 +79,6 @@ describe("el CV habla de lo que la persona HIZO", () => {
     // La persona ya NO rechaza: se corrige lo que el código sabe conjugar y lo
     // demás se entrega. `wrongPerson` sigue siendo quien lo detecta.
     expect(v.ok).toBe(true)
-  })
-})
-
-describe("no se puede soltar lo que la vacante busca", () => {
-  /**
-   * La pérdida que duele no es la de cualquier palabra —parafrasear es legítimo—
-   * sino la de un término que la vacante pide y el CV demostraba. Este proyecto
-   * midió esa fuga: un CV entró con 23 términos y salió con 16 aplicando lo que
-   * el propio panel ofrecía.
-   */
-  const jd = buildTermIndex([{ canonical: "Gestión de turnos", variants: ["turnos"] }])
-
-  it("una reescritura que suelta el término de la vacante se caza", () => {
-    expect(droppedTerms("Confirmé los turnos de la semana", "Confirmando por teléfono a cada paciente", jd)).toEqual([
-      "Gestión de turnos",
-    ])
-  })
-
-  it("si el término sobrevive, parafrasear el resto es legítimo", () => {
-    expect(droppedTerms("Confirmé los turnos", "Coordiné los turnos de tres profesionales por agenda", jd)).toEqual([])
-  })
-
-  it("perder una palabra que la vacante no pide NO es perder información", () => {
-    // "Realicé el arqueo" → "Cuadré efectivo y comprobantes" explica el trabajo.
-    expect(droppedTerms("Realicé el arqueo de caja", "Cuadré efectivo, comprobantes y diferencias del turno", jd)).toEqual([])
   })
 })
 
@@ -181,7 +143,7 @@ describe("el chequeo completo", () => {
   it("NO rechaza porque el verbo ya abra otra línea del CV", () => {
     const v = checkSuggestion(
       sug({ text: "Gestioné el inventario completo del depósito con control semanal", actionVerb: "Gestioné" }),
-      ctx({ original: "Me encargaba del inventario", ledger: ledger({ verbsUsed: ["gestione"] }) }),
+      ctx({ original: "Me encargaba del inventario" }),
     )
     expect(v.ok).toBe(true)
   })
@@ -197,7 +159,7 @@ describe("el chequeo completo", () => {
   it("NO rechaza por el `claim` que el modelo declara", () => {
     const v = checkSuggestion(
       sug({ text: "Ordené el depósito completo reduciendo los faltantes del mes", claim: "reducción de faltantes", actionVerb: "Ordené" }),
-      ctx({ original: "Acomodé el depósito", ledger: ledger({ claimsMade: ["faltantes reducidos"] }) }),
+      ctx({ original: "Acomodé el depósito" }),
     )
     expect(v.ok).toBe(true)
   })
@@ -319,9 +281,8 @@ describe("una sugerencia pensada sobre una versión que ya no existe", () => {
 describe("lealtad: no volver a señalar lo que el usuario ya resolvió", () => {
   const finding = (over: Partial<Finding> = {}): Finding => ({
     id: "f1",
-    type: "soft_not_shown",
-    component: "soft", remedy: "rewrite",
-    merged: ["soft_not_shown"],
+    type: "improve_bullet",
+    component: "bullets", remedy: "rewrite",
     nodeId: "b1",
     nodeText: "Atendí la caja",
     nodeHash: "h4",
@@ -380,11 +341,6 @@ describe("lealtad: no volver a señalar lo que el usuario ya resolvió", () => {
 })
 
 describe("el rechazo le dice al modelo QUÉ falló", () => {
-  it("en los dos idiomas, y nombra la línea parecida", () => {
-    expect(similarNudge("Lideré", "es")).toContain("Lideré")
-    expect(similarNudge("Lideré", "en")).toContain("Lideré")
-  })
-
   it("todo motivo de rechazo tiene su explicación en los dos idiomas", () => {
     const reasons = ["stale", "empty"] as const
     for (const reason of reasons) {
@@ -421,10 +377,9 @@ describe("la variante sin cifra se juzga igual que el texto principal", () => {
   })
 
   it("una variante que dice menos NO rechaza la propuesta: se ve en el antes/después", () => {
-    const index = buildTermIndex([{ canonical: "arqueo", variants: ["arqueo"] }])
     const v = checkSuggestion(
       sug({ text: "Concilié el arqueo de caja al cierre", variantWithoutMetric: "Concilié la caja" }),
-      ctx({ original: "Hice el arqueo de la caja", index }),
+      ctx({ original: "Hice el arqueo de la caja" }),
     )
     expect(v.ok).toBe(true)
   })
@@ -470,7 +425,6 @@ it("dos huecos con el mismo nombre son dos campos, y cada cifra vuelve a su luga
   let final = s.text
   for (const [tok, val] of Object.entries(pre)) final = final.split(tok).join(val)
   expect(final).toBe(original)
-  expect(lostContent(s, ctx({ original }))).toEqual([])
 })
 
 it("y un hueco largo pero honesto NO se rechaza: el guard no puede borrar la cifra", () => {
@@ -510,9 +464,8 @@ it("la cifra del candidato que la propuesta volvió hueco llega precargada, y no
     placeholders: [{ token: "[x%]", type: "PERCENT_DELTA", label: "engagement", hint: "", evidenceNeeded: "", required: true }],
   })
   expect(figureSlots(original, s)).toEqual({ "[x%]": "30%" })
-  expect(lostContent(s, ctx({ original }))).toEqual([])
   // Sin hueco donde ponerla, sí está perdida: el motor la pide una vez más.
-  expect(lostContent(sug({ text: "Designed interfaces across mobile and web, increasing user engagement" }), ctx({ original }))).toEqual(["30%"])
+  expect(droppedFigures(original, "Designed interfaces across mobile and web, increasing user engagement")).toEqual(["30%"])
 
   /**
    * Y EL HUECO TIENE QUE MEDIR LO MISMO (QA, 2026-09-11). Medido ejecutando la
@@ -525,7 +478,6 @@ it("la cifra del candidato que la propuesta volvió hueco llega precargada, y no
     placeholders: [{ token: "[x%]", type: "PERCENT_DELTA", label: "crashes", hint: "", evidenceNeeded: "", required: true }],
   })
   expect(figureSlots(original, otraCosa)).toEqual({})
-  expect(lostContent(otraCosa, ctx({ original }))).toEqual(["30%"])
 })
 
 describe("la tercera persona sin tilde, que es la que se colaba", () => {
@@ -573,16 +525,30 @@ describe("la antigüedad no es una cifra que se pierde", () => {
 })
 
 describe("una reescritura no suelta una tecnología que el CV afirma", () => {
-  it("«RESTful» cambiado por «GraphQL» cuenta como pérdida; la mayúscula de una oración no", async () => {
-    const { lostContent } = await import("@/lib/ats3/guards")
-    const ctx = { original: "Created web apps with Angular and TypeScript, integrating RESTful APIs. Improved load time.", index: buildTermIndex([]), ledger: {} as Ledger }
-    const s = { changed: true, text: "Integrated GraphQL data into web apps using Angular and TypeScript. Improved load time.", placeholders: [] } as unknown as Suggestion
-    const perdido = lostContent(s, ctx as never)
+  it("«RESTful» cambiado por «GraphQL» cuenta como pérdida; la mayúscula de una oración no", () => {
+    const original = "Created web apps with Angular and TypeScript, integrating RESTful APIs. Improved load time."
+    const perdido = droppedNames(original, "Integrated GraphQL data into web apps using Angular and TypeScript. Improved load time.")
     expect(perdido).toContain("RESTful")
     expect(perdido).not.toContain("Improved")
     expect(perdido).not.toContain("Angular")
     // «REST» sigue diciendo lo que decía «RESTful»: no es una pérdida.
-    const conRest = { changed: true, text: "Created web apps with Angular and TypeScript, integrating REST APIs. Improved load time.", placeholders: [] } as unknown as Suggestion
-    expect(lostContent(conRest, ctx as never)).not.toContain("RESTful")
+    expect(droppedNames(original, "Created web apps with Angular and TypeScript, integrating REST APIs. Improved load time.")).not.toContain("RESTful")
+  })
+})
+
+describe("la regla del 90% se mide contra tu línea (CEO, 2026-09-29)", () => {
+  it("tu línea casi intacta con relleno que el CV ya dice no es una mejora", () => {
+    const a = "Established accessibility standards to improve app usability for a broader audience, increasing user satisfaction ratings by 5%."
+    const b = "Established accessibility standards in Swift and iOS development, using Design Guidelines to improve app usability for a broader audience and raise user satisfaction ratings by 5%."
+    expect(addsNothing(a, b, "iOS Developer Swift Design Guidelines development")).toBe(true)
+  })
+  it("un cambio de verbo con dos sinónimos tampoco", () => {
+    const a = "Enhanced team productivity and project delivery timelines by collaborating effectively within a VIPER and MVVM architectural pattern environment."
+    const b = "Shortened project delivery timelines by collaborating effectively within a VIPER and MVVM architectural pattern environment, improving team productivity and delivery flow."
+    expect(addsNothing(a, b)).toBe(true)
+  })
+  it("una línea que se enriquece con un dato nuevo sí es mejora", () => {
+    expect(addsNothing("Built the payments screen", "Built the payments screen for a super-app used by millions", "iOS Developer")).toBe(false)
+    expect(addsNothing("Soldé piezas", "Soldé piezas con soldadura MIG", "Soldadura MIG")).toBe(false)
   })
 })

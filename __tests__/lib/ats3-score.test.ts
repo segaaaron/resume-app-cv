@@ -1,15 +1,12 @@
 import { describe, it, expect } from "vitest"
 import {
-  postingWeights,
   scoreResume,
-  softCoverageOf,
   titleForms,
   experienceYears,
   titleWritten,
   gainOf,
   deltaOf,
   statesQuantity,
-  distinctOpeners,
   PILLAR_WEIGHT,
   type AuditFacts,
   type ParseChecks,
@@ -71,52 +68,29 @@ function makeSpec(must: number, nice: number): JobSpec {
     niceToHave: req(nice, "N"),
     responsibilities: [],
     softSignals: [],
+    conditions: [],
   }
 }
 
 /**
- * Lo que el CV cubre tiene que estar ESCRITO en él.
- *
- * Desde el 2026-09-24 la cobertura la mide el texto (`coverageOf`), no el
- * estado que traiga la auditoría: el filtro compara cadenas. Por eso el
- * generador escribe en el CV los términos que cuenta como cubiertos.
+ * El diagnóstico del ATS: las primeras `mustFound`/`niceFound` skills demostradas,
+ * el resto faltantes; las viñetas pares ya sirven, las impares hay que mejorarlas.
  */
-function escribir(tree: ResumeTree, terminos: string[]): void {
-  tree.otherText = terminos.join(" . ")
-}
-
-function cubiertos(spec: JobSpec, mustFound: number, niceFound: number): string[] {
-  return [...spec.mustHave.slice(0, mustFound), ...spec.niceToHave.slice(0, niceFound)].map((r) => r.skill)
-}
-
 function makeAudit(tree: ResumeTree, spec: JobSpec, mustFound: number, niceFound: number): AuditFacts {
-  escribir(tree, cubiertos(spec, mustFound, niceFound))
-  const cov: AuditFacts["coverage"] = [
-    ...spec.mustHave.map((m, i) => ({
-      skill: m.skill,
-      requirement: "MUST" as const,
-      status: (i < mustFound ? "FOUND" : "NOT_FOUND") as "FOUND" | "NOT_FOUND",
-      evidenceNodeId: null,
-    })),
-    ...spec.niceToHave.map((n, i) => ({
-      skill: n.skill,
-      requirement: "NICE" as const,
-      status: (i < niceFound ? "FOUND" : "NOT_FOUND") as "FOUND" | "NOT_FOUND",
-      evidenceNodeId: null,
-    })),
-  ]
-  const bullets = tree.roles[0].bullets.map((b, i) => ({
-    id: b.id,
-    hasActionVerb: i % 2 === 0,
-    hasResult: i % 3 === 0,
-    hasMethod: i % 2 === 0,
-  }))
+  const skill = (skill: string, requirement: "MUST" | "NICE", ok: boolean) => ({
+    skill, requirement, status: (ok ? "demonstrated" : "missing") as "demonstrated" | "missing", evidenceNodeId: null, writeIn: null, question: null,
+  })
   return {
-    bullets,
+    bullets: tree.roles[0].bullets.map((b, i) => ({ id: b.id, decision: i % 2 === 0 ? ("keep" as const) : ("improve" as const), reason: "", instruction: null, needsFigure: false })),
+    hard: [...spec.mustHave.map((m, i) => skill(m.skill, "MUST", i < mustFound)), ...spec.niceToHave.map((n, i) => skill(n.skill, "NICE", i < niceFound))],
+    soft: [],
     summary: { identity: true, proof: false, fit: true, extra: false },
-    coverage: cov,
-    softCoverage: [],
   }
+}
+
+/** Cerrar una skill es que el ATS la dé por demostrada. */
+function demostrar(audit: AuditFacts, skill: string): AuditFacts {
+  return { ...audit, hard: audit.hard.map((h) => (h.skill === skill ? { ...h, status: "demonstrated" as const } : h)) }
 }
 
 const CHECKS: ParseChecks = { a: true, b: true, c: false, d: null, e: true }
@@ -153,10 +127,10 @@ describe("el total cae en [0,100] por construcción", () => {
     const tree = makeTree(4)
     const spec = makeSpec(3, 0) // sin "nice to have"
     const audit: AuditFacts = {
-      bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, hasActionVerb: true, hasResult: true, hasMethod: true })),
+      bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, decision: "keep" as const, reason: "", instruction: null, needsFigure: true })),
+      hard: spec.mustHave.map((m) => ({ skill: m.skill, requirement: "MUST" as const, status: "demonstrated" as const, evidenceNodeId: null, writeIn: null, question: null })),
+      soft: [],
       summary: { identity: true, proof: true, fit: true, extra: true },
-      coverage: spec.mustHave.map((m) => ({ skill: m.skill, requirement: "MUST" as const, status: "FOUND" as const, evidenceNodeId: null })),
-      softCoverage: [],
     }
     const tree2: ResumeTree = {
       ...tree,
@@ -171,7 +145,6 @@ describe("el total cae en [0,100] por construcción", () => {
         },
       ],
     }
-    escribir(tree2, spec.mustHave.map((m) => m.skill))
     const s = scoreResume(tree2, spec, audit, { a: true, b: true })
     expect(s.total).toBeCloseTo(100, 6)
   })
@@ -192,10 +165,7 @@ describe("la ganancia prometida ES el delta medido", () => {
       const before = scoreResume(tree, spec, audit, CHECKS)
       const promised = gainOf(before, "must")
 
-      // Cerrar el requisito es ESCRIBIRLO: la cobertura la mide el texto.
-      const conUnoMas = { ...tree }
-      escribir(conUnoMas, cubiertos(spec, found + 1, 0))
-      const after = scoreResume(conUnoMas, spec, audit, CHECKS)
+      const after = scoreResume(tree, spec, demostrar(audit, spec.mustHave[found].skill), CHECKS)
       expect(deltaOf(before, after)).toBeCloseTo(promised, 10)
     }
   })
@@ -211,28 +181,24 @@ describe("la ganancia prometida ES el delta medido", () => {
 
       const before = scoreResume(tree, spec, audit, CHECKS)
       const promised = gainOf(before, "nice")
-      const conUnoMas = { ...tree }
-      escribir(conUnoMas, cubiertos(spec, 0, found + 1))
-      const after = scoreResume(conUnoMas, spec, audit, CHECKS)
+      const after = scoreResume(tree, spec, demostrar(audit, spec.niceToHave[found].skill), CHECKS)
       expect(deltaOf(before, after)).toBeCloseTo(promised, 10)
     }
   })
 
-  it("llevar una viñeta a estructura completa", () => {
+  it("mejorar una viñeta que el ATS pidió mejorar", () => {
     const tree = makeTree(8)
     const spec = makeSpec(4, 3)
     const audit = makeAudit(tree, spec, 2, 1)
-    const flojo = audit.bullets.findIndex((b) => !(b.hasActionVerb && b.hasResult && b.hasMethod))
+    const flojo = audit.bullets.findIndex((b) => b.decision === "improve")
     expect(flojo).toBeGreaterThanOrEqual(0)
 
     const before = scoreResume(tree, spec, audit, CHECKS)
-    const promised = gainOf(before, "xyz")
+    const promised = gainOf(before, "bullets")
 
     const fixed: AuditFacts = {
       ...audit,
-      bullets: audit.bullets.map((b, i) =>
-        i === flojo ? { ...b, hasActionVerb: true, hasResult: true, hasMethod: true } : b,
-      ),
+      bullets: audit.bullets.map((b, i) => (i === flojo ? { ...b, decision: "keep" as const } : b)),
     }
     expect(deltaOf(before, scoreResume(tree, spec, fixed, CHECKS))).toBeCloseTo(promised, 10)
   })
@@ -280,16 +246,6 @@ describe("¿la línea declara un tamaño?", () => {
   })
 })
 
-describe("diversidad de aperturas", () => {
-  it("cuenta cuántas líneas empiezan distinto, sin lista de verbos", () => {
-    expect(distinctOpeners(["Lideré el equipo", "Lideré la migración", "Reduje costos"])).toBe(2)
-  })
-
-  it("ignora mayúsculas y acentos: es la misma apertura", () => {
-    expect(distinctOpeners(["Gestioné la agenda", "gestione los turnos"])).toBe(1)
-  })
-})
-
 it("una viñeta que la auditoría inventó no entra al puntaje", () => {
   // El juicio por línea lo devuelve un modelo, y un id que el CV no tiene sube
   // el numerador Y el denominador de un pilar entero con una línea que nadie
@@ -299,105 +255,30 @@ it("una viñeta que la auditoría inventó no entra al puntaje", () => {
   const real = makeAudit(tree, spec, 1, 0)
   const conFantasma = {
     ...real,
-    bullets: [...real.bullets, { id: "b_no_existe", hasActionVerb: true, hasResult: true, hasMethod: true }],
+    bullets: [...real.bullets, { id: "b_no_existe", decision: "keep" as const, reason: "", instruction: null, needsFigure: false }],
   }
-  const xyz = (s: ReturnType<typeof scoreResume>) => s.components.find((c) => c.key === "xyz")!
-  expect(xyz(scoreResume(tree, spec, conFantasma, CHECKS)).denominator).toBe(2)
+  const vinetas = (s: ReturnType<typeof scoreResume>) => s.components.find((c) => c.key === "bullets")!
+  expect(vinetas(scoreResume(tree, spec, conFantasma, CHECKS)).denominator).toBe(2)
   expect(scoreResume(tree, spec, conFantasma, CHECKS).total).toBe(scoreResume(tree, spec, real, CHECKS).total)
 })
 
-describe("no todos los requisitos valen igual, y se mide sobre el aviso", () => {
-  const spec = makeSpec(3, 0)
-  const jd = `Buscamos alguien para ${spec.mustHave[0].raw}.
-    ${spec.mustHave[0].raw} es la tarea central. Se valora ${spec.mustHave[1].raw}.
-    También ${spec.mustHave[2].raw}. Repetimos: ${spec.mustHave[0].raw} todos los días.`
-  const tree = makeTree(3)
-  /**
-   * El fixture compartido usaba un valor aleatorio para el cargo, así que dos llamadas
-   * NO son comparables: la primera versión de este caso medía ese ruido y daba
-   * rojo con el código correcto. Acá se fija.
-   */
-  /** El CV con esos términos escritos: la cobertura la mide el texto. */
-  const escrito = (skills: string[]): ResumeTree => ({ ...tree, otherText: skills.join(" . ") })
-  const cubre = (skills: string[]) => ({
-    ...makeAudit(tree, spec, 0, 0),
-    coverage: spec.mustHave.map((m) => ({
-      skill: m.skill,
-      requirement: "MUST" as const,
-      status: (skills.includes(m.skill) ? "FOUND" : "NOT_FOUND") as "FOUND" | "NOT_FOUND",
-      evidenceNodeId: null,
-    })),
-  })
-
-  it("cubrir lo que el aviso REPITE vale más que cubrir lo que menciona al pasar", () => {
-    // La regla es del CEO: «lo que se repite y lo que abre la descripción pesa
-    // más que lo listado al final». Contarlos por cabeza le dice al candidato
-    // que las dos coberturas valen lo mismo, y no valen lo mismo.
-    const w = postingWeights(spec, jd)
-    const conM0 = scoreResume(escrito([spec.mustHave[0].skill]), spec, cubre([spec.mustHave[0].skill]), CHECKS, w)
-    const conM2 = scoreResume(escrito([spec.mustHave[2].skill]), spec, cubre([spec.mustHave[2].skill]), CHECKS, w)
-    const must = (s: typeof conM0) => s.components.find((c) => c.key === "must")!
-    expect(must(conM0).numerator).toBeGreaterThan(must(conM2).numerator)
-    expect(conM0.total).toBeGreaterThan(conM2.total)
-  })
-
-  it("sin pesos, el puntaje es EXACTAMENTE el de antes", () => {
-    // El re-cálculo instantáneo de la pantalla no recibe el aviso. Un puntaje
-    // que cambia según quién lo calcula es peor que uno más grueso.
-    const cobertura = cubre([spec.mustHave[0].skill])
-    const cv = escrito([spec.mustHave[0].skill])
-    expect(scoreResume(cv, spec, cobertura, CHECKS, {}).total).toBe(scoreResume(cv, spec, cobertura, CHECKS).total)
-  })
-
-  it("el peso sale del TEXTO, así que la misma vacante da siempre lo mismo", () => {
-    // El orden que devuelve un modelo cambia entre dos lecturas del mismo
-    // aviso: este proyecto ya midió 19 puntos de diferencia por esa vía.
-    expect(postingWeights(spec, jd)).toEqual(postingWeights(spec, jd))
-    expect(postingWeights(spec, jd)[spec.mustHave[0].skill]).toBeGreaterThan(
-      postingWeights(spec, jd)[spec.mustHave[2].skill],
-    )
-  })
-
-  it("el peso se cuenta por PALABRA: «excelente» no es «Excel»", () => {
-    // Medido antes de subirlo: buscando la subcadena, "R" pesaba más en un
-    // aviso donde la letra vive dentro de "buscamos" y "reportes", y "Excel"
-    // contaba dentro de "excelencia". Es la clase que este proyecto ya pagó con
-    // «plusvalía» conteniendo «plus».
-    const conTrampa = {
-      ...spec,
-      mustHave: [
-        { skill: "Excel", raw: "Excel", years: null, category: null },
-        { skill: "R", raw: "R", years: null, category: null },
-      ],
-    }
-    const w = postingWeights(conTrampa, "Buscamos analista con excelente trato. Excelencia diaria. Reportes claros.")
-    expect(w["Excel"]).toBe(1)
-    expect(w["R"]).toBe(1)
-  })
-
-  it("y sí cuenta la palabra entera, esté donde esté", () => {
-    const conReportes = { ...spec, mustHave: [{ skill: "reportes", raw: "reportes", years: null, category: null }] }
-    const w = postingWeights(conReportes, "Reportes diarios. Los reportes se envían. Sin reportes no hay control.")
-    expect(w["reportes"]).toBe(1.25)
-  })
-})
-
-describe("la blanda la decide el texto, como la dura", () => {
-  it("declarada sólo si está escrita; demostrada sólo con una línea que existe", () => {
+describe("una skill demostrada vale más que una sólo nombrada", () => {
+  it("demostrada 1, nombrada 0,6, ausente 0; y demostrada en una línea que ya no existe cuenta como nombrada", () => {
     const tree = makeTree(2)
-    tree.summary = { ...tree.summary, text: "Cajera honesta y con atención al cliente" }
     const spec = { ...makeSpec(0, 0), softSignals: ["honestidad", "atención al cliente", "trabajo bajo presión"] }
     const audit: AuditFacts = {
       bullets: [],
-      summary: { identity: true, proof: false, fit: false, extra: false },
-      coverage: [],
-      softCoverage: [
-        { signal: "honestidad", status: "DECLARED_ONLY", evidenceNodeId: null },
-        { signal: "atención al cliente", status: "DEMONSTRATED", evidenceNodeId: "no-existe" },
-        { signal: "trabajo bajo presión", status: "DEMONSTRATED", evidenceNodeId: "b1" },
+      hard: [],
+      soft: [
+        { signal: "honestidad", status: "listed", evidenceNodeId: null, writeIn: null },
+        { signal: "atención al cliente", status: "demonstrated", evidenceNodeId: "no-existe", writeIn: null },
+        { signal: "trabajo bajo presión", status: "demonstrated", evidenceNodeId: "b1", writeIn: null },
       ],
+      summary: { identity: true, proof: false, fit: false, extra: false },
     }
-    expect(softCoverageOf(spec, audit, tree).map((s) => s.status)).toEqual(["ABSENT", "DECLARED_ONLY", "DEMONSTRATED"])
+    const soft = scoreResume(tree, spec, audit, CHECKS).components.find((c) => c.key === "soft")!
+    expect(soft.numerator).toBeCloseTo(0.6 + 0.6 + 1, 10)
+    expect(soft.denominator).toBe(3)
   })
 })
 

@@ -30,21 +30,19 @@ import { OpenAIClientAdapter } from "@/lib/services/ai/OpenAIClientAdapter"
 // termina moviéndose en uno solo, y el modelo entra en TODAS las claves de
 // caché — un desacuerdo serviría respuestas de otro oráculo como si fueran de
 // éste. Es el de prosa porque estos prompts ESCRIBEN el CV.
-import { AI_MODEL_PROSE, logAIUsage } from "@/lib/ai-client"
+import { AI_MODEL_BULLETS, AI_MODEL_PROSE, logAIUsage } from "@/lib/ai-client"
 import { computeCostUsd } from "@/lib/services/ai/shared/cost-tracker"
 import { AIAts3Module } from "@/lib/services/ai/modules/AIAts3Module"
 import {
   buildTree,
   cacheKey,
-  openLedger,
   runAnalysis,
   runRewrite,
-  termsOf,
   type AtsStore,
   type CacheKind,
   type RawResume,
 } from "@/lib/ats3/engine"
-import { buildTermIndex, JobSpecSchema } from "@/lib/ats3/contracts"
+import { JobSpecSchema } from "@/lib/ats3/contracts"
 import { ResolutionLogSchema, type Resolution } from "@/lib/ats3/contracts"
 
 export const maxDuration = 120
@@ -105,27 +103,21 @@ const rewriteSchema = z.object({
   language: z.enum(["es", "en"]).default("es"),
   resume: resumeSchema,
   spec: JobSpecSchema,
-  /** Lo que la vacante exige y el CV ya demuestra: define dónde conviene gastar. */
-  covered: z.array(z.string().max(80)).max(80).default([]),
   /**
-   * Lo que la tarjeta prometió cerrar sobre esta línea.
-   *
-   * Va al prompt, así que se acota acá: es texto que el cliente elige y que
-   * termina dentro de una petición al modelo. El tope es de presentación —se
-   * recorta, no rechaza—: un foco largo no puede dejar al usuario sin
-   * reescritura con la cuota ya gastada.
+   * LO QUE EL ATS DECIDIÓ SOBRE ESTA LÍNEA (CEO, 2026-09-29): por qué, qué tiene
+   * que decir, qué skills escribir y si lleva cifra. Va al prompt, así que se
+   * acota; el tope recorta, no rechaza.
    */
-  focus: z.string().max(400).optional().catch(undefined),
-  /** Los términos que la tarjeta prometió escribir. El motor comprueba que estén. */
-  mustWrite: z.array(z.string().max(160)).max(12).optional().catch(undefined),
-  /** El verbo que la tarjeta promete dejar de repetir. */
-  avoidOpener: z.string().max(60).optional().catch(undefined),
-  /** La tarjeta promete el tamaño del logro. */
-  wantsSize: z.boolean().optional().catch(undefined),
-  /** Los ejes que la tarjeta promete cerrar. */
-  axes: z.array(z.enum(["verbo", "resultado", "método"])).max(3).optional().catch(undefined),
+  reason: z.string().max(400).optional().catch(undefined),
+  instruction: z.string().max(800).optional().catch(undefined),
+  facts: z.array(z.string().max(240)).max(5).optional().catch(undefined),
+  terms: z.array(z.string().max(160)).max(8).optional().catch(undefined),
+  needsFigure: z.boolean().optional().catch(undefined),
   /** Lo que la persona contó en la tarjeta: va al prompt, así que se acota. */
   told: z.string().max(300).optional().catch(undefined),
+  propone: z.boolean().optional().catch(undefined),
+  logro: z.boolean().optional().catch(undefined),
+  nueva: z.boolean().optional().catch(undefined),
 })
 
 /**
@@ -201,6 +193,15 @@ const schema = z.union([rewriteSchema, resolveSchema, analyzeSchema])
  * Falla ABIERTO en las dos direcciones: un caché roto puede costar una llamada,
  * nunca una petición.
  */
+/**
+ * LOS DOS MODELOS DE UNA PETICIÓN, en un solo lugar (CEO, 2026-09-30): el de
+ * prosa lee la vacante, diagnostica y escribe el resumen; el de viñetas hace la
+ * edición mínima. Todas las claves de caché —incluida la del registro de lo
+ * resuelto— salen de acá: si una usara otra, el análisis no encontraría lo que
+ * la persona ya cerró.
+ */
+const MODELOS = `${AI_MODEL_PROSE}+${AI_MODEL_BULLETS}`
+
 function makeStore(resumeId: string, model: string): AtsStore {
   return {
     async read(kind: CacheKind, hash: string) {
@@ -286,8 +287,8 @@ export async function POST(req: Request) {
      */
     if (parsed.data.action === "resolve") {
       const d = parsed.data
-      const store = makeStore(d.resumeId, AI_MODEL_PROSE)
-      const key = cacheKey.log(d.resumeId, cacheKey.jd(d.jobDescription, AI_MODEL_PROSE))
+      const store = makeStore(d.resumeId, MODELOS)
+      const key = cacheKey.log(d.resumeId, cacheKey.jd(d.jobDescription, MODELOS))
       /**
        * Lo que vuelve de la base se VALIDA, no se supone.
        *
@@ -320,6 +321,7 @@ export async function POST(req: Request) {
     await enforceAIQuota(authResult.userId, cuenta, authResult.user.plan)
 
     const model = AI_MODEL_PROSE
+    const modelos = MODELOS
 
     /**
      * EL GASTO, SUMADO A LO LARGO DE LA PETICIÓN Y ESCRITO UNA SOLA VEZ.
@@ -334,10 +336,11 @@ export async function POST(req: Request) {
      * gastado se gastó igual.
      */
     const spend = { promptTokens: 0, completionTokens: 0, costUsd: 0 }
-    const onUsage = (u: { promptTokens: number; completionTokens: number; cachedTokens: number }) => {
+    const onUsage = (u: { promptTokens: number; completionTokens: number; cachedTokens: number; model: string }) => {
       spend.promptTokens += u.promptTokens
       spend.completionTokens += u.completionTokens
-      spend.costUsd += computeCostUsd(model, u.promptTokens, u.completionTokens, u.cachedTokens)
+      // Cada llamada a su precio: Luna no se cobra como mini.
+      spend.costUsd += computeCostUsd(u.model, u.promptTokens, u.completionTokens, u.cachedTokens)
     }
     const bill = () => {
       if (spend.promptTokens || spend.completionTokens) {
@@ -345,15 +348,14 @@ export async function POST(req: Request) {
       }
     }
 
-    const ai = new AIAts3Module({ client: new OpenAIClientAdapter(), model, language: parsed.data.language, onUsage })
-    const store = makeStore(parsed.data.resumeId, model)
+    const ai = new AIAts3Module({ client: new OpenAIClientAdapter(), model, bulletModel: AI_MODEL_BULLETS, language: parsed.data.language, onUsage })
+    const store = makeStore(parsed.data.resumeId, modelos)
 
     // ── REESCRIBIR UNA LÍNEA ────────────────────────────────────────────────
     // Responde JSON común: es una sola cosa y no hay nada que entregar en actos.
     if (parsed.data.action === "rewrite") {
       const d = parsed.data
       const tree = buildTree(d.resume as RawResume)
-      const index = buildTermIndex(termsOf(d.spec, tree))
       /**
        * UNA EXCEPCIÓN TAMPOCO COBRA LA RANURA (QA, 2026-09-29). Un timeout o una
        * respuesta ilegible del modelo lanzaba antes de `bill()` y del reembolso:
@@ -364,23 +366,24 @@ export async function POST(req: Request) {
       let result: Awaited<ReturnType<typeof runRewrite>>
       try {
         result = await runRewrite({
-        tree,
-        nodeId: d.nodeId,
-        spec: d.spec,
-        ledger: openLedger(tree, d.spec, new Set(d.covered)),
-        index,
-        language: d.language,
-        model,
-        jdKey: cacheKey.jd(d.jobDescription, model),
-        focus: d.focus,
-        mustWrite: d.mustWrite,
-        avoidOpener: d.avoidOpener,
-        wantsSize: d.wantsSize,
-        axes: d.axes,
-        told: d.told,
-        ai,
-        store,
-      })
+          tree,
+          nodeId: d.nodeId,
+          spec: d.spec,
+          language: d.language,
+          model: modelos,
+          jdKey: cacheKey.jd(d.jobDescription, modelos),
+          reason: d.reason,
+          instruction: d.instruction,
+          facts: d.facts,
+          terms: d.terms,
+          needsFigure: d.needsFigure,
+          told: d.told,
+          propone: d.propone,
+          logro: d.logro,
+          nueva: d.nueva,
+          ai,
+          store,
+        })
       } catch (e) {
         bill()
         await refundDailyQuota(authResult.userId, cuenta, authResult.user.plan)
@@ -428,7 +431,7 @@ export async function POST(req: Request) {
       jdText: parsed.data.jobDescription,
       language: parsed.data.language,
       resumeId: parsed.data.resumeId,
-      model,
+      model: modelos,
       ai,
       store,
     })

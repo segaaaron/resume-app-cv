@@ -62,6 +62,15 @@ function texto(max: number) {
     .transform((v) => (v ?? "").slice(0, max))
 }
 
+/** Como `texto`, pero sin dato es null: una etiqueta larga se recorta, nunca tumba la respuesta. */
+function textoONull(max: number) {
+  return z
+    .string()
+    .nullish()
+    .catch(null)
+    .transform((v) => (v ? v.slice(0, max) : null))
+}
+
 /**
  * ── POR QUÉ ACÁ NO HAY UN SOLO `.nullable()` ────────────────────────────────
  *
@@ -167,7 +176,8 @@ export const PROMPT_VERSION = {
   // p1-14: un nombre que ya vive dentro de un requisito («Excel» en «Excel
   // avanzado») no se agrega otra vez. Lo guardado con p1-13 los duplicaba.
   // p1-15: un término vive en una sola lista (ver `JobSpecSchema`).
-  P1: "p1-16", // parser de vacante
+  // p1-17 (CEO, 2026-09-29): sin el agregado automático de nombres propios como requisitos.
+  P1: "p1-19", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -191,7 +201,13 @@ export const PROMPT_VERSION = {
   // p2-9 (2026-09-28): una viñeta que abre con «Ayudé con…»/«Participé en…» ya
   // no cuenta como verbo de acción (`opensWeakly` corrige el juicio).
   // p2-10 (2026-09-28): IMPLIED exige la línea citada; hasActionVerb cita `WEAK_OPENERS`; la blanda demostrada cita una viñeta, nunca el resumen.
-  P2: "p2-11", // auditoría
+  // p2-12 (CEO, 2026-09-29): el ATS decide por viñeta (mejorar/mantener/borrar) y por
+  // skill (demostrada/listada/falta), con la instrucción que Tailor ejecuta.
+  P2: "p2-20", // diagnóstico
+  // p3-1 (CEO, 2026-09-29): las herramientas de las habilidades que cada trabajo
+  // usó sin nombrarlas. Separado del diagnóstico: dentro de él el modelo no las
+  // cruzaba (medido: 1 de 42 viñetas) y declaraba frases del aviso como hechos.
+  P3: "p3-4", // herramientas por viñeta
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -233,7 +249,8 @@ export const PROMPT_VERSION = {
   // contar el resultado en la tarjeta, y el modelo declara `newBasis` de su línea.
   // p4-20 (CEO, 2026-09-28): la IA escribe resultado, método y términos; sólo las cifras son del candidato.
   // p4-21 (2026-09-28): lo que la línea ya nombra se queda; el término prometido va al lado.
-  P4: "p4-25", // reescritura de viñeta
+  // p4-26 (CEO, 2026-09-29): Tailor ejecuta la instrucción del ATS; tres reglas.
+  P4: "p4-36", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
@@ -254,7 +271,7 @@ export const PROMPT_VERSION = {
   // p5-14: la prueba llega en su propia sección, no mezclada en una lista.
   // p5-15: la antigüedad del resumen viejo no se exige conservar (se escribe la medida).
   // p5-16: la regla de verdad compartida (truthRule) ahora deja a la IA escribir todo salvo las cifras.
-  P5: "p5-16", // resumen
+  P5: "p5-17", // resumen
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -294,6 +311,16 @@ export function normalize(raw: string): string {
  * diferencian en eso (C, C++, C#). Quitarlos los volvería el mismo término y el
  * candidato recibiría cobertura que no tiene.
  */
+/**
+ * ¿MISMA PALABRA POR SU RAÍZ? Las 4 primeras letras, o todas si alguna es más
+ * corta: «RESTful»/«REST», «tests»/«testing», «api»/«APIs». Menos de 3 letras
+ * tienen que ser iguales («UI» no es «UIKit»).
+ */
+export function mismaRaiz(a: string, b: string): boolean {
+  const k = Math.min(4, a.length, b.length)
+  return k >= 3 ? a.slice(0, k) === b.slice(0, k) : a === b
+}
+
 export function termKey(raw: string): string {
   return normalize(raw).replace(/\s+/g, "")
 }
@@ -351,31 +378,6 @@ function normalizeKeepCase(raw: string): string {
     .trim()
     .replace(/\s+/g, " ")
 }
-
-/**
- * CUÁNTOS TÉRMINOS DE LA VACANTE SUMA UNA VIÑETA (CEO, 2026-09-28).
- *
- * Una sola respuesta para el motor —cuántos requisitos le asigna a una línea— y
- * para el prompt —cuántos puede agregar—. Medido en producción: una viñeta de
- * Rappi recibió siete («…for AI/ML, automation pipelines, Kanban, agentic AI
- * workflows, CallKit, PushKit, and messaging») y en el banco de oficios el
- * modelo metía los cuatro términos del aviso en cada línea. Los reclutadores y
- * los ATS actuales castigan el relleno de palabras clave.
- */
-export const TERMS_PER_BULLET = 2
-
-/**
- * Marca del `detail` de un requisito que NINGUNA viñeta sostiene: la tarjeta lo
- * informa y Tailor no lo escribe, porque sería experiencia que el CV no tiene.
- * La leen el motor (`findingsOf`) y la pantalla (`view-model`).
- */
-export const SIN_RESPALDO = "sin_respaldo"
-/**
- * Marca del `detail` de un requisito que el CV nombra MAL ESCRITO («Objetive-C»
- * por «Objective-C»): un filtro no lo cuenta y la persona no lo sabe. La tarjeta
- * se lo dice; nadie lo corrige solo. Detalle: `mal_escrito:<como lo escribe el CV>`.
- */
-export const MAL_ESCRITO = "mal_escrito"
 
 export function buildTermIndex(terms: TermVariants[]): TermIndex {
   const byKey = new Map<string, string>()
@@ -528,7 +530,6 @@ export function specTerms(spec: JobSpec): TermVariants[] {
     const opciones = r.skill.split(/\s*\|\s*/).filter((o) => o.trim())
     const variants = [
       ...(` ${normalize(r.raw)} `.includes(` ${normalize(r.skill)} `) ? [] : [r.raw]),
-      ...("cvForms" in r && r.cvForms ? r.cvForms : []),
       ...(opciones.length > 1 ? opciones : []),
     ]
     const previo = out.find((o) => normalize(o.canonical) === normalize(r.skill))
@@ -560,7 +561,7 @@ export const RequirementSchema = z.object({
   years: z.number().int().min(0).max(50).nullish().transform((v) => v ?? null),
   /** Categoría libre, en las palabras del aviso: no hay taxonomía cerrada
    *  porque un aviso de soldadura no habla de "LANGUAGE" ni de "FRAMEWORK". */
-  category: z.string().max(40).nullish().transform((v) => v ?? null),
+  category: textoONull(40),
   /**
    * ¿SE EJERCE O SE TIENE?
    *
@@ -575,14 +576,6 @@ export const RequirementSchema = z.object({
    * caso de siempre—.
    */
   kind: z.enum(["capability", "credential"]).optional().catch(undefined),
-  /**
-   * CÓMO LO ESCRIBE ESTE CV, cuando es lo mismo escrito distinto («CoreData»
-   * por «Core Data», «SOLID design principles» por «SOLID principles»). No
-   * viene del aviso: lo juzga la auditoría y el motor lo agrega sólo después de
-   * comprobar que ese texto está en el CV. Es variante del índice como `raw`,
-   * así el puntaje, la tabla y Tailor cuentan lo mismo. Ver `conFormasDelCv`.
-   */
-  cvForms: z.array(z.string().max(80)).max(4).optional().catch(undefined),
 })
 
 export const JobSpecSchema = z.object({
@@ -591,10 +584,10 @@ export const JobSpecSchema = z.object({
   // 500 en pantalla. Medido en producción el 2026-08-29 sobre un aviso real.
   roleTitleRaw: texto(160),
   roleTitleCanonical: texto(160),
-  seniority: z.string().max(40).nullish().transform((v) => v ?? null),
+  seniority: textoONull(40),
   yearsRequired: z.number().int().min(0).max(50).nullish().transform((v) => v ?? null),
-  domain: z.string().max(60).nullish().transform((v) => v ?? null),
-  workMode: z.string().max(40).nullish().transform((v) => v ?? null),
+  domain: textoONull(60),
+  workMode: textoONull(40),
   language: z.enum(["es", "en"]).catch("es"),
   /**
    * QUÉ NÚMERO LE IMPORTA A ESTE PUESTO — volumen, monto, tiempo, rendimiento,
@@ -615,31 +608,20 @@ export const JobSpecSchema = z.object({
   responsibilities: lista(z.string().max(300), 30),
   softSignals: lista(z.string().max(160), 20),
   /**
-   * TODO NOMBRE PROPIO DE HERRAMIENTA, TECNOLOGÍA, NORMA O MÉTODO DEL AVISO.
-   *
-   * ── POR QUÉ SE DECLARA (medido contra la API el 2026-09-24) ───────────────
-   * La regla en prosa —«una herramienta nombrada en las responsabilidades
-   * también es un requisito»— no alcanzó en dos corridas: GraphQL, Clean
-   * Architecture y Crashlytics quedaban fuera de las dos listas, y en la
-   * segunda también Fastlane. Un campo vacío se nota; una regla salteada no deja
-   * rastro. El modelo DECLARA lo que nombra el aviso y el código garantiza que
-   * nada de eso quede fuera (ver la transformación de abajo).
+   * LO QUE TE FILTRA Y NO SE REDACTA (CEO, 2026-09-30): residir en un país,
+   * permiso de trabajo, un nivel de idioma obligatorio. Se avisa; no hay botón.
    */
-  namedTools: lista(z.string().max(80), 60),
-}).transform(({ namedTools, ...crudo }) => {
+  conditions: lista(
+    z.object({ kind: z.enum(["location", "language", "authorization", "other"]).catch("other"), text: z.string().max(200) }),
+    6,
+  ),
+}).transform((crudo) => {
   /**
    * UN TÉRMINO VIVE EN UNA SOLA LISTA.
    *
-   * Medido en local el 2026-09-24: el modelo puso Swift, SwiftUI y Combine en
-   * obligatorios Y en deseables. El puntaje los contaba dos veces en el
-   * denominador y la tarjeta caía en la sección que tocara. Si el aviso lo
-   * exige, es obligatorio; y una blanda no repite un requisito duro. La regla
-   * ya estaba escrita en el prompt («no repite algo que ya pusiste»): un prompt
-   * es una petición, esto es el contrato.
+   * Si el aviso lo exige, es obligatorio; y una blanda no repite un requisito
+   * duro. Una opción de una alternativa («Scrum | Kanban») también es su llave.
    */
-  // Cada opción de una alternativa («LLM-based services | Core ML») es también
-  // su llave: si el aviso ya la acepta como obligatoria, no se repite abajo
-  // como deseable (medido el 2026-09-29: «Core ML» salía en las dos listas).
   const llaves = (rs: { skill: string; raw: string }[]) =>
     new Set(rs.flatMap((r) => [termKey(r.skill), termKey(r.raw), ...r.skill.split(/\s*\|\s*/).map(termKey)]))
   const exigidos = llaves(crudo.mustHave)
@@ -647,42 +629,11 @@ export const JobSpecSchema = z.object({
     (r, i, xs) => !exigidos.has(termKey(r.skill)) && xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i,
   )
   const duros = new Set([...exigidos, ...llaves(niceToHave)])
-  const spec = {
+  return {
     ...crudo,
     mustHave: crudo.mustHave.filter((r, i, xs) => xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i),
     niceToHave,
     softSignals: crudo.softSignals.filter((x) => !duros.has(termKey(x))),
-  }
-  /**
-   * LO QUE EL AVISO NOMBRA Y NINGUNA LISTA TRAE, ENTRA COMO DESEABLE.
-   *
-   * Deseable y no obligatorio: la regla del parser ya dice «ante la duda,
-   * deseable», y el tope de peso impide que un deseable valga más que un
-   * obligatorio. Se compara con `termKey`, la llave de igualdad del motor, para
-   * que «CI/CD» y «ci-cd» no entren dos veces. El campo no viaja más allá: su
-   * trabajo termina acá.
-   */
-  // Un nombre que ya vive DENTRO de un requisito —«Excel» en «Excel avanzado»,
-  // medido en local el 2026-09-24— no es un requisito nuevo: agregarlo contaba
-  // el mismo pedido dos veces y abría dos tarjetas. Se busca como palabra, con
-  // la misma normalización del resto del motor.
-  const dichos = [...spec.mustHave, ...spec.niceToHave].map((r) => ` ${normalize(r.skill)} ${normalize(r.raw)} `)
-  const yaEsta = (t: string) => dichos.some((d) => d.includes(` ${normalize(t)} `))
-  const vistos = new Set<string>()
-  const faltan = namedTools
-    .map((t) => t.trim())
-    .filter((t) => {
-      const k = termKey(t)
-      if (!k || vistos.has(k) || yaEsta(t)) return false
-      vistos.add(k)
-      return true
-    })
-  return {
-    ...spec,
-    niceToHave: [
-      ...spec.niceToHave,
-      ...faltan.slice(0, Math.max(0, 40 - spec.niceToHave.length)).map((t) => ({ skill: t, raw: t, years: null, category: null, kind: "capability" as const })),
-    ],
   }
 })
 export type JobSpec = z.infer<typeof JobSpecSchema>
@@ -811,6 +762,14 @@ export function bulletIdFor(roleId: NodeId, text: string, seen: Set<NodeId>): No
  * calculara sobre el crudo, borrar un espacio doble o cambiar una coma
  * dispararía una corrida completa y el caché no serviría de nada.
  */
+/**
+ * UNA VIÑETA QUE TODAVÍA NO EXISTE: el lugar al final de un puesto donde la IA
+ * escribe una línea nueva (CEO, 2026-09-30: «puesto con menos de 6 viñetas → viñeta
+ * nueva»). Vacía hasta que la persona confirma.
+ */
+export const nuevaEn = (roleId: NodeId): NodeId => `nuevo:${roleId}`
+export const rolDeNueva = (id: NodeId): NodeId | null => (id.startsWith("nuevo:") ? id.slice(6) : null)
+
 export function nodeHash(text: string): string {
   return sha256(normalize(text)).slice(0, 16)
 }
@@ -823,90 +782,26 @@ export function nodeHash(text: string): string {
 // se ve nuevo. Se deriva del nodo, el tipo y la rúbrica.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Los tipos son del MOTOR, no de un oficio: describen qué le falta a un texto. */
-/** Los tipos son del MOTOR, no de un oficio: describen qué le falta a un texto. */
+/**
+ * LAS TARJETAS (CEO, 2026-09-29): el ATS decide y Tailor ejecuta.
+ *
+ * Una viñeta tiene UNA tarjeta, con la decisión del ATS sobre ella —mejorarla o
+ * borrarla— y lo que tiene que escribirse ahí (la instrucción, las skills del
+ * puesto, si lleva cifra). Las skills del puesto que el CV no respalda en
+ * ninguna línea son una pregunta a la persona. El resto —resumen, cargo, años,
+ * lectura del documento— es lo que ya existía.
+ */
 export const FINDING_TYPES = [
-  "missing_requirement", // la vacante lo exige y el CV no lo demuestra
-  /**
-   * Cubre los TRES ejes de la viñeta —verbo, resultado, método— y `detail` dice
-   * cuál falta. Hubo un tiempo `no_method` y `weak_opening` como tipos aparte:
-   * nadie los emitía nunca, porque una línea sin verbo o sin método sale por
-   * acá. Un tipo que ningún emisor produce es vocabulario muerto con clave i18n
-   * y sección asignada — promete una tarjeta que no puede existir.
-   */
-  "no_result", // le falta alguno de los tres ejes; `detail` dice cuál
-  "no_metric", // el logro admite tamaño y no lo declara
+  "improve_bullet", // el ATS dice que esta viñeta sirve y cómo mejorarla para el puesto
+  "remove_bullet", // el ATS dice que esta viñeta no sirve para el puesto o repite a otra
+  "missing_skill", // una skill que el puesto pide y el CV no muestra en ninguna línea
   "summary_gap", // al resumen le falta una de sus funciones
-  "parse_risk", // algo que un lector automático no va a extraer bien
-  "soft_not_shown", // la vacante la pide, el CV la declara y nada la respalda
-  /**
-   * ── LOS DOS QUE COBRABAN SIN REPORTAR (CEO, 2026-09-09) ────────────────────
-   * El puntaje descuenta por el cargo que no coincide (0,14 de la relevancia) y
-   * por los verbos repetidos (0,10 del impacto), y NINGÚN hallazgo declaraba
-   * esos componentes: un puntaje que cobra algo que no enseña a arreglar no es
-   * un puntaje, es un reproche con decimales.
-   */
   "title_mismatch", // el cargo que la vacante busca no está escrito en el CV
-  "verb_repeated", // ese verbo abre más de una viñeta
   "years_short", // la vacante pide más años de los que el CV prueba
-  "cliche", // una frase que podría estar en el CV de cualquiera
-  "role_too_long", // un puesto con más viñetas de las que se leen
+  "eligibility", // una condición que filtra y no se redacta: residencia, permiso, idioma obligatorio
+  "parse_risk", // algo que un lector automático no va a extraer bien
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
-
-/**
- * CÓMO SE ENCADENAN LOS DETALLES DE DOS HALLAZGOS FUSIONADOS.
- *
- * Vive acá, con el vocabulario, porque lo escribe el motor al fusionar y lo LEE
- * la pantalla para volver a separarlos: dos requisitos que caen en la misma
- * línea son una sola tarjeta —una sola reescritura los aterriza a los dos— pero
- * siguen siendo dos cosas que nombrar. Con el separador escrito en dos lugares,
- * el día que cambie la pantalla muestra «Combine · async/await» como si fuera el
- * nombre de una sola habilidad.
- */
-export const DETAIL_SEPARATOR = " · "
-
-/**
- * DE QUÉ TIPO VINO CADA PIEZA DE UN DETALLE FUSIONADO.
- *
- * ── EL DEFECTO QUE ESTO CIERRA (captura del CEO, 2026-09-11) ───────────────
- * La tarjeta decía «2 requirements the posting asks for are missing» y listaba
- * «first or early mobile hire at a startup» y «método». El segundo no era un
- * requisito: era el eje que le faltaba a la viñeta (`no_result`). Al fusionarse
- * en una tarjeta, el detalle se concatenaba y se perdía de qué tipo vino cada
- * pieza, así que la pantalla contó las dos como requisitos y pintó el token
- * crudo, en castellano, dentro de un CV en inglés.
- *
- * Ahora cada pieza fusionada viaja con su tipo, y quien la lee sabe qué es.
- * La marca es un carácter de control: nunca aparece en un CV ni en un aviso.
- */
-const TYPE_MARK = "\u001F"
-
-export interface DetailPart {
-  type: FindingType
-  detail: string
-}
-
-/** Las piezas de un detalle. Una sin marca es del tipo del hallazgo. */
-export function detailParts(f: { type: FindingType; detail: string }): DetailPart[] {
-  return f.detail
-    .split(DETAIL_SEPARATOR)
-    .map((pieza) => pieza.trim())
-    .filter(Boolean)
-    .map((pieza) => {
-      const corte = pieza.indexOf(TYPE_MARK)
-      return corte > 0
-        ? { type: pieza.slice(0, corte) as FindingType, detail: pieza.slice(corte + 1) }
-        : { type: f.type, detail: pieza }
-    })
-}
-
-/** El detalle de una tarjeta fusionada, con cada pieza marcada con su tipo. */
-export function encodeDetail(parts: DetailPart[]): string {
-  const llenas = parts.filter((p) => p.detail.trim())
-  if (llenas.length <= 1) return llenas[0]?.detail ?? ""
-  return llenas.map((p) => `${p.type}${TYPE_MARK}${p.detail}`).join(DETAIL_SEPARATOR)
-}
 
 /**
  * LA IDENTIDAD DE UN HALLAZGO.
@@ -931,84 +826,43 @@ export function findingId(nodeId: NodeId, type: FindingType, matiz?: string): st
 
 export interface Finding {
   id: string
-  /**
-   * DE QUÉ COMPONENTE DEL PUNTAJE SALE ESTE HALLAZGO.
-   *
-   * ── LA CLASE DE DEFECTO QUE CIERRA (auditoría del 2026-08-29) ────────────
-   * La pantalla agrupaba los hallazgos con un mapa PROPIO (tipo → sección) y
-   * pintaba el porcentaje de la sección con OTRO mapa. Los dos podían discrepar
-   * y discrepaban: el hallazgo del resumen caía bajo un porcentaje que medía la
-   * alineación del cargo, y la sección de redacción mostraba el % de uno solo de
-   * sus cuatro componentes. Un número que no habla de lo que lista debajo.
-   *
-   * Con esto el agrupamiento se DERIVA de la medición: el hallazgo dice de dónde
-   * salió su ganancia, y la sección que lo muestra es la del mismo componente.
-   * No hay forma de que el número y su contenido se separen.
-   */
+  /** De qué componente del puntaje sale su ganancia: así la sección y el número no discrepan. */
   component: ComponentKey
   /**
-   * CÓMO SE CIERRA ESTE HALLAZGO. Lo dice quien lo emite, no quien lo pinta.
-   *
-   * ── EL DEFECTO QUE CIERRA (hallado el 2026-08-29, y era mío) ──────────────
-   * Un hallazgo declaraba QUÉ está mal y la pantalla adivinaba la acción: todo
-   * terminaba en "reescribí esta línea". Con dos tipos nuevos eso pasó a ser
-   * una promesa falsa —reescribir la línea vieja no la desentierra, y reescribir
-   * la viñeta que ya demuestra un término no lo agrega a Habilidades—. Un botón
-   * que no arregla lo que la tarjeta dice es peor que no tener botón.
-   *
-   * El motor es el único que tiene el CV, la vacante y la auditoría a la vez, y
-   * por eso es el único que puede decir qué cierra cada cosa. Acá viaja.
-   *
-   *   rewrite   — reescribir el nodo señalado
-   *   weave     — mencionar `detail` en el nodo señalado, que es una línea del
-   *               puesto ACTUAL (el término vive en uno viejo)
-   * Hubo un `add_skill` —agregar un término suelto a Habilidades— y se retiró el
-   * 2026-09-09: la lista entera la decide `skillPlan` con el techo de veinte y
-   * los pesos del aviso, así que un remedio por término era la mitad de esa
-   * respuesta dada por otro dueño.
-   *
-   * ── LOS DOS QUE FALTABAN (2026-09-24, medido en producción) ──────────────
-   * Con un solo remedio, todo hallazgo terminaba en «reescribí esta línea», y
-   * eso mentía en dos casos:
-   *
-   *   ask  — la vacante pide algo de lo que el CV no tiene NINGÚN rastro. Pedir
-   *          una reescritura es pedirle al modelo que lo afirme: escribió
-   *          «applying security best practices for fintech apps» sobre un
-   *          puesto de 2015 que no era fintech. El hecho lo pone la persona —se
-   *          le pregunta si lo tiene y dónde— y recién ahí se redacta, por el
-   *          camino de una línea nueva en el puesto que la persona elige.
-   *   none — lo arregla un dato del documento (las fechas, el orden), no una
-   *          redacción. El botón de la tarjeta de fechas reescribía el RESUMEN.
+   * CÓMO SE CIERRA. Lo dice el motor, no la pantalla.
+   *   rewrite — Tailor reescribe la línea con la instrucción del ATS
+   *   remove  — se saca la línea, con confirmación y deshacer
+   *   ask     — se le pregunta a la persona; con su respuesta, Tailor escribe
+   *   none    — lo que ninguna redacción cierra (años, lectura del documento)
    */
-  remedy: "rewrite" | "none"
-  /**
-   * DE QUÉ habla, cuando no habla de la línea.
-   *
-   * Vacío = habla de la viñeta, y entonces vale "una línea, una tarjeta". Con
-   * sujeto —un término de la vacante— tiene tarjeta propia: su remedio es del
-   * término, no de la línea, y fusionarlo con otro lo perdía.
-   */
+  remedy: "rewrite" | "remove" | "ask" | "none"
+  /** De qué habla cuando no habla de una línea (una skill, el cargo). */
   subject?: string
-  /** El tipo del que reclamó la línea primero: el que da el título a la tarjeta. */
   type: FindingType
-  /**
-   * Los tipos que se FUSIONARON en esta misma tarjeta.
-   *
-   * Una línea tiene UNA tarjeta —dos sobre lo mismo se leen como que el panel se
-   * contradice— pero el que llega segundo no se tira: descartarlo silenciaría al
-   * emisor entero, y los requisitos que faltan aterrizan casi siempre sobre
-   * líneas que ya tienen tarjeta.
-   */
-  merged: FindingType[]
   nodeId: NodeId
-  /** El texto de la línea AL DETECTARLA. El índice es una pista; el texto es la
-   *  identidad, y es lo que permite re-anclar si algo se movió. */
+  /** El texto de la línea al detectarla: es su identidad si algo se movió. */
   nodeText: string
-  /** El hash del texto al detectarlo. Ver BulletNode.hash. */
   nodeHash: string
   /** Cuánto sube el puntaje si se cierra. Lo calcula score.ts, nunca el modelo. */
   gain: number
+  /** Dato corto del motor (el chequeo que falló, la función del resumen, los años). */
   detail: string
+  /** Por qué, dicho por el ATS en el idioma del CV. */
+  reason?: string
+  /** Qué tiene que decir la línea nueva, dicho por el ATS: es lo que Tailor ejecuta. */
+  instruction?: string
+  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
+  facts?: string[]
+  /** Las skills del puesto que el ATS decidió escribir en esta línea. */
+  terms?: string[]
+  /** La línea abre con una fórmula de tarea («Responsable de…»): Tailor la cambia por un verbo de acción. */
+  weakOpener?: boolean
+  /** Este puesto necesita la cifra de este logro: Tailor deja el hueco para la persona. */
+  needsFigure?: boolean
+  /** La línea dice qué se hizo y no qué logró: Tailor agrega el logro (X-Y-Z). */
+  needsOutcome?: boolean
+  /** `ask`: la pregunta del ATS a la persona. */
+  question?: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1124,53 +978,10 @@ export const SuggestionSchema = z.object({
    * `null` es una respuesta legítima: hay trabajos sin tamaño evidente, y
    * forzar una cifra ahí es peor que no ponerla.
    */
-  measurableAspect: z.string().max(160).nullish().transform((v) => v ?? null),
+  measurableAspect: textoONull(160),
 
-  /**
-   * POR QUÉ DECLINA, CUANDO DECLINA — los tres ejes, declarados.
-   *
-   * ── MEDIDO CONTRA LA API (2026-08-29) ──────────────────────────────────────
-   * El modelo devolvió "ya está bien" sobre "Participé en las reuniones con los
-   * padres" —una apertura que el propio prompt prohíbe— y sobre "Di la
-   * medicación", tres palabras sin resultado ni método. Reforzar la regla en
-   * prosa no lo movió: en la corrida siguiente volvió a declinar.
-   *
-   * Lo que sí mueve a un modelo es pedirle que DECLARE antes de contestar: una
-   * regla en prosa se saltea sin dejar rastro, un campo vacío no. Y deja al
-   * motor comprobar la coherencia — declinar diciendo que falta el método es
-   * una contradicción que el código puede ver y devolver.
-   *
-   * `null` es legítimo cuando SÍ reescribe: los ejes describen a la original.
-   */
-  declineBasis: z
-    .object({
-      hasActionVerb: bandera(),
-      hasResult: bandera(),
-      hasMethod: bandera(),
-    })
-    .nullish()
-    .transform((v) => v ?? null),
-  /**
-   * LOS TRES EJES DE LA LÍNEA NUEVA, declarados por quien la escribió.
-   *
-   * La tarjeta promete ejes —«no dice en qué terminó»— y viajaban como prosa:
-   * el modelo, sin un resultado verdadero que escribir, rellenaba con una
-   * palabra de la vacante («Resolví reclamos de clientes con atención al
-   * cliente», medido el 2026-09-28) y nada lo veía. Declarados, el motor
-   * compara contra lo prometido y, si falta el resultado, se le pide el dato a
-   * la persona en vez de entregar relleno. Omitido, cuenta como no cumplido.
-   */
-  newBasis: z
-    .object({
-      hasActionVerb: bandera(),
-      hasResult: bandera(),
-      hasMethod: bandera(),
-    })
-    .nullish(),
 })
 export type Suggestion = z.infer<typeof SuggestionSchema>
-/** Los ejes de una viñeta, con el nombre con el que el motor los marca en un hallazgo. */
-export type Axis = "verbo" | "resultado" | "método"
 
 /** Lo que el motor le agrega a una sugerencia. El modelo no lo puede escribir. */
 export interface AnchoredSuggestion extends Suggestion {

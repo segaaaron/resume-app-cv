@@ -40,21 +40,23 @@
 // motor recalculando sobre una copia.
 
 import { z } from "zod"
-import { opensWeakly, WEAK_OPENERS_EN, WEAK_OPENERS_ES } from "@/lib/services/ai/shared/empty-phrasing"
+import { statesQuantity } from "@/lib/ats3/score"
+import { WEAK_OPENERS_EN, WEAK_OPENERS_ES } from "@/lib/services/ai/shared/empty-phrasing"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import {
   bandera,
+  mismaRaiz,
+  normalize,
   type PromptId,
   JobSpecSchema,
   SuggestionSchema,
   type JobSpec,
   type ResumeTree,
   type Suggestion,
-  TERMS_PER_BULLET,
 } from "@/lib/ats3/contracts"
 import type { AtsAi, RewriteInput, SummaryInput } from "@/lib/ats3/engine"
 import type { AuditFacts } from "@/lib/ats3/score"
-import { saturatedMetricTypes, type Ledger } from "@/lib/ats3/ledger"
+import { BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN } from "@/lib/ats3/ledger"
 
 export type Lang = "es" | "en"
 
@@ -102,11 +104,43 @@ const AuditSchema = z.object({
   bullets: listaDe(
     z.object({
       id: z.string().max(64),
-      hasActionVerb: bandera(),
-      hasResult: bandera(),
-      hasMethod: bandera(),
+      // Lo que no reconocemos se mantiene: borrar o reescribir sin una decisión
+      // clara sería actuar sobre la línea de alguien sin motivo.
+      decision: z.enum(["keep", "improve", "remove"]).catch("keep"),
+      reason: z.string().max(400).nullish().catch(null).transform((v) => v?.trim() ?? ""),
+      instruction: z.string().max(800).nullish().catch(null).transform((v) => v?.trim() || null),
+      needsFigure: bandera(false),
     }),
     80,
+  ),
+  hard: listaDe(
+    z.object({
+      ref: z.string().max(8),
+      // Lo que no reconocemos no se da por cubierto.
+      status: z.enum(["demonstrated", "listed", "missing"]).catch("missing"),
+      evidenceNodeId: z.string().max(64).nullish().catch(null).transform((v) => v ?? null),
+      writeIn: z.string().max(64).nullish().catch(null).transform((v) => v ?? null),
+      question: z.string().max(300).nullish().catch(null).transform((v) => v?.trim() || null),
+    }),
+    80,
+  ),
+  soft: listaDe(
+    z.object({
+      ref: z.string().max(8),
+      status: z.enum(["demonstrated", "listed", "missing"]).catch("missing"),
+      evidenceNodeId: z.string().max(64).nullish().catch(null).transform((v) => v ?? null),
+      writeIn: z.string().max(64).nullish().catch(null).transform((v) => v ?? null),
+    }),
+    30,
+  ),
+  conditions: listaDe(
+    z.object({
+      ref: z.string().max(8),
+      // Lo que no reconocemos no se da por cumplido.
+      met: z.enum(["yes", "no", "unknown"]).catch("unknown"),
+      cvSays: z.string().max(200).nullish().catch(null).transform((v) => v?.trim() || null),
+    }),
+    6,
   ),
   summary: z
     .object({
@@ -117,30 +151,6 @@ const AuditSchema = z.object({
     })
     .nullish()
     .transform((v) => v ?? { identity: false, proof: false, fit: false, extra: false }),
-  coverage: listaDe(
-      z.object({
-        // La referencia del requisito en la lista que se le mandó (M1, N2…).
-        // El nombre lo pone la vacante, no el modelo: ver `audit`.
-        ref: z.string().max(8),
-        // Un estado que no reconocemos NO cuenta como cubierto: decirle a
-        // alguien que cubre un requisito que no cubre es el error caro.
-        status: z.enum(["FOUND", "IMPLIED", "NOT_FOUND"]).catch("NOT_FOUND"),
-        evidenceNodeId: z.string().max(64).nullish().transform((v) => v ?? null),
-        // Cómo lo nombra el CV si no lo escribe como el aviso. El motor comprueba
-        // que ese texto esté en el CV antes de usarlo: ver `coverageOf`.
-        cvWording: z.string().max(80).nullish().catch(null).transform((v) => v ?? null),
-        match: z.enum(["SAME", "EQUIVALENT", "MISSPELLED"]).nullish().catch(null).transform((v) => v ?? null),
-      }),
-    80,
-  ),
-  softCoverage: listaDe(
-    z.object({
-      ref: z.string().max(8),
-      status: z.enum(["DEMONSTRATED", "DECLARED_ONLY", "ABSENT"]).catch("ABSENT"),
-      evidenceNodeId: z.string().max(64).nullish().transform((v) => v ?? null),
-    }),
-    30,
-  ),
 })
 
 
@@ -189,43 +199,20 @@ export function truthRule(lang: Lang): string {
 
 /** La regla de la cifra: el hueco lo propone el modelo, el número lo pone quien lo vivió. */
 export function figureRule(lang: Lang): string {
+  // Corta a propósito: escrita para la edición mínima (CEO, 2026-09-29). La versión
+  // larga era de cuando Tailor reescribía libre, y chocaba con conservar la línea.
   return lang === "en"
     ? [
-        // Los tokens de ejemplo estaban EN ESPAÑOL dentro del prompt inglés, y
-        // el modelo los copió tal cual: un CV en inglés recibió "[n/semana]".
-        // Medido contra la API el 2026-08-29.
-        "NUMBERS: you never write a figure the candidate did not give. When the achievement obviously has a size, you propose a TYPED SLOT and declare it: [x%], [n], [from x to y], [$x], [n people], [n/week], [x/y].",
-        "A FIGURE THE ORIGINAL LINE ALREADY STATES IS COPIED EXACTLY — same number, same unit. It is never turned into a slot and never removed: it is the candidate's data. A slot is only for a size the line does NOT state.",
-        "Each slot carries its type, a label, a hint of what range is believable FOR THIS KIND OF WORK, and what evidence the candidate would check. At most two slots per line; both may be required — the candidate fills them in before anything is written.",
-        "THOSE FOUR FIELDS LIVE IN THEIR OWN OBJECT, NEVER IN THE TEXT. The line carries the token and nothing else — no type in brackets, no label, hint or evidence in parentheses or after a dash. What you write in `text` is what gets printed on someone's résumé.",
-        "The hint SAYS OUT LOUD that an approximate figure or a range is enough — most people abandon the field believing they need the exact number, and a bullet with a rough size beats one with none. The approximation is the candidate's to give: you never write one.",
-        "A range the user confirms is theirs. A number you decided is not.",
-        "",
-        "FIRST FIELD YOU WRITE: `measurableAspect`. Before drafting anything, answer in a few words WHAT CAN BE MEASURED about this work, using the words of THIS line and no others. If the posting carries `metricThatMatters`, pick from this line whatever comes closest to THAT yardstick: the figure that moves an application is the one the role cares about, not any figure. The dimensions are always the same — how much, how often, in how long, over what scope, from what to what — and the unit is whatever this work is counted in. If there is truly nothing measurable, write null: that is a valid answer — EXCEPT when the input says THIS LINE CARRIES ITS SIZE: the ATS already measured that this work has a size, so null is not an answer there; pick the dimension that fits best and offer its slot.",
-        "And if you wrote something in `measurableAspect`, the line CARRIES its typed slot for it — unless the original line already states that figure, in which case the figure itself stays. Declaring a size and not offering it is the worst of both worlds: no figure, and no honest line either.",
-        "`variantWithoutMetric`: only when the line carries a slot — the same line without the slot, keeping every figure the original already had. With no slot, null.",
-        "",
-        "WHEN TO PROPOSE A SLOT — not optional when the work HAS a size:",
-        "Almost every job is measured in something, and saying so is what separates a line that convinces from one that merely describes. Before answering, ask: how often? how much of it? over how long? how far does it reach? from what to what did it change?",
-        "If the answer is obvious FOR THAT TRADE, propose the slot with its believable range. If there is truly nothing to measure, leave the line without one: forcing it is worse than omitting it.",
-        "Measured on real résumés: without this instruction NOT ONE slot was proposed across fifteen lines, and nearly all of them had an obvious size stated in their own words.",
+        "FIGURES: you never write a number the candidate did not give. A figure the line already states is copied exactly.",
+        "When the figure is asked for (THIS LINE CARRIES ITS SIZE), a TYPED SLOT goes in: [x%], [n], [$x], [n people], [n/week], [from x to y]. If the input says THIS LINE CARRIES ITS SIZE, the slot is MANDATORY: a line without it is not delivered. It sits right next to the result it measures, with its connector and without repeating that result: 'reducing crashes by [x%]', 'mentored [n] junior developers'; never hanging at the end or after a comma.",
+        "Each slot goes in `placeholders` with token (the exact slot text), type, label, hint and evidenceNeeded. The hint says an approximate figure or a range is enough: the person writes the number, you never write one. `evidenceNeeded` says WHERE the person finds that number in their own work — the system, report or tool of their trade where it lives (for an app: its analytics or crash reports; for a cashier: the closing report) —, in one short sentence. At most two slots.",
+        "`variantWithoutMetric`: the same line without the slot, keeping every figure it already had; with no slot, null. `measurableAspect`: what the slot measures in a few words, or null.",
       ].join("\n")
     : [
-        "CIFRAS: nunca escribís un número que el candidato no dio. Cuando el logro tiene un tamaño evidente, proponés un HUECO TIPADO y lo declarás: [x%], [n], [de x a y], [$x], [n personas], [n/semana], [x/y].",
-        "UNA CIFRA QUE LA LÍNEA ORIGINAL YA DICE SE COPIA TAL CUAL — el mismo número, la misma unidad. Nunca se vuelve un hueco ni se borra: es un dato del candidato. El hueco es sólo para un tamaño que la línea NO dice.",
-        "Cada hueco lleva su tipo, una etiqueta, una pista de qué rango sería creíble PARA ESTE TIPO DE TRABAJO, y qué evidencia tendría que mirar el candidato. Máximo dos huecos por línea; los dos pueden ser obligatorios — el candidato los completa antes de que se escriba nada.",
-        "ESOS CUATRO CAMPOS VIVEN EN SU OBJETO, NUNCA EN EL TEXTO. La línea lleva el token y nada más: ni el tipo entre corchetes, ni la etiqueta, la pista o la evidencia entre paréntesis o después de un guion. Lo que escribís en `text` es lo que se imprime en el currículum de alguien.",
-        "La pista DICE EXPLÍCITAMENTE que un aproximado o un rango alcanza — la mayoría abandona el campo creyendo que necesita el número exacto, y una línea con un tamaño aproximado vale más que una sin ninguno. El aproximado lo pone el candidato: vos no escribís uno.",
-        "Un rango que el usuario confirma es suyo; un número que decidiste vos, no.",
-        "",
-        "PRIMER CAMPO QUE ESCRIBÍS: `measurableAspect`. Antes de redactar nada, contestá en pocas palabras QUÉ SE PUEDE MEDIR de este trabajo, usando las palabras DE ESTA LÍNEA y ninguna otra. Si la vacante trae `metricThatMatters`, elegí de esta línea lo que se acerque A ESA vara: la cifra que mueve una candidatura es la que al puesto le importa, no cualquiera. Las dimensiones son siempre las mismas —cuánto, cada cuánto, en cuánto tiempo, sobre qué alcance, de cuánto a cuánto— y la unidad es aquello en lo que se cuenta este trabajo. Si de verdad no hay nada medible, escribí null: es una respuesta válida — SALVO cuando la entrada dice ESTA LÍNEA LLEVA SU TAMAÑO: el ATS ya midió que este trabajo tiene un tamaño, así que ahí null no es respuesta; elegí la dimensión que mejor encaje y ofrecé su hueco.",
-        "Y si escribiste algo en `measurableAspect`, la línea LLEVA su hueco tipado para eso — salvo que la línea original ya diga esa cifra: entonces queda la cifra. Declarar que hay un tamaño y no ofrecerlo es el peor de los dos mundos: ni la cifra, ni la línea honesta.",
-        "`variantWithoutMetric`: sólo cuando la línea lleva un hueco — la misma línea sin el hueco, conservando toda cifra que el original ya tenía. Sin hueco, null.",
-        "",
-        "CUÁNDO PROPONER UN HUECO — no es opcional cuando el trabajo TIENE un tamaño:",
-        "Casi todo trabajo se mide en algo, y decirlo es lo que separa una línea que convence de una que sólo describe. Antes de devolver, preguntate: ¿cada cuánto? ¿cuánta cantidad? ¿en cuánto tiempo? ¿sobre qué alcance? ¿de cuánto a cuánto cambió?",
-        "Si la respuesta es evidente PARA ESE OFICIO, proponé el hueco con su rango creíble. Si de verdad no hay nada que medir, dejá la línea sin hueco: forzarlo es peor que no ponerlo.",
-        "Medido sobre CVs reales: sin esta instrucción no se propuso NI UN hueco en quince líneas, y casi todas tenían un tamaño evidente dicho con sus propias palabras.",
+        "CIFRAS: nunca escribís un número que el candidato no dio. Una cifra que la línea ya dice se copia tal cual.",
+        "Cuando se pide la cifra (ESTA LÍNEA LLEVA SU TAMAÑO), va un HUECO TIPADO: [x%], [n], [$x], [n personas], [n/semana], [de x a y]. Si la entrada dice ESTA LÍNEA LLEVA SU TAMAÑO, el hueco es OBLIGATORIO: una línea sin él no se entrega. Va pegado al resultado que mide, con su conector y sin repetir ese resultado: «reduciendo errores en un [x%]», «capacité a [n] personas»; nunca suelto al final ni después de una coma.",
+        "Cada hueco va en `placeholders` con token (el texto exacto del hueco), type, label, hint y evidenceNeeded. La pista dice que un aproximado o un rango alcanza: el número lo pone la persona, vos no escribís uno. `evidenceNeeded` dice DÓNDE encuentra la persona ese número en su propio trabajo —el sistema, reporte o herramienta de su oficio donde vive (en una app: su analítica o sus reportes de fallas; en una caja: el reporte de cierre)—, en una frase corta. Máximo dos huecos.",
+        "`variantWithoutMetric`: la misma línea sin el hueco, conservando las cifras que ya tenía; sin hueco, null. `measurableAspect`: qué mide el hueco en pocas palabras, o null.",
       ].join("\n")
 }
 
@@ -246,12 +233,14 @@ export function jobPrompt(lang: Lang): string {
     "4d. Leé el aviso ENTERO, y antes de devolver hacé este recorrido: por cada responsabilidad y cada oración de la descripción, anotá TODA herramienta, tecnología, norma o método que nombra con nombre propio —en un aviso de cocina «HACCP» o «horno de convección», en uno de desarrollo «GraphQL» o «Clean Architecture»— y ponela en mustHave o niceToHave, aunque no esté bajo el encabezado de requisitos. Cuál lista: si el aviso TIENE secciones de requisitos, lo que sólo se nombra FUERA de ellas —en las responsabilidades o la descripción— es DESEABLE; si el aviso no tiene ninguna sección así, decidí con las reglas 1 a 3. Es sección de requisitos TODA lista de lo que el puesto pide, se llame como se llame y aunque haya varias: «Requisitos», «Excluyentes», «Key Skills», «Skills», «Stack», «Conocimientos», «Lo que buscamos», «Must have»; lo que está en cualquiera de ellas es OBLIGATORIO. Sólo «Deseable», «Plus», «Nice to have», «Preferred» o similares son DESEABLES. La misma vacante tiene que dar siempre las mismas dos listas. Si un nombre propio del aviso no quedó en ninguna de las dos, falta.",
     "4e. `responsibilities` copia cada responsabilidad CON los nombres que trae: «Integrar APIs REST y GraphQL», no «Integrar APIs». Resumirla borra justo lo que el filtro compara.",
     "4g. `kind` de cada requisito: \"capability\" si es algo que se HACE en un puesto —una herramienta, una técnica, una tarea— o \"credential\" si es algo que se TIENE —una licencia, un título, una certificación, un idioma, un permiso de trabajo—.",
-    "4f. `namedTools`: la lista de TODOS los nombres propios de herramientas, tecnologías, normas o métodos que el aviso escribe, en cualquier parte, tal como los escribe. Es un recuento de lo que el texto escribe, no un juicio: si está escrito con nombre propio, va.",
+    "4h. CADA RENGLÓN DE UNA SECCIÓN DE REQUISITOS da al menos un requisito, con su nombre: «Conocimiento de diseño de APIs y arquitectura de SDKs» son dos requisitos («diseño de APIs», «arquitectura de SDKs»). Un requisito es algo que un reclutador verifica en un CV —herramienta, tecnología, práctica, dominio, credencial—; una frase que describe el trabajo de cualquiera («soluciones técnicas», «bases de código grandes y complejas», «equipos multidisciplinarios») no lo es y queda en `responsibilities`.",
     "5. Si un dato no está en el aviso, devolvé null. NUNCA lo deduzcas.",
     "6. No agregues categorías técnicas donde no las hay: la categoría es una palabra del propio aviso, o null.",
     "6b. ORDENÁ las dos listas por PESO REAL, no por el orden en que aparecen: pesa más lo que el aviso repite y lo que enuncia al abrir la descripción; pesa menos lo que queda al final de una enumeración. La primera de la lista es la que el motor va a atender primero, así que el orden es una decisión, no un detalle.",
     "7. `metricThatMatters`: en pocas palabras, QUÉ NÚMERO le importa a este puesto según el aviso — volumen, monto, tiempo, rendimiento, personas o crecimiento— dicho con las palabras del propio aviso. Es la vara con la que después se le pide una cifra al candidato: preguntarle por algo que a este puesto no le importa es hacerle perder el tiempo. Si el aviso no dice cómo se mide el éxito, null.",
     "8. `softSignals`: SÓLO cualidades PERSONALES que el aviso le pide a la persona —cómo trabaja: autonomía, trabajo en equipo, comunicación, atención al detalle—, dichas como sustantivo o frase nominal corta —una a tres palabras— con las del propio aviso: «colaboración», «trabajo en equipo», «comunicación escrita»; nunca un adverbio ni un verbo («colaborativamente», «colaborar»), que no se puede escribir dentro de un logro: si el aviso lo dice así, escribí el sustantivo («colaboración»). NO es una blanda: una responsabilidad o tarea del puesto, una herramienta, un requisito técnico, ni una propiedad del RESULTADO (que la interfaz sea fiel al diseño, que el producto sea accesible, que el código esté probado): eso describe el trabajo o el entregable, no a la persona, y después no hay logro que pueda demostrarlo. Cada señal entra una sola vez y no repite algo que ya pusiste en mustHave o niceToHave. Si el aviso no pide ninguna cualidad personal, devolvé la lista vacía: es una respuesta correcta y esperada.",
+    "9. `roleTitleRaw`: SÓLO el nombre del puesto como el aviso lo escribe («iOS Developer»), sin la empresa, la modalidad, la ubicación ni frases como «is hiring», «busca» o «se necesita». `roleTitleCanonical`: ese mismo nombre, normalizado.",
+    "10. `conditions`: las condiciones que el aviso pone para ser contratado y que no son una habilidad: residir en un país o región («sólo territorio nacional»), permiso de trabajo, un nivel de idioma obligatorio («inglés fluido, no negociable»). `kind`: location, language, authorization u other. `text`: la condición en una frase corta en el idioma del aviso. Sólo si el aviso la exige; una preferencia no va. Una condición de idioma también puede estar en mustHave: acá va además, porque filtra.",
     noScoreRule("es"),
   ]
   const en = [
@@ -270,157 +259,159 @@ export function jobPrompt(lang: Lang): string {
     "4d. Read the WHOLE ad, and before returning walk through it: for every responsibility and every sentence of the description, note EVERY tool, technology, standard or method it names by its proper name — in a kitchen ad \"HACCP\" or \"convection oven\", in a software ad \"GraphQL\" or \"Clean Architecture\" — and put it in mustHave or niceToHave, even outside the requirements heading. Which list: if the ad HAS requirements sections, what is named only OUTSIDE them — in the responsibilities or the description — is NICE-TO-HAVE; if the ad has no such section, decide with rules 1 to 3. A requirements section is ANY list of what the role asks for, whatever its name and even if there are several: \"Requirements\", \"Required\", \"Key Skills\", \"Skills\", \"Tech stack\", \"What we look for\", \"Must have\"; whatever sits in any of them is MUST-HAVE. Only \"Nice to have\", \"Preferred\", \"Bonus\", \"Plus\" or similar are NICE-TO-HAVE. The same posting must always yield the same two lists. If a proper name from the ad is in neither list, it is missing.",
     "4e. `responsibilities` copies each responsibility WITH the names it carries: \"Integrate REST and GraphQL APIs\", not \"Integrate APIs\". Summarising it erases exactly what the filter compares.",
     "4g. Each requirement's `kind`: \"capability\" if it is something DONE in a role — a tool, a technique, a task — or \"credential\" if it is something one HAS — a licence, a degree, a certification, a language, a work permit.",
-    "4f. `namedTools`: the list of ALL proper names of tools, technologies, standards or methods the ad writes, anywhere, as it writes them. It is a tally of what the text writes, not a judgement: if it is written as a proper name, it goes in.",
+    "4h. EVERY LINE OF A REQUIREMENTS SECTION yields at least one requirement, with its name: \"Knowledge of API design and SDK architecture\" is two requirements (\"API design\", \"SDK architecture\"). A requirement is something a recruiter checks on a CV — tool, technology, practice, domain, credential —; a phrase describing anyone's work (\"technical solutions\", \"large and complex codebases\", \"multidisciplinary teams\") is not, and stays in `responsibilities`.",
     "5. If the ad does not state something, return null. NEVER infer it.",
     "6. Do not add technical categories where there are none: the category is a word from the ad itself, or null.",
     "6b. ORDER both lists by REAL WEIGHT, not by order of appearance: what the ad repeats and what it states when opening the description weighs more; what trails at the end of an enumeration weighs less. The first item is the one the engine works on first, so the order is a decision, not a detail.",
     "7. `metricThatMatters`: in a few words, WHICH NUMBER this role cares about according to the ad — volume, money, time, performance, people or growth — said in the ad's own words. It is the yardstick used later to ask the candidate for a figure: asking about something this role does not care about wastes their time. If the ad never says how success is measured, null.",
     "8. `softSignals`: ONLY PERSONAL qualities the ad asks of the person — how they work: autonomy, teamwork, communication, attention to detail — stated as a noun or short noun phrase — one to three words — in the ad's own wording: \"collaboration\", \"teamwork\", \"written communication\"; never an adverb or a verb (\"collaboratively\", \"collaborate\"), which cannot be written inside an achievement: if the ad says it that way, write the noun (\"collaboration\"). NOT a soft skill: a responsibility or task of the role, a tool, a technical requirement, or a property of the OUTPUT (that the UI matches the design, that the product be accessible, that the code be tested): that describes the work or the deliverable, not the person, and no achievement can later evidence it. Each signal appears once and does not repeat something already listed in mustHave or niceToHave. If the ad asks for no personal quality, return an empty list: that is a correct and expected answer.",
+    "9. `roleTitleRaw`: ONLY the job title as the ad writes it (\"iOS Developer\"), without the company, work mode, location or phrases like \"is hiring\" or \"we are looking for\". `roleTitleCanonical`: that same title, normalized.",
+    "10. `conditions`: the conditions the ad sets to be hired that are not a skill: living in a country or region ('national territory only'), work authorization, a mandatory language level ('fluent English, not flexible'). `kind`: location, language, authorization or other. `text`: the condition in one short sentence in the ad's language. Only if the ad requires it; a preference does not go here. A language condition may also be in mustHave: it goes here too, because it filters.",
     noScoreRule("en"),
   ]
   return (lang === "en" ? en : es).join("\n")
 }
 
 export function auditPrompt(lang: Lang): string {
+  /**
+   * CORTO A PROPÓSITO (CEO, 2026-09-29). Llegó a 13.000 caracteres de reglas
+   * agregadas de a una, y pedía una «instrucción» libre por viñeta que después
+   * nadie usaba: el modelo obedecía poco, variaba entre corridas y tardaba. Pide
+   * sólo lo que el motor usa. Lo que se agrega a una línea lo deciden P3 y el código.
+   */
   const es = [
-    "Sos un auditor de currículums. Comparás el CV estructurado contra la vacante estructurada y devolvés hallazgos CON EVIDENCIA.",
+    "Sos un experto en selección de personal y en ATS. Leés el CV entero contra ESTA vacante, del oficio que sea, y decidís tres cosas. Nada más.",
     noScoreRule("es"),
     "",
-    "REGLAS",
-    "1. Una habilidad está FOUND sólo si el CV la escribe y podés citar dónde: el id del nodo (viñeta o `summary`), o —si vive en `declaredSkills` u `otherSections`— evidenceNodeId en null y su texto en `cvWording`. Sin cita ni texto, es NOT_FOUND.",
-    "2. Tres estados, y la diferencia importa: FOUND (el CV lo dice con palabras que un lector literal reconocería, y podés citar el nodo), IMPLIED (el trabajo descrito en UNA línea que citás lo demuestra, pero el CV no lo NOMBRA), NOT_FOUND (no hay rastro). IMPLIED sin el id de esa línea es NOT_FOUND —salvo el EQUIVALENT de la regla 10, que puede vivir en `declaredSkills` u `otherSections`—: la línea citada es donde después se escribe el término.",
-    "2b. La frontera es lo que el filtro puede ver, no lo que vos entendés: si hay que razonar para llegar del texto al término, es IMPLIED. Marcar FOUND por comprensión propia es decirle a alguien que está cubierto cuando el filtro lo va a descartar.",
-    "3. NUNCA marques IMPLIED por parecido de nombre entre dos cosas DISTINTAS: un torno no implica una fresadora, Java no implica JavaScript, atender el teléfono (una tarea) no implica atención al cliente (una capacidad). Otra cosa es que el CV nombre con OTRAS palabras la MISMA capacidad: eso es la regla 10, no esta.",
-    "4. Por cada viñeta evaluá TRES ejes por separado, con true o false:",
-    `   hasActionVerb — abre gobernada por un verbo que dice lo que la persona hizo, no por un sintagma nominal ni por una fórmula de tarea: abrir con ${WEAK_OPENERS_ES.map((o) => `'${o}'`).join(", ")} es false`,
-    "   hasResult     — dice qué CAMBIÓ, no sólo qué hizo",
-    "   hasMethod     — dice con qué herramienta, técnica o enfoque",
-    "5. Por cada habilidad BLANDA que la vacante pide, un estado: DEMONSTRATED (una viñeta de experiencia —nunca el resumen— la evidencia con un logro, y citás el id de esa viñeta), DECLARED_ONLY (aparece como adjetivo o en una lista, sin ningún logro que la respalde), ABSENT (no hay rastro). Una blanda NO se cumple porque la palabra esté escrita: así se cumple sólo en la lista de adjetivos que todo reclutador saltea. Sin id de línea, nunca es DEMONSTRATED.",
-    "6. El resumen se juzga en cuatro funciones: identity (quién es y cuántos años), proof (un logro concreto), fit (la conexión con lo que la vacante pide), extra (dominio, idioma o credencial que la vacante pida).",
-    "7. Contestá POR REFERENCIA: cada requisito de la vacante trae su `ref` (M1, N1…) y cada blanda la suya (S1…). Devolvé una entrada por CADA referencia, con esa `ref` y nada más para nombrarla. No agregues requisitos ni blandas que la lista no trae.",
-    "8. Juzgá TODAS las viñetas del CV, una entrada por cada id. Una viñeta sin juicio no se puede mejorar ni contar.",
-    "9. `otherSections` es parte del CV (idiomas, certificaciones, educación): lo que dice ahí cuenta como escrito en el CV.",
-    "10. CÓMO LO ESCRIBE ESTE CV. Un filtro compara el texto tal cual, y la persona pierde puntos por lo que sí tiene escrito de otra forma. Por cada requisito que el CV no escribe EXACTO como la vacante, buscalo en TODO el CV —viñetas, resumen, `declaredSkills`, `otherSections`— y, si está, copiá en `cvWording` el texto TAL CUAL lo escribe el CV (sus palabras, sus mayúsculas, sin completar nada) y elegí `match`:",
-    "   SAME — es lo mismo escrito distinto: palabras pegadas o separadas, singular o plural, sigla o nombre completo, una palabra de más que no cambia qué es («CoreData» por «Core Data», «SOLID design principles» por «SOLID principles», «JS» por «JavaScript», «Excel avanzado» por «Microsoft Excel», «caja registradora» por «cajas registradoras»).",
-    "   EQUIVALENT — otro nombre que alguien de ese oficio usa para la MISMA capacidad («Git» por «control de versiones», «revisiones de código» por «code reviews», «arqueo» por «cuadre de caja»). Va con status IMPLIED.",
-    "   MISSPELLED — el CV quiso escribirlo y le erró una letra («Objetive-C» por «Objective-C», «Exel» por «Excel»). El status queda NOT_FOUND: un filtro no lo cuenta.",
-    "   NUNCA algo relacionado que es otra cosa: Java no es JavaScript, un torno no es una fresadora, Swift no es SwiftUI, atender el teléfono no es atención al cliente. Si dudás, es null. Si el CV ya lo escribe exacto, o no lo tiene, `cvWording` y `match` van en null.",
-    "11. ANTES DE RESPONDER, por cada requisito que vas a dejar en NOT_FOUND: escribí en `cvWording` el elemento de `declaredSkills` u `otherSections` que más se le parece —en su escritura o en lo que nombra—, copiado letra por letra como está en el CV —no como debería estar—, y recién entonces decidí `match`: comparando letra por letra para MISSPELLED o SAME, y por lo que nombra para EQUIVALENT. Si difieren en una o dos letras, un guion o un espacio, es MISSPELLED o SAME, no NOT_FOUND: decirle a alguien que no tiene lo que escribió mal es el error que esta regla existe para evitar. Si ningún elemento se le parece, `cvWording` va en null; si se parece pero es otra cosa, queda `match` en null.",
+    "1. VIÑETAS — una decisión por cada `id` del CV, sin saltear ninguna:",
+    "   keep — prueba algo que este puesto necesita.",
+    "   remove — SÓLO si dice casi lo mismo que otra viñeta (de dos casi iguales queda la más fuerte) o si el puesto pasa del máximo. Una viñeta de otra tecnología u otra tarea NO se saca: muestra experiencia.",
+    `   Topes: ningún puesto queda con más de ${BULLETS_PER_ROLE_MAX} viñetas en keep, ni con menos de ${BULLETS_PER_ROLE_MIN} (o todas, si tiene menos). Si sobran, sacá las que menos prueban de lo que pide el aviso.`,
+    "   `reason`: una frase, en el idioma del CV, que la persona entienda. Si sacás una por repetida, citá el comienzo de la que queda.",
+    "   `needsFigure`: true sólo si la línea afirma un resultado y no dice cuánto. `instruction`: siempre null.",
+    "",
+    "2. HARD SKILLS — por cada requisito (M1, N1…): demonstrated si una viñeta prueba que lo hizo (`evidenceNodeId` = esa viñeta); listed si sólo está nombrado en el CV; missing si no. Un requisito con alternativas («A | B») se cumple con cualquiera. Nunca por parecido de nombre entre cosas distintas (Java no es JavaScript).",
+    "   Si no está demonstrated, `question` = UNA pregunta corta a la persona, en el idioma del CV, para saber si lo hizo, dónde y para qué. `writeIn`: siempre null (ningún nombre del aviso se escribe dentro de una viñeta).",
+    "",
+    "3. SOFT SKILLS (S1…) — igual: demonstrated si un logro de una viñeta la muestra (nunca el resumen), listed si sólo está nombrada, missing si no. `writeIn`: siempre null.",
+    "",
+    "4. RESUMEN — true o false: identity (quién es y cuántos años), proof (un logro concreto), fit (la conexión con este puesto), extra (dominio, idioma o credencial que el puesto pida).",
+    "5. CONDICIONES (C1…) — por cada una: `met` yes si el CV muestra que la cumple (ubicación, idioma con su nivel, permiso), no si el CV muestra lo contrario (otro país, un nivel menor al pedido), unknown si el CV no lo dice. `cvSays`: lo que el CV dice al respecto, tal cual, o null.",
+    "",
+    "`alreadyFixed` son líneas ya reescritas siguiendo tu diagnóstico: van en keep, salvo que repitan a otra.",
+    "Contestá POR REFERENCIA: requisitos por `ref`, viñetas por `id`. Sólo lo que está en la lista.",
   ]
   const en = [
-    "You are a résumé auditor. You compare the structured CV against the structured job spec and return findings WITH EVIDENCE.",
+    "You are an expert in hiring and ATS. You read the whole CV against THIS posting, in any trade, and decide three things. Nothing else.",
     noScoreRule("en"),
     "",
-    "RULES",
-    "1. A skill is FOUND only if the CV writes it and you can cite where: the node id (a bullet or `summary`), or — if it lives in `declaredSkills` or `otherSections` — evidenceNodeId null and its text in `cvWording`. With neither citation nor text, it is NOT_FOUND.",
-    "2. Three states, and the difference matters: FOUND (the CV says it in words a literal reader would recognize, and you can cite the node), IMPLIED (the work described in ONE line you cite demonstrates it, but the CV does not NAME it), NOT_FOUND (no trace). IMPLIED without that line's id is NOT_FOUND — except the EQUIVALENT of rule 10, which may live in `declaredSkills` or `otherSections` —: the cited line is where the term gets written later.",
-    "2b. The line is what the filter can see, not what you can understand: if you must reason to get from the text to the term, it is IMPLIED. Marking FOUND from your own comprehension tells someone they are covered when the filter will drop them.",
-    "3. NEVER mark IMPLIED from name similarity between two DIFFERENT things: a lathe does not imply a milling machine, Java does not imply JavaScript, answering the phone (a task) does not imply customer service (a capability). The CV naming the SAME capability in OTHER words is something else: that is rule 10, not this one.",
-    "4. For each bullet judge THREE axes separately, true or false:",
-    `   hasActionVerb — opens governed by a verb saying what the person did, not by a noun phrase nor a duty formula: opening with ${WEAK_OPENERS_EN.map((o) => `'${o}'`).join(", ")} is false`,
-    "   hasResult     — says what CHANGED, not only what was done",
-    "   hasMethod     — says with which tool, technique or approach",
-    "5. For each SOFT skill the posting asks for, one state: DEMONSTRATED (an experience bullet — never the summary — evidences it with an achievement, and you cite that bullet's id), DECLARED_ONLY (it appears as an adjective or in a list, with no achievement backing it), ABSENT (no trace). A soft skill is NOT met because the word is written: that only meets it in the adjective list every recruiter skips. With no line id, it is never DEMONSTRATED.",
-    "6. The summary is judged on four jobs: identity (who they are, how many years), proof (one concrete achievement), fit (the link to what the posting asks), extra (domain, language or credential the posting asks for).",
-    "7. Answer BY REFERENCE: each posting requirement carries its `ref` (M1, N1…) and each soft skill its own (S1…). Return one entry for EVERY reference, using that `ref` and nothing else to name it. Do not add requirements or soft skills the list does not carry.",
-    "8. Judge EVERY bullet in the CV, one entry per id. A bullet with no judgement cannot be improved or counted.",
-    "9. `otherSections` is part of the CV (languages, certifications, education): what it says counts as written in the CV.",
-    "10. HOW THIS CV WRITES IT. A filter compares text as written, and the person loses points for what they do have, written another way. For every requirement the CV does not write EXACTLY as the posting, look for it in the WHOLE CV — bullets, summary, `declaredSkills`, `otherSections` — and, if it is there, copy into `cvWording` the text EXACTLY as the CV writes it (its words, its capitals, completing nothing) and choose `match`:",
-    "   SAME — the same thing written differently: words joined or split, singular or plural, acronym or full name, one extra word that does not change what it is (\"CoreData\" for \"Core Data\", \"SOLID design principles\" for \"SOLID principles\", \"JS\" for \"JavaScript\", \"advanced Excel\" for \"Microsoft Excel\", \"cash register\" for \"cash registers\").",
-    "   EQUIVALENT — another name someone in that trade uses for the SAME capability (\"Git\" for \"version control\", \"revisiones de código\" for \"code reviews\", \"till count\" for \"cash reconciliation\"). It goes with status IMPLIED.",
-    "   MISSPELLED — the CV meant it and got a letter wrong (\"Objetive-C\" for \"Objective-C\", \"Exel\" for \"Excel\"). Status stays NOT_FOUND: a filter does not count it.",
-    "   NEVER something related that is a different thing: Java is not JavaScript, a lathe is not a milling machine, Swift is not SwiftUI, answering the phone is not customer service. If in doubt, null. If the CV already writes it exactly, or does not have it, `cvWording` and `match` are null.",
-    "11. BEFORE ANSWERING, for every requirement you are about to leave NOT_FOUND: write in `cvWording` the item of `declaredSkills` or `otherSections` closest to it — in spelling or in what it names —, copied letter by letter as it stands in the CV — not as it should be — and only then decide `match`: letter by letter for MISSPELLED or SAME, by what it names for EQUIVALENT. If they differ by one or two letters, a hyphen or a space, it is MISSPELLED or SAME, not NOT_FOUND: telling someone they lack what they merely misspelled is the error this rule exists to prevent. If no item resembles it, `cvWording` is null; if one resembles it but is a different thing, `match` stays null.",
+    "1. BULLETS — one decision for every `id` in the CV, skip none:",
+    "   keep — proves something this role needs.",
+    "   remove — ONLY if it says nearly the same as another bullet (of two near-duplicates the stronger stays) or the role is over the maximum. A bullet about another technology or task is NOT removed: it shows experience.",
+    `   Limits: no role keeps more than ${BULLETS_PER_ROLE_MAX} bullets as keep, nor fewer than ${BULLETS_PER_ROLE_MIN} (or all, if it has fewer). If there are too many, remove the ones that prove least of what the posting asks.`,
+    "   `reason`: one sentence, in the CV's language, the person understands. If you remove one as a duplicate, quote the start of the one that stays.",
+    "   `needsFigure`: true only if the line claims a result and does not say how much. `instruction`: always null.",
+    "",
+    "2. HARD SKILLS — for every requirement (M1, N1…): demonstrated if a bullet proves the person did it (`evidenceNodeId` = that bullet); listed if only named in the CV; missing if not. A requirement with alternatives (\"A | B\") is met by either. Never by name similarity between different things (Java is not JavaScript).",
+    "   If not demonstrated, `question` = ONE short question to the person, in the CV's language, asking whether they did it, where and for what. `writeIn`: always null (no posting name is written into a bullet).",
+    "",
+    "3. SOFT SKILLS (S1…) — the same: demonstrated if an achievement in a bullet shows it (never the summary), listed if only named, missing if not. `writeIn`: always null.",
+    "",
+    "4. SUMMARY — true or false: identity (who they are and how many years), proof (one concrete achievement), fit (the link to this role), extra (domain, language or credential the role asks for).",
+    "5. CONDITIONS (C1…) — for each: `met` yes if the CV shows it is met (location, language with its level, authorization), no if the CV shows otherwise (another country, a lower level than asked), unknown if the CV does not say. `cvSays`: what the CV says about it, verbatim, or null.",
+    "",
+    "`alreadyFixed` are lines already rewritten following your diagnosis: they are keep, unless they now repeat another.",
+    "Answer BY REFERENCE: requirements by `ref`, bullets by `id`. Only what is in the list.",
   ]
   return (lang === "en" ? en : es).join("\n")
 }
 
-export function bulletPrompt(lang: Lang): string {
+/**
+ * P3 — LAS HERRAMIENTAS QUE CADA TRABAJO USÓ (CEO, 2026-09-29).
+ *
+ * Una pregunta chica y cerrada, fuera del diagnóstico: dentro de él el modelo
+ * no cruzaba las viñetas con las habilidades (1 de 42) y devolvía frases del
+ * aviso como si fueran hechos. El código comprueba cada respuesta.
+ */
+export function toolsPrompt(lang: Lang): string {
   const es = [
-    "Sos un redactor de currículums. Reescribís UNA viñeta, del oficio que sea, para que rinda contra ESTA vacante. Escribís vos todo lo que la línea necesita —el resultado, el método, los términos de la vacante que encajan con ese trabajo—; lo único que no escribís es una cifra que el candidato no dio.",
-    "EL RESULTADO QUE SE BUSCA: un reclutador de ESE oficio lee la línea en diez segundos, la encuentra técnicamente correcta y quiere preguntarle a la persona por ese trabajo en la entrevista. El ATS la mide con lo mismo que se te pide abajo: abre con un verbo que gobierna la oración, dice qué resultado logró, dice con qué método o herramienta, lleva el hueco de la cifra cuando el logro tiene tamaño, y nombra los términos comprometidos con la redacción exacta del aviso. Si cumple eso, sube el puntaje y la lee bien una persona; si amontona términos, el ATS y el reclutador la castigan.",
-    "CÓMO SE VE, en dos oficios opuestos (el ejemplo muestra el PRINCIPIO, nunca copies su redacción ni su vocabulario):",
-    "  iOS — MAL: «Escribí pruebas unitarias para IA/ML, Kanban, CallKit y GraphQL, mejorando la calidad.» (términos amontonados, relaciones falsas) · BIEN: «Construí la capa de red con GraphQL y Swift Concurrency y la cubrí con pruebas unitarias en XCTest, reduciendo las regresiones un [x%].» (cada término hace lo que es, un resultado, un método, un hueco).",
-    "  Caja — MAL: «Atendí clientes con control interno y arqueo de caja y normativa.» · BIEN: «Cuadré el arqueo de caja diario bajo control interno, conciliando efectivo y comprobantes sin diferencias en [n cierres/mes].»",
+    "Recibís las viñetas de experiencia de una persona y la LISTA de herramientas y habilidades que ella declara. Para cada viñeta decí qué elementos de la LISTA usó ese trabajo sin que la viñeta los nombre.",
+    "Sólo lo que ese trabajo usa necesariamente o casi siempre en su oficio: escribir tests unitarios de iOS usa XCTest; perfilar memoria o rendimiento en iOS usa Xcode Instruments; cobrar en caja usa el sistema de punto de venta de la lista. Nunca algo que el trabajo PODRÍA haber usado, ni un área, método o práctica (Agile, Debugging, Teamwork, «… Development», «… Optimization», «… Testing», «Code Review»): sólo herramientas, librerías o frameworks con nombre propio, los que alguien instala o abre.",
+    "Cada elemento se escribe EXACTAMENTE como está en la LISTA. Máximo 2 por viñeta.",
+    "Y para cada viñeta, `resultWithoutSize`: true si afirma que algo cambió o se logró —mejoró, subió, bajó, se aceleró, se redujo, aumentó el uso o la satisfacción— y no dice cuánto ni de qué tamaño. false si ya trae un número o si no afirma ningún resultado.",
+    "Y `taskWithoutOutcome`: true si la viñeta dice QUÉ hizo la persona pero no QUÉ LOGRÓ con eso —para los usuarios, el negocio, el equipo o el producto—: «Implementé capas de red para sincronizar datos» (¿qué mejoró?). false si ya dice un resultado, aunque sea sin número.",
+    "Contestá por `id` de viñeta. Una viñeta sin herramientas, sin resultado sin tamaño y con su logro no va.",
+  ]
+  const en = [
+    "You receive a person's experience bullets and the LIST of tools and skills they declare. For each bullet, say which items of the LIST that work used without the bullet naming them.",
+    "Only what that work necessarily or almost always uses in its trade: writing iOS unit tests uses XCTest; profiling memory or performance on iOS uses Xcode Instruments; ringing up sales uses the listed point-of-sale system. Never something the work MIGHT have used, nor an area, method or practice (Agile, Debugging, Teamwork, '… Development', '… Optimization', '… Testing', 'Code Review'): only named tools, libraries or frameworks, the ones someone installs or opens.",
+    "Each item is written EXACTLY as it appears in the LIST. At most 2 per bullet.",
+    "And for each bullet, `resultWithoutSize`: true if it claims something changed or was achieved — improved, increased, reduced, sped up, raised engagement or satisfaction — without saying how much or at what size. false if it already has a number or claims no result.",
+    "And `taskWithoutOutcome`: true if the bullet says WHAT the person did but not WHAT IT ACHIEVED — for users, the business, the team or the product: 'Implemented network layers to sync data' (what improved?). false if it already states a result, even without a number.",
+    "Answer by bullet `id`. A bullet with no tools, no sizeless result and with its outcome is left out.",
+  ]
+  return (lang === "en" ? en : es).join("\n")
+}
+
+const ToolsSchema = z.object({
+  matches: listaDe(z.object({ id: z.string().max(64), tools: listaDe(z.string().max(80), 2), resultWithoutSize: bandera(false), taskWithoutOutcome: bandera(false) }), 80),
+})
+
+export function bulletPrompt(lang: Lang): string {
+  /**
+   * EDICIÓN MÍNIMA, Y NADA MÁS (CEO, 2026-09-29). Lo que se inserta lo decidieron
+   * el ATS y el código (herramienta, skill, cifra, apertura); este prompt sólo lo
+   * escribe bien. Sin la regla general de «tuyo es el resultado y el método»: esa
+   * vale para el resumen y acá le daba permiso para agregar lo que no se pidió.
+   */
+  const es = [
+    "Sos un redactor experto de currículums. Editás UNA viñeta para ESTE puesto con EDICIÓN MÍNIMA: la línea original se conserva palabra por palabra y sólo insertás lo que viene abajo, con las pocas palabras de unión que hagan falta (con, en, para, usando).",
     "",
-    truthRule("es"),
+    "QUÉ SE INSERTA (sólo lo que venga):",
+    "- HECHOS A ESCRIBIR: herramientas de las habilidades de la persona que este trabajo usó. Tal cual, como parte del trabajo («con XCTest», «usando Core Data»).",
+    "- SKILLS A ESCRIBIR: cada una tal cual la escribe el aviso, como parte de lo que la línea hace — con el verbo o el complemento que le corresponde («integré las APIs REST definiendo el API design con backend») —; nunca agregada a una enumeración de lo que la línea ya dice, ni pegada al final.",
+    "- ESTA LÍNEA LLEVA SU TAMAÑO: el hueco de la cifra (ver CIFRAS).",
+    "- LO QUE LA PERSONA CONTÓ: el contexto que ella misma dio, con sus hechos.",
+    "- ESTA LÍNEA LLEVA SU LOGRO: la línea dice qué se hizo y no qué logró. Agregás el resultado que ESE trabajo produce —para los usuarios, el negocio, el equipo o el producto— con el hueco de su cifra: «…, reduciendo las fallas de sincronización en [x%]». Es el resultado natural de lo que la línea ya dice, nunca el de otro trabajo.",
+    "- VIÑETA NUEVA: no hay línea original; escribís una viñeta completa para este puesto sobre el trabajo con la skill pedida: verbo de acción en pasado + qué hizo + cómo (con herramientas de la persona) + el logro con el hueco de su cifra. Acorde a lo que este puesto ya dice (ESTE PUESTO YA DICE), sin repetir ninguna de sus líneas.",
+    "- LA IA ESCRIBE ESTA SKILL: la vacante la pide y el CV no la muestra. Escribís una cláusula completa con el trabajo hecho con esa skill que encaja con lo que la línea ya hace (qué se hizo con ella y para qué), sin sacar nada de la original. La persona confirma si es verdad: no devuelvas changed: false.",
+    `- APERTURA DÉBIL: si la línea abre con una fórmula de tarea (${WEAK_OPENERS_ES.slice(0, 6).map((o) => `«${o}…»`).join(", ")}), esa apertura se cambia por el verbo de acción en pasado de lo que la persona hizo; el resto se conserva.`,
     "",
     figureRule("es"),
     "",
-    "ESTRUCTURA",
-    "Verbo de acción en pasado + qué se logró + con qué método o herramienta + a qué escala, cuando el original lo permita. Una sola oración, primera persona implícita (nunca 'yo', nunca tercera persona).",
-    "IDIOMA: escribí la viñeta en ESPAÑOL, que es el idioma del CV, aunque la viñeta original venga en otro idioma — a veces es lo que la persona contó con sus palabras. Traducís su contenido; no cambiás ningún hecho. Los TÉRMINOS COMPROMETIDOS y los nombres propios NO se traducen: van tal cual los escribe la vacante, aunque estén en otro idioma.",
-    "El largo lo decide el contenido: una línea larga con información de primera es mejor que una corta y vacía. No rellenes para alargar.",
+    "REGLAS:",
+    "1. Cada HECHO de la línea original se queda: tecnología, producto, empresa, cifra, alcance y cada resultado que ya nombra. No cambiás otros verbos, no resumís ni reordenás.",
+    "2. El nivel de participación es un hecho: si la línea dice participé o colaboré, la nueva no dice lideré ni impulsé.",
+    "3. No agregás contexto, alcance ni técnica que la línea no diga, ni un resultado salvo el LOGRO pedido, ni frases del aviso: del aviso sólo entran los NOMBRES de las SKILLS A ESCRIBIR.",
+    "4. La línea nueva no puede decir casi lo mismo que la original ni que ninguna de OTRAS LÍNEAS DEL CV: tiene que llevar lo insertado.",
+    "5. En el idioma del CV (ESPAÑOL). Primera persona implícita; nunca tercera persona ni infinitivo.",
     "",
-    `PROHIBIDO ABRIR CON: ${WEAK_OPENERS_ES.map((o) => `'${o}'`).join(", ")}. Son las fórmulas que le sacan la autoría a quien hizo el trabajo. Y pegarle un verbo delante a un sintagma nominal no lo arregla: el verbo tiene que gobernar la oración.`,
-    "",
-    "PROHIBIDA LA TERCERA PERSONA Y EL INFINITIVO, y es el error más frecuente medido: el CV lo escribe la persona sobre sí misma.",
-    "  Se dice: Apliqué · Administré · Controlé · Coordiné · Soldé · Atendí.",
-    "  NO se dice: Aplicó · Administró · Controló (habla de otro) ni Aplicar · Administrar · Controlar (es una lista de tareas del puesto, no lo que ESTA persona hizo).",
-    "  Regla para revisar antes de responder: ¿la primera palabra termina en -ó o en -ar/-er/-ir? Entonces está mal.",
-    "",
-    `COMO MÁXIMO ${TERMS_PER_BULLET} TÉRMINOS DEL AVISO NUEVOS POR LÍNEA: los que la línea no tenía y mejor encajan con ESTE trabajo, prefiriendo los que la MEMORIA DEL CV todavía no cubre. Los TÉRMINOS COMPROMETIDOS van siempre y cuentan dentro de ese tope. Los demás términos del aviso los cubren otras líneas: repetir los mismos en cada viñeta es relleno, y el ATS y el reclutador lo castigan.`,
-    "LAS PALABRAS DE LA VACANTE, TAL COMO LA VACANTE LAS ESCRIBE. Donde la vacante nombra algo que encaja con el trabajo de esta línea, usá su redacción EXACTA en vez de un sinónimo: el filtro compara cadenas, así que 'gestión de proyectos' y 'coordiné proyectos' no son lo mismo para él. Si el aviso usa una sigla, escribí la forma completa seguida de la sigla entre paréntesis la primera vez.",
-    "LO QUE LA LÍNEA YA NOMBRA SE QUEDA: toda tecnología, producto, herramienta o sigla del original sigue en tu línea. Cambiar una por otra altera un hecho de la persona.",
-    "DÓNDE VA CADA TÉRMINO: dentro de la acción, como la herramienta, la técnica o el ámbito de ESE trabajo; nunca amontonado ni pegado al final como lista. Una línea con tres términos sueltos se lee como relleno y el reclutador la descarta.",
-    "CADA TÉRMINO EN SU RELACIÓN VERDADERA: un profesional del oficio tiene que leer tu línea y encontrarla correcta. Un término entra como lo que ES para ese trabajo: una API es lo que se integra o se prueba, no el lenguaje de las pruebas («pruebas unitarias de la capa de red con GraphQL», nunca «pruebas en GraphQL»); una base de datos local es donde se guarda, no una etapa de la publicación; en una caja, una normativa es lo que se cumple al cuadrar, no la herramienta con la que se atiende. Si un término no tiene relación verdadera con el trabajo de esta línea, se escribe como lo que la persona hizo con él dentro de ese mismo puesto, nunca como una relación que un entrevistador leería como error.",
-    "",
-    "ESPECIFICIDAD: la línea tiene que contener algo que sólo ESTA persona podría escribir — la herramienta que usó, el ámbito concreto, el tamaño de lo que manejó, sacado del original. Una línea intercambiable con la de cualquier otro postulante no aporta. Si al reescribirla te queda genérica, el problema es que estás usando poco del original, no que falte agregar algo de afuera.",
-    "",
-    "MEMORIA DEL CV (se te da abajo): no repitas un verbo ya usado, no pases el presupuesto de un término, no vuelvas a contar un logro que ya tiene dueño, y variá el tipo de métrica si ya hay dos del mismo.",
-    "OTRAS LÍNEAS DEL CV (se te dan abajo): tu reescritura NO puede decir lo mismo que ninguna de ellas. Dos viñetas que cuentan el mismo trabajo ocupan dos renglones para un solo dato.",
-    "LO QUE ESTA LÍNEA TIENE QUE RESOLVER (se te da abajo cuando existe): es lo único que se le prometió al candidato sobre esta línea. Ciérralo en UNA reescritura; no abras nada que no esté ahí.",
-    "TÉRMINOS COMPROMETIDOS (se te dan abajo cuando existen): la tarjeta le prometió a la persona que esta línea los nombra. Escribí cada uno TAL CUAL lo escribe la vacante; si trae formas separadas por « | », escribí UNA, la que corresponde a la persona. Va AL LADO de lo que la línea ya nombra, nunca en su lugar: si la línea dice «RESTful APIs» y el término es «REST», la línea sigue diciendo «RESTful APIs» y además «REST». Integralo con naturalidad en la oración —«en el rubro retail», «ventas retail»—, nunca pegado al final. Las mayúsculas las decide la oración: un nombre común va en minúscula; una sigla o un nombre propio, como lo escribe la vacante.",
-    "VERBO QUE NO PODÉS USAR PARA ABRIR (se te da abajo cuando existe): otra viñeta del CV ya abre con él. Abrí con otro verbo que diga lo mismo.",
-    "EJES PROMETIDOS (abajo cuando existen: verbo, resultado, método): tu línea nueva tiene cada uno, y los escribís vos. El resultado es lo que ese trabajo logra —más rápido, más estable, menos errores, mejor experiencia— dicho con el vocabulario del oficio; el método, la herramienta o la técnica con la que se hace. Si viene LO QUE LA PERSONA AGREGA, usalo tal cual lo dijo. Un término de la vacante suelto no es un método ni un resultado. La CIFRA del resultado nunca la escribís vos: va como hueco tipado.",
-    "`newBasis`: los tres ejes de TU línea nueva, con la misma vara que `declineBasis`. Siempre que reescribís, va lleno.",
-    "ESTA LÍNEA LLEVA SU TAMAÑO (se te dice abajo cuando aplica): se le prometió a la persona la cifra de este logro. Si la línea original la dice, se conserva; si no, va su hueco tipado con su rango creíble.",
-    "",
-    "DECLINAR (changed: false) es una respuesta válida y preferible a un cambio cosmético, PERO se declara. Si declinás, `declineBasis` lleva los tres ejes de la línea ORIGINAL: hasActionVerb (abre con un verbo en pasado que gobierna la oración), hasResult (dice qué cambió), hasMethod (dice con qué herramienta, técnica o enfoque).",
-    "Los tres tienen que ser true para poder declinar, y nunca se declina si abajo viene LO QUE ESTA LÍNEA TIENE QUE RESOLVER, un TÉRMINO COMPROMETIDO o el TAMAÑO: eso es lo que el análisis ya midió que le falta. Con uno solo en false, la línea TIENE algo que arreglar y la reescribís. Medido: el modelo declinó sobre 'Participé en las reuniones con los padres' —apertura prohibida— y sobre 'Di la medicación', tres palabras sin resultado ni método.",
-    "ANTES DE RESPONDER, revisá tu línea contra esto y corregila si falla algo: 1) ¿abre con un verbo en pasado que gobierna la oración? 2) ¿dice un resultado y un método concretos? 3) ¿cada término comprometido está escrito tal cual el aviso y en una relación que un profesional del oficio encontraría correcta? 4) ¿se lee como una oración de trabajo real y no como una lista de palabras? 5) ¿conservaste todo lo que la línea original nombraba? 6) ¿la cifra que no te dieron va como hueco y no como número?",
+    "Devolvé changed: false sólo si no podés insertar lo pedido sin afirmar algo que la persona no dijo.",
     noScoreRule("es"),
   ]
   const en = [
-    "You are a résumé writer. You rewrite ONE bullet, from any trade or profession, so it performs against THIS posting. You write everything the line needs — the result, the method, the posting terms that fit that work; the only thing you never write is a figure the candidate did not give.",
-    "THE OUTCOME YOU ARE AFTER: a recruiter from THAT trade reads the line in ten seconds, finds it technically correct, and wants to ask the person about that work in the interview. The ATS scores it on exactly what is asked below: opens with a verb that governs the sentence, states the result achieved, states the method or tool, carries the figure slot when the achievement has a size, and names the committed terms in the posting's exact wording. Meet that and the score rises and a human reads it well; pile terms up and both the ATS and the recruiter punish it.",
-    "WHAT IT LOOKS LIKE, in two opposite trades (the example shows the PRINCIPLE; never copy its wording or vocabulary):",
-    "  iOS — BAD: \"Wrote unit tests for AI/ML, Kanban, CallKit and GraphQL, improving quality.\" (terms piled up, false relations) · GOOD: \"Built the GraphQL networking layer with Swift Concurrency and covered it with XCTest unit tests, cutting regressions by [x%].\" (each term does what it is; a result, a method, a slot).",
-    "  Cash desk — BAD: \"Served customers with internal control and cash count and regulations.\" · GOOD: \"Balanced the daily cash count under internal controls, reconciling cash and receipts with zero discrepancies across [n closings/month].\"",
+    "You are an expert résumé writer. You edit ONE bullet for THIS role with MINIMAL EDIT: the original line is kept word for word and you only insert what comes below, with the few joining words needed (with, using, in, for).",
     "",
-    truthRule("en"),
+    "WHAT GETS INSERTED (only what is given):",
+    "- FACTS TO WRITE: tools from the person's skills that this work used. Exactly as given, as part of the work ('with XCTest', 'using Core Data').",
+    "- SKILLS TO WRITE: each one exactly as the posting writes it, as part of what the line does — with the verb or complement it takes ('integrated the REST APIs, shaping the API design with the backend team') —; never added to a list of what the line already says, nor tacked on at the end.",
+    "- THIS LINE CARRIES ITS SIZE: the figure slot (see FIGURES).",
+    "- WHAT THE PERSON TOLD: the context they gave, with their facts.",
+    "- THIS LINE CARRIES ITS OUTCOME: the line says what was done but not what it achieved. Add the result THAT work produces — for users, the business, the team or the product — with its figure slot: '…, cutting sync failures by [x%]'. It is the natural result of what the line already says, never that of another piece of work.",
+    "- NEW BULLET: there is no original line; write a complete bullet for this role about the work with the requested skill: past-tense action verb + what was done + how (with the person's tools) + the outcome with its figure slot. In line with what this role already says (THIS ROLE ALREADY SAYS), repeating none of its lines.",
+    "- THE AI WRITES THIS SKILL: the posting asks for it and the CV does not show it. Write one full clause with the work done with that skill that fits what the line already does (what was done with it and what for), removing nothing from the original. The person confirms whether it is true: do not return changed: false.",
+    `- WEAK OPENING: if the line opens with a duty formula (${WEAK_OPENERS_EN.slice(0, 6).map((o) => `'${o}…'`).join(", ")}), that opening is replaced by the past-tense action verb of what the person did; the rest is kept.`,
     "",
     figureRule("en"),
     "",
-    "STRUCTURE",
-    "Past-tense action verb + what was achieved + with which method or tool + at what scale, when the original allows it. One sentence, implicit first person (never 'I', never third person).",
-    "LANGUAGE: write the bullet in ENGLISH, the CV's language, even when the original bullet comes in another language — sometimes it is what the person told in their own words. You translate its content; you change no fact. COMMITTED TERMS and proper names are NOT translated: they go exactly as the posting writes them, even in another language.",
-    "Length follows content: a long line with first-rate information beats a short empty one. Never pad to lengthen.",
+    "RULES:",
+    "1. Every FACT of the original line stays: technology, product, employer, figure, scope and every result it already names. You do not change other verbs, summarize or reorder.",
+    "2. The level of involvement is a fact: if the line says participated or collaborated, the new one does not say led or drove.",
+    "3. You add no context, scope or technique the line does not state, no result except the requested OUTCOME, and no posting phrases: from the posting only the NAMES of the SKILLS TO WRITE go in.",
+    "4. The new line cannot say nearly the same as the original nor as any of the OTHER LINES IN THE CV: it must carry what was inserted.",
+    "5. In the CV's language (ENGLISH). Implicit first person; never third person or bare infinitive.",
     "",
-    `NEVER OPEN WITH: ${WEAK_OPENERS_EN.map((o) => `'${o}'`).join(", ")}. These strip authorship from the person who did the work. Sticking a verb in front of a noun phrase does not fix it: the verb must govern the sentence.`,
-    "",
-    "NO THIRD PERSON AND NO BARE INFINITIVE: the CV is written by the person about themselves. Past tense, implicit first person — 'Operated', 'Received', 'Reconciled', never 'Operates' or 'To operate'.",
-    "",
-    `AT MOST ${TERMS_PER_BULLET} NEW POSTING TERMS PER LINE: the ones the line did not have that best fit THIS work, preferring those the CV MEMORY does not cover yet. COMMITTED TERMS always go in and count toward that cap. The other posting terms are covered by other lines: repeating the same ones in every bullet is filler, and both the ATS and the recruiter punish it.`,
-    "THE POSTING'S OWN WORDING. Where the posting names something that fits the work of this line, use its EXACT wording instead of a synonym: the filter compares strings, so 'project management' and 'led projects' are not the same to it. If the ad uses an acronym, write the spelled-out form followed by the acronym in parentheses the first time.",
-    "WHAT THE LINE ALREADY NAMES STAYS: every technology, product, tool or acronym in the original remains in your line. Swapping one for another changes a fact about the person.",
-    "WHERE EACH TERM GOES: inside the action, as the tool, technique or scope of THAT work; never piled up or tacked on at the end as a list. A line with three loose terms reads as filler and the recruiter drops it.",
-    "EACH TERM IN ITS TRUE RELATION: a professional of the trade must read your line and find it correct. A term goes in as what it IS for that work: an API is what gets integrated or tested, not the language of the tests (\"unit tests for the GraphQL networking layer\", never \"tests in GraphQL\"); a local database is where data is stored, not a stage of an App Store release; at a cash desk, a regulation is what you comply with when balancing, not the tool you serve customers with. If a term has no true relation to this line's work, write it as what the person did with it within that same role, never as a relation an interviewer would read as a mistake.",
-    "",
-    "SPECIFICITY: the line must carry something only THIS person could write — the tool they used, the concrete scope, the size of what they handled, taken from the original. A line interchangeable with any other applicant's adds nothing. If your rewrite comes out generic, the problem is that you are using too little of the original, not that something external is missing.",
-    "",
-    "CV MEMORY (given below): do not reuse a verb already used, do not exceed a term's budget, do not retell an achievement that already has an owner, and vary the metric type if two of the same kind are already used.",
-    "OTHER LINES IN THE CV (given below): your rewrite must NOT say the same as any of them. Two bullets telling the same work spend two lines on one fact.",
-    "WHAT THIS LINE MUST FIX (given below when present): it is the only thing promised to the candidate about this line. Close it in ONE rewrite; do not open anything that is not there.",
-    "COMMITTED TERMS (given below when present): the card promised the person that this line names them. Write each one EXACTLY as the posting writes it; if it carries forms separated by \" | \", write ONE, the one that fits the person. It goes NEXT TO what the line already names, never instead of it: if the line says \"RESTful APIs\" and the term is \"REST\", the line still says \"RESTful APIs\" and also \"REST\". Weave it naturally into the sentence — \"across retail sales\", \"in the retail channel\" — never tacked on at the end. Capitalisation follows the sentence: a common noun goes lowercase; an acronym or a proper name, as the posting writes it.",
-    "VERB YOU MAY NOT OPEN WITH (given below when present): another bullet in the CV already opens with it. Open with a different verb that says the same.",
-    "PROMISED AXES (below when present: verbo = action verb, resultado = result, método = method): your new line has each one, and you write them. The result is what that work achieves — faster, more stable, fewer errors, better experience — said in the trade's vocabulary; the method, the tool or technique it is done with. If WHAT THE PERSON ADDS comes, use it as they said it. A loose posting term is not a method or a result. You never write the result's FIGURE: it goes as a typed slot.",
-    "`newBasis`: the three axes of YOUR new line, with the same yardstick as `declineBasis`. Whenever you rewrite, it is filled.",
-    "THIS LINE CARRIES ITS SIZE (stated below when it applies): the person was promised this achievement's figure. If the original line states it, it stays; if not, its typed slot goes in with its believable range.",
-    "",
-    "DECLINING (changed: false) is a valid answer and better than a cosmetic edit, BUT it is declared. When you decline, `declineBasis` carries the three axes of the ORIGINAL line: hasActionVerb (opens with a past-tense verb governing the sentence), hasResult (says what changed), hasMethod (says with which tool, technique or approach).",
-    "All three must be true to decline, and you never decline when WHAT THIS LINE MUST FIX, a COMMITTED TERM or the SIZE comes below: that is what the analysis already measured is missing. With a single one false, the line HAS something to fix and you rewrite it. Measured: the model declined on 'Participated in the meetings with parents' — a forbidden opener — and on 'Gave the medication', three words with no result and no method.",
-    "BEFORE YOU ANSWER, check your line against this and fix it if anything fails: 1) does it open with a past-tense verb that governs the sentence? 2) does it state a concrete result and method? 3) is each committed term written exactly as the posting writes it and in a relation a professional of the trade would find correct? 4) does it read as a sentence about real work, not a list of words? 5) did you keep everything the original line named? 6) does any figure you were not given go in as a slot, not a number?",
+    "Return changed: false only if you cannot insert what was asked without claiming something the person did not say.",
     noScoreRule("en"),
   ]
   return (lang === "en" ? en : es).join("\n")
@@ -433,7 +424,7 @@ export function summaryPrompt(lang: Lang): string {
     "PRIMERA ORACIÓN (identidad) — qué es la persona, cuántos años lleva y en qué se especializa, alineado con lo que la vacante busca. Sin adjetivos de relleno. Los años son los de AÑOS DE EXPERIENCIA (se te dan abajo, medidos sobre las fechas del CV): ese número y ningún otro, sin «+» ni redondeo. Son los años de TODA su trayectoria: no los atribuyas a una especialidad salvo que todos sus puestos sean de esa especialidad. Si viene null, la identidad no dice años.",
     "SEGUNDA (prueba) — LA PRUEBA que se te da abajo, que es el logro más fuerte que YA ESTÉ en el CV, con su resultado y su tamaño tal como el CV los dice. Un resumen que declara cualidades en vez de mostrar un resultado no distingue a nadie: es la parte que un reclutador saltea. No reformules la cifra a otro número.",
     "TERCERA (ajuste) — lo que el CV ya demuestra que la persona HIZO y que la vacante pide, nombrado con las palabras del aviso. Esos términos te llegan abajo en TÉRMINOS DEL AVISO QUE ESTA PERSONA YA DEMOSTRÓ, ordenados por lo que más pesa para el puesto: nombrá los primeros, tal cual están escritos, dentro de lo que la persona hizo; no hace falta nombrarlos todos, y los que no entran NUNCA se enumeran al final ni se presentan como «el CV también muestra». Es lo que hace a este resumen de ESTE puesto y no de cualquiera. Nunca una oración que sea sólo una lista de términos. Las responsabilidades del aviso NO son de la persona: nunca las copies como si lo fueran; sólo prestan su redacción a algo que el CV ya dice.",
-    "CUARTA (extra) — sólo si la vacante lo pide: dominio, idioma o credencial, dicho dentro de una oración completa, nunca como lista suelta. Si no aporta, omitila.",
+    "CUARTA (extra) — sólo si la vacante lo pide: dominio, idioma o credencial, dicho dentro de una oración completa, nunca como lista suelta. Un idioma o una credencial va SÓLO si el CV cumple el nivel que el aviso pide: un nivel menor (B2 cuando pide fluido) no se pone en la primera línea del CV. Si no aporta, omitila.",
     "",
     "LO QUE ESTE RESUMEN TIENE QUE RESOLVER y sus TÉRMINOS COMPROMETIDOS (se te dan abajo cuando existen) son lo que se le prometió a la persona: cada término comprometido va escrito tal cual lo escribe la vacante. Si nombra el cargo que busca la vacante y el trabajo del CV es ese mismo, la IDENTIDAD abre con ese cargo escrito tal cual lo escribe la vacante. Nunca un cargo que la persona no ejerció.",
     "",
@@ -455,7 +446,7 @@ export function summaryPrompt(lang: Lang): string {
     "FIRST SENTENCE (identity) — what the person is, how many years, and what they specialise in, aligned with what the posting seeks. No filler adjectives. The years are those in YEARS OF EXPERIENCE (given below, measured on the CV's dates): that number and no other, no '+' and no rounding. They are the years of the WHOLE career: do not attach them to a specialty unless every role is in that specialty. If it is null, the identity states no years.",
     "SECOND (proof) — THE PROOF given below, which is the strongest achievement ALREADY IN the CV, with its result and its size exactly as the CV states them. A summary that declares qualities instead of showing a result distinguishes no one: it is the part a recruiter skips. Do not restate the figure as a different number.",
     "THIRD (fit) — what the CV already shows the person DID that the posting asks for, named in the ad's words. Those terms come below in POSTING TERMS THIS PERSON HAS ALREADY PROVEN, ordered by what weighs most for the role: name the first ones, exactly as written, inside what the person did; you do not need to name them all, and the ones that do not fit are NEVER listed at the end or presented as \"the CV also shows\". That is what makes this summary about THIS role and not any role. Never a sentence that is only a list of terms. The ad's responsibilities are NOT the person's: never copy them as if they were; they only lend their wording to something the CV already says.",
-    "FOURTH (extra) — only if the posting asks for it: domain, language or credential, said inside a complete sentence, never as a loose list. If it adds nothing, omit it.",
+    "FOURTH (extra) — only if the posting asks for it: domain, language or credential, said inside a complete sentence, never as a loose list. A language or credential goes in ONLY if the CV meets the level the posting asks for: a lower level (B2 when it asks for fluent) is not put in the first lines of the CV. If it adds nothing, omit it.",
     "",
     "WHAT THIS SUMMARY MUST FIX and its COMMITTED TERMS (given below when they exist) are what the person was promised: each committed term is written exactly as the posting writes it. If it names the title the posting seeks and the CV's work is that same work, the IDENTITY opens with that title written exactly as the posting writes it. Never a title the person did not hold.",
     "",
@@ -509,9 +500,10 @@ export const OUTPUT_CONTRACT =
  * desincronizan.
  */
 export const OUTPUT_SHAPE: Record<PromptId, string> = {
-  P1: `{"roleTitleRaw":"","roleTitleCanonical":"","seniority":null,"yearsRequired":null,"domain":null,"workMode":null,"language":"es","metricThatMatters":null,"mustHave":[{"skill":"","raw":"","years":null,"category":null,"kind":"capability"}],"niceToHave":[{"skill":"","raw":"","years":null,"category":null,"kind":"capability"}],"responsibilities":[""],"softSignals":[""],"namedTools":[""]}`,
-  P2: `{"bullets":[{"id":"","hasActionVerb":true,"hasResult":false,"hasMethod":true}],"summary":{"identity":true,"proof":false,"fit":false,"extra":false},"coverage":[{"ref":"M1","status":"IMPLIED","evidenceNodeId":null,"cvWording":null,"match":null}],"softCoverage":[{"ref":"S1","status":"DECLARED_ONLY","evidenceNodeId":null}]}`,
-  P4: `{"measurableAspect":"","bulletId":"","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[{"token":"[x%]","type":"PERCENT_DELTA","label":"","hint":"","evidenceNeeded":"","required":true}],"variantWithoutMetric":null,"declineBasis":null,"newBasis":{"hasActionVerb":true,"hasResult":true,"hasMethod":true}}`,
+  P1: `{"roleTitleRaw":"","roleTitleCanonical":"","seniority":null,"yearsRequired":null,"domain":null,"workMode":null,"language":"es","metricThatMatters":null,"mustHave":[{"skill":"","raw":"","years":null,"category":null,"kind":"capability"}],"niceToHave":[{"skill":"","raw":"","years":null,"category":null,"kind":"capability"}],"responsibilities":[""],"softSignals":[""],"conditions":[{"kind":"location","text":""}]}`,
+  P2: `{"bullets":[{"id":"","decision":"keep","reason":"","instruction":null,"needsFigure":false}],"hard":[{"ref":"M1","status":"missing","evidenceNodeId":null,"writeIn":null,"question":null}],"soft":[{"ref":"S1","status":"listed","evidenceNodeId":null,"writeIn":null}],"summary":{"identity":true,"proof":false,"fit":false,"extra":false},"conditions":[{"ref":"C1","met":"unknown","cvSays":null}]}`,
+  P3: `{"matches":[{"id":"","tools":[""],"resultWithoutSize":false}]}`,
+  P4: `{"measurableAspect":null,"bulletId":"","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[{"token":"[x%]","type":"PERCENT_DELTA","label":"","hint":"","evidenceNeeded":"","required":true}],"variantWithoutMetric":null}`,
   P5: `{"measurableAspect":null,"bulletId":"summary","changed":true,"text":"","actionVerb":"","keywordsUsed":[""],"claim":"","metricType":null,"placeholders":[],"variantWithoutMetric":null}`,
 }
 
@@ -526,7 +518,7 @@ export function outputBlock(id: PromptId): string {
     // Medido contra la API: un aviso en inglés volvía con language "es" porque
     // el ejemplo lo mostraba así, y la auditoría devolvía "NICE_TO_HAVE" donde
     // el contrato dice "NICE". Un valor enumerado que no se enumera se adivina.
-    'Valores permitidos / allowed values: "language" = idioma DEL AVISO ("es" o "en") · "status" (coverage) = "FOUND", "IMPLIED" o "NOT_FOUND" · "status" (softCoverage) = "DEMONSTRATED", "DECLARED_ONLY" o "ABSENT" · "kind" = "capability" o "credential" · "type" (hueco) = "PERCENT_DELTA", "SCALE", "TIME_DELTA", "MONEY", "TEAM_SIZE", "FREQUENCY" o "QUALITY_SCORE".',
+    'Valores permitidos / allowed values: "language" = idioma DEL AVISO ("es" o "en") · "decision" = "keep", "improve" o "remove" · "status" (hard, soft) = "demonstrated", "listed" o "missing" · "kind" = "capability" o "credential" · "type" (hueco) = "PERCENT_DELTA", "SCALE", "TIME_DELTA", "MONEY", "TEAM_SIZE", "FREQUENCY" o "QUALITY_SCORE".',
     OUTPUT_SHAPE[id],
   ].join("\n")
 }
@@ -534,9 +526,14 @@ export function outputBlock(id: PromptId): string {
 export interface Ats3Deps {
   client: IAIClient
   model: string
+  /**
+   * El modelo de las viñetas: la edición mínima de Tailor (P4) y la búsqueda de
+   * herramientas y cifras (P3). Sin él, todo va con `model`.
+   */
+  bulletModel?: string
   language: Lang
-  /** Tokens de esta llamada, para que el gasto llegue al panel de administración. */
-  onUsage?: (u: { promptTokens: number; completionTokens: number; cachedTokens: number }) => void
+  /** Tokens de esta llamada y el modelo que la contestó: cada uno tiene su precio. */
+  onUsage?: (u: { promptTokens: number; completionTokens: number; cachedTokens: number; model: string }) => void
 }
 
 export class AIAts3Module implements AtsAi {
@@ -551,85 +548,114 @@ export class AIAts3Module implements AtsAi {
     return { ...spec, mustHave: spec.mustHave.map(sinFormas), niceToHave: spec.niceToHave.map(sinFormas) }
   }
 
-  async audit(tree: ResumeTree, spec: JobSpec): Promise<AuditFacts> {
+  async audit(tree: ResumeTree, spec: JobSpec, alreadyFixed: string[] = [], nudge?: string): Promise<AuditFacts> {
     const body = [
       `CV:\n${JSON.stringify(compactTree(tree))}`,
       `VACANTE / POSTING:\n${JSON.stringify(compactSpec(spec))}`,
-    ].join("\n\n")
+      alreadyFixed.length ? `alreadyFixed:\n${JSON.stringify(alreadyFixed)}` : "",
+      nudge ? `CORREGÍ ESTO / FIX THIS:\n${nudge}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n")
     const raw = await this.ask(auditPrompt(this.deps.language), body, AuditSchema, "P2")
     /**
      * LA REFERENCIA SE TRADUCE AL REQUISITO DE LA VACANTE; LO DEMÁS NO EXISTE.
-     *
-     * Una referencia que no está en la lista que se mandó se descarta, y una
-     * repetida cuenta la primera vez: el modelo no puede agregar requisitos ni
-     * contar uno dos veces. Lo que no contestó queda sin juicio y el motor lo
-     * trata como no encontrado (`coverageOf`).
+     * El código sólo comprueba que lo citado exista: un id que el CV no tiene no
+     * es evidencia ni lugar donde escribir, y una referencia repetida cuenta una vez.
      */
     const refs = refsOf(spec)
     const requisito = new Map<string, { skill: string; requirement: "MUST" | "NICE" }>([
       ...refs.mustHave.map((r): [string, { skill: string; requirement: "MUST" | "NICE" }] => [r.ref, { skill: r.skill, requirement: "MUST" }]),
       ...refs.niceToHave.map((r): [string, { skill: string; requirement: "MUST" | "NICE" }] => [r.ref, { skill: r.skill, requirement: "NICE" }]),
     ])
-    const blanda = new Map(refs.softSignals.map((s) => [s.ref, s.signal]))
-    const primeraVez = <T extends { ref: string }>(xs: T[]) => xs.filter((x, i) => xs.findIndex((y) => y.ref === x.ref) === i)
+    const blanda = new Map(refs.softSignals.map((x) => [x.ref, x.signal]))
+    const condicion = new Map(refs.conditions.map((c) => [c.ref, c.condition]))
+    const ids = new Set([tree.summary.id, ...tree.roles.flatMap((r) => r.bullets.map((b) => b.id))])
+    const vinetas = new Set(tree.roles.flatMap((r) => r.bullets.map((b) => b.id)))
+    const existe = (id: string | null) => (id && ids.has(id) ? id : null)
+    const enVineta = (id: string | null) => (id && vinetas.has(id) ? id : null)
+    const primeraVez = <T,>(xs: T[], llave: (x: T) => string) => xs.filter((x, i) => xs.findIndex((y) => llave(y) === llave(x)) === i)
     /**
-     * «Ayudé con…», «Participé en…» abren con un verbo y no dicen el trabajo, y
-     * el modelo las daba por acción (medido el 2026-09-28, CV de cajera) con la
-     * doctrina que las prohíbe en su propio prompt. Lo que se prueba sobre el
-     * texto lo decide el texto: `opensWeakly` es el dueño de esa pregunta.
+     * EL MOTIVO LO LEE LA PERSONA: un id interno («b_15c29cf413») no le dice nada.
+     * El modelo cita las viñetas por id porque así las recibe; acá cada id se
+     * dice con el comienzo de su línea (visto en local el 2026-09-29).
      */
-    const textoDe = new Map(tree.roles.flatMap((r) => r.bullets).map((b) => [b.id, b.text]))
+    const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text] as const)))
+    const sinIds = (x: string | null) =>
+      x &&
+      x.replace(/\bb_[0-9a-f]{10}\b/g, (id) => {
+        const t = textoDe.get(id)
+        return t ? `«${t.split(/\s+/).slice(0, 6).join(" ")}…»` : this.deps.language === "en" ? "another bullet" : "otra viñeta"
+      })
     return {
-      bullets: raw.bullets.map((b) => (b.hasActionVerb && opensWeakly(textoDe.get(b.id) ?? "") ? { ...b, hasActionVerb: false } : b)),
-      summary: raw.summary,
-      // El id del nodo VIAJA: sin él no se puede saber DÓNDE vive el término, y
-      // un requisito demostrado en el puesto de 2015 no pesa lo mismo que en el
-      // actual.
-      coverage: primeraVez(raw.coverage).flatMap((c) => {
-        const r = requisito.get(c.ref.trim().toUpperCase())
-        return r ? [{ ...r, status: c.status, evidenceNodeId: c.evidenceNodeId, cvWording: c.cvWording, match: c.match }] : []
+      bullets: primeraVez(raw.bullets.filter((b) => vinetas.has(b.id)), (b) => b.id).map((b) => ({ ...b, reason: sinIds(b.reason) ?? "", instruction: sinIds(b.instruction) })),
+      hard: primeraVez(raw.hard, (h) => h.ref.trim().toUpperCase()).flatMap((h) => {
+        const r = requisito.get(h.ref.trim().toUpperCase())
+        return r ? [{ ...r, status: h.status, evidenceNodeId: existe(h.evidenceNodeId), writeIn: enVineta(h.writeIn), question: h.question }] : []
       }),
-      /**
-       * Sin id de línea NO está demostrada, lo diga el modelo o no.
-       *
-       * Es la misma vara que ya rige a las duras —"FOUND sólo si podés citar el
-       * nodo"— y acá importa más: una blanda "demostrada" sin un logro detrás
-       * es exactamente el adjetivo suelto que el reclutador saltea.
-       */
-      softCoverage: primeraVez(raw.softCoverage).flatMap((s) => {
-        const signal = blanda.get(s.ref.trim().toUpperCase())
-        if (!signal) return []
-        const status = s.status === "DEMONSTRATED" && !s.evidenceNodeId ? ("DECLARED_ONLY" as const) : s.status
-        return [{ signal, status, evidenceNodeId: s.evidenceNodeId }]
+      soft: primeraVez(raw.soft, (x) => x.ref.trim().toUpperCase()).flatMap((x) => {
+        const signal = blanda.get(x.ref.trim().toUpperCase())
+        // Una soft se demuestra en un logro de una viñeta, nunca en el resumen.
+        return signal ? [{ signal, status: x.status, evidenceNodeId: enVineta(x.evidenceNodeId), writeIn: enVineta(x.writeIn) }] : []
+      }),
+      summary: raw.summary,
+      conditions: primeraVez(raw.conditions, (c) => c.ref.trim().toUpperCase()).flatMap((c) => {
+        const text = condicion.get(c.ref.trim().toUpperCase())
+        return text ? [{ text, met: c.met, cvSays: c.cvSays }] : []
       }),
     }
+  }
+
+  async matchTools(tree: ResumeTree): Promise<{ id: string; tools: string[]; sinTamano: boolean; sinLogro: boolean }[]> {
+    // Los tres puestos más recientes: ahí es donde el reclutador lee.
+    const roles = tree.roles.slice(0, 3).filter((r) => r.bullets.length > 0)
+    if (roles.length === 0) return []
+    const body = [
+      `LISTA / LIST:\n${JSON.stringify(tree.declaredSkills)}`,
+      `VIÑETAS / BULLETS:\n${JSON.stringify(roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, role: r.title, text: b.text }))))}`,
+    ].join("\n\n")
+    const raw = await this.ask(toolsPrompt(this.deps.language), body, ToolsSchema, "P3")
+    /**
+     * EL CÓDIGO COMPRUEBA LO QUE PUEDE PROBAR: la herramienta está en la lista de
+     * la persona (se devuelve como ella la escribió) y la viñeta no la nombra.
+     */
+    const lista = new Map(tree.declaredSkills.map((d) => [normalize(d), d]))
+    const palabrasDe = new Map(roles.flatMap((r) => r.bullets.map((b) => [b.id, normalize(b.text).split(" ")] as const)))
+    // «Code Review» ya está en «led code reviews»: cada palabra de la herramienta
+    // aparece en la línea por su raíz (4 letras), así que no es un hecho nuevo.
+    const yaLaDice = (palabras: string[], tool: string) =>
+      normalize(tool).split(" ").filter(Boolean).every((w) => palabras.some((p) => mismaRaiz(p, w)))
+    const textoDe = new Map(roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text] as const)))
+    return raw.matches.flatMap((m) => {
+      const palabras = palabrasDe.get(m.id)
+      if (!palabras) return []
+      const tools = [...new Set(m.tools.map((t) => lista.get(normalize(t))).filter((t): t is string => Boolean(t) && !yaLaDice(palabras, t as string)))]
+      // Un resultado sin tamaño sólo se cree si la línea de verdad no trae ningún número.
+      const sinTamano = m.resultWithoutSize && !statesQuantity(textoDe.get(m.id) ?? "")
+      // Una línea con número ya dice lo que logró.
+      const sinLogro = m.taskWithoutOutcome && !statesQuantity(textoDe.get(m.id) ?? "")
+      return tools.length || sinTamano || sinLogro ? [{ id: m.id, tools, sinTamano, sinLogro }] : []
+    })
   }
 
   async rewriteBullet(input: RewriteInput): Promise<Suggestion> {
     const body = [
       `VIÑETA ORIGINAL / ORIGINAL BULLET:\n"""${input.original}"""`,
-      `CONTEXTO / ROLE:\n${input.roleContext}`,
-      `VACANTE / POSTING:\n${JSON.stringify(compactSpec(input.spec))}`,
-      `HABILIDADES DECLARADAS / DECLARED SKILLS:\n${JSON.stringify(input.declaredSkills)}`,
-      `MEMORIA DEL CV / CV MEMORY:\n${JSON.stringify(compactLedger(input.ledger))}`,
-      // Lo que la tarjeta le prometió al usuario sobre ESTA línea, dicho una vez
-      // y en un solo lugar. Sin esto el modelo reescribía sin saber qué se le
-      // había prometido cerrar.
-      input.focus ? `LO QUE ESTA LÍNEA TIENE QUE RESOLVER / WHAT THIS LINE MUST FIX:\n${input.focus}` : "",
-      input.mustWrite?.length ? `TÉRMINOS COMPROMETIDOS / COMMITTED TERMS:\n${JSON.stringify(input.mustWrite)}` : "",
-      input.avoidOpener ? `VERBO QUE NO PODÉS USAR PARA ABRIR / VERB YOU MAY NOT OPEN WITH:\n${input.avoidOpener}` : "",
-      input.wantsSize ? "ESTA LÍNEA LLEVA SU TAMAÑO / THIS LINE CARRIES ITS SIZE" : "",
-      input.axes?.length ? `EJES PROMETIDOS / PROMISED AXES:\n${JSON.stringify(input.axes)}` : "",
-      input.told ? `LO QUE LA PERSONA AGREGA / WHAT THE PERSON ADDS:\n"""${input.told}"""` : "",
-      // Para que no devuelva una calcada: se le muestran, no se le castiga después.
-      input.siblings?.length
-        ? `OTRAS LÍNEAS DEL CV — NINGUNA SE REPITE / OTHER LINES IN THE CV — DO NOT REPEAT ANY:\n${JSON.stringify(input.siblings.slice(0, 20))}`
-        : "",
+      `PUESTO / ROLE:\n${input.roleContext}`,
+      input.facts?.length ? `HECHOS A ESCRIBIR / FACTS TO WRITE:\n${JSON.stringify(input.facts)}` : "",
+      input.terms?.length ? `SKILLS A ESCRIBIR / SKILLS TO WRITE:\n${JSON.stringify(input.terms)}` : "",
+      input.needsFigure ? "ESTA LÍNEA LLEVA SU TAMAÑO / THIS LINE CARRIES ITS SIZE" : "",
+      input.told ? `LO QUE LA PERSONA CONTÓ / WHAT THE PERSON TOLD:\n"""${input.told}"""` : "",
+      input.propone ? "LA IA ESCRIBE ESTA SKILL / THE AI WRITES THIS SKILL" : "",
+      input.logro ? "ESTA LÍNEA LLEVA SU LOGRO / THIS LINE CARRIES ITS OUTCOME" : "",
+      input.nueva ? "VIÑETA NUEVA / NEW BULLET" : "",
+      input.roleLines?.length ? `ESTE PUESTO YA DICE / THIS ROLE ALREADY SAYS:\n${JSON.stringify(input.roleLines)}` : "",
+      input.siblings?.length ? `OTRAS LÍNEAS DEL CV / OTHER LINES IN THE CV:\n${JSON.stringify(input.siblings.slice(0, 40))}` : "",
       input.nudge ? `CORREGÍ ESTO / FIX THIS:\n${input.nudge}` : "",
     ]
       .filter(Boolean)
       .join("\n\n")
-    const s = await this.ask(bulletPrompt(this.deps.language), body, SuggestionSchema, "P4")
+    const s = await this.ask(bulletPrompt(input.language), body, SuggestionSchema, "P4")
     return { ...s, bulletId: input.bulletId }
   }
 
@@ -664,8 +690,9 @@ export class AIAts3Module implements AtsAi {
   // ───────────────────────────────────────────────────────────────────────────
 
   private async ask<T>(system: string, body: string, schema: z.ZodType<T>, name: PromptId): Promise<T> {
+    const modelo = (name === "P3" || name === "P4") && this.deps.bulletModel ? this.deps.bulletModel : this.deps.model
     const res = await this.deps.client.chat({
-      model: this.deps.model,
+      model: modelo,
       // Reglas arriba, datos abajo: el proveedor cachea el prefijo común, así
       // que ocho reescrituras seguidas pagan las instrucciones una sola vez.
       messages: [
@@ -673,6 +700,14 @@ export class AIAts3Module implements AtsAi {
         { role: "user", content: body },
       ],
       response_format: { type: "json_object" },
+      /**
+       * RAZONAMIENTO DONDE SE MIDIÓ QUE AYUDA (2026-09-29, CV real contra DECISION).
+       * P1 con «medium» dejó de partir «Apigee o un API proxy similar» en dos y de
+       * perder API design / SDK. P2 NO lleva: con «low» tardó 64 s y con «medium»
+       * 345 s (el cliente corta a los 120 s) sin proponer más mejoras.
+       */
+      // P4 y P5 en «low»: la salida es lo caro (US$4,50/M) y no se midió que «medium» escriba mejor.
+      ...(name === "P2" ? {} : { reasoning_effort: name === "P1" ? ("medium" as const) : ("low" as const) }),
     })
 
     const usage = res.usage
@@ -681,6 +716,7 @@ export class AIAts3Module implements AtsAi {
         promptTokens: usage.prompt_tokens ?? 0,
         completionTokens: usage.completion_tokens ?? 0,
         cachedTokens: usage.prompt_tokens_details?.cached_tokens ?? 0,
+        model: modelo,
       })
     }
 
@@ -781,16 +817,7 @@ function refsOf(spec: JobSpec) {
     mustHave: (spec.mustHave ?? []).map((r, i) => ({ ref: `M${i + 1}`, skill: r.skill })),
     niceToHave: (spec.niceToHave ?? []).map((r, i) => ({ ref: `N${i + 1}`, skill: r.skill })),
     softSignals: (spec.softSignals ?? []).map((s, i) => ({ ref: `S${i + 1}`, signal: s })),
+    conditions: (spec.conditions ?? []).map((c, i) => ({ ref: `C${i + 1}`, condition: c.text })),
   }
 }
 
-function compactLedger(l: Ledger) {
-  return {
-    verbsAlreadyUsed: l.verbsUsed,
-    termsWithBudgetLeft: Object.entries(l.keywordBudget)
-      .filter(([, v]) => v.used < v.max)
-      .map(([k, v]) => ({ term: k, left: v.max - v.used, priority: v.priority })),
-    metricTypesToAvoid: saturatedMetricTypes(l),
-    achievementsAlreadyClaimed: l.claimsMade,
-  }
-}

@@ -19,7 +19,8 @@ import { useTranslations } from "next-intl"
 import { Check, Lightbulb, Loader2, Minus, Sparkles, Target } from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
-import { softCoverageOf, statesQuantity } from "@/lib/ats3/score"
+import { statesQuantity } from "@/lib/ats3/score"
+import { normalize } from "@/lib/ats3/contracts"
 import type { AuditFacts } from "@/lib/ats3/score"
 import type { ResumeSections } from "@/types/resume"
 // LA PANTALLA DE SIEMPRE. El motor cambió debajo; el informe que el usuario
@@ -44,6 +45,8 @@ export default function Ats3Panel() {
 
   /** Los hallazgos, dichos en la forma que la pantalla ya sabía pintar. */
   const todos = useMemo(() => [...a.regressed, ...a.findings], [a.findings, a.regressed])
+  /** Los términos con una tarjeta pendiente en Tailor: la tabla abre la puerta sólo donde hay algo detrás. */
+  const conTarjeta = useMemo(() => new Set(todos.flatMap((f) => (f.subject ? [normalize(f.subject)] : []))), [todos])
   /**
    * EL NOMBRE HUMANO DE UN TOKEN DEL MOTOR.
    *
@@ -65,8 +68,8 @@ export default function Ats3Panel() {
   /** Las cuatro cifras de la cabecera salen juntas: no pueden discrepar. */
   const cabecera = useMemo(() => headlineOf(a.score, secciones), [a.score, secciones])
   const términos = useMemo(
-    () => termsOfSpec(a.spec, a.covered, a.jd, a.tree, a.spec && a.audit ? softCoverageOf(a.spec, a.audit, a.tree) : []),
-    [a.spec, a.covered, a.jd, a.tree, a.audit],
+    () => termsOfSpec(a.spec, a.audit, a.jd, a.tree),
+    [a.spec, a.jd, a.tree, a.audit],
   )
 
   /**
@@ -269,6 +272,7 @@ export default function Ats3Panel() {
               {términos.some((x) => x.section === sección.id) && (
                 <TermTable
                   terms={términos.filter((x) => x.section === sección.id)}
+                  conTarjeta={conTarjeta}
                   /* La fila LLEVA a Tailor con su término: el informe abre la
                      puerta, y quien escribe sigue siendo el de siempre. */
                   onSolve={(term) => {
@@ -431,88 +435,45 @@ function Anatomy({
   t,
 }: {
   audit: AuditFacts
-  /**
-   * CUÁNTAS LÍNEAS TIENE EL CV, revisadas o no.
-   *
-   * El cuadro cuenta sobre las líneas que la auditoría juzgó, y está bien: son
-   * las únicas de las que puede hablar. Pero decir «12/12» sobre un CV de 42
-   * es decir que se revisó todo (medido en producción el 2026-09-24). Si
-   * quedaron líneas sin juicio, se dice cuántas.
-   */
+  /** Cuántas líneas tiene el CV, revisadas o no: si quedaron sin decisión, se dice. */
   lines: number
-  /**
-   * LA VARA DE LA CIFRA ES EL PUNTAJE, y por eso viene de él.
-   *
-   * El panel viejo pintaba un objetivo de 60-70% de líneas con número. Ese
-   * umbral vivía en la configuración del motor viejo y estaba marcado ahí mismo
-   * como elegido, no medido — y el motor v3 no lo tiene. Escribirlo acá sería
-   * una vara inventada que además el número no comparte: el panel diría «te
-   * falta» contra algo que el puntaje no mide.
-   *
-   * Lo que SÍ es cierto y no necesita umbral: cuánto vale la cifra en el
-   * análisis. Sale del componente que ya la puntúa, así que la pantalla y el
-   * número no pueden discrepar.
-   */
+  /** Cuánto vale la cifra en el análisis, del componente que la puntúa. */
   metric: { points: number; max: number } | null
-  /**
-   * QUÉ DICE ESA LÍNEA HOY. Con esto se responden las DOS preguntas del cuadro
-   * —¿sigue en el CV? ¿trae una cifra?— sobre el mismo conjunto de líneas.
-   */
+  /** Qué dice esa línea hoy. */
   textOf: (nodeId: string) => string
   t: (k: string, v?: Record<string, string | number>) => string
 }) {
   /**
-   * SÓLO LAS LÍNEAS QUE EL CV TIENE DE VERDAD.
-   *
-   * El juicio por viñeta lo devuelve un modelo, y un modelo puede contestar por
-   * una línea que no existe: un id mal copiado, una que el usuario ya borró.
-   * Contándolas contra el total de líneas reales, el panel puede mostrar «9 de
-   * 8» — un número imposible que además contradice al puntaje, que ya las
-   * descarta por su cuenta. Se descartan con la misma vara: si la línea no está
-   * en el CV vivo, no se cuenta.
+   * LO QUE EL ATS DECIDIÓ DE CADA VIÑETA, contra este puesto (CEO, 2026-09-29):
+   * cuáles ya sirven, cuáles hay que mejorar y cuáles sobran, con su motivo. Sólo
+   * las líneas que el CV tiene hoy.
    */
   const reales = audit.bullets.filter((b) => textOf(b.id).length > 0)
-  /**
-   * ── UN SOLO DENOMINADOR PARA LAS CUATRO FILAS ─────────────────────────────
-   *
-   * Las cuatro se pintan igual —«n/total»— y hasta hoy no contaban lo mismo:
-   * verbo, resultado y método salían de las líneas que la auditoría JUZGÓ, y la
-   * cifra de TODAS las líneas vivas del CV. Cuando la auditoría no devuelve una
-   * viñeta —un borde que este motor tiene declarado— los tres primeros quedaban
-   * cortos contra un denominador que no era el suyo, y el cuadro decía «te
-   * faltan dos líneas con verbo» sobre dos líneas que nadie leyó.
-   *
-   * Las cuatro cuentan sobre las mismas líneas: las que existen en el CV y la
-   * auditoría juzgó. Es la única población de la que este cuadro puede hablar.
-   */
   const total = reales.length
   if (total === 0) return null
-  const verb = reales.filter((b) => b.hasActionVerb).length
-  const result = reales.filter((b) => b.hasResult).length
-  const method = reales.filter((b) => b.hasMethod).length
-  const quantified = reales.filter((b) => statesQuantity(textOf(b.id))).length
-  const complete = reales.filter((b) => b.hasActionVerb && b.hasResult && b.hasMethod).length
-  /**
-   * SIN BANDA, Y NO ES UN OLVIDO.
-   *
-   * El panel viejo pintaba un objetivo de 60–70% de líneas con cifra. Ese número
-   * vivía en la configuración del motor VIEJO y estaba marcado ahí mismo como
-   * `basis: "chosen"` — elegido, no medido. Traerlo escrito a mano en esta
-   * pantalla sería un umbral inventado que además nadie puntúa: el motor v3 no
-   * tiene banda, así que el panel diría «te falta» sobre una vara que el número
-   * no comparte.
-   *
-   * Se dice lo que SÍ es cierto y no necesita umbral: llenar todas las líneas de
-   * números se lee fabricado. Cuántas exactamente es una decisión del CEO y una
-   * medición, no una constante que yo elija acá.
-   */
-
+  const cuenta = (d: "keep" | "improve" | "remove") => reales.filter((b) => b.decision === d).length
+  const piden = reales.filter((b) => b.needsFigure)
+  const conCifra = piden.filter((b) => statesQuantity(textOf(b.id))).length
   const filas: [string, number][] = [
-    ["bq_verb", verb],
-    ["bq_result", result],
-    ["bq_method", method],
-    ["bq_metric", quantified],
+    ["bq_keep", cuenta("keep")],
+    ["bq_improve", cuenta("improve")],
+    ["bq_remove", cuenta("remove")],
   ]
+  const TONO = { keep: "ok", improve: "warn", remove: "neutral" } as const
+  /**
+   * X-Y-Z DE CADA VIÑETA (CEO, 2026-09-30), con las MISMAS marcas que abren las
+   * tarjetas de Tailor, para que la lista y las tarjetas no se contradigan:
+   * «sólo tarea» = le falta el logro; «falta la cifra» = el logro no dice cuánto;
+   * «completa» = trae su cifra y nada le falta.
+   */
+  const xyz = (b: AuditFacts["bullets"][number]): "task" | "figure" | "complete" | null => {
+    if (b.decision === "remove") return null
+    if (b.needsOutcome) return "task"
+    if (b.needsFigure && !statesQuantity(textOf(b.id))) return "figure"
+    return statesQuantity(textOf(b.id)) ? "complete" : null
+  }
+  const TONO_XYZ = { task: "warn", figure: "warn", complete: "ok" } as const
+  const completas = reales.filter((b) => xyz(b) === "complete").length
   const resumen: [string, boolean][] = [
     ["bq_sum_identity", audit.summary.identity],
     ["bq_sum_proof", audit.summary.proof],
@@ -537,101 +498,47 @@ function Anatomy({
               {n}/{total}
             </span>
             <span className="min-w-0 flex-1" style={{ color: "var(--a-ink-2)" }}>{t(clave)}</span>
-            {/* La barra dice lo mismo que el número: quien lee de un vistazo no
-                tiene que hacer la división. */}
             <span className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full" style={{ background: "var(--a-track)" }}>
-              <span
-                className="block h-full rounded-full"
-                style={{ width: `${Math.round((n / total) * 100)}%`, background: "var(--a-accent)" }}
-              />
+              <span className="block h-full rounded-full" style={{ width: `${Math.round((n / total) * 100)}%`, background: "var(--a-accent)" }} />
             </span>
           </li>
         ))}
       </ul>
 
-      <Note className="mt-3">
-        {/* Un componente que no se pudo medir reparte su peso y queda en cero:
-            decir «vale 0,0 de 0,0 puntos» es ruido con forma de dato. */}
-        {metric && metric.max > 0 && (
-          <b style={{ color: "var(--a-ink-2)" }}>
-            {t("bq_metric_worth", { points: metric.points.toFixed(1), max: metric.max.toFixed(1) })}{" "}
-          </b>
-        )}
-        {t("bq_band")}
-      </Note>
-      <p className="mt-1.5 text-[11px]" style={{ color: "var(--a-muted-2)" }}>
-        {t("bq_complete", { n: complete, total })}
-      </p>
+      {piden.length > 0 && (
+        <Note className="mt-3">
+          {metric && metric.max > 0 && (
+            <b style={{ color: "var(--a-ink-2)" }}>
+              {t("bq_metric_worth", { points: metric.points.toFixed(1), max: metric.max.toFixed(1) })}{" "}
+            </b>
+          )}
+          {t("bq_figures", { n: conCifra, total: piden.length })}
+        </Note>
+      )}
 
-      {/* ── LAS LÍNEAS, UNA POR UNA ──────────────────────────────────────────
-          Se fue con el borrado del motor viejo (`BulletQualityPanel`, commit
-          04d28d4) sin que nadie lo pidiera, y el CEO lo reclamó: los contadores
-          de arriba contestan «¿cuántas de mis líneas dicen algo medible?», pero
-          no CUÁL. Sin esta lista, «te faltan tres con cifra» obliga a ir a
-          buscarlas a mano.
-
-          Los tres chips son los tres ejes que la auditoría YA juzga —el mismo
-          insumo que los contadores— así que no puede decir una cosa acá y otra
-          tres renglones arriba. Y CADA CHIP DICE QUÉ ES en su nombre accesible:
-          «V», «R» y «C» sueltas son crípticas en táctil —donde no hay hover— y
-          un lector de pantalla leería tres letras. */}
       <h3 className="mt-4 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_lines_title")}</h3>
+      <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_xyz_count", { n: completas, total })}</p>
       <ul className="mt-2 flex max-h-[280px] flex-col overflow-y-auto rounded-xl border" style={{ borderColor: "var(--a-border)" }}>
-        {reales.map((b) => {
-          const texto = textOf(b.id)
-          const palabras = texto.trim().split(/\s+/).length
-          /* Los términos que ESTA línea demuestra, según la misma auditoría que
-             decide la cobertura. No es una segunda opinión: es el mismo campo
-             con el que el puntaje cuenta el requisito como cubierto. */
-          const términos = audit.coverage
-            .filter((c) => c.evidenceNodeId === b.id && c.status === "FOUND")
-            .map((c) => c.skill)
-          const ejes: [string, boolean, string][] = [
-            ["V", b.hasActionVerb, "bq_verb"],
-            ["R", b.hasResult, "bq_result"],
-            ["C", b.hasMethod, "bq_method"],
-          ]
-          return (
-            <li
-              key={b.id}
-              className="flex items-start gap-2 border-b px-3 py-2 last:border-b-0"
-              style={{ borderColor: "var(--a-border)" }}
-            >
-              <span className="mt-0.5 flex shrink-0 gap-0.5">
-                {ejes.map(([letra, on, clave]) => (
-                  <i
-                    key={letra}
-                    title={t(on ? "bq_axis_on" : "bq_axis_off", { axis: t(clave) })}
-                    aria-label={t(on ? "bq_axis_on" : "bq_axis_off", { axis: t(clave) })}
-                    className="flex h-[15px] w-[15px] items-center justify-center rounded-[3px] text-[8.5px] font-bold not-italic"
-                    style={
-                      on
-                        ? { background: "var(--a-ok-soft)", color: "var(--a-ok-ink)" }
-                        : { background: "var(--a-surface-3)", color: "var(--a-muted-2)" }
-                    }
-                  >
-                    {letra}
-                  </i>
-                ))}
-              </span>
-
-              <span className="min-w-0 flex-1">
-                <span className="block text-[11px] leading-snug" style={{ color: "var(--a-ink-2)" }}>
-                  {texto}
-                </span>
-                {términos.length > 0 && (
-                  <span className="mt-0.5 block text-[9.5px]" style={{ color: "var(--a-accent-ink)" }}>
-                    {términos.slice(0, 4).join(" · ")}
-                  </span>
-                )}
-              </span>
-
-              <span className="shrink-0 text-[9.5px] font-bold tabular-nums" style={{ color: "var(--a-muted-2)" }}>
-                {t("bq_words_short", { n: palabras })}
-              </span>
-            </li>
-          )
-        })}
+        {reales.map((b) => (
+          <li key={b.id} className="flex items-start gap-2 border-b px-3 py-2 last:border-b-0" style={{ borderColor: "var(--a-border)" }}>
+            <span className="mt-0.5 flex shrink-0 flex-col items-start gap-1">
+              <Chip size="xs" tone={TONO[b.decision]}>
+                {t(`bq_decision_${b.decision}`)}
+              </Chip>
+              {xyz(b) && (
+                <Chip size="xs" tone={TONO_XYZ[xyz(b)!]}>
+                  {t(`bq_xyz_${xyz(b)}`)}
+                </Chip>
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] leading-snug" style={{ color: "var(--a-ink-2)" }}>{textOf(b.id)}</span>
+              {b.reason && (
+                <span className="mt-0.5 block text-[10px] leading-snug" style={{ color: "var(--a-muted)" }}>{b.reason}</span>
+              )}
+            </span>
+          </li>
+        ))}
       </ul>
 
       <h3 className="mt-4 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_summary_title")}</h3>
@@ -639,8 +546,6 @@ function Anatomy({
       <ul className="mt-2 flex flex-wrap gap-1.5">
         {resumen.map(([clave, ok]) => (
           <li key={clave}>
-            {/* El estado se distingue por ICONO además de color: un panel que
-                sólo cambia el tono deja afuera a quien no distingue los dos. */}
             <Chip tone={ok ? "ok" : "neutral"} className="flex items-center gap-1.5">
               {ok ? <Check className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
               {t(clave)}

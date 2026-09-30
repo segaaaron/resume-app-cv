@@ -17,21 +17,32 @@ import {
   ResumeSectionsSchema,
 } from "@/types/resume"
 
-/** Parse a free-text date like "04/2023", "2023", "2021 - 2022" → numeric value for sorting */
+/**
+ * Parse a free-text date — "2023-04" (what the editor stores), "04/2023",
+ * "2023", "2021 - 2022" — into a sortable month count. Unknown → 0.
+ */
 function parseDateValue(d: string): number {
   if (!d) return 0
-  const clean = d.trim().split(/[\s–\-→]+/)[0] // take first part if range
+  const iso = d.trim().match(/^(\d{4})-(\d{1,2})/)
+  if (iso) return parseInt(iso[1]) * 12 + parseInt(iso[2])
+  const clean = d.trim().split(/[\s–→]+|\s-\s/)[0] // first part of a range
   const parts = clean.split("/")
   if (parts.length === 2) {
     const [month, year] = parts
-    return parseInt(year) * 12 + parseInt(month)
+    return (parseInt(year) || 0) * 12 + (parseInt(month) || 0)
   }
-  return parseInt(clean) * 12
+  return (parseInt(clean) || 0) * 12
 }
 
-/** Sort work experience and education chronologically (oldest first) */
+/**
+ * Work experience and education, MOST RECENT FIRST (CEO, 2026-09-29).
+ *
+ * This sorted oldest-first, so every template printed the 2015 job at the top —
+ * the opposite of how a recruiter reads a CV and of what the ATS check
+ * `chronology_reversed` flags as a defect. Ties keep the user's order.
+ */
 function sortChronological<T extends { startDate?: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) => parseDateValue(a.startDate ?? "") - parseDateValue(b.startDate ?? ""))
+  return [...items].sort((a, b) => parseDateValue(b.startDate ?? "") - parseDateValue(a.startDate ?? ""))
 }
 
 /**
@@ -117,7 +128,7 @@ const defaultConfig: ResumeConfig = {
 
 const defaultSectionData: ResumeSections = ResumeSectionsSchema.parse({})
 
-/** Hook for templates: returns sectionData sorted chronologically */
+/** Hook for templates: returns sectionData with experience and education most recent first */
 export function useTemplateSectionData() {
   const raw = useResumeStore((s) => s.sectionData)
   return useMemo(() => applySectionOrder(raw), [raw])

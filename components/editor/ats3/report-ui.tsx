@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl"
 import { Btn, Chip, Note, PRESSABLE, toneOf, type Tone } from "./ui"
 import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Sparkles, Tag, User } from "lucide-react"
 import { READY_SCORE, scoreBand } from "@/lib/ats3/score"
+import { normalize } from "@/lib/ats3/contracts"
 import type { PanelCheck, PanelSection, PanelSectionId, PanelTerm } from "./view-model"
 
 
@@ -754,9 +755,11 @@ interface TableProps {
    * tocar el CV aunque alguien quisiera.
    */
   onSolve?: (term: string) => void
+  /** Términos (normalizados) con tarjeta pendiente en Tailor. */
+  conTarjeta?: ReadonlySet<string>
 }
 
-export function TermTable({ terms, onSolve }: TableProps) {
+export function TermTable({ terms, onSolve, conTarjeta }: TableProps) {
   const t = useTranslations("editor.ats")
   if (terms.length === 0) return null
 
@@ -896,7 +899,10 @@ export function TermTable({ terms, onSolve }: TableProps) {
                             que su botón abría Tailor sin nada que resolver
                             (medido el 2026-09-28: Combine, XCTest, English). La
                             blanda sí tiene tarjeta: dicha no es demostrada. */}
-                        {onSolve && !row.proven && !(row.listOnly && row.section !== "soft") && (
+                        {/* Y la decide la lista de tarjetas pendientes, no la fila: la regla
+                            por sección dejaba el botón en «Lo deseable» con Jira ya resuelto
+                            (CEO, 2026-09-30). */}
+                        {onSolve && conTarjeta?.has(normalize(row.term)) && (
                           <span className="shrink-0">
                             <Btn
                               variant="outline"
