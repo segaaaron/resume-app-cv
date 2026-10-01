@@ -4,8 +4,18 @@ import type OpenAI from "openai"
 export type ChatParams = OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming
 export type ChatCompletion = OpenAI.Chat.Completions.ChatCompletion
 
+/**
+ * Límites de UNA petición, para el llamador que sabe cuánto tarda la suya. El
+ * cliente global corta a los 60 s y reintenta tres veces: vale para una llamada
+ * corta, y mata a una que tarda 70 s cuatro veces seguidas.
+ */
+export interface ChatRequestOptions {
+  timeoutMs?: number
+  maxRetries?: number
+}
+
 export interface IAIClient {
-  chat(params: ChatParams): Promise<ChatCompletion>
+  chat(params: ChatParams, options?: ChatRequestOptions): Promise<ChatCompletion>
   /** Returns one embedding vector per input string (same order). Used for
    *  semantic keyword matching (cosine similarity) in the ATS score. */
   /**

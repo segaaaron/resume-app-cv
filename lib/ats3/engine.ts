@@ -21,7 +21,7 @@
 // y reanalizar cuesta cero.
 
 import { buildTermIndex, findingId, nodeHash, normalize, sha256, termsIn, type AnchoredSuggestion, type Finding, type JobSpec, type Resolution, type ResumeTree } from "@/lib/ats3/contracts"
-import { isStale, loyalty, type GuardVerdict } from "@/lib/ats3/guards"
+import { droppedNames, isStale, loyalty, type GuardVerdict } from "@/lib/ats3/guards"
 import { cvTextOf, deltaOf, gainOf, scoreResume, statesQuantity, termsOf, titleForms, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 import { type RawResume, buildTree, readableChecks, writeInto } from "@/lib/ats3/cv"
 import { findingsOf, hayTrabajo, respaldadoEnCv, trabajoPorViñeta } from "@/lib/ats3/findings"
@@ -98,6 +98,14 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     telemetry.calls++
     await input.store.write("ats3-jd", jdKey, spec)
   }
+  /**
+   * LA VACANTE SALE APENAS SE LEE (2026-09-30). La ruta abre el stream con el
+   * primer acto, y el navegador espera la respuesta 120 s como mucho: cuando el
+   * primer acto era el puntaje, esa espera cubría la vacante Y la auditoría, y
+   * un aviso largo la pasaba (medido en producción, Sezzle, dos veces). Con la
+   * vacante primero, lo que tarde la auditoría corre con el stream ya abierto.
+   */
+  yield { act: "job", spec }
 
   /**
    * LO QUE TAILOR YA ESCRIBIÓ SIGUIENDO AL ATS, Y SIGUE EN EL CV (CEO, 2026-09-29).
@@ -178,9 +186,23 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    * él mismo mandó escribir es el bucle que este motor existe para no tener.
    */
   // Una skill «demostrada» o «listada» cuyo nombre el CV no respalda no está en el CV: falta.
+  /**
+   * SALVO UNA CREDENCIAL, QUE SE ESCRIBE DISTINTO EN CADA PAÍS (2026-09-30). Medido
+   * en producción: «Bachelor's degree» quedaba como faltante con «Systems engineer —
+   * Catolica University» en la educación, porque esta comprobación exige las
+   * palabras del aviso. Un título es lo que es, no cómo se llama: eso lo juzga el
+   * ATS. El código sólo puede probar que no hay nada que juzgar —un CV sin
+   * educación, certificaciones ni idiomas—.
+   */
+  const credenciales = new Set([...spec.mustHave, ...spec.niceToHave].filter((r) => r.kind === "credential").map((r) => normalize(r.skill)))
+  const sinDondeTenerla = !tree.otherText.trim()
   audit = {
     ...audit,
-    hard: audit.hard.map((h) => (h.status !== "missing" && !respaldadoEnCv(tree, h.skill) ? { ...h, status: "missing" as const, evidenceNodeId: null } : h)),
+    hard: audit.hard.map((h) =>
+      h.status !== "missing" && !respaldadoEnCv(tree, h.skill) && (sinDondeTenerla || !credenciales.has(normalize(h.skill)))
+        ? { ...h, status: "missing" as const, evidenceNodeId: null }
+        : h,
+    ),
   }
   /**
    * LO QUE TAILOR ESCRIBIÓ QUEDA PROBADO (CEO, 2026-09-30): si una línea que la
@@ -223,7 +245,8 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
       quedan.add(b.id)
       if (typeof v === "string" && !quedan.has(v)) {
         const esta = todas.find((x) => x.id === b.id)?.text ?? ""
-        sacar.set(v, `Dice lo mismo que «${esta.split(/\s+/).slice(0, 6).join(" ")}…», que trae la cifra.`)
+        const inicio = esta.split(/\s+/).slice(0, 6).join(" ")
+        sacar.set(v, input.language === "en" ? `Says the same as "${inicio}…", which carries the figure.` : `Dice lo mismo que «${inicio}…», que trae la cifra.`)
       }
     }
     audit = {
@@ -291,7 +314,6 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   const checks = readableChecks(tree)
   const score = scoreResume(tree, spec, audit, checks)
   yield { act: "score", score, tree, audit, checks }
-  yield { act: "job", spec }
 
   // ── las tarjetas: la decisión del ATS, una por viñeta ─────────────────────
   const all = findingsOf(tree, audit, score, spec)
@@ -334,6 +356,28 @@ function sacarSeSostiene(tree: ResumeTree, id: string, reason: string): true | f
   const citadas = todas.filter((b) => b.id !== id && citas.some((c) => c.length >= 12 && normalize(b.text).startsWith(c)))
   // Se cita a sí misma, o cita algo que no está: no se saca.
   if (citadas.length === 0) return false
+  /**
+   * REPETIR ES DECIR LO MISMO, Y LO QUE QUEDA TIENE QUE DECIRLO (2026-09-30).
+   * Medido en producción: el ATS mandó sacar «Implemented TCA architecture…»
+   * por repetir a «Applied SOLID design principles…», y «Used AI-assisted
+   * engineering tools (Claude Code, Codex, Copilot)…» por parecerse a una de
+   * unit tests. Las dos se parecen en las palabras de siempre; ninguna repite:
+   * sacarlas borraba TCA y Claude Code del CV. Una línea que nombra algo que la
+   * citada no nombra no la repite.
+   */
+  if (droppedNames(esta.text, citadas.map((b) => b.text).join(" ")).length > 0) return false
+  /**
+   * Y TIENE QUE DECIR, EN SUS PALABRAS, LO QUE DICE LA QUE SE VA. Medido contra la
+   * API con el aviso de Sezzle: «Collaborated in code reviews…» salía por
+   * «repetir» a «Conducted unit and UI testing…» (comparten 10% de su contenido),
+   * «networking layers» por «RESTful APIs» (0%), «user-friendly interfaces» por
+   * «cross-platform apps» (30%). Las repetidas de verdad comparten 45–80%.
+   *
+   * ponytail: raíces de cinco letras, no significado; el piso de 40% sale de esos
+   * ocho pares medidos. Si una repetida real queda debajo, la línea se conserva:
+   * el error barato, porque mostrar experiencia vale más que una viñeta menos.
+   */
+  if (cubre(esta.text, citadas.map((b) => b.text).join(" ")) < 0.4) return false
   // Sacaba la que tiene cifra para dejar una sin cifra: se queda ésta y se va la citada.
   if (statesQuantity(esta.text) && citadas.every((b) => !statesQuantity(b.text))) return citadas[0].id
   return true
@@ -399,6 +443,14 @@ function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bu
         ? { ...b, decision: "remove" as const, reason: b.reason || "Supera el máximo de viñetas que se leen por puesto." }
         : b,
   )
+}
+
+/** Cuánto del contenido de `a` (raíces de cinco letras, palabras de 4+) dice también `b`. */
+function cubre(a: string, b: string): number {
+  const raices = (t: string) => [...new Set(normalize(t).split(" ").filter((w) => w.length >= 4).map((w) => w.slice(0, 5)))]
+  const A = raices(a)
+  const B = new Set(raices(b))
+  return A.length === 0 ? 0 : A.filter((w) => B.has(w)).length / A.length
 }
 
 /** Los puestos que quedan fuera del rango de viñetas que se leen, dicho para el ATS. */

@@ -22,7 +22,7 @@ vi.mock("@/lib/controllers/shared", () => ({
 }))
 vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({
   enforceAIQuota: vi.fn(),
-  refundDailyQuota: vi.fn(),
+  refundDailyQuota: vi.fn(async () => undefined),
 }))
 vi.mock("@/lib/db", () => ({
   // `resume.findFirst` es la comprobación de dueño: el CV tiene que ser de quien
@@ -119,7 +119,7 @@ beforeEach(() => {
 })
 
 describe("la ruta del motor v3", () => {
-  it("entrega el análisis en actos, y el puntaje llega primero", async () => {
+  it("entrega el análisis en actos: la vacante abre el stream y el puntaje sigue", async () => {
     const res = await POST(req(CUERPO))
     expect(res.status).toBe(200)
     expect(res.headers.get("Content-Type")).toContain("ndjson")
@@ -128,8 +128,8 @@ describe("la ruta del motor v3", () => {
     expect(res.headers.get("Cache-Control")).toContain("no-transform")
 
     const salida = await actos(res)
-    expect(salida.map((a) => a.act)).toEqual(["score", "job", "findings", "done"])
-    const score = salida[0].score as { total: number }
+    expect(salida.map((a) => a.act)).toEqual(["job", "score", "findings", "done"])
+    const score = salida[1].score as { total: number }
     expect(score.total).toBeGreaterThan(0)
     expect(score.total).toBeLessThanOrEqual(100)
   })
@@ -221,8 +221,11 @@ describe("la ruta del motor v3", () => {
   it("un análisis que falla devuelve la ranura y anota lo gastado", async () => {
     falla.audit = true
     try {
+      // La auditoría corre con el stream ya abierto por la vacante: su fallo no
+      // puede cambiar el estado HTTP y se dice en la línea.
       const res = await POST(req(CUERPO))
-      expect(res.status).toBe(500)
+      expect(res.status).toBe(200)
+      expect((await actos(res)).map((a) => a.act)).toEqual(["job", "error"])
       expect(refundDailyQuota).toHaveBeenCalledWith("u1", "ats3", "PRO")
       expect(logAIUsage).toHaveBeenCalled()
     } finally {
@@ -256,7 +259,7 @@ describe("la ruta del motor v3", () => {
   })
 
   it("la vacante se guarda SIN resumeId: dos candidatos con el mismo aviso la comparten", async () => {
-    await POST(req(CUERPO))
+    await actos(await POST(req(CUERPO)))
     // Escribe con UPSERT: el registro de lo resuelto crece, y con `create` la
     // segunda anotación chocaba con la clave y se perdía en silencio.
     const escrituras = vi.mocked(db.aiAnswerCache.upsert).mock.calls.map((c) => ({

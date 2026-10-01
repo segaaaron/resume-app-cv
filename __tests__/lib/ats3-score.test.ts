@@ -4,6 +4,7 @@ import {
   titleForms,
   experienceYears,
   titleWritten,
+  cargoNucleo,
   gainOf,
   deltaOf,
   statesQuantity,
@@ -295,6 +296,14 @@ describe("un cargo con barra son varios cargos", () => {
     const spec = { ...makeSpec(0, 0), roleTitleRaw: "Cajera / Cajero de Supermercado" }
     expect(titleWritten(tree, spec)).toBe(true)
     expect(titleWritten(tree, { ...spec, roleTitleRaw: "Repositor / Repositora" })).toBe(false)
+  })
+  it("lo que va entre paréntesis califica al cargo y no se exige escrito", () => {
+    // Medido en producción: «Mobile Engineer (LATAM)» pedía escribir «(LATAM)» en el resumen.
+    const tree = makeTree(1)
+    tree.summary = { ...tree.summary, text: "Mobile Engineer with 7+ years" }
+    expect(titleWritten(tree, { ...makeSpec(0, 0), roleTitleRaw: "Mobile Engineer (LATAM, All Levels)" })).toBe(true)
+    expect(cargoNucleo("Mobile Engineer (LATAM)")).toBe("Mobile Engineer")
+    expect(cargoNucleo("(Remote)")).toBe("(Remote)")
   })
 })
 

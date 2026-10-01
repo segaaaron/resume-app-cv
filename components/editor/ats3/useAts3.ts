@@ -227,6 +227,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: ctrl.signal,
+        // Esta espera cubre sólo la lectura de la vacante: el stream abre con ella.
+        // Un aviso largo con razonamiento «medium» pasó del minuto (medido en prod).
+        timeoutMs: 180_000,
         body: JSON.stringify({
           resumeId,
           jobDescription: jd,

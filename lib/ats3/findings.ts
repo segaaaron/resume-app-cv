@@ -7,7 +7,7 @@
 import { findingId, mismaRaiz, nodeHash, normalize, type Finding, type JobSpec, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { opensWeakly } from "@/lib/services/ai/shared/empty-phrasing"
-import { cvTextOf, experienceYears, gainOf, statesQuantity, titleWritten, type AuditFacts, type Score } from "@/lib/ats3/score"
+import { cargoNucleo, cvTextOf, experienceYears, gainOf, statesQuantity, titleWritten, type AuditFacts, type Score } from "@/lib/ats3/score"
 
 /**
  * ¿EL CV RESPALDA ESTE NOMBRE? Cada palabra del nombre aparece en algún lado del
@@ -210,7 +210,7 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
   }
 
   // ── el cargo que la vacante busca, escrito tal cual ─────────────────────────
-  const cargo = (spec?.roleTitleRaw ?? "").trim()
+  const cargo = cargoNucleo(spec?.roleTitleRaw ?? "")
   if (cargo && spec && !titleWritten(tree, spec)) {
     out.push(tarjeta({ type: "title_mismatch", component: "title", remedy: "rewrite", subject: cargo, nodeId: tree.summary.id, gain: gainOf(score, "title"), detail: cargo }))
   }

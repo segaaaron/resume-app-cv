@@ -375,9 +375,9 @@ describe("¿se lee bien? — lo mide el motor, no el cliente", () => {
 // ── los actos ────────────────────────────────────────────────────────────────
 
 describe("el análisis se entrega en actos", () => {
-  it("el puntaje llega primero y no cuesta una llamada", async () => {
+  it("la vacante llega primero —abre el stream— y el puntaje después", async () => {
     const { acts } = await analyze(new CountingAi(), new MemoryStore())
-    expect(acts.map((a) => a.act)).toEqual(["score", "job", "findings"])
+    expect(acts.map((a) => a.act)).toEqual(["job", "score", "findings"])
   })
 
   it("cada decisión del ATS es UNA tarjeta, con lo que Tailor recibe", async () => {
@@ -473,6 +473,16 @@ describe("las herramientas de tus habilidades que ese trabajo usó abren su tarj
     expect(f.findings.find((x) => x.nodeId === con.id)?.needsFigure).toBeUndefined()
   })
 
+  it("el resumen no suelta un requisito del aviso que ya decía: se pide una vez más y, si igual lo suelta, no se ofrece", async () => {
+    // Medido en producción: la reescritura del cargo borró Claude Code, que el aviso exige. Acá, atención al cliente.
+    const ai = new CountingAi()
+    ai.rewriteSummary = async () => { ai.rewrites++; return sug({ bulletId: "summary", text: "Cajera con experiencia en sucursales de barrio y trato amable con cada persona", actionVerb: "" }) }
+    const tree = buildTree({ ...RAW, summary: "Cajera con experiencia en atención al cliente en Supermercado Sur" })
+    const r = await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    expect(ai.rewrites).toBe(2)
+    expect(r.ok).toBe(false)
+  })
+
   it("Tailor que no escribe la herramienta: se pide una vez más y, si no la escribe, no se ofrece", async () => {
     const ai = new CountingAi()
     const tree = buildTree(RAW)
@@ -536,6 +546,19 @@ describe("lo que filtra y no se redacta: sólo se avisa", () => {
     if (f?.act !== "findings") throw new Error("sin hallazgos")
     return f.findings
   }
+  it("una credencial que el ATS da por tenida no se vuelve «falta» porque el CV la escribe con otras palabras", async () => {
+    const ai = new CountingAi()
+    ai.parseJob = async () => ({ ...SPEC, mustHave: [...SPEC.mustHave, { skill: "Bachelor's degree", raw: "Bachelor's in computer science or related", years: null, category: null, kind: "credential" as const }] })
+    ai.auditFor = (t) => ({ ...fakeAudit(t), hard: [...fakeAudit(t).hard, { skill: "Bachelor's degree", requirement: "MUST" as const, status: "listed" as const, evidenceNodeId: null, writeIn: null, question: null }] })
+    const raw = { ...RAW, otherText: "Systems engineer Catolica University" }
+    const gen = runAnalysis({ raw, jdText: "Buscamos iOS", language: "en", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
+    const acts = []
+    for (let out = await gen.next(); !out.done; out = await gen.next()) acts.push(out.value)
+    const f = acts.find((a) => a.act === "findings")
+    if (f?.act !== "findings") throw new Error("sin hallazgos")
+    expect(f.findings.some((x) => x.type === "missing_skill" && x.subject === "Bachelor's degree")).toBe(false)
+  })
+
   it("una condición que el CV contradice o no dice abre un aviso sin botón; la que cumple, no", async () => {
     const fs = await conCondiciones([
       { text: "Residir en Brasil", met: "no", cvSays: "Cochabamba, Bolivia" },
@@ -616,6 +639,12 @@ describe("sacar «por repetida» lo comprueba el código", () => {
     expect(d[2]).not.toBe("remove")
   })
 
+  it("una línea que nombra algo que la citada no nombra no la repite: no se saca", async () => {
+    // Medido en producción: «Migrated … SwiftUI» contra «Built the offline cache…» se «parecían».
+    const d = await run([undefined as unknown as string, undefined as unknown as string, undefined as unknown as string, undefined as unknown as string, "Repeats «Built the offline cache for the orders screen»."])
+    expect(d[4]).not.toBe("remove")
+  })
+
   it("repetida de verdad, citando otra línea que también la prueba: se saca", async () => {
     const d = await run([undefined as unknown as string, "Repeats «Resolved critical bugs to improve app stability, contributing»."])
     expect(d[1]).toBe("remove")
@@ -624,7 +653,8 @@ describe("sacar «por repetida» lo comprueba el código", () => {
 
 describe("el rango de viñetas por puesto lo garantiza el código", () => {
   it("«no sirve a este puesto» no saca: sólo lo repetido o lo que pasa del máximo", async () => {
-    const lineas = ["Programé una web en Angular con 15% más de velocidad", "Hice el arqueo de caja al cierre", "Di atención al cliente en el mostrador", "Ordené la góndola", "Repuse mercadería"]
+    // Cada una cita a la siguiente; sólo dos pares se repiten de verdad (sacar exige que la citada diga lo mismo).
+    const lineas = ["Programé una web en Angular con 15% más de velocidad", "Programé la web en Angular y mejoré su velocidad", "Hice el arqueo de caja al cierre", "Hice el arqueo de caja al cierre del turno", "Di atención al cliente en el mostrador"]
     const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: lineas.map((l) => `• ${l}`).join("\n") }] }
     const ai = new CountingAi()
     ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b) => ({ id: b.id, decision: "remove" as const, reason: "no sirve", instruction: null, needsFigure: false })) })
@@ -640,7 +670,8 @@ describe("el rango de viñetas por puesto lo garantiza el código", () => {
   })
 
   it("sacando repetidas, el puesto no baja del mínimo: vuelve primero lo que prueba el puesto", async () => {
-    const lineas = ["Programé una web en Angular con 15% más de velocidad", "Hice el arqueo de caja al cierre", "Di atención al cliente en el mostrador", "Ordené la góndola", "Repuse mercadería"]
+    // Cada una cita a la siguiente; sólo dos pares se repiten de verdad (sacar exige que la citada diga lo mismo).
+    const lineas = ["Programé una web en Angular con 15% más de velocidad", "Programé la web en Angular y mejoré su velocidad", "Hice el arqueo de caja al cierre", "Hice el arqueo de caja al cierre del turno", "Di atención al cliente en el mostrador"]
     const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: lineas.map((l) => `• ${l}`).join("\n") }] }
     const ai = new CountingAi()
     ai.auditFor = (t) => ({
@@ -655,7 +686,7 @@ describe("el rango de viñetas por puesto lo garantiza el código", () => {
     if (sc?.act !== "score") throw new Error("sin puntaje")
     const quedan = sc.audit.bullets.filter((b) => b.decision !== "remove").map((b) => sc.tree.roles[0].bullets.find((x) => x.id === b.id)!.text)
     expect(quedan).toHaveLength(BULLETS_PER_ROLE_MIN)
-    expect(quedan).toContain("Hice el arqueo de caja al cierre")
+    expect(quedan).toContain("Hice el arqueo de caja al cierre del turno")
     expect(quedan).toContain("Di atención al cliente en el mostrador")
   })
 })

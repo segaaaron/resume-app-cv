@@ -177,7 +177,8 @@ export const PROMPT_VERSION = {
   // avanzado») no se agrega otra vez. Lo guardado con p1-13 los duplicaba.
   // p1-15: un término vive en una sola lista (ver `JobSpecSchema`).
   // p1-17 (CEO, 2026-09-29): sin el agregado automático de nombres propios como requisitos.
-  P1: "p1-19", // parser de vacante
+  // p1-20 (2026-09-30): el cargo sin lo que el aviso pone entre paréntesis («(LATAM)»).
+  P1: "p1-20", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -203,7 +204,8 @@ export const PROMPT_VERSION = {
   // p2-10 (2026-09-28): IMPLIED exige la línea citada; hasActionVerb cita `WEAK_OPENERS`; la blanda demostrada cita una viñeta, nunca el resumen.
   // p2-12 (CEO, 2026-09-29): el ATS decide por viñeta (mejorar/mantener/borrar) y por
   // skill (demostrada/listada/falta), con la instrucción que Tailor ejecuta.
-  P2: "p2-20", // diagnóstico
+  // p2-21 (2026-09-30): el motivo y la pregunta en el idioma del CV, nombrado; una credencial se juzga por lo que es.
+  P2: "p2-21", // diagnóstico
   // p3-1 (CEO, 2026-09-29): las herramientas de las habilidades que cada trabajo
   // usó sin nombrarlas. Separado del diagnóstico: dentro de él el modelo no las
   // cruzaba (medido: 1 de 42 viñetas) y declaraba frases del aviso como hechos.

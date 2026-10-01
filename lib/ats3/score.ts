@@ -308,10 +308,24 @@ export function experienceYears(tree: ResumeTree, hoy: Date = new Date()): numbe
  * que este proyecto ya pagó con «plusvalía contiene plus».
  */
 export function titleWritten(tree: ResumeTree, spec: JobSpec): boolean {
-  const formas = titleForms(spec.roleTitleRaw ?? "").map(normalize).filter(Boolean)
+  const formas = titleForms(cargoNucleo(spec.roleTitleRaw ?? "")).map(normalize).filter(Boolean)
   if (formas.length === 0) return true // Sin cargo en el aviso no hay nada que comparar.
   const donde = ` ${[tree.summary.text, ...tree.roles.map((r) => r.title)].map(normalize).join(" · ")} `
   return formas.some((f) => donde.includes(` ${f} `))
+}
+
+/**
+ * EL CARGO SIN LO QUE VA ENTRE PARÉNTESIS (2026-09-30).
+ *
+ * Medido en producción: la vacante «Mobile Engineer (LATAM, All Levels)» volvía
+ * de P1 como «Mobile Engineer (LATAM)», aunque el prompt prohíbe la ubicación, y
+ * Tailor pedía escribir ese cargo, con «(LATAM)», en el resumen del candidato. Lo
+ * que un título lleva entre paréntesis lo califica —región, nivel, modalidad—:
+ * el nombre del puesto es lo de afuera. Si no queda nada afuera, se deja entero.
+ */
+export function cargoNucleo(raw: string): string {
+  const sin = raw.replace(/\s*\([^)]*\)/g, " ").replace(/\s+/g, " ").trim()
+  return sin || raw.trim()
 }
 
 /**

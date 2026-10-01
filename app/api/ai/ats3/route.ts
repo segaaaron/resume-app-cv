@@ -436,10 +436,10 @@ export async function POST(req: Request) {
       store,
     })
 
-    // El primer acto es código puro, pero el motor pide la vacante y la
-    // auditoría antes de poder puntuar. Se espera A ESE acto y recién ahí se
+    // El primer acto es la vacante leída. Se espera A ESE acto y recién ahí se
     // abre el stream: hasta acá, cualquier fallo todavía puede responder con su
-    // propio código HTTP.
+    // propio código HTTP. La auditoría corre después, con el stream abierto, y
+    // si falla lo dice en la línea (ver abajo).
     let first
     try {
       first = await gen.next()

@@ -239,7 +239,7 @@ export function jobPrompt(lang: Lang): string {
     "6b. ORDENÁ las dos listas por PESO REAL, no por el orden en que aparecen: pesa más lo que el aviso repite y lo que enuncia al abrir la descripción; pesa menos lo que queda al final de una enumeración. La primera de la lista es la que el motor va a atender primero, así que el orden es una decisión, no un detalle.",
     "7. `metricThatMatters`: en pocas palabras, QUÉ NÚMERO le importa a este puesto según el aviso — volumen, monto, tiempo, rendimiento, personas o crecimiento— dicho con las palabras del propio aviso. Es la vara con la que después se le pide una cifra al candidato: preguntarle por algo que a este puesto no le importa es hacerle perder el tiempo. Si el aviso no dice cómo se mide el éxito, null.",
     "8. `softSignals`: SÓLO cualidades PERSONALES que el aviso le pide a la persona —cómo trabaja: autonomía, trabajo en equipo, comunicación, atención al detalle—, dichas como sustantivo o frase nominal corta —una a tres palabras— con las del propio aviso: «colaboración», «trabajo en equipo», «comunicación escrita»; nunca un adverbio ni un verbo («colaborativamente», «colaborar»), que no se puede escribir dentro de un logro: si el aviso lo dice así, escribí el sustantivo («colaboración»). NO es una blanda: una responsabilidad o tarea del puesto, una herramienta, un requisito técnico, ni una propiedad del RESULTADO (que la interfaz sea fiel al diseño, que el producto sea accesible, que el código esté probado): eso describe el trabajo o el entregable, no a la persona, y después no hay logro que pueda demostrarlo. Cada señal entra una sola vez y no repite algo que ya pusiste en mustHave o niceToHave. Si el aviso no pide ninguna cualidad personal, devolvé la lista vacía: es una respuesta correcta y esperada.",
-    "9. `roleTitleRaw`: SÓLO el nombre del puesto como el aviso lo escribe («iOS Developer»), sin la empresa, la modalidad, la ubicación ni frases como «is hiring», «busca» o «se necesita». `roleTitleCanonical`: ese mismo nombre, normalizado.",
+    "9. `roleTitleRaw`: SÓLO el nombre del puesto como el aviso lo escribe («iOS Developer»), sin la empresa, la modalidad, la ubicación, el nivel ni lo que el aviso pone entre paréntesis para calificarlo («Mobile Engineer (LATAM, All Levels)» → «Mobile Engineer»), ni frases como «is hiring», «busca» o «se necesita». `roleTitleCanonical`: ese mismo nombre, normalizado.",
     "10. `conditions`: las condiciones que el aviso pone para ser contratado y que no son una habilidad: residir en un país o región («sólo territorio nacional»), permiso de trabajo, un nivel de idioma obligatorio («inglés fluido, no negociable»). `kind`: location, language, authorization u other. `text`: la condición en una frase corta en el idioma del aviso. Sólo si el aviso la exige; una preferencia no va. Una condición de idioma también puede estar en mustHave: acá va además, porque filtra.",
     noScoreRule("es"),
   ]
@@ -265,7 +265,7 @@ export function jobPrompt(lang: Lang): string {
     "6b. ORDER both lists by REAL WEIGHT, not by order of appearance: what the ad repeats and what it states when opening the description weighs more; what trails at the end of an enumeration weighs less. The first item is the one the engine works on first, so the order is a decision, not a detail.",
     "7. `metricThatMatters`: in a few words, WHICH NUMBER this role cares about according to the ad — volume, money, time, performance, people or growth — said in the ad's own words. It is the yardstick used later to ask the candidate for a figure: asking about something this role does not care about wastes their time. If the ad never says how success is measured, null.",
     "8. `softSignals`: ONLY PERSONAL qualities the ad asks of the person — how they work: autonomy, teamwork, communication, attention to detail — stated as a noun or short noun phrase — one to three words — in the ad's own wording: \"collaboration\", \"teamwork\", \"written communication\"; never an adverb or a verb (\"collaboratively\", \"collaborate\"), which cannot be written inside an achievement: if the ad says it that way, write the noun (\"collaboration\"). NOT a soft skill: a responsibility or task of the role, a tool, a technical requirement, or a property of the OUTPUT (that the UI matches the design, that the product be accessible, that the code be tested): that describes the work or the deliverable, not the person, and no achievement can later evidence it. Each signal appears once and does not repeat something already listed in mustHave or niceToHave. If the ad asks for no personal quality, return an empty list: that is a correct and expected answer.",
-    "9. `roleTitleRaw`: ONLY the job title as the ad writes it (\"iOS Developer\"), without the company, work mode, location or phrases like \"is hiring\" or \"we are looking for\". `roleTitleCanonical`: that same title, normalized.",
+    "9. `roleTitleRaw`: ONLY the job title as the ad writes it (\"iOS Developer\"), without the company, work mode, location, level or what the ad puts in parentheses to qualify it (\"Mobile Engineer (LATAM, All Levels)\" → \"Mobile Engineer\"), and without phrases like \"is hiring\" or \"we are looking for\". `roleTitleCanonical`: that same title, normalized.",
     "10. `conditions`: the conditions the ad sets to be hired that are not a skill: living in a country or region ('national territory only'), work authorization, a mandatory language level ('fluent English, not flexible'). `kind`: location, language, authorization or other. `text`: the condition in one short sentence in the ad's language. Only if the ad requires it; a preference does not go here. A language condition may also be in mustHave: it goes here too, because it filters.",
     noScoreRule("en"),
   ]
@@ -287,11 +287,11 @@ export function auditPrompt(lang: Lang): string {
     "   keep — prueba algo que este puesto necesita.",
     "   remove — SÓLO si dice casi lo mismo que otra viñeta (de dos casi iguales queda la más fuerte) o si el puesto pasa del máximo. Una viñeta de otra tecnología u otra tarea NO se saca: muestra experiencia.",
     `   Topes: ningún puesto queda con más de ${BULLETS_PER_ROLE_MAX} viñetas en keep, ni con menos de ${BULLETS_PER_ROLE_MIN} (o todas, si tiene menos). Si sobran, sacá las que menos prueban de lo que pide el aviso.`,
-    "   `reason`: una frase, en el idioma del CV, que la persona entienda. Si sacás una por repetida, citá el comienzo de la que queda.",
+    "   `reason`: una frase, en ESPAÑOL, que la persona entienda. Si sacás una por repetida, citá el comienzo de la que queda.",
     "   `needsFigure`: true sólo si la línea afirma un resultado y no dice cuánto. `instruction`: siempre null.",
     "",
-    "2. HARD SKILLS — por cada requisito (M1, N1…): demonstrated si una viñeta prueba que lo hizo (`evidenceNodeId` = esa viñeta); listed si sólo está nombrado en el CV; missing si no. Un requisito con alternativas («A | B») se cumple con cualquiera. Nunca por parecido de nombre entre cosas distintas (Java no es JavaScript).",
-    "   Si no está demonstrated, `question` = UNA pregunta corta a la persona, en el idioma del CV, para saber si lo hizo, dónde y para qué. `writeIn`: siempre null (ningún nombre del aviso se escribe dentro de una viñeta).",
+    "2. HARD SKILLS — por cada requisito (M1, N1…): demonstrated si una viñeta prueba que lo hizo (`evidenceNodeId` = esa viñeta); listed si sólo está nombrado en el CV; missing si no. Un requisito con alternativas («A | B») se cumple con cualquiera. Nunca por parecido de nombre entre cosas distintas (Java no es JavaScript). Una credencial —título, licencia, certificación, idioma— se juzga por lo que ES, no por cómo se escribe: «Ingeniería de Sistemas» cumple «licenciatura en Informática o afín»; si el CV la tiene (educación, certificaciones, idiomas) es listed.",
+    "   Si no está demonstrated, `question` = UNA pregunta corta a la persona, en ESPAÑOL, para saber si lo hizo, dónde y para qué. `writeIn`: siempre null (ningún nombre del aviso se escribe dentro de una viñeta).",
     "",
     "3. SOFT SKILLS (S1…) — igual: demonstrated si un logro de una viñeta la muestra (nunca el resumen), listed si sólo está nombrada, missing si no. `writeIn`: siempre null.",
     "",
@@ -309,11 +309,11 @@ export function auditPrompt(lang: Lang): string {
     "   keep — proves something this role needs.",
     "   remove — ONLY if it says nearly the same as another bullet (of two near-duplicates the stronger stays) or the role is over the maximum. A bullet about another technology or task is NOT removed: it shows experience.",
     `   Limits: no role keeps more than ${BULLETS_PER_ROLE_MAX} bullets as keep, nor fewer than ${BULLETS_PER_ROLE_MIN} (or all, if it has fewer). If there are too many, remove the ones that prove least of what the posting asks.`,
-    "   `reason`: one sentence, in the CV's language, the person understands. If you remove one as a duplicate, quote the start of the one that stays.",
+    "   `reason`: one sentence, in ENGLISH, the person understands. If you remove one as a duplicate, quote the start of the one that stays.",
     "   `needsFigure`: true only if the line claims a result and does not say how much. `instruction`: always null.",
     "",
-    "2. HARD SKILLS — for every requirement (M1, N1…): demonstrated if a bullet proves the person did it (`evidenceNodeId` = that bullet); listed if only named in the CV; missing if not. A requirement with alternatives (\"A | B\") is met by either. Never by name similarity between different things (Java is not JavaScript).",
-    "   If not demonstrated, `question` = ONE short question to the person, in the CV's language, asking whether they did it, where and for what. `writeIn`: always null (no posting name is written into a bullet).",
+    "2. HARD SKILLS — for every requirement (M1, N1…): demonstrated if a bullet proves the person did it (`evidenceNodeId` = that bullet); listed if only named in the CV; missing if not. A requirement with alternatives (\"A | B\") is met by either. Never by name similarity between different things (Java is not JavaScript). A credential — degree, licence, certification, language — is judged by what it IS, not by its wording: \"Systems Engineer\" (a university degree) meets \"Bachelor's in Computer Science or related\"; if the CV holds it (education, certifications, languages) it is listed.",
+    "   If not demonstrated, `question` = ONE short question to the person, in ENGLISH, asking whether they did it, where and for what. `writeIn`: always null (no posting name is written into a bullet).",
     "",
     "3. SOFT SKILLS (S1…) — the same: demonstrated if an achievement in a bullet shows it (never the summary), listed if only named, missing if not. `writeIn`: always null.",
     "",
@@ -468,6 +468,21 @@ export function summaryPrompt(lang: Lang): string {
 // ─────────────────────────────────────────────────────────────────────────────
 // EL MÓDULO
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * CUÁNTO SE LE ESPERA A UNA LLAMADA DE ESTE MOTOR (2026-09-30).
+ *
+ * El cliente global corta cada llamada a los 60 s y la reintenta tres veces.
+ * La auditoría de un CV de 29 viñetas tardó 64 s medida (P2, sin razonamiento),
+ * y P1 con «medium» sobre un aviso largo pasa del minuto: se cortaban justo
+ * antes de terminar y el reintento volvía a empezar de cero. En producción,
+ * dos análisis seguidos murieron así con el aviso de Sezzle
+ * (Service Errors: «Request timed out.»).
+ *
+ * Se espera lo que tarda y se reintenta UNA vez: un segundo intento de algo que
+ * ya tardó dos minutos no es una red, es duplicar la espera.
+ */
+const ATS3_CALL = { timeoutMs: 150_000, maxRetries: 1 }
 
 /**
  * EL CIERRE DE CADA PROMPT, y no es decorativo.
@@ -708,7 +723,7 @@ export class AIAts3Module implements AtsAi {
        */
       // P4 y P5 en «low»: la salida es lo caro (US$4,50/M) y no se midió que «medium» escriba mejor.
       ...(name === "P2" ? {} : { reasoning_effort: name === "P1" ? ("medium" as const) : ("low" as const) }),
-    })
+    }, ATS3_CALL)
 
     const usage = res.usage
     if (usage) {

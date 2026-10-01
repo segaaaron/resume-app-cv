@@ -6,7 +6,7 @@
 // skills escribir, si lleva cifra— y lo que la persona contó. Una llamada, los
 // tres controles de `guards.ts`, y como mucho un reintento que dice qué falló.
 
-import { buildTermIndex, mismaRaiz, normalize, rolDeNueva, termKey, termsIn, type AnchoredSuggestion, type JobSpec, type NodeId, type ResumeTree, type Suggestion } from "@/lib/ats3/contracts"
+import { buildTermIndex, mismaRaiz, normalize, rolDeNueva, specTerms, termKey, termsIn, type AnchoredSuggestion, type JobSpec, type NodeId, type ResumeTree, type Suggestion } from "@/lib/ats3/contracts"
 import { checkSuggestion, droppedFigures, droppedNames, figureSlots, findNode, repairSuggestion, retryNudge, similarTo, toFirstPerson, addsNothing, type GuardVerdict } from "@/lib/ats3/guards"
 import { cvTextOf, experienceYears, statesQuantity, termsOf, titleForms } from "@/lib/ats3/score"
 import { type AtsAi, type AtsStore, cacheKey } from "@/lib/ats3/ports"
@@ -152,6 +152,20 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   const pedido = JSON.stringify([req.reason ?? "", req.instruction ?? "", req.facts ?? [], terms, Boolean(req.needsFigure), req.told ?? "", Boolean(req.propone), Boolean(req.logro), nueva])
   const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, req.model, pedido)
 
+  /**
+   * LO QUE EL RESUMEN YA PROBABA DEL AVISO NO SE SUELTA (2026-09-30). Medido en
+   * producción: la reescritura del cargo borró «Claude Code», que el aviso de
+   * Sezzle exige, y nada la frenaba porque el resumen estaba exento. Exigirle
+   * TODOS los nombres propios lo dejó sin poder acortar (medido: dos veces
+   * declinado); lo que no puede perder es un requisito de la vacante que ya decía.
+   */
+  const indiceAviso = buildTermIndex(specTerms(req.spec))
+  const yaProbaba = isSummary ? termsIn(indiceAviso, original) : new Set<string>()
+  const requisitosPerdidos = (texto: string) => {
+    const dice = termsIn(indiceAviso, texto)
+    return [...yaProbaba].filter((t) => !dice.has(t))
+  }
+
   /** ¿Qué le falta a esta propuesta? Vacío si pasa los tres controles. */
   const problemas = (s: Suggestion): string[] => {
     const v = checkSuggestion(s, ctx)
@@ -159,7 +173,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     const out: string[] = []
     // 2 · no se pierde ningún hecho: nombres propios y cifras (una cifra que
     // quedó precargada en su hueco no se perdió).
-    const perdidos = isSummary ? [] : droppedNames(original, s.text)
+    const perdidos = isSummary ? requisitosPerdidos(s.text) : droppedNames(original, s.text)
     const precargadas = new Set(Object.values(figureSlots(original, s)).map((c) => c.replace(/^\$/, "")))
     const cifras = droppedFigures(original, s.text.replace(/\[[^\]]+\]/g, " ")).filter((c) => !precargadas.has(c))
     if (perdidos.length || cifras.length) {
@@ -271,7 +285,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           current: original,
           focus: req.reason,
           mustWrite: terms,
-          yearsOfExperience: Math.floor(experienceYears(req.tree)) || null,
+          yearsOfExperience: aniosDichos(original) ?? (Math.floor(experienceYears(req.tree)) || null),
           cvLines: req.tree.roles.flatMap((r) => r.bullets.map((b) => b.text)),
           otherSections: req.tree.otherText,
           spec: req.spec,
@@ -353,8 +367,9 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   if (hechos.length > 0 && hechosFaltantes(first.text).length === hechos.length) {
     return { ok: false, verdict: { ok: false, reason: "declined", detail: hechos.map((h) => h.f).join("; ") }, calls }
   }
-  if (!isSummary && droppedNames(original, first.text).length > 0) {
-    return { ok: false, verdict: { ok: false, reason: "declined", detail: droppedNames(original, first.text).join(", ") }, calls }
+  const soltados = isSummary ? requisitosPerdidos(first.text) : droppedNames(original, first.text)
+  if (soltados.length > 0) {
+    return { ok: false, verdict: { ok: false, reason: "declined", detail: soltados.join(", ") }, calls }
   }
 
   /**
@@ -391,4 +406,17 @@ function provenTermsOf(tree: ResumeTree, spec: JobSpec): string[] {
   const escritos = termsIn(index, cvTextOf(tree))
   const pedidos = [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])].map((r) => index.byKey.get(termKey(r.skill)) ?? r.skill)
   return [...new Set(pedidos.filter((t) => escritos.has(t)))].filter((t) => normalize(t))
+}
+
+/**
+ * LOS AÑOS QUE LA PERSONA YA DICE EN SU RESUMEN MANDAN (2026-09-30).
+ *
+ * Con fechas de sólo año, «2015 — 2016» se cuenta como dos años enteros aunque
+ * hayan sido meses: medido en producción, un CV que dice «7+ years» recibía una
+ * propuesta de resumen con «11 years». Lo que la persona afirma de sí misma no
+ * lo corrige el cálculo; el cálculo sólo decide cuando el resumen no lo dice.
+ */
+function aniosDichos(resumen: string): number | null {
+  const m = resumen.match(/(\d{1,2})\s*\+?\s*(?:years?|años?)/i)
+  return m ? Number(m[1]) : null
 }

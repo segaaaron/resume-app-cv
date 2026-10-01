@@ -1,6 +1,6 @@
 // lib/services/ai/OpenAIClientAdapter.ts
 import { getOpenAI } from "@/lib/ai-client"
-import type { IAIClient, ChatParams, ChatCompletion } from "@/lib/interfaces/IAIClient"
+import type { IAIClient, ChatParams, ChatCompletion, ChatRequestOptions } from "@/lib/interfaces/IAIClient"
 import { computeCostUsd } from "./shared/cost-tracker"
 import { createLogger } from "@/lib/logger"
 import pLimit from "p-limit"
@@ -46,11 +46,15 @@ export class OpenAIClientAdapter implements IAIClient {
    * model-availability failure is fixed by switching models, and masking the rest
    * would hide real bugs.
    */
-  async chat(params: ChatParams): Promise<ChatCompletion> {
+  async chat(params: ChatParams, options?: ChatRequestOptions): Promise<ChatCompletion> {
     const useFallback = unavailableModels.has(params.model) && params.model !== FALLBACK_MODEL
     const model = useFallback ? FALLBACK_MODEL : params.model
+    const request = {
+      ...(options?.timeoutMs !== undefined ? { timeout: options.timeoutMs } : {}),
+      ...(options?.maxRetries !== undefined ? { maxRetries: options.maxRetries } : {}),
+    }
     const send = (m: string) =>
-      limit(() => getOpenAI().chat.completions.create(normalizeParamsForModel({ ...params, model: m })))
+      limit(() => getOpenAI().chat.completions.create(normalizeParamsForModel({ ...params, model: m }), request))
 
     try {
       return await send(model)
