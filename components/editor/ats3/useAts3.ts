@@ -173,6 +173,22 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   /** Se lee fuera del render: escribir la vacante no puede re-renderizar nada. */
   const setPosting = useAtsPostingStore((s) => s.setPosting)
 
+  /**
+   * LO QUE LA PERSONA CONFIRMÓ EN TAILOR QUEDA GUARDADO (2026-10-02). Medido en
+   * producción: se aplicaron 16 tarjetas, la barra quedó en «Sin guardar» y una
+   * recarga del navegador se las llevaba todas. Confirmar es la aceptación; no
+   * hace falta un segundo clic para no perderla. Mismo patrón que la entrevista
+   * de IA: el store suelta un guardado si hay otro en vuelo, así que se reintenta
+   * una vez cuando aterriza —`save()` manda siempre el estado actual—.
+   */
+  const guardar = useCallback(async () => {
+    const { save } = useResumeStore.getState() as { save: (o?: { skipThumbnail?: boolean }) => Promise<void> }
+    await save({ skipThumbnail: true }).catch(() => { /* la barra de arriba ya muestra un guardado fallido */ })
+    if ((useResumeStore.getState() as { isDirty: boolean }).isDirty) {
+      await save({ skipThumbnail: true }).catch(() => { /* ídem */ })
+    }
+  }, [])
+
   const [jd, setJd] = useState("")
   const [state, setState] = useState<Ats3State>(EMPTY)
   const [loading, setLoading] = useState(false)
@@ -480,8 +496,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         }))
         updateSectionData("workExperience", roles)
       }
+      void guardar()
     },
-    [sectionData.workExperience, updateSectionData],
+    [guardar, sectionData.workExperience, updateSectionData],
   )
 
   /**
@@ -643,12 +660,13 @@ export function useAts3(resumeId: string, language: "es" | "en") {
             porNombre.get(normalize(nombre)) ?? { id: `sk_${nodeHash(nombre)}`, name: nombre, level: "intermediate" },
         ) as ResumeSections["skills"],
       )
+      void guardar()
       // Y se mide, como al aceptar una propuesta: el dial no se queda quieto.
       if (!state.spec || !state.audit) return
       const tree = buildTree({ ...payloadResume(), skills: final.map((name) => ({ name })) })
       setState((st) => ({ ...st, score: scoreResume(tree, state.spec!, state.audit!, state.checks) }))
     },
-    [payloadResume, state.audit, state.checks, state.spec, updateSectionData],
+    [guardar, payloadResume, state.audit, state.checks, state.spec, updateSectionData],
   )
 
   /**

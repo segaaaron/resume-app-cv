@@ -152,9 +152,9 @@ class CountingAi implements AtsAi {
 
 const CHECKS: ParseChecks = { contacto: true, unaColumna: true, fechas: true, imagenes: null }
 
-async function analyze(ai: AtsAi, store: AtsStore) {
+async function analyze(ai: AtsAi, store: AtsStore, raw: RawResume = RAW) {
   const gen = runAnalysis({
-    raw: RAW,
+    raw,
     jdText: "Buscamos cajera con arqueo de caja y atención al cliente",
     language: "es",
     resumeId: "cv1",
@@ -584,10 +584,16 @@ describe("lo que filtra y no se redacta: sólo se avisa", () => {
 
 describe("ninguna skill suelta y ninguna que vuelva", () => {
   const listada = (t: ResumeTree) => ({ ...fakeAudit(t), hard: fakeAudit(t).hard.map((h) => (h.skill === "Arqueo de caja" ? { ...h, status: "listed" as const, evidenceNodeId: null } : h)) })
-  const tarjetas = async (store: MemoryStore) => {
+  // La skill vive sólo en Habilidades: ninguna viñeta la escribe.
+  const SOLO_LISTA: RawResume = {
+    ...RAW,
+    workExperience: [{ ...RAW.workExperience![0], description: "• Atendí a los clientes en la línea de cajas\n• Cuadré el efectivo y los comprobantes al cierre" }],
+    skills: [{ name: "Excel" }, { name: "Arqueo de caja" }],
+  }
+  const tarjetas = async (store: MemoryStore, raw: RawResume = SOLO_LISTA) => {
     const ai = new CountingAi()
     ai.auditFor = listada
-    const { acts } = await analyze(ai, store)
+    const { acts } = await analyze(ai, store, raw)
     const f = acts.find((a) => a.act === "findings")
     if (f?.act !== "findings") throw new Error("sin hallazgos")
     return f.findings.filter((x) => x.type === "missing_skill" && x.subject === "Arqueo de caja")
@@ -604,7 +610,12 @@ describe("ninguna skill suelta y ninguna que vuelva", () => {
     const tree = buildTree(RAW)
     const jdKey = cacheKey.jd("Buscamos cajera con arqueo de caja y atención al cliente", "m1")
     await store.write("ats3-log", cacheKey.log("cv1", jdKey), [{ findingId: "f", nodeId: tree.roles[0].bullets[1].id, kind: "applied", after: tree.roles[0].bullets[1].text, at: 0 }])
-    expect(await tarjetas(store)).toHaveLength(0)
+    expect(await tarjetas(store, RAW)).toHaveLength(0)
+  })
+
+  it("una viñeta que escribe la skill con su nombre la prueba, aunque el modelo diga «sólo en la lista»", async () => {
+    // Medido en producción: «TypeScript — sólo en la lista» con «…with Angular and TypeScript» en el CV.
+    expect(await tarjetas(new MemoryStore(), RAW)).toHaveLength(0)
   })
 })
 
@@ -688,6 +699,80 @@ describe("el rango de viñetas por puesto lo garantiza el código", () => {
     expect(quedan).toHaveLength(BULLETS_PER_ROLE_MIN)
     expect(quedan).toContain("Hice el arqueo de caja al cierre del turno")
     expect(quedan).toContain("Di atención al cliente en el mostrador")
+  })
+})
+
+describe("una línea que no cambió conserva su juicio entre análisis (medido en producción, 2026-10-02)", () => {
+  it("el modelo cambia de opinión sobre lo que nadie tocó: manda el juicio anterior", async () => {
+    const store = new MemoryStore()
+    const correr = async (resumen: string, cambiaDeOpinion: boolean) => {
+      const ai = new CountingAi()
+      ai.auditFor = (t) => {
+        const base = fakeAudit(t)
+        if (!cambiaDeOpinion) return base
+        // Segunda lectura: la línea que ya servía pasa a «mejorar» y la skill demostrada, a faltante.
+        return {
+          ...base,
+          bullets: base.bullets.map((b, i) => (i === 0 ? { ...b, decision: "improve" as const, instruction: "otra cosa" } : b)),
+          hard: base.hard.map((h) => (h.skill === "Atención al cliente" ? { ...h, status: "missing" as const, evidenceNodeId: null } : h)),
+        }
+      }
+      const gen = runAnalysis({ raw: { ...RAW, summary: resumen }, jdText: "Buscamos cajera con arqueo de caja y atención al cliente", language: "es", resumeId: "cv1", model: "m1", ai, store })
+      const acts = []
+      let out = await gen.next()
+      while (!out.done) { acts.push(out.value); out = await gen.next() }
+      const sc = acts.find((a) => a.act === "score")
+      if (sc?.act !== "score") throw new Error("sin puntaje")
+      return sc
+    }
+    const primera = await correr("Cajera", false)
+    // El resumen cambió: la auditoría se vuelve a pedir. Las viñetas no cambiaron.
+    const segunda = await correr("Cajera de sucursal", true)
+    expect(segunda.audit.bullets[0].decision).toBe(primera.audit.bullets[0].decision)
+    expect(segunda.audit.hard.find((h) => h.skill === "Atención al cliente")?.status).toBe("demonstrated")
+  })
+})
+
+describe("lo que el ATS cita con las palabras del CV cuenta, aunque no sea la palabra del aviso (2026-10-02)", () => {
+  const correr = async (cvWording: string) => {
+    const ai = new CountingAi()
+    ai.auditFor = (t) => ({
+      ...fakeAudit(t),
+      hard: [...fakeAudit(t).hard, { skill: "Servicio al público", requirement: "NICE", status: "demonstrated", evidenceNodeId: t.roles[0].bullets[0].id, writeIn: null, question: null, cvWording }],
+    })
+    const { acts } = await analyze(ai, new MemoryStore())
+    const sc = acts.find((a) => a.act === "score")
+    if (sc?.act !== "score") throw new Error("sin puntaje")
+    return sc.audit.hard.find((h) => h.skill === "Servicio al público")?.status
+  }
+
+  it("la cita está en la línea de la prueba: se respeta («Mobile» ↔ «aplicaciones móviles»)", async () => {
+    expect(await correr("Atendí a los clientes")).toBe("demonstrated")
+  })
+
+  it("la cita no está en la línea: el código la baja a faltante", async () => {
+    expect(await correr("atendí al público en ventanilla")).toBe("missing")
+  })
+})
+
+describe("lo que se saca por exceso dice por qué (medido en producción, 2026-10-02)", () => {
+  it("el motivo es el exceso del puesto, no el que el modelo dio para conservarla", async () => {
+    const lineas = Array.from({ length: 8 }, (_, i) => `Atendí la caja número ${i + 1} del turno`)
+    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: lineas.map((l) => `• ${l}`).join("\n") }] }
+    const ai = new CountingAi()
+    ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b) => ({ id: b.id, decision: "keep" as const, reason: "Se superpone con «Atendí la caja número 1 del turno»", instruction: null, needsFigure: false })) })
+    const gen = runAnalysis({ raw, jdText: "Buscamos cajera", language: "es", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
+    const acts = []
+    let out = await gen.next()
+    while (!out.done) { acts.push(out.value); out = await gen.next() }
+    const sc = acts.find((a) => a.act === "score")
+    if (sc?.act !== "score") throw new Error("sin puntaje")
+    const sacadas = sc.audit.bullets.filter((b) => b.decision === "remove")
+    expect(sacadas.length).toBe(2)
+    for (const b of sacadas) {
+      expect(b.reason).toMatch(/tiene 8 viñetas/)
+      expect(b.reason).not.toMatch(/superpone/)
+    }
   })
 })
 
@@ -830,6 +915,58 @@ describe("la reescritura y su reintento", () => {
     const r = await req(ai)
     expect(ai.rewrites).toBe(1)
     expect(r.ok).toBe(false)
+  })
+
+  describe("lo que una línea no puede traer de otro puesto (medido en producción, 2026-10-02)", () => {
+    const DOS: RawResume = {
+      ...RAW,
+      workExperience: [
+        { jobTitle: "Cajera", employer: "Supermercado Sur", startDate: "2022-01", endDate: "2024-06", description: "• Atendí a los clientes en la línea de cajas\n• Realicé el arqueo de caja al cierre" },
+        { jobTitle: "Vendedora", employer: "Tienda Norte", startDate: "2019-01", endDate: "2021-12", description: "• Atendí a 50 clientes por día en el mostrador" },
+      ],
+    }
+    const t2 = buildTree(DOS)
+    const linea = t2.roles[0].bullets[0]
+    const pedir = (ai: CountingAi, over: Record<string, unknown> = {}) =>
+      runRewrite({ tree: t2, nodeId: linea.id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore(), ...over })
+
+    it("nombrar la empresa de otro puesto: se pide una vez más y, si insiste, no se ofrece", async () => {
+      const ai = new CountingAi()
+      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas y en Tienda Norte resolví cobros" })
+      const r = await pedir(ai)
+      expect(ai.lastNudge ?? "").toMatch(/Tienda Norte/)
+      expect(r.ok).toBe(false)
+    })
+
+    it("una cifra que la persona no dio para esta línea: se pide una vez más y, si insiste, no se ofrece", async () => {
+      const ai = new CountingAi()
+      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas, para 50 usuarios por turno" })
+      const r = await pedir(ai)
+      expect(ai.lastNudge ?? "").toMatch(/50/)
+      expect(r.ok).toBe(false)
+    })
+
+    it("la cifra que contó la persona sí entra", async () => {
+      const ai = new CountingAi()
+      ai.nextSuggestion = sug({ text: "Atendí a 80 clientes por turno en la línea de cajas resolviendo cobros" })
+      const r = await pedir(ai, { told: "unos 80 clientes por turno" })
+      expect(r.ok).toBe(true)
+    })
+
+    it("el logro no es sólo su hueco: «… en [x%]» no se ofrece", async () => {
+      const ai = new CountingAi()
+      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas en [x%]", placeholders: [{ token: "[x%]", type: "PERCENT_DELTA", label: "x", hint: "", evidenceNeeded: "", required: true }] })
+      const r = await pedir(ai, { logro: true, needsFigure: true })
+      expect(r.ok).toBe(false)
+    })
+
+    it("la misma palabra nueva dos veces en la línea no se ofrece", async () => {
+      const ai = new CountingAi()
+      // Con «Proponer con IA», que admite hasta 16 palabras nuevas: así llegó en producción.
+      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas con procesos escalables para que el servicio escale" })
+      const r = await pedir(ai, { propone: true })
+      expect(r.ok).toBe(false)
+    })
   })
 
   it("nunca reintenta dos veces: eso escondería un prompt que dejó de funcionar", async () => {

@@ -406,7 +406,7 @@ describe("el diagnóstico habla de la lista de la vacante, y de nada más", () =
     bullets: [],
     summary: { identity: true, proof: false, fit: false, extra: false },
     hard: [
-      { ref: "M1", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null },
+      { ref: "M1", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "arqueo de caja" },
       { ref: "M1", status: "missing" }, // repetida
       { ref: "M9", status: "demonstrated" }, // no existe
       { ref: "n1", status: "missing", writeIn: "no-existe", question: "¿Usaste Excel?" },
@@ -429,8 +429,8 @@ describe("el diagnóstico habla de la lista de la vacante, y de nada más", () =
   it("traduce la referencia al nombre de la vacante y descarta lo que no está en la lista", async () => {
     const a = await mod(new ScriptedClient(respuesta)).audit(tree, spec)
     expect(a.hard).toEqual([
-      { skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null },
-      { skill: "Excel", requirement: "NICE", status: "missing", evidenceNodeId: null, writeIn: null, question: "¿Usaste Excel?" },
+      { skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "arqueo de caja" },
+      { skill: "Excel", requirement: "NICE", status: "missing", evidenceNodeId: null, writeIn: null, question: "¿Usaste Excel?", cvWording: null },
     ])
     // Una soft «demostrada» en el resumen no tiene logro detrás: la cita se cae.
     expect(a.soft).toEqual([{ signal: "trabajo en equipo", status: "demonstrated", evidenceNodeId: null, writeIn: null }])

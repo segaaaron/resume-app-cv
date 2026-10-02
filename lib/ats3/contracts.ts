@@ -107,6 +107,22 @@ export function numero(min: number, max: number, porDefecto: number) {
     .transform((v) => (typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : porDefecto))
 }
 
+/**
+ * LOS AÑOS QUE PIDE EL AVISO, COMO VENGAN (2026-10-02). Medido contra la API con
+ * el aviso de Tekton («al menos 3 a 4 años»): el modelo devolvió `yearsRequired`
+ * como texto y P1 se cayó ENTERO —`expected number, received string`—, con la
+ * consulta gastada y el análisis muerto. Un número o un texto con un número
+ * («3-4», «5+») da su primer entero; lo que no se entiende queda en null.
+ */
+function anios() {
+  return z
+    .unknown()
+    .transform((v) => {
+      const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.match(/\d+/)?.[0] ?? NaN) : NaN
+      return Number.isFinite(n) && n >= 0 && n <= 50 ? Math.round(n) : null
+    })
+}
+
 function lista<T extends z.ZodTypeAny>(item: T, max: number) {
   // SE DESCARTA EL ELEMENTO, NO LA RESPUESTA. Un requisito sin `skill` o un
   // hueco sin `token` mataban la vacante o la reescritura completas, con la
@@ -178,7 +194,8 @@ export const PROMPT_VERSION = {
   // p1-15: un término vive en una sola lista (ver `JobSpecSchema`).
   // p1-17 (CEO, 2026-09-29): sin el agregado automático de nombres propios como requisitos.
   // p1-20 (2026-09-30): el cargo sin lo que el aviso pone entre paréntesis («(LATAM)»).
-  P1: "p1-20", // parser de vacante
+  // p1-21 (2026-10-02): una capacidad de rol («architecture decisions», «technical direction») no es un requisito.
+  P1: "p1-21", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -198,14 +215,15 @@ export const PROMPT_VERSION = {
   // 12 de 42 y la pantalla dijo «12/12».
   // p2-8 (2026-09-28): vuelve a juzgar viñetas y resumen (p2-7 no lo hacía), y
   // ahora el motor FIJA cada juicio al texto que lo sostiene: una línea que no
-  // cambió conserva el suyo entre análisis. Ver `fijarJuicios`.
+  // cambió conserva el suyo entre análisis. Ver `fijarJuicios` en engine.ts.
   // p2-9 (2026-09-28): una viñeta que abre con «Ayudé con…»/«Participé en…» ya
   // no cuenta como verbo de acción (`opensWeakly` corrige el juicio).
   // p2-10 (2026-09-28): IMPLIED exige la línea citada; hasActionVerb cita `WEAK_OPENERS`; la blanda demostrada cita una viñeta, nunca el resumen.
   // p2-12 (CEO, 2026-09-29): el ATS decide por viñeta (mejorar/mantener/borrar) y por
   // skill (demostrada/listada/falta), con la instrucción que Tailor ejecuta.
   // p2-21 (2026-09-30): el motivo y la pregunta en el idioma del CV, nombrado; una credencial se juzga por lo que es.
-  P2: "p2-21", // diagnóstico
+  // p2-22 (2026-10-02): cada skill demostrada o listada cita `cvWording`, las palabras del CV que la dicen.
+  P2: "p2-22", // diagnóstico
   // p3-1 (CEO, 2026-09-29): las herramientas de las habilidades que cada trabajo
   // usó sin nombrarlas. Separado del diagnóstico: dentro de él el modelo no las
   // cruzaba (medido: 1 de 42 viñetas) y declaraba frases del aviso como hechos.
@@ -252,7 +270,8 @@ export const PROMPT_VERSION = {
   // p4-20 (CEO, 2026-09-28): la IA escribe resultado, método y términos; sólo las cifras son del candidato.
   // p4-21 (2026-09-28): lo que la línea ya nombra se queda; el término prometido va al lado.
   // p4-26 (CEO, 2026-09-29): Tailor ejecuta la instrucción del ATS; tres reglas.
-  P4: "p4-36", // reescritura de viñeta
+  // p4-37 (2026-10-02): la skill con las mayúsculas de su nombre, y sin fórmula vacía alrededor.
+  P4: "p4-37", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
@@ -560,7 +579,7 @@ export const RequirementSchema = z.object({
   skill: z.string().min(1).max(80),
   /** Cómo lo escribió la vacante. Es la variante que alimenta el índice. */
   raw: z.string().min(1).max(160),
-  years: z.number().int().min(0).max(50).nullish().transform((v) => v ?? null),
+  years: anios(),
   /** Categoría libre, en las palabras del aviso: no hay taxonomía cerrada
    *  porque un aviso de soldadura no habla de "LANGUAGE" ni de "FRAMEWORK". */
   category: textoONull(40),
@@ -587,7 +606,7 @@ export const JobSpecSchema = z.object({
   roleTitleRaw: texto(160),
   roleTitleCanonical: texto(160),
   seniority: textoONull(40),
-  yearsRequired: z.number().int().min(0).max(50).nullish().transform((v) => v ?? null),
+  yearsRequired: anios(),
   domain: textoONull(60),
   workMode: textoONull(40),
   language: z.enum(["es", "en"]).catch("es"),

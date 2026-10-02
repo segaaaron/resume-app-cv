@@ -160,6 +160,19 @@ describe("el error que este módulo existe para no cometer", () => {
     expect(counts.get("GraphQL")).toBe(1)
   })
 
+  it("los años como texto («3 a 4», «5+») no tiran la vacante: se lee el primer entero", () => {
+    // Medido contra la API el 2026-10-02 con el aviso de Tekton: P1 se cayó entero.
+    const spec = JobSpecSchema.parse({
+      roleTitleRaw: "RN", roleTitleCanonical: "RN", seniority: null, yearsRequired: "3-4", domain: null,
+      workMode: null, language: "es", metricThatMatters: null, responsibilities: [], softSignals: [], namedTools: [],
+      mustHave: [{ skill: "React Native", raw: "3 a 4 años de React Native", years: "5+", category: null, kind: "capability" }],
+      niceToHave: [],
+    })
+    expect(spec.yearsRequired).toBe(3)
+    expect(spec.mustHave[0].years).toBe(5)
+    expect(JobSpecSchema.parse({ roleTitleRaw: "x", roleTitleCanonical: "x", yearsRequired: "varios", language: "es", mustHave: [], niceToHave: [] }).yearsRequired).toBeNull()
+  })
+
   it("una habilidad declarada con alias son dos nombres, no uno largo", () => {
     const spec = JobSpecSchema.parse({
       roleTitleRaw: "iOS", roleTitleCanonical: "iOS", seniority: null, yearsRequired: null, domain: null,

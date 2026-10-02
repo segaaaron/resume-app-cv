@@ -179,6 +179,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     }
     await input.store.write("ats3-audit", auditKey, audit)
   }
+  audit = await fijarJuicios(tree, audit, input.store, cacheKey.judge(input.resumeId, jdKey))
 
   /**
    * LO QUE TAILOR YA ARREGLÓ SIGUIENDO AL ATS QUEDA EN «MANTENER». El ATS lo
@@ -196,10 +197,27 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    */
   const credenciales = new Set([...spec.mustHave, ...spec.niceToHave].filter((r) => r.kind === "credential").map((r) => normalize(r.skill)))
   const sinDondeTenerla = !tree.otherText.trim()
+  /**
+   * Y SALVO LO QUE EL ATS CITA CON LAS PALABRAS DEL CV (2026-10-02). Medido contra
+   * la API con el aviso de Tekton: P2 daba «Mobile» por demostrado en la viñeta de
+   * «aplicaciones móviles» (4 de 4) y esta comprobación lo bajaba a faltante,
+   * porque exige la palabra del aviso. Que dos formas o dos idiomas digan lo mismo
+   * es semántica y lo decide el ATS; el código sólo comprueba lo que puede: que
+   * las palabras citadas estén de verdad donde dice —la línea de la prueba o, si
+   * sólo está nombrada, el CV—.
+   */
+  const textoCv = normalize(cvTextOf(tree))
+  const lineaDe = new Map([tree.summary, ...tree.roles.flatMap((r) => r.bullets)].map((b) => [b.id, normalize(b.text)] as const))
+  const citado = (h: AuditFacts["hard"][number]) => {
+    const c = normalize(h.cvWording ?? "")
+    if (c.length < 3) return false
+    const donde = h.status === "demonstrated" && h.evidenceNodeId ? lineaDe.get(h.evidenceNodeId) ?? "" : textoCv
+    return ` ${donde} `.includes(` ${c} `)
+  }
   audit = {
     ...audit,
     hard: audit.hard.map((h) =>
-      h.status !== "missing" && !respaldadoEnCv(tree, h.skill) && (sinDondeTenerla || !credenciales.has(normalize(h.skill)))
+      h.status !== "missing" && !respaldadoEnCv(tree, h.skill) && !citado(h) && (sinDondeTenerla || !credenciales.has(normalize(h.skill)))
         ? { ...h, status: "missing" as const, evidenceNodeId: null }
         : h,
     ),
@@ -210,15 +228,27 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    * podía volver a leerla «sólo en la lista» y abrir otra tarjeta para escribirla
    * de nuevo.
    */
+  /**
+   * Y UNA SKILL DURA QUE UNA VIÑETA ESCRIBE CON SU NOMBRE ESTÁ EN LA EXPERIENCIA
+   * (2026-10-02). Medido en producción: «TypeScript — tu CV sólo lo nombra en la
+   * lista» con la viñeta «Created web applications with Angular and TypeScript»
+   * en el mismo CV. Que el nombre está escrito en una línea lo prueba el código;
+   * las blandas no, porque nombrar «comunicación» no la demuestra.
+   */
   {
-    const deTailor = tree.roles.flatMap((r) => r.bullets).filter((b) => arregladas.includes(b.text.trim()))
-    const prueba = <T extends { status: string; evidenceNodeId: string | null }>(x: T, nombre: string): T => {
+    const viñetas = tree.roles.flatMap((r) => r.bullets)
+    const deTailor = viñetas.filter((b) => arregladas.includes(b.text.trim()))
+    const prueba = <T extends { status: string; evidenceNodeId: string | null }>(x: T, nombre: string, lineas: typeof viñetas): T => {
       if (x.status === "demonstrated") return x
       const indice = buildTermIndex([{ canonical: nombre, variants: titleForms(nombre) }])
-      const linea = deTailor.find((b) => termsIn(indice, b.text).size > 0)
+      const linea = lineas.find((b) => termsIn(indice, b.text).size > 0)
       return linea ? { ...x, status: "demonstrated", evidenceNodeId: linea.id } : x
     }
-    audit = { ...audit, hard: audit.hard.map((h) => prueba(h, h.skill)), soft: audit.soft.map((x) => prueba(x, x.signal)) }
+    audit = {
+      ...audit,
+      hard: audit.hard.map((h) => prueba(h, h.skill, credenciales.has(normalize(h.skill)) ? deTailor : viñetas)),
+      soft: audit.soft.map((x) => prueba(x, x.signal, deTailor)),
+    }
   }
   /**
    * LA DECISIÓN QUE SE VE ES LA QUE SE PUEDE HACER: «mejorar» si hay algo
@@ -298,7 +328,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    */
   const pruebas = new Set([...audit.hard, ...audit.soft].flatMap((x) => (x.status === "demonstrated" && x.evidenceNodeId ? [x.evidenceNodeId] : [])))
   audit = { ...audit, bullets: audit.bullets.map((b) => (b.decision === "remove" && pruebas.has(b.id) ? { ...b, decision: "keep" as const } : b)) }
-  audit = { ...audit, bullets: ajustarAlRango(tree, spec, audit.bullets, pruebas) }
+  audit = { ...audit, bullets: ajustarAlRango(tree, spec, audit.bullets, pruebas, input.language) }
   const quedan = audit.bullets.filter((b) => b.decision !== "remove").map((b) => textoNorm.get(b.id) ?? "").filter(Boolean)
   await input.store.write("ats3-lock", lockKey, [...new Set([...conservadas, ...quedan])])
   const trabajo = trabajoPorViñeta(tree, audit)
@@ -340,6 +370,57 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   yield { act: "findings", findings: seen.shown, suppressed: seen.suppressed.length, regressed: seen.regressed, resolved: log }
 
   return telemetry
+}
+
+/**
+ * UNA LÍNEA QUE NO CAMBIÓ CONSERVA SU JUICIO ENTRE ANÁLISIS (2026-10-02).
+ *
+ * El comentario de P2 lo prometía desde p2-8 y la función se había perdido con la
+ * reescritura del motor. Medido en producción con el CV de Hapi: el editor marcaba
+ * 75 después de aplicar, y el reanálisis —que vuelve a preguntar todo— dio 66 con
+ * las mismas líneas: blandas 65 → 40%, impacto 70 → 55%. El modelo cambió de
+ * opinión sobre lo que nadie tocó, y el número bajó sin una razón en el CV.
+ *
+ * Se fija por TEXTO, para este CV y esta vacante: la decisión de cada viñeta que
+ * sigue igual, y la skill que una línea demostraba mientras esa línea siga ahí.
+ * Lo que cambió se juzga de nuevo; lo que se fijó sigue pasando por los controles
+ * del código que corren después (respaldo en el CV, credenciales, rango).
+ */
+type Juicio = Omit<AuditFacts["bullets"][number], "id">
+type Juicios = { bullets: Record<string, Juicio>; skills: Record<string, { status: "demonstrated" | "listed" | "missing"; evidencia: string | null }> }
+
+async function fijarJuicios(tree: ResumeTree, audit: AuditFacts, store: AtsStore, key: string): Promise<AuditFacts> {
+  const previos = ((await store.read("ats3-judge", key)) as Juicios | null) ?? { bullets: {}, skills: {} }
+  const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, normalize(b.text)] as const)))
+  const idDe = new Map([...textoDe].map(([id, t]) => [t, id] as const))
+  const rango = { missing: 0, listed: 1, demonstrated: 2 } as const
+  const fijar = <T extends { status: "demonstrated" | "listed" | "missing"; evidenceNodeId: string | null }>(x: T, nombre: string): T => {
+    const p = previos.skills[normalize(nombre)]
+    if (!p || rango[p.status] <= rango[x.status]) return x
+    // Demostrada en una línea que ya no está: no hay prueba que conservar.
+    if (p.status === "demonstrated") return p.evidencia && idDe.has(p.evidencia) ? { ...x, status: "demonstrated", evidenceNodeId: idDe.get(p.evidencia)! } : x
+    return { ...x, status: p.status, evidenceNodeId: null }
+  }
+  const fijada: AuditFacts = {
+    ...audit,
+    bullets: audit.bullets.map((b) => {
+      const p = previos.bullets[textoDe.get(b.id) ?? ""]
+      return p ? { ...p, id: b.id } : b
+    }),
+    hard: audit.hard.map((h) => fijar(h, h.skill)),
+    soft: audit.soft.map((x) => fijar(x, x.signal)),
+  }
+  const ahora: Juicios = { bullets: { ...previos.bullets }, skills: { ...previos.skills } }
+  for (const b of fijada.bullets) {
+    const t = textoDe.get(b.id)
+    if (!t) continue
+    ahora.bullets[t] = b
+  }
+  for (const x of [...fijada.hard.map((h) => ({ n: h.skill, s: h })), ...fijada.soft.map((y) => ({ n: y.signal, s: y }))]) {
+    ahora.skills[normalize(x.n)] = { status: x.s.status, evidencia: x.s.evidenceNodeId ? textoDe.get(x.s.evidenceNodeId) ?? null : null }
+  }
+  await store.write("ats3-judge", key, ahora)
+  return fijada
 }
 
 /**
@@ -398,7 +479,7 @@ export function menosAporta(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, 
   return [...role.bullets].map((b, i) => ({ b, i })).sort((x, y) => peso(x.b) - peso(y.b) || y.i - x.i)[0].b.id
 }
 
-function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bullets"], pruebas: ReadonlySet<string> = new Set()): AuditFacts["bullets"] {
+function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bullets"], pruebas: ReadonlySet<string> = new Set(), language: "es" | "en" = "es"): AuditFacts["bullets"] {
   const decision = new Map(bullets.map((b) => [b.id, b]))
   /**
    * CUÁL VUELVE O CUÁL SE VA: primero lo que prueba el puesto —cuántos requisitos
@@ -411,6 +492,7 @@ function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bu
   const peso = (b: { id: string; text: string }) => (pruebas.has(b.id) ? 100 : 0) + termsIn(indice, b.text).size * 2 + (statesQuantity(b.text) ? 1 : 0)
   const porPeso = <T extends { id: string; text: string }>(xs: T[]): T[] => xs.map((b, i) => ({ b, i })).sort((x, y) => peso(y.b) - peso(x.b) || x.i - y.i).map((x) => x.b)
   const cambios = new Map<string, "keep" | "remove">()
+  const porExceso = new Map<string, string>()
   const todas = tree.roles.flatMap((r) => r.bullets)
   /**
    * SÓLO SE SACA LO QUE ES EL CASO (CEO, 2026-09-30): «es preferible mostrar
@@ -433,14 +515,27 @@ function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bu
       for (const b of porPeso(sacadas).slice(0, minimo - quedan.length)) cambios.set(b.id, "keep")
     } else if (quedan.length > BULLETS_PER_ROLE_MAX) {
       const sobran = quedan.length - BULLETS_PER_ROLE_MAX
-      for (const b of porPeso(quedan).reverse().slice(0, sobran)) cambios.set(b.id, "remove")
+      /**
+       * EL MOTIVO ES EL DEL CÓDIGO (2026-10-02). Se guardaba el del modelo, que es
+       * el de su propia decisión —«mantener», o una repetición que el código ya
+       * descartó—. Medido en producción: «Facilité ceremonias Agile» salía con
+       * «se superpone con "Desarrollé y mantuve aplicaciones iOS"», que no repite.
+       * La razón real es que el puesto pasa del máximo, y eso es lo que se dice.
+       */
+      const motivo = language === "en"
+        ? `This role has ${quedan.length} bullets and recruiters read up to ${BULLETS_PER_ROLE_MAX}: this one proves the least for this posting.`
+        : `Este puesto tiene ${quedan.length} viñetas y se leen hasta ${BULLETS_PER_ROLE_MAX}: ésta es la que menos prueba para esta vacante.`
+      for (const b of porPeso(quedan).reverse().slice(0, sobran)) {
+        cambios.set(b.id, "remove")
+        porExceso.set(b.id, motivo)
+      }
     }
   }
   return bullets.map((b) =>
     cambios.get(b.id) === "keep"
       ? { ...b, decision: "keep" as const }
       : cambios.get(b.id) === "remove"
-        ? { ...b, decision: "remove" as const, reason: b.reason || "Supera el máximo de viñetas que se leen por puesto." }
+        ? { ...b, decision: "remove" as const, reason: porExceso.get(b.id) ?? b.reason }
         : b,
   )
 }

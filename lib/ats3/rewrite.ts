@@ -149,6 +149,36 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     const dice = new Set(normalize(texto).split(" "))
     return hechos.filter((h) => !h.w.some((x) => dice.has(x))).map((h) => h.f)
   }
+  /**
+   * CADA PUESTO HABLA DE SU EMPRESA (2026-10-02). Medido en producción: con el
+   * dato «En Salamanca Solutions construí aplicaciones web…» y el selector en el
+   * primer puesto, Tailor escribió el trabajo de Salamanca dentro de la línea de
+   * IA Interactive. Nada lo frenaba: la empresa está en el CV, así que tenía
+   * «respaldo». Una línea que nombra la empresa de OTRO puesto le asigna ese
+   * trabajo a un empleador que no lo hizo.
+   */
+  const otrasEmpresas = isSummary
+    ? []
+    : [...new Set(req.tree.roles.filter((r) => r !== role).map((r) => r.company.trim()).filter((c) => normalize(c).length >= 3 && normalize(c) !== normalize(role?.company ?? "")))]
+  const nombraOtraEmpresa = (texto: string) => {
+    const t = ` ${normalize(texto)} `
+    return otrasEmpresas.filter((c) => t.includes(` ${normalize(c)} `))
+  }
+  /**
+   * UNA CIFRA QUE LA PERSONA NO DIO PARA ESTA LÍNEA VA COMO HUECO (2026-10-02).
+   * Medido en producción: la propuesta para Rappi decía «para 50 usuarios», el
+   * número de otro puesto. Un número que no está en la línea, ni en lo que contó
+   * la persona, ni en el nombre de lo que el ATS mandó escribir lo decidió el
+   * modelo, y eso es lo único prohibido sobre las cifras.
+   */
+  const cifrasPermitidas = new Set([original, req.told ?? "", ...nombresPermitidos].flatMap((t) => [...t.matchAll(/\d[\d.,]*/g)].map((m) => m[0].replace(/\D/g, ""))))
+  const cifrasNuevas = (texto: string) =>
+    isSummary
+      ? []
+      : [...new Set([...texto.replace(/\[[^\]]+\]/g, " ").matchAll(/\d[\d.,]*\s*%?/g)].map((m) => m[0].trim()).filter((c) => {
+          const d = c.replace(/\D/g, "")
+          return d && !cifrasPermitidas.has(d) && !/^(19|20)\d{2}$/.test(d)
+        }))]
   const pedido = JSON.stringify([req.reason ?? "", req.instruction ?? "", req.facts ?? [], terms, Boolean(req.needsFigure), req.told ?? "", Boolean(req.propone), Boolean(req.logro), nueva])
   const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, req.model, pedido)
 
@@ -205,6 +235,23 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     if (inventados.length) {
       out.push(req.language === "en" ? `These names are not in the CV: ${inventados.join(", ")}. Remove them.` : `Estos nombres no están en el CV: ${inventados.join(", ")}. Sacalos.`)
     }
+    const ajenas = nombraOtraEmpresa(s.text)
+    if (ajenas.length) {
+      out.push(req.language === "en" ? `This line belongs to ${role?.company ?? "this role"}; do not name ${ajenas.join(", ")}, that is another role.` : `Esta línea es de ${role?.company ?? "este puesto"}: no nombres ${ajenas.join(", ")}, que es otro puesto.`)
+    }
+    const nuevasCifras = cifrasNuevas(s.text)
+    if (nuevasCifras.length) {
+      out.push(req.language === "en" ? `The person did not give these figures for this line: ${nuevasCifras.join(", ")}. Remove them or write a typed slot ([x%], [n users]).` : `La persona no dio estas cifras para esta línea: ${nuevasCifras.join(", ")}. Sacalas o escribí un hueco tipado ([x%], [n usuarios]).`)
+    }
+    /**
+     * EL LOGRO SE ESCRIBE, NO SÓLO SU HUECO (2026-10-02). Medido en producción: la
+     * tarjeta X-Y-Z devolvía la misma línea con «en [x%]» pegado al final —una
+     * consulta gastada en un corchete—. Lo que la tarjeta promete es decir qué se
+     * logró; si no hay ninguna palabra nueva fuera del hueco, no lo dijo.
+     */
+    if (req.logro && !isSummary && !nueva && edicion(s.text).libres.length === 0) {
+      out.push(req.language === "en" ? "Write the outcome this work achieved, not only its slot." : "Escribí el logro que consiguió ese trabajo, no sólo su hueco.")
+    }
     if (!isSummary) {
       const { perdidas, libres } = nueva ? { perdidas: [], libres: [] } : edicion(s.text)
       if (perdidas.length) out.push(req.language === "en" ? `You removed words from the line: ${perdidas.join(", ")}. Keep the line word for word.` : `Sacaste palabras de la línea: ${perdidas.join(", ")}. Conservá la línea palabra por palabra.`)
@@ -258,9 +305,19 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
       return out
     }
     const yaPegadas = pegadas(original)
-    const nuevasPegadas = [...pegadas(s.text)].filter((r) => !yaPegadas.has(r))
+    /**
+     * Y LA PALABRA NUEVA QUE VUELVE MÁS ADELANTE (2026-10-02). Medido en producción:
+     * «…mediante arquitecturas escalables con Clean Architecture, modularizando la
+     * app para que escale». Una raíz que la línea no tenía y aparece dos veces es
+     * la misma idea dicha dos veces, aunque no estén pegadas.
+     */
+    const raicesNuevas = (t: string) => normalize(t.replace(/\[[^\]]+\]/g, " ")).split(" ").filter((x) => x.length >= 5).map((x) => x.slice(0, 5))
+    const delOriginal = new Set(raicesNuevas(original))
+    const cuenta = new Map<string, number>()
+    for (const r of raicesNuevas(s.text)) if (!delOriginal.has(r)) cuenta.set(r, (cuenta.get(r) ?? 0) + 1)
+    const nuevasPegadas = [...new Set([...[...pegadas(s.text)].filter((r) => !yaPegadas.has(r)), ...[...cuenta].filter(([, n]) => n > 1).map(([r]) => r)])]
     if (!isSummary && nuevasPegadas.length) {
-      out.push(req.language === "en" ? "The same word is repeated right next to itself. Rewrite that part as one clean phrase." : "Repetiste la misma palabra una al lado de la otra. Escribí esa parte como una sola frase limpia.")
+      out.push(req.language === "en" ? "The same word is repeated in your line. Say that idea once, as one clean phrase." : "Repetiste la misma palabra en la línea. Decí esa idea una vez, como una sola frase limpia.")
     }
     const sinEscribir = hechosFaltantes(s.text)
     if (sinEscribir.length) {
@@ -362,6 +419,14 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   }
   if (!isSummary && (copiaDelAviso(first.text).length > 0 || sinRespaldo(first.text).length > 0)) {
     return { ok: false, verdict: { ok: false, reason: "declined", detail: [...copiaDelAviso(first.text), ...sinRespaldo(first.text)].join(", ") }, calls }
+  }
+  // El trabajo de otro empleador o una cifra que nadie dio, si sobrevivieron al reintento: no se ofrece.
+  if (nombraOtraEmpresa(first.text).length > 0 || cifrasNuevas(first.text).length > 0) {
+    return { ok: false, verdict: { ok: false, reason: "declined", detail: [...nombraOtraEmpresa(first.text), ...cifrasNuevas(first.text)].join(", ") }, calls }
+  }
+  // La tarjeta pedía el logro y volvió sólo el hueco: no hay nada que ofrecer.
+  if (req.logro && !isSummary && !nueva && edicion(first.text).libres.length === 0) {
+    return { ok: false, verdict: { ok: false, reason: "declined", detail: "sólo el hueco" }, calls }
   }
   // El ATS pidió reescribir para decir hechos nuevos: si no dice ninguno, no aporta.
   if (hechos.length > 0 && hechosFaltantes(first.text).length === hechos.length) {

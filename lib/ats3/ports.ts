@@ -100,7 +100,7 @@ export interface AtsStore {
   write(kind: CacheKind, hash: string, payload: unknown): Promise<void>
 }
 
-export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-fix" | "ats3-log" | "ats3-lock"
+export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-fix" | "ats3-log" | "ats3-lock" | "ats3-judge"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CLAVES DE CACHÉ
@@ -137,5 +137,8 @@ export const cacheKey = {
 
   /** Las viñetas que el ATS ya decidió conservar para este CV y esta vacante. */
   lock: (resumeId: string, jdHash: string) => sha256("lock", resumeId, jdHash),
+
+  /** Lo que el ATS juzgó de cada línea, por su texto, para este CV y esta vacante. */
+  judge: (resumeId: string, jdHash: string) => sha256("judge", resumeId, jdHash),
 
 }

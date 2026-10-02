@@ -159,6 +159,8 @@ export interface AuditFacts {
     writeIn: string | null
     /** Si no hay rastro: la pregunta para la persona. */
     question: string | null
+    /** Las palabras del CV que lo dicen, como las citó el ATS: puede ser otra forma u otro idioma («aplicaciones móviles» para «Mobile»). */
+    cvWording?: string | null
   }[]
   /** Cada soft skill del puesto, igual. Una soft se demuestra en un logro, no se lista. */
   soft: {
