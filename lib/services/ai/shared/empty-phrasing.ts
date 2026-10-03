@@ -356,6 +356,37 @@ export function opensNominally(text: string): boolean {
  * formas de abrir mal se juzgan juntas: la frase de tarea que ENUMERA la lista,
  * y el sintagma nominal que se DERIVA de la gramática.
  */
+/**
+ * LAS PALABRAS DE LA FÓRMULA, Y NADA MÁS (2026-10-02).
+ *
+ * Al cambiar una apertura débil, lo que se puede ir es la fórmula —«Encargado
+ * del», «Responsible for», «Uso de»—, no el trabajo que viene después. Se
+ * permitía borrar las tres primeras palabras, sea cual fuera la apertura, y en
+ * «Encargado del mantenimiento de las máquinas» la tercera era el contenido:
+ * medido contra la API, quedó «Mantuve las máquinas». Devuelve las palabras de
+ * la frase de la lista (más el artículo o la preposición que la cierra) o, en
+ * una apertura nominal, el sustantivo que abre.
+ */
+export function weakOpenerWords(text: string): string[] {
+  const palabras = text.toLowerCase().replace(/^[\s•·▪◦‣∙●○*–—-]+/, "").trim().split(/\s+/).filter(Boolean)
+  const lower = palabras.join(" ")
+  const frase = [...WEAK_OPENERS].sort((a, b) => b.length - a.length).find((o) => lower.startsWith(o))
+  const cierra = (w: string | undefined) => !!w && (DET_EN.has(w) || DET_ES.has(w) || PREP_EN.has(w) || PREP_ES.has(w))
+  if (frase) {
+    const n = frase.split(/\s+/).length
+    // «encargado de» también cubre «encargado del»: la palabra que la lista cortó se cuenta entera.
+    let fin = n
+    while (cierra(palabras[fin])) fin++
+    return palabras.slice(0, fin)
+  }
+  if (opensNominally(text)) {
+    let fin = 1
+    while (cierra(palabras[fin])) fin++
+    return palabras.slice(0, fin)
+  }
+  return []
+}
+
 export function opensWeakly(text: string): boolean {
   const lower = text.toLowerCase().replace(/^[\s•·▪◦‣∙●○*–—-]+/, "").trim()
   return WEAK_OPENERS.some((o) => lower.startsWith(o)) || opensNominally(text)

@@ -52,6 +52,7 @@ const messages: Record<string, string> = {
   rewrite_rejected: "No pasó los controles",
   already_good: "La línea ya está bien",
   fix_it: "Escribirla mejor",
+  told_label: "¿Qué logró ese trabajo? (opcional)",
   writing: "Escribiendo…",
   dismiss: "No me interesa",
   confirm_title: "Confirmá antes de escribirlo",
@@ -153,6 +154,9 @@ const storeState = {
   config: { language: "es" },
   sectionData: JSON.parse(JSON.stringify(CV_INICIAL)) as typeof CV_INICIAL,
   updateSectionData,
+  // El store real guarda: Tailor guarda al confirmar (2026-10-02). El doble lo expone igual.
+  save: vi.fn(async () => {}),
+  isDirty: false,
 }
 
 const setPosting = vi.fn()
@@ -428,6 +432,46 @@ describe("el panel pinta lo que el motor midió", () => {
   })
 })
 
+describe("ninguna escritura se queda sin guardar (QA, 2026-10-02)", () => {
+  it("si el CV cambia mientras se guarda, se vuelve a guardar", async () => {
+    let primera = true
+    storeState.save = vi.fn(async () => {
+      // Otra escritura llega con el primer guardado en vuelo: el CV ya no es el que se mandó.
+      if (primera) {
+        primera = false
+        storeState.sectionData = JSON.parse(JSON.stringify(storeState.sectionData))
+      }
+    })
+    await analyze()
+    await click("Arreglar con Tailor")
+    apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
+    await click("Escribirla mejor")
+    await escribir("#slot-\\[n\\]", "80")
+    await click("Confirmar cambio")
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    expect(storeState.save).toHaveBeenCalledTimes(2)
+    storeState.save = vi.fn(async () => {})
+  })
+})
+
+describe("una tarjeta que pide el logro o la cifra deja contarlo (2026-10-02)", () => {
+  it("lo que la persona escribe viaja como su dato en el pedido de reescritura", async () => {
+    const conCifra = JSON.parse(JSON.stringify(ACTS))
+    conCifra.find((a: { act: string }) => a.act === "findings").findings[0].needsFigure = true
+    apiFetch.mockResolvedValueOnce(ndjsonResponse(conCifra))
+    await mount()
+    await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
+    await click("Analizar compatibilidad")
+    await click("Arreglar con Tailor")
+    expect(texto()).toContain("¿Qué logró ese trabajo?")
+    await escribir("#f1-told", "atendía unos 80 clientes por turno")
+    apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
+    await click("Escribirla mejor")
+    const cuerpo = String((apiFetch.mock.calls.at(-1) as unknown[])[1] && ((apiFetch.mock.calls.at(-1) as [unknown, { body?: string }])[1].body ?? ""))
+    expect(cuerpo).toContain("80 clientes por turno")
+  })
+})
+
 describe("la cifra la escribe el candidato", () => {
   async function openSheet() {
     await analyze()
@@ -457,6 +501,8 @@ describe("la cifra la escribe el candidato", () => {
     expect(written).toContain("80 clientes por turno")
     // El hueco no puede sobrevivir al CV: un corchete exportado es un CV roto.
     expect(written).not.toContain("[n]")
+    // Y queda guardado sin un segundo clic (2026-10-02).
+    expect(storeState.save).toHaveBeenCalled()
   })
 
   it("quien no tiene el dato recibe la versión SIN cifra, nunca un número puesto por el modelo", async () => {

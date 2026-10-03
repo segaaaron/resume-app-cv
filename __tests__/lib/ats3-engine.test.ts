@@ -144,7 +144,8 @@ class CountingAi implements AtsAi {
     this.nudges.push(input.nudge)
     return this.nextSuggestion ?? sug()
   }
-  async rewriteSummary() {
+  async rewriteSummary(_input?: unknown) {
+    void _input
     this.rewrites++
     return sug({ bulletId: "summary", text: "Cajera con experiencia en atención al cliente y arqueo de caja en sucursal", actionVerb: "" })
   }
@@ -656,6 +657,19 @@ describe("sacar «por repetida» lo comprueba el código", () => {
     expect(d[4]).not.toBe("remove")
   })
 
+  it("la que el código conserva no queda con el motivo de sacarla", async () => {
+    const ai = new CountingAi()
+    ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b, i) => ({ id: b.id, decision: i === 4 ? ("remove" as const) : ("keep" as const), reason: i === 4 ? "Repeats «Built the offline cache for the orders screen»." : "", instruction: null, needsFigure: false })) })
+    const gen = runAnalysis({ raw, jdText: "Buscamos iOS", language: "en", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
+    let out = await gen.next()
+    const acts = []
+    while (!out.done) { acts.push(out.value); out = await gen.next() }
+    const sc = acts.find((a) => a.act === "score")
+    if (sc?.act !== "score") throw new Error("sin puntaje")
+    expect(sc.audit.bullets[4].decision).not.toBe("remove")
+    expect(sc.audit.bullets[4].reason).not.toMatch(/Repeats/)
+  })
+
   it("repetida de verdad, citando otra línea que también la prueba: se saca", async () => {
     const d = await run([undefined as unknown as string, "Repeats «Resolved critical bugs to improve app stability, contributing»."])
     expect(d[1]).toBe("remove")
@@ -752,6 +766,18 @@ describe("lo que el ATS cita con las palabras del CV cuenta, aunque no sea la pa
 
   it("la cita no está en la línea: el código la baja a faltante", async () => {
     expect(await correr("atendí al público en ventanilla")).toBe("missing")
+  })
+  it("«sólo en la lista» exige el nombre entero o una cita: palabras sueltas no alcanzan (Clean Code ≠ Clean Architecture + código)", async () => {
+    const lista = async (cvWording: string | null) => {
+      const ai = new CountingAi()
+      ai.auditFor = (t) => ({ ...fakeAudit(t), hard: [...fakeAudit(t).hard, { skill: "Excel avanzado", requirement: "NICE", status: "listed", evidenceNodeId: null, writeIn: null, question: null, cvWording }] })
+      const { acts } = await analyze(ai, new MemoryStore(), { ...RAW, skills: [{ name: "Excel" }, { name: "Inglés avanzado" }] })
+      const sc = acts.find((a) => a.act === "score")
+      if (sc?.act !== "score") throw new Error("sin puntaje")
+      return sc.audit.hard.find((h) => h.skill === "Excel avanzado")?.status
+    }
+    expect(await lista(null)).toBe("missing")
+    expect(await lista("Excel")).toBe("listed")
   })
 })
 
@@ -969,6 +995,81 @@ describe("la reescritura y su reintento", () => {
     })
   })
 
+  it("la barra de un requisito con alternativas nunca entra al CV, y al resumen le llega la alternativa que el CV escribe", async () => {
+    const ai = new CountingAi()
+    let visto: { provenTerms?: string[] } = {}
+    ai.rewriteSummary = async (input?: unknown) => {
+      visto = input as { provenTerms?: string[] }
+      ai.rewrites++
+      return sug({ bulletId: "summary", text: "Cajera con 3 años en atención al cliente y arqueo de caja | conteo de efectivo en sucursal.", actionVerb: "" })
+    }
+    const spec: JobSpec = { ...SPEC, mustHave: [...SPEC.mustHave, { skill: "Excel | Google Sheets", raw: "Excel o Google Sheets", years: null, category: null }] }
+    const r = await runRewrite({ tree, nodeId: tree.summary.id, spec, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    if (r.ok) expect(r.suggestion.text).not.toMatch(/\|/)
+    expect(visto.provenTerms ?? []).not.toContain("Excel | Google Sheets")
+    expect(visto.provenTerms ?? []).toContain("Excel")
+  })
+
+  it("lo que el resumen ya probaba del aviso le llega como término a conservar, en la forma en que lo escribe", async () => {
+    const ai = new CountingAi()
+    let visto: { mustWrite?: string[] } = {}
+    ai.rewriteSummary = async (input?: unknown) => {
+      visto = input as { mustWrite?: string[] }
+      ai.rewrites++
+      return sug({ bulletId: "summary", text: "Cajera con experiencia en atención al cliente y arqueo de caja en sucursal.", actionVerb: "" })
+    }
+    const spec: JobSpec = { ...SPEC, mustHave: [{ skill: "Servicio | Atención al cliente", raw: "servicio o atención al cliente", years: null, category: null }] }
+    await runRewrite({ tree, nodeId: tree.summary.id, spec, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    expect(visto.mustWrite ?? []).toContain("Atención al cliente")
+  })
+
+  it("un resumen en inglés en tercera persona («Holds a…») se pide una vez más diciéndolo", async () => {
+    const ai = new CountingAi()
+    const nudges: (string | undefined)[] = []
+    ai.rewriteSummary = async (input?: unknown) => {
+      nudges.push((input as { nudge?: string }).nudge)
+      ai.rewrites++
+      return sug({ bulletId: "summary", text: "Cashier with 3 years of experience in customer service and cash handling. Balanced the till at every close with zero discrepancies across 3 years. Holds a retail certificate and has worked night shifts.", actionVerb: "" })
+    }
+    const r = await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "en", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    expect(nudges[1] ?? "").toMatch(/third person/)
+    // Y si el reintento insiste, la oración se saca: «Holds a…» no llega al CV.
+    if (r.ok) expect(r.suggestion.text).not.toMatch(/Holds a/)
+  })
+
+  it("el resumen es un párrafo y sin datos sueltos («Español nativo.») (visto en local, 2026-10-02)", async () => {
+    const ai = new CountingAi()
+    let visto: unknown = null
+    ai.rewriteSummary = async (input?: unknown) => {
+      visto = input
+      ai.rewrites++
+      return sug({ bulletId: "summary", text: "Cajera con 3 años de experiencia en atención al cliente en Supermercado Sur S.A. de C.V.\nRealicé el arqueo de caja al cierre del turno con cero diferencias.\nEspañol nativo.", actionVerb: "" })
+    }
+    const r = await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.suggestion.text).not.toMatch(/\n/)
+      expect(r.suggestion.text).not.toMatch(/Español nativo/)
+      // Una abreviatura no es un fin de oración: «S.A. de C.V.» queda entera.
+      expect(r.suggestion.text).toContain("S.A. de C.V.")
+    }
+    // Y le llega la trayectoria con sus fechas: sin ellas atribuía los años a una especialidad.
+    expect(visto).toMatchObject({ career: [{ company: "Supermercado Sur", from: "2021-03", to: "2024-06" }] })
+  })
+
+  it("al cambiar una apertura débil se va la fórmula, no el trabajo: «Encargado del mantenimiento…» → «Mantuve las máquinas» no se ofrece", async () => {
+    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: "• Encargado del mantenimiento de las máquinas\n• Soldé piezas" }] }
+    const t = buildTree(raw)
+    const ai = new CountingAi()
+    ai.nextSuggestion = sug({ text: "Mantuve las máquinas" })
+    const malo = await runRewrite({ tree: t, nodeId: t.roles[0].bullets[0].id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    expect(malo.ok).toBe(false)
+    const ai2 = new CountingAi()
+    ai2.nextSuggestion = sug({ text: "Realicé el mantenimiento preventivo de las máquinas" })
+    const bueno = await runRewrite({ tree: t, nodeId: t.roles[0].bullets[0].id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai: ai2, store: new MemoryStore() })
+    expect(bueno.ok).toBe(true)
+  })
+
   it("nunca reintenta dos veces: eso escondería un prompt que dejó de funcionar", async () => {
     const ai = new CountingAi()
     ai.nextSuggestion = sug({ text: "Realicé el arqueo de caja al cierre" })
@@ -1142,6 +1243,16 @@ describe("las habilidades que entran a la plantilla", () => {
     expect(p.final.filter((s) => !["Swift", "Combine"].includes(s))).toEqual(["Excel", "Word"])
   })
 
+  it("un requisito con alternativas no entra con la barra: sube la que ya está, o la citada (visto en local, 2026-10-02)", () => {
+    const spec = { ...specSkills, mustHave: [{ skill: "RESTful APIs | GraphQL", raw: "APIs RESTful/GraphQL", years: null, category: null }], niceToHave: [] } as unknown as JobSpec
+    const a = (cvWording: string | null): AuditFacts => ({ ...auditSkills, hard: [{ skill: "RESTful APIs | GraphQL", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording }] })
+    const ya = skillPlan(["Excel", "RESTful APIs"], spec, a(null))
+    expect(ya.final.some((x) => x.includes("|"))).toBe(false)
+    expect(ya.final[0]).toBe("RESTful APIs")
+    expect(skillPlan(["Excel"], spec, a("consumo de GraphQL")).add).toEqual(["GraphQL"])
+    expect(skillPlan(["Excel"], spec, a(null)).add).toHaveLength(0)
+  })
+
   it("una skill que el CV no sostiene nunca se agrega", () => {
     const a: AuditFacts = { ...auditSkills, hard: [{ skill: "SAP", requirement: "MUST", status: "missing", evidenceNodeId: null, writeIn: null, question: null }] }
     const spec = { ...specSkills, mustHave: [{ skill: "SAP", raw: "SAP", years: null, category: null }], niceToHave: [] } as unknown as JobSpec
@@ -1201,5 +1312,14 @@ describe("lo esencial de un ATS, medido por el código", () => {
     expect(readableChecks(cv(roles, { email: "ana arroba correo", phone: "12" })).contacto_email).toBe(false)
     expect(readableChecks(cv(roles, { email: "ana@correo.com", phone: "12" })).contacto_telefono).toBe(false)
     expect(readableChecks(cv(roles)).contacto_email).toBeNull()
+  })
+})
+
+describe("la fórmula de una apertura débil son sus palabras, no las tres primeras (2026-10-02)", () => {
+  it("devuelve la fórmula y el artículo que la cierra, nunca el contenido", async () => {
+    const { weakOpenerWords } = await import("@/lib/services/ai/shared/empty-phrasing")
+    expect(weakOpenerWords("Encargado del mantenimiento de las máquinas")).toEqual(["encargado", "del"])
+    expect(weakOpenerWords("Responsible for receiving trucks")).toEqual(["responsible", "for"])
+    expect(weakOpenerWords("Soldé piezas")).toEqual([])
   })
 })

@@ -10,7 +10,7 @@ import { buildTermIndex, mismaRaiz, normalize, rolDeNueva, specTerms, termKey, t
 import { checkSuggestion, droppedFigures, droppedNames, figureSlots, findNode, repairSuggestion, retryNudge, similarTo, toFirstPerson, addsNothing, type GuardVerdict } from "@/lib/ats3/guards"
 import { cvTextOf, experienceYears, statesQuantity, termsOf, titleForms } from "@/lib/ats3/score"
 import { type AtsAi, type AtsStore, cacheKey } from "@/lib/ats3/ports"
-import { opensWeakly } from "@/lib/services/ai/shared/empty-phrasing"
+import { opensWeakly, weakOpenerWords } from "@/lib/services/ai/shared/empty-phrasing"
 
 export interface RewriteRequest {
   tree: ResumeTree
@@ -121,7 +121,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * verbo que dice lo que hizo.
    */
   const aperturaDebil = !isSummary && opensWeakly(original)
-  const apertura = new Set(aperturaDebil ? contenido(original.split(/\s+/).slice(0, 3).join(" ")).map(raiz) : [])
+  const apertura = new Set(aperturaDebil ? contenido(weakOpenerWords(original).join(" ")).map(raiz) : [])
   const edicion = (texto: string) => {
     const orig = new Set(contenido(original).map(raiz))
     const nueva = new Set(contenido(texto).map(raiz))
@@ -179,6 +179,11 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           const d = c.replace(/\D/g, "")
           return d && !cifrasPermitidas.has(d) && !/^(19|20)\d{2}$/.test(d)
         }))]
+  /** Oraciones del resumen en inglés que abren hablando de la persona en tercera («Holds a…», «Has worked…»). */
+  const terceraEn = (texto: string) =>
+    isSummary && req.language === "en"
+      ? texto.split(/(?<=[.!?])\s+/).filter((o) => /^(?:[A-Z][a-z]+s)\s+(?:a|an|the|over|more|strong|deep|solid|extensive|worked|built|led|been|developed|delivered|shipped|experience)\b/.test(o.trim()))
+      : []
   const pedido = JSON.stringify([req.reason ?? "", req.instruction ?? "", req.facts ?? [], terms, Boolean(req.needsFigure), req.told ?? "", Boolean(req.propone), Boolean(req.logro), nueva])
   const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, req.model, pedido)
 
@@ -191,6 +196,8 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    */
   const indiceAviso = buildTermIndex(specTerms(req.spec))
   const yaProbaba = isSummary ? termsIn(indiceAviso, original) : new Set<string>()
+  // Cada requisito que ya probaba, con la forma en que el resumen lo escribe («Swift», no «Objective-C | Swift»).
+  const conservarEnResumen = [...yaProbaba].map((t) => t.split(/\s*\|\s*/).find((o) => termsIn(buildTermIndex([{ canonical: o, variants: titleForms(o) }]), original).size > 0) ?? t)
   const requisitosPerdidos = (texto: string) => {
     const dice = termsIn(indiceAviso, texto)
     return [...yaProbaba].filter((t) => !dice.has(t))
@@ -210,6 +217,18 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
       out.push(req.language === "en"
         ? `You dropped facts the line states: ${[...perdidos, ...cifras].join(", ")}. Keep them.`
         : `Soltaste hechos que la línea dice: ${[...perdidos, ...cifras].join(", ")}. Conservalos.`)
+    }
+    /**
+     * EL RESUMEN EN INGLÉS NO HABLA DE LA PERSONA EN TERCERA (2026-10-02). Medido
+     * contra la API con Sezzle: «Holds a Systems Engineering degree and has worked
+     * on…». `wrongPerson` sólo cubre el español; en inglés lo que se puede probar
+     * es una oración que ABRE con un verbo en tercera persona seguido de su
+     * complemento («Holds a», «Has worked», «Brings over») — un sustantivo plural
+     * («Systems engineer…») no lleva esa continuación.
+     */
+    const enTercera = terceraEn(s.text)
+    if (enTercera.length) {
+      out.push(`These sentences speak of the person in the third person: ${enTercera.map((o) => `"${o.split(/\s+/).slice(0, 4).join(" ")}…"`).join(", ")}. Write them as a noun phrase or as the work itself.`)
     }
     // 3 · no puede ser casi igual a la línea ni a otra del CV.
     const parecida = hayPedido && pedidoFaltante(s).length === 0 ? null : similarTo(s, ctx)
@@ -329,9 +348,24 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     return out
   }
 
+  // La tercera persona regular se corrige, no se rechaza («Atendió» → «Atendí»).
+  const preparar = (s: Suggestion): Suggestion => {
+    const enPrimera = req.language !== "en" && !isSummary ? toFirstPerson(s.text) : null
+    // «A | B» es la forma del motor para un requisito con alternativas: en una frase del CV
+    // nunca va la barra (medido: «JavaScript | TypeScript» en un resumen). Se lee como «A / B».
+    s = { ...s, text: s.text.replace(/\s*\|\s*/g, " / ") }
+    // El resumen es UN párrafo: llegaba partido en renglones, uno por oración (visto en local).
+    // Y sin datos sueltos: «Español nativo.» como oración. El prompt lo prohíbe y salía
+    // igual, también en el reintento; sacarla no borra nada —el dato vive en su sección—.
+    const texto = isSummary
+      ? s.text.replace(/\s*\n+\s*/g, " ").split(/(?<=[.!?])\s+/).filter((o) => !/^\p{Lu}/u.test(o.trim()) || o.replace(/[^\p{L}\p{N}\s]/gu, "").trim().split(/\s+/).filter(Boolean).length > 2).join(" ").trim()
+      : enPrimera ?? s.text
+    return repairSuggestion({ ...s, text: texto })
+  }
+
   // Lo guardado pasa por los mismos controles: un control nuevo vale también para lo ya guardado.
   const guardada = (await req.store.read("ats3-fix", key)) as Suggestion | null
-  const cached = guardada ? repairSuggestion(guardada) : null
+  const cached = guardada && guardada.changed ? preparar(guardada) : guardada
   if (cached && cached.changed && problemas(cached).length === 0) {
     return { ok: true, suggestion: anchor(cached, node.hash, node.text), served: true, calls: 0 }
   }
@@ -341,7 +375,9 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
       ? req.ai.rewriteSummary({
           current: original,
           focus: req.reason,
-          mustWrite: terms,
+          // Lo que el resumen ya probaba del aviso viaja como término a conservar: el control
+          // lo exigía y el modelo nunca lo recibía (medido: «Swift» soltado en 1 de 4, y declinado).
+          mustWrite: [...new Set([...terms, ...conservarEnResumen])],
           yearsOfExperience: aniosDichos(original) ?? (Math.floor(experienceYears(req.tree)) || null),
           cvLines: req.tree.roles.flatMap((r) => r.bullets.map((b) => b.text)),
           otherSections: req.tree.otherText,
@@ -349,6 +385,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           topBullets: topBulletsOf(req.tree),
           provenTerms: provenTermsOf(req.tree, req.spec),
           declaredSkills: req.tree.declaredSkills,
+          career: req.tree.roles.map((r) => ({ title: r.title, company: r.company, from: r.startDate, to: r.endDate })),
           nudge,
         })
       : req.ai.rewriteBullet({
@@ -370,12 +407,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           nudge,
         })
 
-  // La tercera persona regular se corrige, no se rechaza («Atendió» → «Atendí»).
-  const preparar = (s: Suggestion): Suggestion => {
-    const enPrimera = req.language !== "en" && !isSummary ? toFirstPerson(s.text) : null
-    return repairSuggestion(enPrimera ? { ...s, text: enPrimera } : s)
-  }
-
   let calls = 1
   let first = await ask()
   // Una skill pedida no se abandona al primer «no puedo»: se pide una vez más.
@@ -395,6 +426,13 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
       const reparado = preparar(segundo)
       if (problemas(reparado).length < antes.length) first = reparado
     }
+  }
+
+  // La oración en tercera que sobrevivió al reintento se saca, si el resumen sigue
+  // teniendo de qué hablar: el dato que decía vive en su sección (título, idioma).
+  if (terceraEn(first.text).length > 0) {
+    const quedan = first.text.split(/(?<=[.!?])\s+/).filter((o) => !terceraEn(o).length)
+    if (quedan.length >= 2) first = { ...first, text: quedan.join(" ") }
   }
 
   // Si sigue siendo la misma línea, no hay mejora: se dice, no se ofrece. Salvo que
@@ -469,8 +507,20 @@ function topBulletsOf(tree: ResumeTree): string[] {
 function provenTermsOf(tree: ResumeTree, spec: JobSpec): string[] {
   const index = buildTermIndex(termsOf(spec, tree))
   const escritos = termsIn(index, cvTextOf(tree))
-  const pedidos = [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])].map((r) => index.byKey.get(termKey(r.skill)) ?? r.skill)
-  return [...new Set(pedidos.filter((t) => escritos.has(t)))].filter((t) => normalize(t))
+  /**
+   * «A | B» ES UN REQUISITO, NO UN NOMBRE QUE SE ESCRIBE (2026-10-02). Medido contra
+   * la API con Sezzle: el resumen decía «JavaScript | TypeScript» y «Claude | large
+   * language model tools», con la barra, porque se le pasaba el requisito entero.
+   * Se pasa la alternativa que el CV escribe.
+   */
+  const cv = cvTextOf(tree)
+  const pedidos = [...(spec.mustHave ?? []), ...(spec.niceToHave ?? [])].flatMap((r) => {
+    const opciones = r.skill.split(/\s*\|\s*/).filter(Boolean)
+    if (opciones.length > 1) return opciones.filter((o) => termsIn(buildTermIndex([{ canonical: o, variants: titleForms(o) }]), cv).size > 0).slice(0, 1)
+    const t = index.byKey.get(termKey(r.skill)) ?? r.skill
+    return escritos.has(t) ? [t] : []
+  })
+  return [...new Set(pedidos)].filter((t) => normalize(t))
 }
 
 /**

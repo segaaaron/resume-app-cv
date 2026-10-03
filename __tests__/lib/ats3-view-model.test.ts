@@ -97,6 +97,9 @@ describe("la decisión del ATS, dicha en la forma que la pantalla pinta", () => 
     const cab = headlineOf(score(), secciones)
     expect(cab.criticalCount).toBe(2)
     expect(cab.detail).toEqual(["Excel avanzado"])
+    // Y la viñeta crítica se cuenta: los nombres + las viñetas suman lo que dice el número.
+    expect(cab.criticalLines).toBe(1)
+    expect(cab.detail.length + cab.criticalLines).toBe(cab.criticalCount)
   })
 })
 

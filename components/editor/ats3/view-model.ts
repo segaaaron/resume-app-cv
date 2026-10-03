@@ -140,6 +140,15 @@ export interface PanelTerm {
    * tabla promete que sus números se comprueban leyendo.
    */
   proven: boolean
+  /**
+   * CÓMO LO DICE EL CV, cuando el ATS lo reconoció en otra forma (2026-10-02).
+   * Visto en local: «Demostrada · Mobile — lo decís 0» con «aplicaciones
+   * móviles» en el CV. Las dos cosas eran ciertas y juntas se leían como una
+   * contradicción: la cuenta busca la palabra; el estado, lo que significa.
+   */
+  como?: string
+  /** Demostrada en una viñeta que no escribe la palabra, y sin cita: «lo probás en una viñeta», no «lo decís 0». */
+  enViñeta?: boolean
 }
 
 /**
@@ -219,7 +228,7 @@ export function checkOf(
   const [tiene, pide] = f.type === "years_short" ? f.detail.split("/") : []
   const params: Record<string, string | number> | undefined =
     f.type === "missing_skill"
-      ? { term: f.subject ?? "" }
+      ? { term: paraLeer(f.subject ?? "") }
       : f.type === "eligibility"
         ? { term: f.subject ?? "", cv: f.reason ?? "" }
       : f.type === "title_mismatch"
@@ -302,6 +311,7 @@ export function termsOfSpec(spec: JobSpec | null, audit: AuditFacts | null, jdTe
   const enAviso = new Map([...termCounts(index, jdText), ...termCounts(blandas, jdText)])
   const canonico = (x: string) => index.byKey.get(termKey(x)) ?? blandas.byKey.get(termKey(x)) ?? x
   // El estado lo decide el ATS; las cuentas son sólo para leer «lo pide N veces · lo decís M».
+  const cita = new Map((audit?.hard ?? []).filter((h) => h.status !== "missing" && h.cvWording).map((h) => [normalize(h.skill), h.cvWording as string] as const))
   const estado = new Map<string, "demonstrated" | "listed" | "missing">([
     ...(audit?.hard ?? []).map((h) => [normalize(h.skill), h.status] as [string, "demonstrated" | "listed" | "missing"]),
     ...(audit?.soft ?? []).map((x) => [normalize(x.signal), x.status] as [string, "demonstrated" | "listed" | "missing"]),
@@ -311,13 +321,17 @@ export function termsOfSpec(spec: JobSpec | null, audit: AuditFacts | null, jdTe
     const nombre = term.trim()
     if (!nombre || filas.some((f) => termKey(f.term) === termKey(nombre))) return
     const e = estado.get(normalize(nombre))
+    const cv = enCv.get(canonico(nombre)) ?? 0
     filas.push({
       term: nombre,
       section,
       jd: enAviso.get(canonico(nombre)) ?? 0,
-      cv: enCv.get(canonico(nombre)) ?? 0,
+      cv,
       listOnly: e === "listed",
       proven: e === "demonstrated",
+      ...(cv === 0 && cita.get(normalize(nombre)) ? { como: cita.get(normalize(nombre)) } : {}),
+      // Demostrada sin la palabra y sin cita: una viñeta la prueba, y eso es lo que se dice.
+      ...(cv === 0 && e === "demonstrated" && !cita.get(normalize(nombre)) ? { enViñeta: true } : {}),
     })
   }
   for (const r of spec.mustHave ?? []) push(r.skill, "hard")
@@ -336,6 +350,15 @@ export function termsOfSpec(spec: JobSpec | null, audit: AuditFacts | null, jdTe
  * Cuatro cifras que tienen que concordar entre sí no pueden calcularse en el
  * borde donde se pintan: se derivan juntas, una vez, de la misma medición.
  */
+/**
+ * «A | B» ES UN REQUISITO CON ALTERNATIVAS, NO UN NOMBRE (2026-10-02). La barra es
+ * del motor; en pantalla se leía «AI/ML | agentic development», como un símbolo
+ * suelto. Se muestra con la barra común de «uno u otro».
+ */
+export function paraLeer(term: string): string {
+  return term.replace(/\s*\|\s*/g, " / ")
+}
+
 export function headlineOf(score: Score | null, sections: readonly PanelSection[]) {
   const críticos = sections.flatMap((s) => s.checks).filter((c) => c.state === "crit")
   const abiertos = sections.flatMap((s) => s.checks)
@@ -356,7 +379,14 @@ export function headlineOf(score: Score | null, sections: readonly PanelSection[
      * señalada: volcarlas todas convertía la cabecera en una lista del panel
      * entero y tapaba justo el dato que este renglón existe para dar.
      */
-    detail: [...new Set(críticos.flatMap((c) => c.requirements))].slice(0, 5),
+    detail: [...new Set(críticos.flatMap((c) => c.requirements).map(paraLeer))].slice(0, 5),
+    /**
+     * Y LAS VIÑETAS CRÍTICAS, CONTADAS (2026-10-02). Visto en local: «6 arreglos
+     * críticos» con tres nombres debajo — las otras tres eran viñetas, que no
+     * traen requisito y no se nombraban. Se dicen juntas en un renglón, no línea
+     * por línea, para no volver a tapar la cabecera.
+     */
+    criticalLines: críticos.filter((c) => c.requirements.length === 0).length,
     /** Nunca promete más puntos de los que quedan por ganar. */
     recoverable: score ? Math.round(Math.min(suma, Math.max(0, 100 - score.total))) : 0,
   }

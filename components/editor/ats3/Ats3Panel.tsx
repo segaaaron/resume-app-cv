@@ -226,6 +226,7 @@ export default function Ats3Panel() {
             score={cabecera.score}
             criticalCount={cabecera.criticalCount}
             criticalDetail={cabecera.detail}
+            criticalLines={cabecera.criticalLines}
             recoverable={cabecera.recoverable}
           />
 

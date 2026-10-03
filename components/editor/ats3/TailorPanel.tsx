@@ -447,7 +447,8 @@ export default function TailorPanel({
               La plantilla muestra las primeras veinte; el plan decide el ORDEN
               y no borra ninguna. Se enseña cuáles pasan a verse y cuáles dejan
               de verse —con el nombre exacto— y se escribe cuando lo aceptás. */}
-          {planAbierto && plan && (
+          {/* Está PENDIENTE hasta que se acepta: no va bajo «Hechas» ni en una sección que no es la suya. */}
+          {planAbierto && plan && (filter === "all" || filter === "open" || filter === "hard") && (
             <Card tone="accent" filled>
               <div className="px-4 py-3">
                 <h3 className="text-[13px] font-semibold" style={{ color: "var(--a-ink)" }}>
@@ -1034,12 +1035,33 @@ function FixCard({
         </div>
       )}
 
+      {/* EL LOGRO O LA CIFRA, CONTADOS POR LA PERSONA (2026-10-02). Medido contra la API
+          en oficios: con «Soldé piezas» la IA no puede decir qué logró sin afirmarlo, y
+          la tarjeta quedaba sin salida. Lo que la persona cuenta viaja como su dato. */}
+      {check.remedy === "rewrite" && (check.needsOutcome || check.needsFigure) && (
+        <div className="mx-3.5 mt-3">
+          <label htmlFor={`${check.id}-told`} className="text-[11.5px] font-semibold" style={{ color: "var(--a-ink-2)" }}>
+            {t("told_label")}
+          </label>
+          <textarea
+            id={`${check.id}-told`}
+            value={dato}
+            onChange={(e) => setDato(e.target.value)}
+            rows={2}
+            maxLength={300}
+            placeholder={t("told_placeholder")}
+            className={`mt-1 resize-y ${FIELD_CLASS}`}
+            style={FIELD_STYLE}
+          />
+        </div>
+      )}
+
       {/* LA ÚNICA ESPERA: en la tarjeta que se está escribiendo. */}
       {writing && <Writing label={t("writing_card")} className="mx-3.5 mt-3" />}
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
         {check.remedy === "rewrite" && (
-          <Btn tone="ai" disabled={busy} onClick={() => onSolve()}>
+          <Btn tone="ai" disabled={busy} onClick={() => onSolve(dato.trim() || undefined)}>
             <Sparkles className="h-3 w-3" />
             {writing ? t("writing") : t("fix_it")}
           </Btn>

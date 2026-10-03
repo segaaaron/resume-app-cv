@@ -181,11 +181,26 @@ export function useAts3(resumeId: string, language: "es" | "en") {
    * de IA: el store suelta un guardado si hay otro en vuelo, así que se reintenta
    * una vez cuando aterriza —`save()` manda siempre el estado actual—.
    */
+  /**
+   * ── NINGUNA ESCRITURA SE QUEDA AFUERA (QA, 2026-10-02) ────────────────────
+   * `save()` manda la foto del CV del momento en que empieza, y al terminar bien
+   * marca `isDirty = false`; y si ya hay uno en vuelo, sale sin hacer nada. Con
+   * dos tarjetas confirmadas seguidas, la segunda escritura llegaba durante el
+   * primer guardado: la barra decía «Guardado» y el servidor no la tenía — al
+   * recargar se perdía. Se espera al que está en vuelo y se vuelve a guardar
+   * mientras lo que se mandó no sea lo que hay ahora.
+   */
   const guardar = useCallback(async () => {
-    const { save } = useResumeStore.getState() as { save: (o?: { skipThumbnail?: boolean }) => Promise<void> }
-    await save({ skipThumbnail: true }).catch(() => { /* la barra de arriba ya muestra un guardado fallido */ })
-    if ((useResumeStore.getState() as { isDirty: boolean }).isDirty) {
-      await save({ skipThumbnail: true }).catch(() => { /* ídem */ })
+    type Store = { save?: (o?: { skipThumbnail?: boolean }) => Promise<void>; isSaving?: boolean; sectionData?: unknown; saveError?: { fatal?: boolean } | null }
+    const leer = () => useResumeStore.getState() as Store
+    if (typeof leer().save !== "function") return
+    for (let vuelta = 0; vuelta < 6; vuelta++) {
+      // Espera al guardado en vuelo (tope 10 s: el timeout del cliente ya avisa si se colgó).
+      for (let i = 0; i < 100 && leer().isSaving; i++) await new Promise((r) => setTimeout(r, 100))
+      if (leer().saveError?.fatal) return
+      const enviado = leer().sectionData
+      await leer().save!({ skipThumbnail: true }).catch(() => { /* la barra de arriba ya muestra un guardado fallido */ })
+      if (leer().sectionData === enviado || leer().saveError) return
     }
   }, [])
 
@@ -200,6 +215,23 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   /** Cuál de las tarjetas de esa línea pidió la reescritura. Ver `olvidar`. */
   const [pendingFinding, setPendingFinding] = useState<string | null>(null)
   const inFlight = useRef<AbortController | null>(null)
+  /**
+   * LO QUE SE DESHACE VUELVE A PENDIENTES (2026-10-02). Visto en local: «Deshacer»
+   * devolvía la línea al CV y su tarjeta desaparecía hasta el próximo análisis —
+   * «Todas» bajaba de 10 a 9 sin que nada se hubiera resuelto—. Las tarjetas que
+   * se retiran al aplicar o sacar se guardan por el texto que quedó escrito, y
+   * vuelven cuando ese texto se deshace.
+   */
+  const retiradas = useRef(new Map<string, Finding[]>())
+  const guardarRetiradas = (clave: string, fs: Finding[]) => {
+    if (fs.length) retiradas.current.set(clave.trim(), fs)
+  }
+  const devolverRetiradas = (clave: string) => {
+    const fs = retiradas.current.get(clave.trim())
+    if (!fs) return
+    retiradas.current.delete(clave.trim())
+    setState((st) => ({ ...st, findings: [...st.findings, ...fs.filter((f) => !st.findings.some((x) => x.id === f.id))] }))
+  }
   /** El CV tal como se mandó a analizar: contra esto se dice si cambió después. */
   const [analizado, setAnalizado] = useState<string | null>(null)
 
@@ -527,6 +559,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         const puntaje = scoreResume(nuevo, state.spec, state.audit, state.checks)
         setState((st) => ({ ...st, score: puntaje }))
       }
+      devolverRetiradas(after)
       return true
     },
     [payloadResume, persistir, state.audit, state.checks, state.spec],
@@ -630,6 +663,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * que se dijo sobre él. Lo que siga faltando vuelve en el próximo
        * análisis, medido sobre lo que ahora hay escrito.
        */
+      guardarRetiradas(finalText, [...state.findings, ...state.regressed].filter((f) => f.id === pendingFinding || (f.nodeId === s.bulletId && !f.subject)))
       setState((st) => {
         // La tarjeta que pidió la propuesta se cierra por su id. La de un
         // término lleva sujeto y `olvidar` por línea la deja viva a propósito,
@@ -639,7 +673,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         return olvidar(cerrada, { nodeId: s.bulletId })
       })
     },
-    [findingActual, payloadResume, pendingFinding, persistir, registrarResuelto, state.audit, state.checks, state.spec],
+    [findingActual, payloadResume, pendingFinding, persistir, registrarResuelto, state.audit, state.checks, state.findings, state.regressed, state.spec],
   )
 
   /**
@@ -707,9 +741,10 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       persistir(nuevo, raw, nodeId)
       registrarResuelto(nodeId, "", "AI_SUGGESTION", findingId, registro)
       if (state.spec && state.audit) setState((st) => ({ ...st, score: scoreResume(nuevo, state.spec!, state.audit!, state.checks) }))
+      guardarRetiradas(linea.text, [...state.findings, ...state.regressed].filter((f) => f.id === findingId || (f.nodeId === nodeId && !f.subject)))
       setState((st) => olvidar(olvidar(st, { findingId }), { nodeId }))
     },
-    [payloadResume, persistir, registrarResuelto, state.audit, state.checks, state.spec],
+    [payloadResume, persistir, registrarResuelto, state.audit, state.checks, state.findings, state.regressed, state.spec],
   )
 
   /** Devuelve una viñeta sacada a su puesto y a su lugar. */
@@ -732,6 +767,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       }
       persistir(nuevo, raw, `${roleId}_back`)
       if (state.spec && state.audit) setState((st) => ({ ...st, score: scoreResume(nuevo, state.spec!, state.audit!, state.checks) }))
+      devolverRetiradas(texto)
       return true
     },
     [payloadResume, persistir, state.audit, state.checks, state.spec],

@@ -195,7 +195,8 @@ export const PROMPT_VERSION = {
   // p1-17 (CEO, 2026-09-29): sin el agregado automático de nombres propios como requisitos.
   // p1-20 (2026-09-30): el cargo sin lo que el aviso pone entre paréntesis («(LATAM)»).
   // p1-21 (2026-10-02): una capacidad de rol («architecture decisions», «technical direction») no es un requisito.
-  P1: "p1-21", // parser de vacante
+  // p1-22 (2026-10-02): un requisito con la redacción larga se recorta, no se descarta (Sezzle: Claude se perdía 0 de 4).
+  P1: "p1-22", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -223,7 +224,8 @@ export const PROMPT_VERSION = {
   // skill (demostrada/listada/falta), con la instrucción que Tailor ejecuta.
   // p2-21 (2026-09-30): el motivo y la pregunta en el idioma del CV, nombrado; una credencial se juzga por lo que es.
   // p2-22 (2026-10-02): cada skill demostrada o listada cita `cvWording`, las palabras del CV que la dicen.
-  P2: "p2-22", // diagnóstico
+  // p2-23 (2026-10-02): el motivo dice la decisión (keep: qué prueba) en una frase limpia; visto en local «ecosistema no, no;» y «demasiado genérica» bajo «Sirve».
+  P2: "p2-23", // diagnóstico
   // p3-1 (CEO, 2026-09-29): las herramientas de las habilidades que cada trabajo
   // usó sin nombrarlas. Separado del diagnóstico: dentro de él el modelo no las
   // cruzaba (medido: 1 de 42 viñetas) y declaraba frases del aviso como hechos.
@@ -292,7 +294,8 @@ export const PROMPT_VERSION = {
   // p5-14: la prueba llega en su propia sección, no mezclada en una lista.
   // p5-15: la antigüedad del resumen viejo no se exige conservar (se escribe la medida).
   // p5-16: la regla de verdad compartida (truthRule) ahora deja a la IA escribir todo salvo las cifras.
-  P5: "p5-17", // resumen
+  // p5-18 (2026-10-02): recibe la TRAYECTORIA con fechas; los años van con el total si el cargo pedido es sólo una parte.
+  P5: "p5-18", // resumen
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -575,10 +578,17 @@ export function termPresent(index: TermIndex, canonical: string, text: string): 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const RequirementSchema = z.object({
+  /**
+   * SE RECORTAN, NO SE RECHAZAN (2026-10-02). Medido contra la API con el aviso de
+   * Sezzle: el renglón de Claude mide ~200 caracteres, `raw` tenía tope 160 y
+   * `lista` descartaba el requisito ENTERO en silencio — 0 de 4 corridas lo
+   * conservaban, y ni el prompt ni el reintento podían arreglarlo. Un tope de
+   * presentación no tumba un requisito exigido.
+   */
   /** Nombre canónico, decidido por el modelo a partir del propio aviso. */
-  skill: z.string().min(1).max(80),
+  skill: z.string().min(1).transform((v) => v.slice(0, 80)),
   /** Cómo lo escribió la vacante. Es la variante que alimenta el índice. */
-  raw: z.string().min(1).max(160),
+  raw: z.string().min(1).transform((v) => v.slice(0, 300)),
   years: anios(),
   /** Categoría libre, en las palabras del aviso: no hay taxonomía cerrada
    *  porque un aviso de soldadura no habla de "LANGUAGE" ni de "FRAMEWORK". */
@@ -626,8 +636,9 @@ export const JobSpecSchema = z.object({
   metricThatMatters: texto(80),
   mustHave: lista(RequirementSchema, 40),
   niceToHave: lista(RequirementSchema, 40),
-  responsibilities: lista(z.string().max(300), 30),
-  softSignals: lista(z.string().max(160), 20),
+  // Recortar, no tirar: una responsabilidad larga se perdía entera (ver RequirementSchema).
+  responsibilities: lista(z.string().transform((v) => v.slice(0, 300)), 30),
+  softSignals: lista(z.string().transform((v) => v.slice(0, 160)), 20),
   /**
    * LO QUE TE FILTRA Y NO SE REDACTA (CEO, 2026-09-30): residir en un país,
    * permiso de trabajo, un nivel de idioma obligatorio. Se avisa; no hay botón.
@@ -957,7 +968,7 @@ export const SuggestionSchema = z.object({
   /** El único que NO se recorta: es lo que se escribe en el CV. */
   text: z.string().max(1200).nullish().transform((v) => v ?? ""),
   actionVerb: texto(60),
-  keywordsUsed: lista(z.string().max(80), 10),
+  keywordsUsed: lista(z.string().transform((v) => v.slice(0, 80)), 10),
   claim: texto(200),
   /**
    * El tipo de medida. Un valor fuera de la lista NO tira la respuesta: cae en

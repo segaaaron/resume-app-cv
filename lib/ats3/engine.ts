@@ -214,10 +214,24 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     const donde = h.status === "demonstrated" && h.evidenceNodeId ? lineaDe.get(h.evidenceNodeId) ?? "" : textoCv
     return ` ${donde} `.includes(` ${c} `)
   }
+  /**
+   * «SÓLO EN LA LISTA» ES EL NOMBRE ENTERO, NO SUS PALABRAS SUELTAS (2026-10-02).
+   * Visto en local: «Clean Code — sólo en la lista» con «Clean Architecture» en
+   * Habilidades y «código» en una viñeta: cada palabra estaba en algún lado, el
+   * requisito en ninguno. «Listada» afirma que el nombre está escrito, y eso se
+   * prueba con la frase —o una alternativa— o con la cita del ATS. «Demostrada»
+   * apunta a una viñeta y sigue con la vara de raíces: ahí lo semántico lo juzga
+   * el ATS («Atendí a los clientes» demuestra «atención al cliente»).
+   */
+  const dicho = (nombre: string) => {
+    const opciones = nombre.split(/\s*\|\s*/).filter(Boolean)
+    const indice = buildTermIndex(opciones.map((o) => ({ canonical: o, variants: titleForms(o) })))
+    return termsIn(indice, cvTextOf(tree)).size > 0
+  }
   audit = {
     ...audit,
     hard: audit.hard.map((h) =>
-      h.status !== "missing" && !respaldadoEnCv(tree, h.skill) && !citado(h) && (sinDondeTenerla || !credenciales.has(normalize(h.skill)))
+      h.status !== "missing" && !citado(h) && !(h.status === "listed" ? dicho(h.skill) : respaldadoEnCv(tree, h.skill)) && (sinDondeTenerla || !credenciales.has(normalize(h.skill)))
         ? { ...h, status: "missing" as const, evidenceNodeId: null }
         : h,
     ),
@@ -282,7 +296,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     audit = {
       ...audit,
       bullets: audit.bullets.map((b) =>
-        quedan.has(b.id) ? { ...b, decision: "keep" as const } : sacar.has(b.id) ? { ...b, decision: "remove" as const, reason: sacar.get(b.id)! } : b,
+        quedan.has(b.id) ? { ...b, decision: "keep" as const, reason: seQueda(input.language) } : sacar.has(b.id) ? { ...b, decision: "remove" as const, reason: sacar.get(b.id)! } : b,
       ),
     }
   }
@@ -319,7 +333,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   const textoNorm = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, normalize(b.text)] as const)))
   audit = {
     ...audit,
-    bullets: audit.bullets.map((b) => (b.decision === "remove" && conservadas.has(textoNorm.get(b.id) ?? "") ? { ...b, decision: "keep" as const } : b)),
+    bullets: audit.bullets.map((b) => (b.decision === "remove" && conservadas.has(textoNorm.get(b.id) ?? "") ? { ...b, decision: "keep" as const, reason: seQueda(input.language) } : b)),
   }
   /**
    * NO SE SACA LA PRUEBA DE LO QUE PIDE LA VACANTE (CEO, 2026-09-30): «me pediste
@@ -327,7 +341,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    * en el puntaje (demostrada 1, nombrada 0,6): sacarla nunca es «no aporta».
    */
   const pruebas = new Set([...audit.hard, ...audit.soft].flatMap((x) => (x.status === "demonstrated" && x.evidenceNodeId ? [x.evidenceNodeId] : [])))
-  audit = { ...audit, bullets: audit.bullets.map((b) => (b.decision === "remove" && pruebas.has(b.id) ? { ...b, decision: "keep" as const } : b)) }
+  audit = { ...audit, bullets: audit.bullets.map((b) => (b.decision === "remove" && pruebas.has(b.id) ? { ...b, decision: "keep" as const, reason: seQueda(input.language, true) } : b)) }
   audit = { ...audit, bullets: ajustarAlRango(tree, spec, audit.bullets, pruebas, input.language) }
   const quedan = audit.bullets.filter((b) => b.decision !== "remove").map((b) => textoNorm.get(b.id) ?? "").filter(Boolean)
   await input.store.write("ats3-lock", lockKey, [...new Set([...conservadas, ...quedan])])
@@ -370,6 +384,17 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   yield { act: "findings", findings: seen.shown, suppressed: seen.suppressed.length, regressed: seen.regressed, resolved: log }
 
   return telemetry
+}
+
+/**
+ * EL MOTIVO DE UNA VIÑETA QUE EL CÓDIGO CONSERVA (2026-10-02). El modelo la mandaba
+ * sacar —«dice casi lo mismo que…»— y el código lo descartó; la línea quedaba
+ * en «Sirve» con ese motivo debajo. Visto en local: cuatro viñetas así en la misma
+ * pantalla. Lo que se ve es lo que se decidió.
+ */
+function seQueda(language: "es" | "en", prueba = false): string {
+  if (prueba) return language === "en" ? "Stays: it proves a skill the posting asks for." : "Se queda: prueba una skill que pide el aviso."
+  return language === "en" ? "Stays: it shows experience and does not repeat another line." : "Se queda: muestra experiencia y no repite a otra línea."
 }
 
 /**
@@ -419,6 +444,9 @@ async function fijarJuicios(tree: ResumeTree, audit: AuditFacts, store: AtsStore
   for (const x of [...fijada.hard.map((h) => ({ n: h.skill, s: h })), ...fijada.soft.map((y) => ({ n: y.signal, s: y }))]) {
     ahora.skills[normalize(x.n)] = { status: x.s.status, evidencia: x.s.evidenceNodeId ? textoDe.get(x.s.evidenceNodeId) ?? null : null }
   }
+  // Con tope: las líneas viejas se guardan para que un «Deshacer» recupere su juicio, no para siempre.
+  const textos = Object.keys(ahora.bullets)
+  for (const t of textos.slice(0, Math.max(0, textos.length - 300))) delete ahora.bullets[t]
   await store.write("ats3-judge", key, ahora)
   return fijada
 }
@@ -533,7 +561,7 @@ function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bu
   }
   return bullets.map((b) =>
     cambios.get(b.id) === "keep"
-      ? { ...b, decision: "keep" as const }
+      ? { ...b, decision: "keep" as const, ...(b.decision === "remove" ? { reason: seQueda(language) } : {}) }
       : cambios.get(b.id) === "remove"
         ? { ...b, decision: "remove" as const, reason: porExceso.get(b.id) ?? b.reason }
         : b,

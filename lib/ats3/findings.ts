@@ -259,8 +259,23 @@ export function skillPlan(
     if (!n || final.some((x) => normalize(x) === n)) return
     final.push(nombre(s))
   }
+  /**
+   * UN REQUISITO CON ALTERNATIVAS NO ES UN NOMBRE (2026-10-02). Visto en local: la
+   * tarjeta proponía agregar «RESTful APIs | GraphQL» a Habilidades, con la barra,
+   * y el CV ya decía «RESTful APIs». Se escribe UNA alternativa: la que la persona
+   * ya declaró, o la que el ATS citó del CV; si no se sabe cuál, ninguna.
+   */
+  const citaDe = new Map(audit.hard.map((h) => [normalize(h.skill), normalize(h.cvWording ?? "")] as const))
   for (const r of [...spec.mustHave, ...spec.niceToHave]) {
     const n = normalize(r.skill)
+    const opciones = r.skill.split(/\s*\|\s*/).filter(Boolean)
+    if (opciones.length > 1) {
+      const declarada = opciones.find((o) => comoLoEscribio.has(normalize(o)))
+      const citada = opciones.find((o) => normalize(o) && (citaDe.get(n) ?? "").includes(normalize(o)))
+      const una = declarada ?? (demostradas.has(n) && !credenciales.has(n) ? citada : undefined)
+      if (una) meter(una)
+      continue
+    }
     if (comoLoEscribio.has(n) || (demostradas.has(n) && !credenciales.has(n))) meter(r.skill)
   }
   for (const s of declared) meter(s)

@@ -24,6 +24,7 @@ import { AlertCircle, AlertTriangle, Briefcase, Check, ChevronDown, FileText, Sp
 import { READY_SCORE, scoreBand } from "@/lib/ats3/score"
 import { normalize } from "@/lib/ats3/contracts"
 import type { PanelCheck, PanelSection, PanelSectionId, PanelTerm } from "./view-model"
+import { paraLeer } from "./view-model"
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,11 +165,13 @@ interface DialProps {
    * aprende a ignorar porque no puede actuar sobre ella.
    */
   criticalDetail?: readonly string[]
+  /** Los críticos que son viñetas: se cuentan en un renglón, no se nombran una por una. */
+  criticalLines?: number
   /** Puntos que quedan sobre la mesa, ya sumados por el informe. */
   recoverable: number
 }
 
-export function ScoreDial({ score, criticalCount, recoverable, criticalDetail = [] }: DialProps) {
+export function ScoreDial({ score, criticalCount, recoverable, criticalDetail = [], criticalLines = 0 }: DialProps) {
   const t = useTranslations("editor.ats")
   const tone = bandOf(score)
   const shown = useCountUp(score)
@@ -254,9 +257,9 @@ export function ScoreDial({ score, criticalCount, recoverable, criticalDetail = 
           {/* Y CUÁL es. Se envuelve, nunca se corta: un requisito a medias no se
               puede juzgar, y truncarlo devuelve al usuario al mismo lugar —
               sabe que algo falla y no sabe qué. */}
-          {criticalDetail.length > 0 && (
+          {(criticalDetail.length > 0 || criticalLines > 0) && (
             <ul className="mt-1.5 flex flex-col gap-1">
-              {criticalDetail.map((req) => (
+              {[...criticalDetail, ...(criticalLines > 0 ? [t("verdict_critical_lines", { count: criticalLines })] : [])].map((req) => (
                 <li
                   key={req}
                   className="flex gap-1.5 text-[11px] font-semibold leading-snug [overflow-wrap:anywhere]"
@@ -819,7 +822,7 @@ export function TermTable({ terms, onSolve, conTarjeta }: TableProps) {
               style={{ borderColor: "var(--a-border)", background: "var(--a-surface)" }}
             >
               {rows.map((row, i) => {
-                const present = row.cv > 0
+                const present = row.cv > 0 || Boolean(row.como) || Boolean(row.enViñeta)
                 const shown = row.cv
                 return (
                   <li
@@ -833,7 +836,7 @@ export function TermTable({ terms, onSolve, conTarjeta }: TableProps) {
                       className="text-[12.5px] font-semibold leading-snug [overflow-wrap:anywhere]"
                       style={{ color: "var(--a-ink-2)" }}
                     >
-                      {row.term}
+                      {paraLeer(row.term)}
                     </p>
 
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -858,7 +861,7 @@ export function TermTable({ terms, onSolve, conTarjeta }: TableProps) {
                         {row.jd > 0 ? t("term_meta_jd", { jd: row.jd }) : t("term_meta_jd_unknown")}
                         <span className="mx-1" style={{ color: "var(--a-border-2)" }}>·</span>
                         <span style={{ color: present ? "var(--a-ok)" : "var(--a-bad)", fontWeight: 700 }}>
-                          {t("term_meta_cv", { cv: shown })}
+                          {row.como ? t("term_meta_cv_as", { como: row.como }) : row.enViñeta ? t("term_meta_cv_proven") : t("term_meta_cv", { cv: shown })}
                         </span>
                       </span>
 

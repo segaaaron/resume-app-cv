@@ -160,6 +160,16 @@ describe("el error que este módulo existe para no cometer", () => {
     expect(counts.get("GraphQL")).toBe(1)
   })
 
+  it("un requisito con la redacción larga se recorta, no se descarta (Sezzle: «Claude» se perdía, 2026-10-02)", () => {
+    const largo = "Demonstrated experience working with Claude or equivalent large language model tools is required; candidates must be comfortable leveraging AI to enhance productivity, research, and communication."
+    const spec = JobSpecSchema.parse({
+      roleTitleRaw: "Mobile", roleTitleCanonical: "Mobile", language: "en", responsibilities: [], softSignals: [],
+      mustHave: [{ skill: "Claude | large language model tools", raw: largo, years: null, category: null, kind: "capability" }],
+      niceToHave: [],
+    })
+    expect(spec.mustHave.map((r) => r.skill)).toEqual(["Claude | large language model tools"])
+  })
+
   it("los años como texto («3 a 4», «5+») no tiran la vacante: se lee el primer entero", () => {
     // Medido contra la API el 2026-10-02 con el aviso de Tekton: P1 se cayó entero.
     const spec = JobSpecSchema.parse({

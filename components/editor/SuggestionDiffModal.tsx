@@ -377,22 +377,27 @@ export default function SuggestionDiffModal({
           ) : (
             <div className="space-y-3">
               {/* Single-line fields (a job title, a summary) read better as
-                  before → after than as a line diff. */}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">{t("diff_before")}</p>
-                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#6B7A8C] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
-                  {currentValue || <span className="italic opacity-60">{t("diff_empty")}</span>}
-                </div>
-              </div>
+                  before → after than as a line diff. Nothing before means it is
+                  NEW: an empty «current» box read as if something were erased. */}
+              {currentValue.trim() ? (
+                <>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">{t("diff_before")}</p>
+                    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#6B7A8C] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
+                      {currentValue}
+                    </div>
+                  </div>
 
-              <div className="flex justify-center">
-                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200">
-                  <ArrowDown className="h-3.5 w-3.5 text-emerald-600" />
-                </div>
-              </div>
+                  <div className="flex justify-center">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200">
+                      <ArrowDown className="h-3.5 w-3.5 text-emerald-600" />
+                    </div>
+                  </div>
+                </>
+              ) : null}
 
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{t("diff_after")}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{currentValue.trim() ? t("diff_after") : t("diff_new")}</p>
                 <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
                   {shownAfter}
                 </div>

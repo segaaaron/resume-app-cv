@@ -91,6 +91,13 @@ export interface SummaryInput {
   /** Lo que la vacante pide y el CV ya demuestra, en su orden de peso (`provenTermsOf`). */
   provenTerms: string[]
   declaredSkills: string[]
+  /**
+   * LA TRAYECTORIA: cargo, empresa y fechas de cada puesto (2026-10-02). Sin esto
+   * el resumen sólo veía viñetas sueltas y no podía saber cuánto duró cada
+   * especialidad: medido en local, «React Native Developer con 7 años» en un CV
+   * con React Native de 2017 a 2020.
+   */
+  career?: { title: string; company: string; from: string; to: string }[]
   nudge?: string
 }
 
@@ -138,7 +145,11 @@ export const cacheKey = {
   /** Las viñetas que el ATS ya decidió conservar para este CV y esta vacante. */
   lock: (resumeId: string, jdHash: string) => sha256("lock", resumeId, jdHash),
 
-  /** Lo que el ATS juzgó de cada línea, por su texto, para este CV y esta vacante. */
-  judge: (resumeId: string, jdHash: string) => sha256("judge", resumeId, jdHash),
+  /**
+   * Lo que el ATS juzgó de cada línea, por su texto, para este CV y esta vacante.
+   * Con la versión del diagnóstico: un juicio fijado con un prompt viejo no puede
+   * tapar lo que el prompt nuevo corrigió.
+   */
+  judge: (resumeId: string, jdHash: string) => sha256("judge", resumeId, jdHash, PROMPT_VERSION.P2, PROMPT_VERSION.P3),
 
 }
