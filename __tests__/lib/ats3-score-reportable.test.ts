@@ -30,7 +30,8 @@ describe("el puntaje no cobra nada que el panel no reporte", () => {
     ...(/requirement === "MUST" \? "must" : "nice"/.test(engine) && engine.includes("component: key") ? ["must", "nice"] : []),
     // La cifra que el puesto pide va en la tarjeta de su viñeta y suma a `metric`.
     ...(engine.includes('gainOf(score, "metric")') ? ["metric"] : []),
-    // La soft que falta se escribe en la viñeta que el ATS eligió (`writeIn`).
+    // Lo deseable que falta se informa en la tabla de términos («Lo deseable»), no en una tarjeta.
+    ...(readFileSync("components/editor/ats3/view-model.ts", "utf8").includes("spec.niceToHave") ? ["nice"] : []),
 
   ])
 

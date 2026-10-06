@@ -19,7 +19,7 @@
 
 import type { Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
 import { mismaRaiz, buildTermIndex, normalize, nuevaEn, termCounts, termKey } from "@/lib/ats3/contracts"
-import { cvTextOf, SCORED_COMPONENTS, termsOf } from "@/lib/ats3/score"
+import { cvTextOf, SCORED_COMPONENTS, statesQuantity, termsOf } from "@/lib/ats3/score"
 import type { AuditFacts, ComponentKey, Score } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ import type { AuditFacts, ComponentKey, Score } from "@/lib/ats3/score"
  * producto —sigue valiendo 0,15 del pilar de relevancia y el dial lo cuenta—;
  * lo que desaparece es la promesa de que había algo que hacer con él.
  */
-export type PanelSectionId = "hard" | "soft" | "other" | "format" | "tips"
+export type PanelSectionId = "hard" | "soft" | "other" | "format"
 
 
 export interface PanelCheck {
@@ -99,19 +99,12 @@ export interface PanelCheck {
   requirements: string[]
   /** Por qué, dicho por el ATS en el idioma del CV. */
   reason?: string
-  /** Qué tiene que decir la línea nueva, según el ATS: lo que Tailor ejecuta. */
-  instruction?: string
-  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
-  facts?: string[]
   /** Las skills que el ATS decidió escribir en esta línea. */
   terms?: string[]
-  /** La línea abre con una fórmula de tarea: Tailor la cambia por un verbo de acción. */
-  weakOpener?: boolean
-  /** Este puesto necesita la cifra de este logro. */
-  needsFigure?: boolean
-  needsOutcome?: boolean
   /** `ask`: la pregunta del ATS a la persona. */
   question?: string
+  /** `missing_skills`: las skills sin evidencia en el CV; la persona elige cuál tiene. */
+  subjects?: string[]
 }
 
 export interface PanelSection {
@@ -140,15 +133,6 @@ export interface PanelTerm {
    * tabla promete que sus números se comprueban leyendo.
    */
   proven: boolean
-  /**
-   * CÓMO LO DICE EL CV, cuando el ATS lo reconoció en otra forma (2026-10-02).
-   * Visto en local: «Demostrada · Mobile — lo decís 0» con «aplicaciones
-   * móviles» en el CV. Las dos cosas eran ciertas y juntas se leían como una
-   * contradicción: la cuenta busca la palabra; el estado, lo que significa.
-   */
-  como?: string
-  /** Demostrada en una viñeta que no escribe la palabra, y sin cita: «lo probás en una viñeta», no «lo decís 0». */
-  enViñeta?: boolean
 }
 
 /**
@@ -178,12 +162,6 @@ const COMPONENTS_OF: Record<PanelSectionId, ComponentKey[]> = {
   soft: ["soft"],
   other: ["nice"],
   format: ["checks"],
-  /**
-   * EL IMPACTO DE LAS VIÑETAS: acción, resultado y método (XYZ), la cifra, los
-   * verbos que se repiten y el resumen. Es parte del análisis, no un consejo
-   * aparte (CEO, 2026-09-28).
-   */
-  tips: ["bullets", "metric", "summary"],
 }
 
 /** La sección de un componente. Se deriva del mapa de arriba: no hay segunda lista. */
@@ -223,12 +201,15 @@ export function checkOf(
   glosa?: (token: string, params?: Record<string, string>) => string,
 ): PanelCheck {
   const linea = textoVivo?.(f.nodeId) || f.nodeText
-  const deLinea = f.type === "improve_bullet" || f.type === "remove_bullet"
-  const tokens = f.type === "parse_risk" || f.type === "summary_gap" ? f.detail.split(/\s*,\s*/).filter(Boolean) : []
+  const tokens = f.type === "parse_risk" ? f.detail.split(/\s*,\s*/).filter(Boolean) : []
   const [tiene, pide] = f.type === "years_short" ? f.detail.split("/") : []
   const params: Record<string, string | number> | undefined =
     f.type === "missing_skill"
       ? { term: paraLeer(f.subject ?? "") }
+      : f.type === "missing_skills"
+        ? { n: f.subjects?.length ?? 0 }
+      : f.type === "role_short"
+        ? { puesto: f.subject ?? "", n: f.detail }
       : f.type === "eligibility"
         ? { term: f.subject ?? "", cv: f.reason ?? "" }
       : f.type === "title_mismatch"
@@ -236,18 +217,16 @@ export function checkOf(
         : f.type === "years_short"
           ? { tiene: tiene ?? "", pide: pide ?? "" }
           : undefined
-  const evidence = [...tokens.map((t) => glosa?.(t) ?? t), ...(f.terms ?? [])].filter((x) => x.trim())
+  const evidence = [...tokens.map((t) => glosa?.(t) ?? t), ...(f.terms ?? []), ...(f.subjects ?? []).map(paraLeer)].filter((x) => x.trim())
   return {
     id: f.id,
     remedy: f.remedy,
     subject: f.subject,
-    section: SECTION_OF.get(f.component) ?? "tips",
+    section: SECTION_OF.get(f.component) ?? "hard",
     state: f.gain >= CRITICAL_GAIN ? "crit" : "warn",
     weight: Number(f.gain.toFixed(1)),
     titleKey: f.type === "parse_risk" ? `type_parse_risk_${f.detail}` : f.type === "missing_skill" && f.detail === "listed" ? "type_missing_skill_listed" : `type_${f.type}`,
-    detailKey: deLinea
-      ? undefined
-      : f.type === "missing_skill" && f.remedy === "none"
+    detailKey: f.type === "missing_skill" && f.remedy === "none"
         ? "type_missing_skill_credential_detail"
         : f.type === "missing_skill" && f.detail === "listed"
           ? "type_missing_skill_listed_detail"
@@ -255,20 +234,16 @@ export function checkOf(
             ? `type_eligibility_${f.detail === "no" ? "no" : "unknown"}_detail`
             : `type_${f.type}_detail`,
     params,
-    // La línea de tu CV que la tarjeta toca: la viñeta, o el resumen cuando se reescribe.
-    line: deLinea || f.remedy === "rewrite" ? linea : undefined,
+    // La línea de tu CV que la tarjeta toca: el resumen cuando se reescribe.
+    line: f.remedy === "rewrite" ? linea : undefined,
     evidence,
-    focus: [f.reason, f.instruction].filter(Boolean).join(" "),
-    requirements: f.type === "missing_skill" || f.type === "title_mismatch" ? [f.subject ?? f.detail] : (f.terms ?? []),
+    focus: f.reason ?? "",
+    requirements: f.type === "missing_skill" || f.type === "title_mismatch" ? [f.subject ?? f.detail] : f.type === "missing_skills" ? (f.subjects ?? []) : (f.terms ?? []),
     // La elegibilidad ya cita lo que dice el CV en su detalle.
     ...(f.reason && f.type !== "eligibility" ? { reason: f.reason } : {}),
-    ...(f.instruction ? { instruction: f.instruction } : {}),
-    ...(f.facts?.length ? { facts: f.facts } : {}),
-    ...(f.weakOpener ? { weakOpener: true } : {}),
     ...(f.terms?.length ? { terms: f.terms } : {}),
-    ...(f.needsFigure ? { needsFigure: true } : {}),
-    ...(f.needsOutcome ? { needsOutcome: true } : {}),
     ...(f.question ? { question: f.question } : {}),
+    ...(f.subjects?.length ? { subjects: f.subjects } : {}),
   }
 }
 
@@ -311,7 +286,6 @@ export function termsOfSpec(spec: JobSpec | null, audit: AuditFacts | null, jdTe
   const enAviso = new Map([...termCounts(index, jdText), ...termCounts(blandas, jdText)])
   const canonico = (x: string) => index.byKey.get(termKey(x)) ?? blandas.byKey.get(termKey(x)) ?? x
   // El estado lo decide el ATS; las cuentas son sólo para leer «lo pide N veces · lo decís M».
-  const cita = new Map((audit?.hard ?? []).filter((h) => h.status !== "missing" && h.cvWording).map((h) => [normalize(h.skill), h.cvWording as string] as const))
   const estado = new Map<string, "demonstrated" | "listed" | "missing">([
     ...(audit?.hard ?? []).map((h) => [normalize(h.skill), h.status] as [string, "demonstrated" | "listed" | "missing"]),
     ...(audit?.soft ?? []).map((x) => [normalize(x.signal), x.status] as [string, "demonstrated" | "listed" | "missing"]),
@@ -329,9 +303,6 @@ export function termsOfSpec(spec: JobSpec | null, audit: AuditFacts | null, jdTe
       cv,
       listOnly: e === "listed",
       proven: e === "demonstrated",
-      ...(cv === 0 && cita.get(normalize(nombre)) ? { como: cita.get(normalize(nombre)) } : {}),
-      // Demostrada sin la palabra y sin cita: una viñeta la prueba, y eso es lo que se dice.
-      ...(cv === 0 && e === "demonstrated" && !cita.get(normalize(nombre)) ? { enViñeta: true } : {}),
     })
   }
   for (const r of spec.mustHave ?? []) push(r.skill, "hard")
@@ -380,13 +351,6 @@ export function headlineOf(score: Score | null, sections: readonly PanelSection[
      * entero y tapaba justo el dato que este renglón existe para dar.
      */
     detail: [...new Set(críticos.flatMap((c) => c.requirements).map(paraLeer))].slice(0, 5),
-    /**
-     * Y LAS VIÑETAS CRÍTICAS, CONTADAS (2026-10-02). Visto en local: «6 arreglos
-     * críticos» con tres nombres debajo — las otras tres eran viñetas, que no
-     * traen requisito y no se nombraban. Se dicen juntas en un renglón, no línea
-     * por línea, para no volver a tapar la cabecera.
-     */
-    criticalLines: críticos.filter((c) => c.requirements.length === 0).length,
     /** Nunca promete más puntos de los que quedan por ganar. */
     recoverable: score ? Math.round(Math.min(suma, Math.max(0, 100 - score.total))) : 0,
   }
@@ -440,13 +404,24 @@ export function encajaEn(bullets: readonly { id: string; text: string }[], respu
  *  · el puesto tiene lugar (menos del máximo) → una viñeta NUEVA;
  *  · está lleno y una línea ya habla de ese trabajo → se escribe DENTRO de ella;
  *  · está lleno y ninguna encaja → REEMPLAZA a la que menos aporta a esta vacante.
+ *
+ * UNA BLANDA VA SIEMPRE DENTRO DE UNA VIÑETA REAL (CEO, 2026-10-05). Se demuestra
+ * con un hecho, y una viñeta nueva no tiene ninguno: medido contra la API, salía
+ * «…with conviction to strengthen team alignment by [x%]», relleno. Va en la línea
+ * que comparte palabras con ella o, si ninguna, en la primera del puesto que
+ * declara un resultado medible; si tampoco, en la primera.
  */
 export function destinoDeSkill(
   role: { id: string; bullets: readonly { id: string; text: string }[] },
   sobre: string,
   maximo: number,
   menosAporta: string | null,
+  blanda = false,
 ): { nodeId: string; nueva: boolean } | null {
+  if (blanda) {
+    const linea = encajaEn(role.bullets, sobre) ?? role.bullets.find((b) => statesQuantity(b.text))?.id ?? role.bullets[0]?.id
+    return linea ? { nodeId: linea, nueva: false } : { nodeId: nuevaEn(role.id), nueva: true }
+  }
   if (role.bullets.length < maximo) return { nodeId: nuevaEn(role.id), nueva: true }
   const encaja = encajaEn(role.bullets, sobre)
   if (encaja) return { nodeId: encaja, nueva: false }

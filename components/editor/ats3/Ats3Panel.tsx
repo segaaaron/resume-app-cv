@@ -16,17 +16,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { Check, Lightbulb, Loader2, Minus, Sparkles, Target } from "lucide-react"
+import { Lightbulb, Loader2, Sparkles, Target } from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAts3 } from "./useAts3"
-import { statesQuantity } from "@/lib/ats3/score"
 import { normalize } from "@/lib/ats3/contracts"
-import type { AuditFacts } from "@/lib/ats3/score"
 import type { ResumeSections } from "@/types/resume"
 // LA PANTALLA DE SIEMPRE. El motor cambió debajo; el informe que el usuario
 // aprendió a leer —dial, secciones, filas de chequeo, tabla de términos— no.
 import { ScoreDial, ReportSectionCard, CheckRow, TermTable } from "./report-ui"
-import { Btn, Card, Chip, Note } from "./ui"
+import { Btn, Chip, Note } from "./ui"
 import TailorPanel, { pendingCount, type DoneEntry } from "./TailorPanel"
 import { sectionsOf, termsOfSpec, headlineOf, errorKeyOf } from "./view-model"
 
@@ -46,7 +44,7 @@ export default function Ats3Panel() {
   /** Los hallazgos, dichos en la forma que la pantalla ya sabía pintar. */
   const todos = useMemo(() => [...a.regressed, ...a.findings], [a.findings, a.regressed])
   /** Los términos con una tarjeta pendiente en Tailor: la tabla abre la puerta sólo donde hay algo detrás. */
-  const conTarjeta = useMemo(() => new Set(todos.flatMap((f) => (f.subject ? [normalize(f.subject)] : []))), [todos])
+  const conTarjeta = useMemo(() => new Set(todos.flatMap((f) => [...(f.subject ? [f.subject] : []), ...(f.terms ?? []), ...(f.subjects ?? [])].map(normalize))), [todos])
   /**
    * EL NOMBRE HUMANO DE UN TOKEN DEL MOTOR.
    *
@@ -84,17 +82,6 @@ export default function Ats3Panel() {
     [secciones],
   )
   const [tailorAbierto, setTailorAbierto] = useState(false)
-  /**
-   * CUÁNTO VALE LA CIFRA EN EL ANÁLISIS, dicho por el propio puntaje.
-   *
-   * `effectiveWeight` es el peso REAL del componente una vez repartido lo que no
-   * se pudo medir: es el techo que ese componente puede dar hoy, no el nominal.
-   */
-  const medidaDeLaCifra = useMemo(() => {
-    const c = a.score?.components.find((x) => x.key === "metric")
-    return c ? { points: c.points, max: c.effectiveWeight } : null
-  }, [a.score])
-
   /** El término con el que se entró, para aterrizar en SU tarjeta y no arriba de todo. */
   const [foco, setFoco] = useState<string | null>(null)
   /** Lo resuelto en esta sesión: sobrevive a cerrar y volver a abrir Tailor. */
@@ -226,7 +213,6 @@ export default function Ats3Panel() {
             score={cabecera.score}
             criticalCount={cabecera.criticalCount}
             criticalDetail={cabecera.detail}
-            criticalLines={cabecera.criticalLines}
             recoverable={cabecera.recoverable}
           />
 
@@ -285,15 +271,6 @@ export default function Ats3Panel() {
             </ReportSectionCard>
           ))}
 
-          {a.audit && (
-            <Anatomy
-              audit={a.audit}
-              metric={medidaDeLaCifra}
-              textOf={a.textOf}
-              lines={a.tree.roles.reduce((n, r) => n + r.bullets.length, 0)}
-              t={t}
-            />
-          )}
 
           {/* LA ÚNICA SALIDA DEL INFORME.
               Doce puntos de contacto se fueron a Tailor y queda uno: el que
@@ -412,148 +389,3 @@ function JobBox(props: {
 // LA ANATOMÍA — tus viñetas y tu resumen, medidos
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * POR QUÉ AGREGADO Y NO SÓLO POR TARJETA.
- *
- * La tarjeta de un arreglo contesta «¿esta línea mejoró?». Esta vista contesta
- * la otra pregunta, que es la que decide si el CV se manda: «¿cuántas de mis
- * líneas dicen algo medible?». Sin ella el usuario arregla tres viñetas, no sabe
- * si eso mueve la aguja y vuelve a preguntarle al panel lo mismo.
- *
- * VA EN EL INFORME Y NO EN TAILOR, y es la regla del CEO: acá se MIDE. Cada
- * línea con defecto ya tiene su tarjeta del otro lado, así que poner un botón
- * acá sería el segundo camino para lo mismo.
- *
- * NO MIDE POR SU CUENTA: los tres ejes son los que devolvió la auditoría y la
- * cifra es la que cuenta el puntaje. Una cuarta opinión sobre si una línea tiene
- * número es exactamente lo que este motor vino a terminar.
- */
-function Anatomy({
-  audit,
-  metric,
-  textOf,
-  lines,
-  t,
-}: {
-  audit: AuditFacts
-  /** Cuántas líneas tiene el CV, revisadas o no: si quedaron sin decisión, se dice. */
-  lines: number
-  /** Cuánto vale la cifra en el análisis, del componente que la puntúa. */
-  metric: { points: number; max: number } | null
-  /** Qué dice esa línea hoy. */
-  textOf: (nodeId: string) => string
-  t: (k: string, v?: Record<string, string | number>) => string
-}) {
-  /**
-   * LO QUE EL ATS DECIDIÓ DE CADA VIÑETA, contra este puesto (CEO, 2026-09-29):
-   * cuáles ya sirven, cuáles hay que mejorar y cuáles sobran, con su motivo. Sólo
-   * las líneas que el CV tiene hoy.
-   */
-  const reales = audit.bullets.filter((b) => textOf(b.id).length > 0)
-  const total = reales.length
-  if (total === 0) return null
-  const cuenta = (d: "keep" | "improve" | "remove") => reales.filter((b) => b.decision === d).length
-  const piden = reales.filter((b) => b.needsFigure)
-  const conCifra = piden.filter((b) => statesQuantity(textOf(b.id))).length
-  const filas: [string, number][] = [
-    ["bq_keep", cuenta("keep")],
-    ["bq_improve", cuenta("improve")],
-    ["bq_remove", cuenta("remove")],
-  ]
-  const TONO = { keep: "ok", improve: "warn", remove: "neutral" } as const
-  /**
-   * X-Y-Z DE CADA VIÑETA (CEO, 2026-09-30), con las MISMAS marcas que abren las
-   * tarjetas de Tailor, para que la lista y las tarjetas no se contradigan:
-   * «sólo tarea» = le falta el logro; «falta la cifra» = el logro no dice cuánto;
-   * «completa» = trae su cifra y nada le falta.
-   */
-  const xyz = (b: AuditFacts["bullets"][number]): "task" | "figure" | "complete" | null => {
-    if (b.decision === "remove") return null
-    if (b.needsOutcome) return "task"
-    if (b.needsFigure && !statesQuantity(textOf(b.id))) return "figure"
-    return statesQuantity(textOf(b.id)) ? "complete" : null
-  }
-  const TONO_XYZ = { task: "warn", figure: "warn", complete: "ok" } as const
-  const completas = reales.filter((b) => xyz(b) === "complete").length
-  const resumen: [string, boolean][] = [
-    ["bq_sum_identity", audit.summary.identity],
-    ["bq_sum_proof", audit.summary.proof],
-    ["bq_sum_fit", audit.summary.fit],
-    ["bq_sum_extra", audit.summary.extra],
-  ]
-
-  return (
-    <Card radius="2xl" className="p-4">
-      <h3 className="text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_title")}</h3>
-      <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_caption")}</p>
-      {total < lines && (
-        <Note tone="warn" className="mt-2">
-          {t("bq_partial", { n: total, total: lines })}
-        </Note>
-      )}
-
-      <ul className="mt-3 flex flex-col gap-2">
-        {filas.map(([clave, n]) => (
-          <li key={clave} className="flex items-center gap-3 text-[12px]">
-            <span className="w-[9ch] shrink-0 text-right font-bold tabular-nums" style={{ color: "var(--a-ink)" }}>
-              {n}/{total}
-            </span>
-            <span className="min-w-0 flex-1" style={{ color: "var(--a-ink-2)" }}>{t(clave)}</span>
-            <span className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full" style={{ background: "var(--a-track)" }}>
-              <span className="block h-full rounded-full" style={{ width: `${Math.round((n / total) * 100)}%`, background: "var(--a-accent)" }} />
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      {piden.length > 0 && (
-        <Note className="mt-3">
-          {metric && metric.max > 0 && (
-            <b style={{ color: "var(--a-ink-2)" }}>
-              {t("bq_metric_worth", { points: metric.points.toFixed(1), max: metric.max.toFixed(1) })}{" "}
-            </b>
-          )}
-          {t("bq_figures", { n: conCifra, total: piden.length })}
-        </Note>
-      )}
-
-      <h3 className="mt-4 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_lines_title")}</h3>
-      <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_xyz_count", { n: completas, total })}</p>
-      <ul className="mt-2 flex max-h-[280px] flex-col overflow-y-auto rounded-xl border" style={{ borderColor: "var(--a-border)" }}>
-        {reales.map((b) => (
-          <li key={b.id} className="flex items-start gap-2 border-b px-3 py-2 last:border-b-0" style={{ borderColor: "var(--a-border)" }}>
-            <span className="mt-0.5 flex shrink-0 flex-col items-start gap-1">
-              <Chip size="xs" tone={TONO[b.decision]}>
-                {t(`bq_decision_${b.decision}`)}
-              </Chip>
-              {xyz(b) && (
-                <Chip size="xs" tone={TONO_XYZ[xyz(b)!]}>
-                  {t(`bq_xyz_${xyz(b)}`)}
-                </Chip>
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[11px] leading-snug" style={{ color: "var(--a-ink-2)" }}>{textOf(b.id)}</span>
-              {b.reason && (
-                <span className="mt-0.5 block text-[10px] leading-snug" style={{ color: "var(--a-muted)" }}>{b.reason}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <h3 className="mt-4 text-sm font-semibold" style={{ color: "var(--a-ink)" }}>{t("bq_summary_title")}</h3>
-      <p className="mt-0.5 text-xs" style={{ color: "var(--a-muted)" }}>{t("bq_summary_caption")}</p>
-      <ul className="mt-2 flex flex-wrap gap-1.5">
-        {resumen.map(([clave, ok]) => (
-          <li key={clave}>
-            <Chip tone={ok ? "ok" : "neutral"} className="flex items-center gap-1.5">
-              {ok ? <Check className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-              {t(clave)}
-            </Chip>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  )
-}

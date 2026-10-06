@@ -281,8 +281,8 @@ describe("una sugerencia pensada sobre una versión que ya no existe", () => {
 describe("lealtad: no volver a señalar lo que el usuario ya resolvió", () => {
   const finding = (over: Partial<Finding> = {}): Finding => ({
     id: "f1",
-    type: "improve_bullet",
-    component: "bullets", remedy: "rewrite",
+    type: "missing_skill",
+    component: "must", remedy: "rewrite",
     nodeId: "b1",
     nodeText: "Atendí la caja",
     nodeHash: "h4",

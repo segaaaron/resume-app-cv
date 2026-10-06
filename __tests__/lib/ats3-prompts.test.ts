@@ -172,6 +172,18 @@ describe("los cuatro modos de fallo se distinguen", () => {
   }
   const spec = JSON.parse(SPEC_JSON) as JobSpec
 
+  it("una respuesta rota se pide UNA vez más y, si la segunda sirve, el análisis sigue (QA, 2026-10-02)", async () => {
+    let n = 0
+    const buena = new ScriptedClient(SPEC_JSON)
+    const client: IAIClient = {
+      chat: async (p) => (++n === 1 ? new ScriptedClient("esto no es json").chat(p) : buena.chat(p)),
+      embed: async () => [],
+    }
+    const spec2 = await mod(client).parseJob("Buscamos cajera con arqueo de caja", "es")
+    expect(spec2.roleTitleRaw).toBe("Cajera")
+    expect(n).toBe(2)
+  })
+
   it("truncado: la respuesta se cortó por largo", async () => {
     const client = new ScriptedClient({ finish_reason: "length", message: { role: "assistant", content: "{", refusal: null } })
     await expect(mod(client).audit(tree, spec)).rejects.toMatchObject({ kind: "truncated" })
@@ -188,13 +200,13 @@ describe("los cuatro modos de fallo se distinguen", () => {
   })
 
   it("esquema: JSON válido que no cumple el contrato", async () => {
-    const client = new ScriptedClient(JSON.stringify({ summary: "no es un objeto" }))
+    const client = new ScriptedClient(JSON.stringify({ hard: "no es una lista" }))
     await expect(mod(client).audit(tree, spec)).rejects.toMatchObject({ kind: "schema" })
   })
 
   it("los cuatro son el mismo síntoma para el usuario, y por eso se nombran distinto", async () => {
     const kinds = new Set<string>()
-    for (const reply of ["", "no json", JSON.stringify({ summary: 1 })]) {
+    for (const reply of ["", "no json", JSON.stringify({ hard: 1 })]) {
       try {
         await mod(new ScriptedClient(reply)).audit(tree, spec)
       } catch (e) {
@@ -324,17 +336,6 @@ describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas"
     expect(jobPrompt("en")).toMatch(/NEVER derive the expansion/)
   })
 
-  it("el ATS decide por viñeta sirve o sobra, con topes, sin instrucciones libres", () => {
-    for (const lang of ["es", "en"] as const) {
-      const p = auditPrompt(lang)
-      expect(p).toMatch(/keep —/)
-      expect(p).toMatch(/remove —/)
-      // Lo que se agrega a una línea lo deciden P3 y el código: el diagnóstico no escribe instrucciones.
-      expect(p).toMatch(/`instruction`: (siempre null|always null)/)
-      expect(p).not.toMatch(/improve —/)
-    }
-  })
-
   it("el resumen prueba con un resultado, no con cualidades declaradas", () => {
     expect(summaryPrompt("es")).toMatch(/declara cualidades en vez de mostrar un resultado/)
     expect(summaryPrompt("en")).toMatch(/declares qualities instead of showing a result/)
@@ -362,15 +363,9 @@ describe("tampoco mueren los esquemas del módulo", () => {
   } as unknown as ResumeTree
 
   it("el diagnóstico (P2) sobrevive a una respuesta con todo en null", async () => {
-    const r = await mod(responde({ bullets: null, hard: null, soft: null, summary: null })).audit(tree, {} as JobSpec)
-    expect(r.bullets).toEqual([])
+    const r = await mod(responde({ hard: null, soft: null, conditions: null })).audit(tree, {} as JobSpec)
     expect(r.hard).toEqual([])
     expect(r.soft).toEqual([])
-  })
-
-  it("una línea que el CV no tiene no existe, y una decisión ilegible es «mantener»", async () => {
-    const r = await mod(responde({ bullets: [{ id: "a", decision: "rehacer" }, { id: "zzz", decision: "remove" }] })).audit(tree, {} as JobSpec)
-    expect(r.bullets.map((b) => [b.id, b.decision])).toEqual([["a", "keep"]])
   })
 
   it("la vacante se pide ORDENADA por peso, y dice qué número le importa al puesto", () => {
@@ -417,6 +412,15 @@ describe("el diagnóstico habla de la lista de la vacante, y de nada más", () =
     ],
   })
 
+  it("una cita larga se recorta, no se pierde (QA, 2026-10-02)", async () => {
+    const largo = JSON.stringify({
+      hard: [{ ref: "M1", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "y".repeat(300) }],
+      soft: [],
+    })
+    const a = await mod(new ScriptedClient(largo)).audit(tree, spec)
+    expect(a.hard[0]?.cvWording?.length).toBe(160)
+  })
+
   it("le manda al modelo las blandas y los requisitos, cada uno con su referencia", async () => {
     const client = new ScriptedClient(respuesta)
     await mod(client).audit(tree, spec)
@@ -446,7 +450,7 @@ describe("el pedido a Tailor lleva la decisión del ATS", () => {
     const client = new ScriptedClient(vacia)
     await mod(client).rewriteBullet({
       original: "SIN: emití facturas", bulletId: "b", roleContext: "Cajera — X", language: "es",
-      reason: "Sirve, pero no dice el sistema.", instruction: "Decí que facturabas ante el SIN.", terms: ["SIN"], needsFigure: true,
+      reason: "Sirve, pero no dice el sistema.", terms: ["SIN"], needsFigure: true,
       told: "bajó la fila en caja", roleLines: ["Cuadré la caja"], siblings: ["Cuadré la caja"],
     })
     const pedido = String(client.lastParams!.messages[1].content)

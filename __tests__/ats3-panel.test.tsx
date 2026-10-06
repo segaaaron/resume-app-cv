@@ -52,7 +52,6 @@ const messages: Record<string, string> = {
   rewrite_rejected: "No pasó los controles",
   already_good: "La línea ya está bien",
   fix_it: "Escribirla mejor",
-  told_label: "¿Qué logró ese trabajo? (opcional)",
   writing: "Escribiendo…",
   dismiss: "No me interesa",
   confirm_title: "Confirmá antes de escribirlo",
@@ -454,24 +453,6 @@ describe("ninguna escritura se queda sin guardar (QA, 2026-10-02)", () => {
   })
 })
 
-describe("una tarjeta que pide el logro o la cifra deja contarlo (2026-10-02)", () => {
-  it("lo que la persona escribe viaja como su dato en el pedido de reescritura", async () => {
-    const conCifra = JSON.parse(JSON.stringify(ACTS))
-    conCifra.find((a: { act: string }) => a.act === "findings").findings[0].needsFigure = true
-    apiFetch.mockResolvedValueOnce(ndjsonResponse(conCifra))
-    await mount()
-    await escribir("#ats3-jd", "Buscamos cajera con arqueo de caja y atención al cliente")
-    await click("Analizar compatibilidad")
-    await click("Arreglar con Tailor")
-    expect(texto()).toContain("¿Qué logró ese trabajo?")
-    await escribir("#f1-told", "atendía unos 80 clientes por turno")
-    apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
-    await click("Escribirla mejor")
-    const cuerpo = String((apiFetch.mock.calls.at(-1) as unknown[])[1] && ((apiFetch.mock.calls.at(-1) as [unknown, { body?: string }])[1].body ?? ""))
-    expect(cuerpo).toContain("80 clientes por turno")
-  })
-})
-
 describe("la cifra la escribe el candidato", () => {
   async function openSheet() {
     await analyze()
@@ -577,27 +558,6 @@ describe("la cifra la escribe el candidato", () => {
     // aviso genérico arriba y el panel exactamente igual que antes de apretar.
     expect(texto()).toContain("La IA no respondió bien esta vez")
     expect(texto()).not.toContain("server_error")
-  })
-
-  it("el botón de la fila pide la reescritura de ESA línea, no de otra", async () => {
-    await analyze()
-    // El trabajo vive en Tailor: el informe sólo lleva hasta su puerta.
-    await click("Arreglar con Tailor")
-    apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, suggestion: SUGGESTION, served: false }) })
-    await click("Escribirla mejor")
-    // El hallazgo viaja con su nodo: el índice se corre en cuanto el usuario
-    // aplica algo, el id no.
-    const body = JSON.parse((apiFetch.mock.calls[1][1] as { body: string }).body)
-    expect(body.action).toBe("rewrite")
-    // El id del hallazgo del acto, no un índice ni un id fabricado por la pantalla.
-    expect(body.nodeId).toBe(NODE_ID)
-    // Y la vacante ya parseada vuelve con el pedido: no se re-pregunta.
-    expect(body.spec).toBeTruthy()
-    // LO QUE EL ATS DECIDIÓ VIAJA CON EL PEDIDO, y es lo mismo que la tarjeta dice.
-    expect(body.reason).toBe("No dice con qué cuadraba la caja.")
-    expect(body.instruction).toBe("Decí que cuadrabas la caja en Excel.")
-    expect(body.terms).toEqual(["Excel"])
-    expect(texto()).toContain(body.instruction)
   })
 
   it("una skill sin rastro pregunta, y la respuesta viaja a la línea del puesto donde ese trabajo vive", async () => {

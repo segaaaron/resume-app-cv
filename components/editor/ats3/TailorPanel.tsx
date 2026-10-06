@@ -37,7 +37,7 @@ import { Z_MODAL } from "@/lib/ui/z-layers"
 import { skillPlan } from "@/lib/ats3/engine"
 import { SKILLS_MAX } from "@/lib/ats3/ledger"
 import { figureSlots, fillSlot } from "@/lib/ats3/guards"
-import type { AnchoredSuggestion, Finding, Placeholder } from "@/lib/ats3/contracts"
+import { normalize, nuevaEn, rolDeNueva, type AnchoredSuggestion, type Finding, type Placeholder } from "@/lib/ats3/contracts"
 import { Btn, Card, Chip, Diff, FIELD_CLASS, FIELD_STYLE, Label, Note, PRESSABLE, Writing } from "./ui"
 import type { PanelCheck, PanelSection, PanelSectionId } from "./view-model"
 import { anclaDeRespuesta, destinoDeSkill, errorKeyOf } from "./view-model"
@@ -231,9 +231,6 @@ export default function TailorPanel({
 
 
   const nodoDe = (checkId: string) => findings.find((f) => f.id === checkId)
-  // Una skill no se escribe en una línea que el ATS manda sacar: se iría con ella.
-  const saliendo = new Set(findings.filter((f) => f.remedy === "remove").map((f) => f.nodeId))
-  const destinos = <T extends { id: string }>(bullets: T[]): T[] => (bullets.some((b) => !saliendo.has(b.id)) ? bullets.filter((b) => !saliendo.has(b.id)) : bullets)
 
 
 
@@ -275,10 +272,12 @@ export default function TailorPanel({
   /** Lleva la vista hasta la tarjeta del término con el que se entró. */
   useEffect(() => {
     if (!focusTerm) return
+    // La tarjeta que habla de ese término —la suya o la agrupada que lo lista—, por su id.
+    const de = trabajo.find((x) => [x.subject ?? "", ...(x.subjects ?? []), ...x.requirements].some((t) => t && normalize(t) === normalize(focusTerm)))
     document
-      .querySelector(`[data-term="${CSS.escape(focusTerm)}"]`)
+      .querySelector(de ? `[data-check="${CSS.escape(de.id)}"]` : `[data-term="${CSS.escape(focusTerm)}"]`)
       ?.scrollIntoView?.({ behavior: "smooth", block: "center" })
-  }, [focusTerm, filter])
+  }, [focusTerm, filter, trabajo])
 
   const respuestaRef = useRef<HTMLDivElement>(null)
   // Un error también es la respuesta al clic: se dibuja acá y se trae a la vista.
@@ -515,8 +514,8 @@ export default function TailorPanel({
               la lista es una secuencia de trabajo y el orden lo decide la
               ganancia que el motor midió, no el orden en que llegaron. */}
           {mostradas.map((check, i) => (
+            <div key={check.id} data-check={check.id}>
             <FixCard
-              key={check.id}
               check={check}
               order={i + 1}
               regressed={regressed.has(check.id)}
@@ -539,24 +538,37 @@ export default function TailorPanel({
                   return
                 }
                 a.requestRewrite(f.nodeId, check.id, {
-                  reason: f.reason ?? (f.type === "summary_gap" ? check.focus : undefined),
-                  instruction: f.instruction,
-                  facts: f.facts,
+                  reason: f.reason,
                   terms: f.type === "title_mismatch" ? [f.subject ?? f.detail] : f.terms,
-                  needsFigure: f.needsFigure,
-                  logro: f.needsOutcome,
                   told,
                 })
               }}
               roles={a.tree.roles.map((r) => ({ id: r.id, label: [r.title, r.company].filter(Boolean).join(" — ") }))}
               roleSugerido={(() => {
-                // La IA elige el puesto: el que tiene la línea más cercana a la skill.
-                const b = anclaDeRespuesta(destinos(a.tree.roles.flatMap((r) => r.bullets)), nodoDe(check.id)?.subject ?? "")
+                // El puesto lo decidió el motor al repartir las skills; si no vino, el de la línea más cercana.
+                if (nodoDe(check.id)?.roleId) return nodoDe(check.id)!.roleId
+                const b = anclaDeRespuesta(a.tree.roles.flatMap((r) => r.bullets), nodoDe(check.id)?.subject ?? "")
                 return a.tree.roles.find((r) => r.bullets.some((x) => x.id === b))?.id
               })()}
-              onAsk={(told, roleId) => {
+              onAsk={(told, roleId, skill) => {
                 const f = nodoDe(check.id)
                 const role = a.tree.roles.find((r) => r.id === roleId)
+                /**
+                 * LA TARJETA AGRUPADA: skills sin evidencia en el CV. Sólo se escribe la
+                 * que la persona eligió y con lo que ella contó (el botón no se habilita
+                 * sin eso): sin su dato, Tailor inventaría experiencia.
+                 */
+                if (f?.type === "missing_skills" && role && skill && told) {
+                  const destino = destinoDeSkill(
+                    { id: role.id, bullets: role.bullets },
+                    told,
+                    BULLETS_PER_ROLE_MAX,
+                    a.spec && a.audit ? menosAporta(a.tree, a.spec, a.audit, role.id) : null,
+                  )
+                  if (!destino) return
+                  a.requestRewrite(destino.nodeId, check.id, { terms: [skill], told, propone: true, ...(destino.nueva ? { nueva: true, needsFigure: true } : {}) })
+                  return
+                }
                 /**
                  * LA IA PROPONE, LA PERSONA CONFIRMA (CEO, 2026-09-29): sin respuesta,
                  * la línea es la del puesto que más se parece a esa skill y Tailor
@@ -564,31 +576,39 @@ export default function TailorPanel({
                  * dice si es verdad. Con respuesta, se escribe lo que contó.
                  */
                 if (!f || !role) return
+                // El puesto con menos de 4 viñetas: una nueva con lo que la persona contó (el botón exige el dato).
+                if (f.type === "role_short") {
+                  if (told) a.requestRewrite(nuevaEn(role.id), check.id, { told, nueva: true, needsFigure: true })
+                  return
+                }
+                // Las skills de la tarjeta: la dura y, si la hay, la blanda que va con ella.
+                const terms = f.terms ?? (f.subject ? [f.subject] : [])
+                // La línea que eligió el ATS, o la viñeta nueva de ese puesto, si la persona dejó ese puesto.
+                if (f.roleId === role.id && role.bullets.some((b) => b.id === f.nodeId)) {
+                  a.requestRewrite(f.nodeId, check.id, { reason: check.question, terms, ...(told ? { told } : {}), propone: true })
+                  return
+                }
+                if (f.roleId === role.id && rolDeNueva(f.nodeId) === role.id) {
+                  a.requestRewrite(f.nodeId, check.id, { reason: check.question, terms, ...(told ? { told } : {}), propone: true, nueva: true, needsFigure: true })
+                  return
+                }
                 // Nueva si el puesto tiene lugar; dentro de la línea que ya habla de ese
                 // trabajo si está lleno; en lugar de la que menos aporta si ninguna encaja.
                 const destino = destinoDeSkill(
-                  { id: role.id, bullets: destinos(role.bullets) },
+                  { id: role.id, bullets: role.bullets },
                   told || f.subject || "",
                   BULLETS_PER_ROLE_MAX,
-                  a.spec && a.audit ? menosAporta({ ...a.tree, roles: a.tree.roles.map((r) => (r.id === role.id ? { ...r, bullets: destinos(r.bullets) } : r)) }, a.spec, a.audit, role.id) : null,
+                  a.spec && a.audit ? menosAporta(a.tree, a.spec, a.audit, role.id) : null,
+                  f.component === "soft",
                 )
                 if (!destino) return
                 a.requestRewrite(destino.nodeId, check.id, {
                   reason: check.question,
-                  terms: f.subject ? [f.subject] : [],
+                  terms,
                   ...(told ? { told } : {}),
                   propone: true,
                   ...(destino.nueva ? { nueva: true, needsFigure: true } : {}),
                 })
-              }}
-              onRemove={() => {
-                const f = nodoDe(check.id)
-                if (!f) return
-                const role = a.tree.roles.find((r) => r.bullets.some((b) => b.id === f.nodeId))
-                const index = role ? role.bullets.findIndex((b) => b.id === f.nodeId) : -1
-                const texto = a.textOf(f.nodeId)
-                onDone({ ...entradaDe(check, "dropped", { before: texto }), ...(role && index >= 0 ? { where: { roleId: role.id, index } } : {}) })
-                a.dropLine(f.nodeId, check.id, entradaDe(check, "dropped", { before: texto }))
               }}
               onDismiss={() => {
                 // Entra en «Hechas» como «Descartada por vos», en tono neutro y
@@ -602,6 +622,7 @@ export default function TailorPanel({
               t={t}
               ta={ta}
             />
+            </div>
           ))}
 
           {/* LO RESUELTO NO DESAPARECE: queda con su tilde y con lo que cambió.
@@ -759,6 +780,7 @@ function SuggestionSheet({
       currentValue={suggestion.originalText}
       afterOverride={finalText}
       blocked={blocked}
+      blockedHint={t("confirm_needs_figure")}
       where={donde ? { jobTitle: donde.puesto, line: donde.linea } : undefined}
       /* SÓLO LOS HUECOS. El modal ya dibuja el título, el antes/después y los
          botones: pasarle la hoja entera pintaba el mismo diff dos veces, una
@@ -852,7 +874,6 @@ function FixCard({
   writing,
   onSolve,
   onAsk,
-  onRemove,
   roles,
   roleSugerido,
   onDismiss,
@@ -868,10 +889,8 @@ function FixCard({
   writing: boolean
   /** `told`: lo que la persona contó sobre esta línea, si la tarjeta se lo preguntó. */
   onSolve: (told?: string) => void
-  /** `ask`: la respuesta de la persona y el puesto donde va. */
-  onAsk: (told: string, roleId: string) => void
-  /** `remove`: sacar la viñeta que el ATS decidió que sobra. */
-  onRemove: () => void
+  /** `ask`: la respuesta de la persona, el puesto donde va y —en la tarjeta agrupada— la skill que eligió. */
+  onAsk: (told: string, roleId: string, skill?: string) => void
   /** Los puestos del CV, para elegir dónde va lo que la persona contó. */
   roles: { id: string; label: string }[]
   /** El puesto donde la skill encaja mejor; la persona lo puede cambiar. */
@@ -884,6 +903,10 @@ function FixCard({
   // quiera agregar sobre esta línea antes de que Tailor la escriba.
   const [dato, setDato] = useState("")
   const [puesto, setPuesto] = useState(roleSugerido ?? roles[0]?.id ?? "")
+  const grupo = check.subjects ?? []
+  // La agrupada y la del puesto corto no se escriben sin el dato de la persona.
+  const exigeDato = grupo.length > 0 || check.titleKey === "type_role_short"
+  const [skill, setSkill] = useState(grupo[0] ?? "")
   return (
     <Card>
       <div className="flex items-start gap-2.5 px-3.5 pt-3">
@@ -971,44 +994,32 @@ function FixCard({
         </div>
       )}
 
-      {/* LO QUE DICE EL ATS: por qué y qué tiene que decir la línea nueva. Es
-          lo mismo que Tailor recibe: la tarjeta y la reescritura no pueden
-          decir cosas distintas. */}
-      {(check.reason || check.instruction) && (
+      {/* LO QUE DICE EL ATS: lo mismo que Tailor recibe. */}
+      {check.reason && (
         <div className="mx-3.5 mt-2.5">
           <Label>{t("card_ats_says")}</Label>
-          {check.reason && <Note className="mt-1">{check.reason}</Note>}
-          {check.instruction && <Note tone="accent" className="mt-1.5">{check.instruction}</Note>}
+          <Note className="mt-1">{check.reason}</Note>
         </div>
-      )}
-
-      {/* LO QUE LA LÍNEA VA A SUMAR: las herramientas de tus habilidades que ese
-          trabajo usó. Es exactamente lo que Tailor inserta. */}
-      {check.facts && check.facts.length > 0 && (
-        <div className="mx-3.5 mt-2.5">
-          <Label>{t("card_facts")}</Label>
-          <ul className="mt-1 flex flex-col gap-1.5">
-            {check.facts.map((f) => (
-              <li key={f}>
-                <Note>{f}</Note>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {check.weakOpener && (
-        <p className="mx-3.5 mt-2 text-[11px]" style={{ color: "var(--a-ink-2)" }}>{t("card_weak_opener")}</p>
-      )}
-      {check.needsFigure && (
-        <p className="mx-3.5 mt-2 text-[10.5px]" style={{ color: "var(--a-muted)" }}>{t("card_needs_figure")}</p>
       )}
 
       {/* ASK: la IA propone la línea en el puesto sugerido; el dato de la
           persona es opcional y la confirmación decide si entra. */}
       {check.remedy === "ask" && (
         <div className="mx-3.5 mt-3">
+          {grupo.length > 0 && (
+            <label className="mb-2 block text-[11px] font-semibold" style={{ color: "var(--a-muted)" }}>
+              {t("ask_group_skill")}
+              <select value={skill} onChange={(e) => setSkill(e.target.value)} className={`mt-1 ${FIELD_CLASS}`} style={FIELD_STYLE}>
+                {grupo.map((g) => (
+                  <option key={g} value={g}>
+                    {g.replace(/\s*\|\s*/g, " / ")}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label htmlFor={`${check.id}-ask`} className="text-[11.5px] font-semibold" style={{ color: "var(--a-ink-2)" }}>
-            {t("ask_default", { term: check.subject ?? "" })}
+            {grupo.length > 0 ? t("ask_group_told") : check.titleKey === "type_role_short" ? t("ask_role_short_told") : t("ask_default", { term: check.subject ?? "" })}
           </label>
           <textarea
             id={`${check.id}-ask`}
@@ -1016,7 +1027,7 @@ function FixCard({
             onChange={(e) => setDato(e.target.value)}
             rows={2}
             maxLength={300}
-            placeholder={t("ask_placeholder")}
+            placeholder={grupo.length > 0 ? t("ask_group_placeholder") : check.titleKey === "type_role_short" ? t("ask_role_short_placeholder") : t("ask_placeholder")}
             className={`mt-1 resize-y ${FIELD_CLASS}`}
             style={FIELD_STYLE}
           />
@@ -1035,45 +1046,18 @@ function FixCard({
         </div>
       )}
 
-      {/* EL LOGRO O LA CIFRA, CONTADOS POR LA PERSONA (2026-10-02). Medido contra la API
-          en oficios: con «Soldé piezas» la IA no puede decir qué logró sin afirmarlo, y
-          la tarjeta quedaba sin salida. Lo que la persona cuenta viaja como su dato. */}
-      {check.remedy === "rewrite" && (check.needsOutcome || check.needsFigure) && (
-        <div className="mx-3.5 mt-3">
-          <label htmlFor={`${check.id}-told`} className="text-[11.5px] font-semibold" style={{ color: "var(--a-ink-2)" }}>
-            {t("told_label")}
-          </label>
-          <textarea
-            id={`${check.id}-told`}
-            value={dato}
-            onChange={(e) => setDato(e.target.value)}
-            rows={2}
-            maxLength={300}
-            placeholder={t("told_placeholder")}
-            className={`mt-1 resize-y ${FIELD_CLASS}`}
-            style={FIELD_STYLE}
-          />
-        </div>
-      )}
-
       {/* LA ÚNICA ESPERA: en la tarjeta que se está escribiendo. */}
       {writing && <Writing label={t("writing_card")} className="mx-3.5 mt-3" />}
 
       <div className="flex flex-wrap items-center gap-2 px-3.5 pb-3 pt-3">
         {check.remedy === "rewrite" && (
-          <Btn tone="ai" disabled={busy} onClick={() => onSolve(dato.trim() || undefined)}>
+          <Btn tone="ai" disabled={busy} onClick={() => onSolve()}>
             <Sparkles className="h-3 w-3" />
             {writing ? t("writing") : t("fix_it")}
           </Btn>
         )}
-        {check.remedy === "remove" && (
-          <Btn disabled={busy} onClick={onRemove}>
-            <Minus className="h-3.5 w-3.5" />
-            {t("remove_it")}
-          </Btn>
-        )}
         {check.remedy === "ask" && (
-          <Btn tone="ai" disabled={busy || !puesto} onClick={() => onAsk(dato.trim(), puesto)}>
+          <Btn tone="ai" disabled={busy || !puesto || (exigeDato && !dato.trim()) || (grupo.length > 0 && !skill)} onClick={() => onAsk(dato.trim(), puesto, grupo.length > 0 ? skill : undefined)}>
             <Sparkles className="h-3 w-3" />
             {writing ? t("writing") : t("ask_write")}
           </Btn>

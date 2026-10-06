@@ -55,21 +55,31 @@ export const maxDuration = 120
  */
 const LIMITS = { jd: 20_000, bullet: 1_200, bullets: 120, roles: 30 } as const
 
+/**
+ * LOS TOPES RECORTAN, NO RECHAZAN (QA, 2026-10-02). El esquema devolvía 422 —y el
+ * análisis entero moría— con un dato normal del usuario: más de 120 skills, un
+ * cargo largo, más de 30 puestos, un aviso pegado con toda la página alrededor.
+ * Es la misma clase de defecto que tumbaba la vacante por un «3 a 4 años»: un
+ * tope de tamaño protege el costo, no decide si la persona recibe servicio.
+ */
+// Un techo duro sigue existiendo, diez veces el tope: un cuerpo absurdo no es un CV.
+const corto = (max: number) => z.string().max(max * 10).default("").transform((v) => v.slice(0, max))
+const hasta = <T extends z.ZodTypeAny>(item: T, max: number) => z.array(item).max(max * 10).default([]).transform((xs) => xs.slice(0, max))
+const aviso = z.string().min(20).max(LIMITS.jd * 10).transform((v) => v.slice(0, LIMITS.jd))
+
 const resumeSchema = z.object({
-  summary: z.string().max(4_000).default(""),
-  workExperience: z
-    .array(
-      z.object({
-        jobTitle: z.string().max(160).default(""),
-        employer: z.string().max(160).default(""),
-        startDate: z.string().max(40).default(""),
-        endDate: z.string().max(40).default(""),
-        description: z.string().max(LIMITS.bullet * LIMITS.bullets).default(""),
-      }),
-    )
-    .max(LIMITS.roles)
-    .default([]),
-  skills: z.array(z.object({ name: z.string().max(120) })).max(120).default([]),
+  summary: corto(4_000),
+  workExperience: hasta(
+    z.object({
+      jobTitle: corto(160),
+      employer: corto(160),
+      startDate: corto(40),
+      endDate: corto(40),
+      description: corto(LIMITS.bullet * LIMITS.bullets),
+    }),
+    LIMITS.roles,
+  ),
+  skills: hasta(z.object({ name: corto(120) }), 120),
   /**
    * Idiomas, certificaciones, educación y el resto del CV, en texto plano.
    *
@@ -77,9 +87,11 @@ const resumeSchema = z.object({
    * DESCARTABA en silencio —Zod borra lo que no declara—: el aviso pedía
    * «English B2» y el CV lo decía en Idiomas, y el panel lo daba por faltante.
    */
-  otherText: z.string().max(8_000).default(""),
+  otherText: corto(8_000),
   /** Sólo para saber si un lector encuentra cómo contactar: no va al modelo. */
   contact: z.object({ email: z.string().max(200).default(""), phone: z.string().max(60).default("") }).optional().catch(undefined),
+  /** Sólo el nombre de cada título, para saber si un lector lo entiende: no va al modelo. */
+  education: z.array(z.object({ degree: z.string().transform((v) => v.slice(0, 200)).default("") })).max(20).optional().catch(undefined),
 })
 
 /**
@@ -99,24 +111,22 @@ const rewriteSchema = z.object({
   action: z.literal("rewrite"),
   resumeId: z.string().max(64),
   nodeId: z.string().max(64),
-  jobDescription: z.string().min(20).max(LIMITS.jd),
+  jobDescription: aviso,
   language: z.enum(["es", "en"]).default("es"),
   resume: resumeSchema,
   spec: JobSpecSchema,
   /**
-   * LO QUE EL ATS DECIDIÓ SOBRE ESTA LÍNEA (CEO, 2026-09-29): por qué, qué tiene
-   * que decir, qué skills escribir y si lleva cifra. Va al prompt, así que se
+   * LO QUE EL ATS DECIDIÓ SOBRE ESTA LÍNEA: por qué, qué skills escribir y si
+   * lleva cifra. Va al prompt, así que se
    * acota; el tope recorta, no rechaza.
    */
-  reason: z.string().max(400).optional().catch(undefined),
-  instruction: z.string().max(800).optional().catch(undefined),
-  facts: z.array(z.string().max(240)).max(5).optional().catch(undefined),
-  terms: z.array(z.string().max(160)).max(8).optional().catch(undefined),
+  reason: z.string().transform((v) => v.slice(0, 400)).optional().catch(undefined),
+  // Elemento por elemento: un término largo se recorta; antes vaciaba la lista ENTERA.
+  terms: z.array(z.string().transform((v) => v.slice(0, 160))).transform((xs) => xs.slice(0, 8)).optional().catch(undefined),
   needsFigure: z.boolean().optional().catch(undefined),
   /** Lo que la persona contó en la tarjeta: va al prompt, así que se acota. */
-  told: z.string().max(300).optional().catch(undefined),
+  told: z.string().transform((v) => v.slice(0, 300)).optional().catch(undefined),
   propone: z.boolean().optional().catch(undefined),
-  logro: z.boolean().optional().catch(undefined),
   nueva: z.boolean().optional().catch(undefined),
 })
 
@@ -133,7 +143,7 @@ const rewriteSchema = z.object({
 const resolveSchema = z.object({
   action: z.literal("resolve"),
   resumeId: z.string().max(64),
-  jobDescription: z.string().min(20).max(LIMITS.jd),
+  jobDescription: aviso,
   entries: z
     .array(
       z.object({
@@ -144,10 +154,12 @@ const resolveSchema = z.object({
         // Lo que la pantalla necesita para volver a dibujar «Hechas» después de
         // un F5. Se recortan, no rechazan: perder el registro por un título
         // largo sería peor que mostrarlo cortado.
-        title: z.string().max(160).optional().catch(undefined),
+        title: z.string().transform((v) => v.slice(0, 160)).optional().catch(undefined),
         kind: z.enum(["applied", "dropped", "dismissed"]).optional().catch(undefined),
-        before: z.string().max(600).optional().catch(undefined),
-        after: z.string().max(600).optional().catch(undefined),
+        // Enteros: «Deshacer» escribe este «antes». Un tope menor que el del resumen (4.000)
+        // devolvería un resumen cortado; con el tope viejo (600) una viñeta larga perdía su vuelta atrás.
+        before: z.string().max(4_000).optional().catch(undefined),
+        after: z.string().max(4_000).optional().catch(undefined),
       }),
     )
     .min(1)
@@ -157,7 +169,7 @@ const resolveSchema = z.object({
 const analyzeSchema = z.object({
   action: z.literal("analyze").optional(),
   resumeId: z.string().max(64),
-  jobDescription: z.string().min(20).max(LIMITS.jd),
+  jobDescription: aviso,
   language: z.enum(["es", "en"]).default("es"),
   resume: resumeSchema,
   /**
@@ -373,13 +385,10 @@ export async function POST(req: Request) {
           model: modelos,
           jdKey: cacheKey.jd(d.jobDescription, modelos),
           reason: d.reason,
-          instruction: d.instruction,
-          facts: d.facts,
           terms: d.terms,
           needsFigure: d.needsFigure,
           told: d.told,
           propone: d.propone,
-          logro: d.logro,
           nueva: d.nueva,
           ai,
           store,

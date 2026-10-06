@@ -160,6 +160,8 @@ interface SuggestionDiffModalProps {
   afterOverride?: string
   /** Falta completar algo: el botón de confirmar se apaga. */
   blocked?: boolean
+  /** Qué falta para poder confirmar: se dice al lado del botón apagado. */
+  blockedHint?: string
 }
 
 const FIELD_KEYS: Record<SuggestionField, string> = {
@@ -184,6 +186,7 @@ export default function SuggestionDiffModal({
   slotsUI,
   afterOverride,
   blocked,
+  blockedHint,
 }: SuggestionDiffModalProps) {
   const t = useTranslations("editor.cv_review")
   /**
@@ -262,7 +265,10 @@ export default function SuggestionDiffModal({
   const isMultiLine = diff.length > 2
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+    /* UN CLIC AFUERA NO CIERRA (CEO, 2026-10-05): visto en local, marcar «no tengo
+       ese dato» achica la ventana, el botón sube y el clic caía afuera — se
+       cerraba sin aplicar ni avisar. Se cierra con Cancelar, la X o Escape. */
+    <Dialog open={open} disablePointerDismissal onOpenChange={(v) => { if (!v) onClose() }}>
       {/* ENCIMA DE QUIEN LO ABRIÓ. Esta confirmación se lanza desde el modal del
           ejecutor (a pantalla completa), y sin la capa explícita caía detrás:
           el usuario agregaba una habilidad, la viñeta nueva se mostraba para que
@@ -377,27 +383,22 @@ export default function SuggestionDiffModal({
           ) : (
             <div className="space-y-3">
               {/* Single-line fields (a job title, a summary) read better as
-                  before → after than as a line diff. Nothing before means it is
-                  NEW: an empty «current» box read as if something were erased. */}
-              {currentValue.trim() ? (
-                <>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">{t("diff_before")}</p>
-                    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#6B7A8C] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
-                      {currentValue}
-                    </div>
-                  </div>
+                  before → after than as a line diff. */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">{t("diff_before")}</p>
+                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#6B7A8C] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
+                  {currentValue || <span className="italic opacity-60">{t("diff_empty")}</span>}
+                </div>
+              </div>
 
-                  <div className="flex justify-center">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200">
-                      <ArrowDown className="h-3.5 w-3.5 text-emerald-600" />
-                    </div>
-                  </div>
-                </>
-              ) : null}
+              <div className="flex justify-center">
+                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200">
+                  <ArrowDown className="h-3.5 w-3.5 text-emerald-600" />
+                </div>
+              </div>
 
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{currentValue.trim() ? t("diff_after") : t("diff_new")}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{t("diff_after")}</p>
                 <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
                   {shownAfter}
                 </div>
@@ -409,6 +410,9 @@ export default function SuggestionDiffModal({
           {slotsUI}
         </div>
 
+        {bloqueado && blockedHint && (
+          <p role="status" className="px-4 sm:px-6 pt-3 text-[12px] font-medium text-[#B45309] bg-white">{blockedHint}</p>
+        )}
         {/* Actions */}
         <div className="flex gap-2 sm:gap-[10px] px-4 sm:px-6 pt-3 pb-5 sm:pb-[22px] border-t border-[#E8EDF6] bg-white">
           <button

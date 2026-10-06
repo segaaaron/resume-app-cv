@@ -31,7 +31,13 @@ import { normalize, specTerms, type JobSpec, type ResumeTree, type TermVariants 
 // PESOS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const PILLAR_WEIGHT = { parse: 20, relevance: 45, impact: 35 } as const
+/**
+ * SÓLO LO QUE MIRA UN FILTRO (CEO, 2026-10-03). El ATS mide si el CV pasa el
+ * filtro de la vacante: lectura del documento y relevancia (habilidades, cargo,
+ * años). La redacción —calidad de viñetas, cifras, resumen— no la mira ningún
+ * ATS y salió del número; los pesos conservan la proporción que tenían (20/45).
+ */
+export const PILLAR_WEIGHT = { parse: 30, relevance: 70 } as const
 export type Pillar = keyof typeof PILLAR_WEIGHT
 
 /** Reparto dentro de cada pilar. Cada bloque suma 1. */
@@ -59,12 +65,6 @@ export const COMPONENT_WEIGHT = {
    * misma proporción (×0,9): el orden entre ellos no cambia.
    */
   relevance: { must: 0.486, nice: 0.198, title: 0.126, soft: 0.09, years: 0.1 },
-  /**
-   * EL IMPACTO LO DECIDE EL ATS (CEO, 2026-09-29): cuántas viñetas ya sirven
-   * para este puesto tal como están, cuántas de las que necesitan cifra la
-   * tienen, y el resumen.
-   */
-  impact: { bullets: 0.55, metric: 0.3, summary: 0.15 },
 } as const
 
 /**
@@ -76,9 +76,6 @@ export type ScoredComponent =
   | "nice"
   | "title"
   | "years"
-  | "bullets"
-  | "metric"
-  | "summary"
   | "soft"
 
 /** Lo que un hallazgo puede nombrar: hoy, exactamente lo que el puntaje mide. */
@@ -90,9 +87,6 @@ const PILLAR_OF: Record<ScoredComponent, Pillar> = {
   nice: "relevance",
   title: "relevance",
   years: "relevance",
-  bullets: "impact",
-  metric: "impact",
-  summary: "impact",
   soft: "relevance",
 }
 
@@ -130,24 +124,6 @@ export type ParseChecks = Record<string, boolean | null>
  * existan, lo muestra y puntúa con estos estados.
  */
 export interface AuditFacts {
-  /** Una decisión por viñeta, contra ESTE puesto. */
-  bullets: {
-    id: string
-    /** keep: ya sirve así · improve: sirve y hay que mejorarla · remove: no sirve o repite a otra. */
-    decision: "keep" | "improve" | "remove"
-    /** Por qué, en una frase, en el idioma del CV. */
-    reason: string
-    /** improve: qué tiene que decir la línea nueva, con los hechos del CV a usar. */
-    instruction: string | null
-    /** improve: los hechos nuevos del CV que la línea va a decir, cada uno con su fuente. */
-    facts?: string[]
-    /** Este puesto necesita la cifra de este logro. */
-    needsFigure: boolean
-    /** Tailor ya escribió esta línea siguiendo al ATS: no recibe más encargos. */
-    cerrada?: boolean
-    /** Dice qué se hizo y no qué logró (X-Y-Z): Tailor agrega el logro con su hueco. */
-    needsOutcome?: boolean
-  }[]
   /** Cada hard skill del puesto, con su estado y dónde vive. */
   hard: {
     skill: string
@@ -157,6 +133,8 @@ export interface AuditFacts {
     evidenceNodeId: string | null
     /** Si falta pero hay trabajo relacionado: la viñeta donde escribirla. */
     writeIn: string | null
+    /** same_task: va dentro de esa línea · same_role: va en una viñeta nueva de ese puesto. */
+    writeInRelation?: "same_task" | "same_role"
     /** Si no hay rastro: la pregunta para la persona. */
     question: string | null
     /** Las palabras del CV que lo dicen, como las citó el ATS: puede ser otra forma u otro idioma («aplicaciones móviles» para «Mobile»). */
@@ -169,8 +147,6 @@ export interface AuditFacts {
     evidenceNodeId: string | null
     writeIn: string | null
   }[]
-  /** Las cuatro funciones del resumen, cumplidas o no. */
-  summary: { identity: boolean; proof: boolean; fit: boolean; extra: boolean }
   /** Las condiciones que filtran (residencia, permiso, idioma): si el CV muestra que se cumplen. */
   conditions?: { text: string; met: "yes" | "no" | "unknown"; cvSays: string | null }[]
 }
@@ -486,18 +462,6 @@ export function scoreResume(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, 
     return n + (j ? valor(j) : 0)
   }, 0)
 
-  /**
-   * LAS VIÑETAS: sólo las que el CV tiene hoy. Una que Tailor ya reescribió o
-   * que se sacó deja de contar en los dos lados, y el número sube; el análisis
-   * siguiente la juzga sobre su texto nuevo.
-   */
-  const idsReales = new Set(tree.roles.flatMap((r) => r.bullets.map((b) => b.id)))
-  const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text] as const)))
-  const juzgadas = audit.bullets.filter((b) => idsReales.has(b.id))
-  const sirven = juzgadas.filter((b) => b.decision === "keep").length
-  const conCifra = juzgadas.filter((b) => b.needsFigure)
-  const cifradas = conCifra.filter((b) => statesQuantity(textoDe.get(b.id) ?? "")).length
-  const summaryDone = [audit.summary.identity, audit.summary.proof, audit.summary.fit, audit.summary.extra].filter(Boolean).length
 
   const raws: RawComponent[] = [
     { key: "checks", numerator: checkValues.filter(Boolean).length, denominator: checkValues.length },
@@ -512,9 +476,6 @@ export function scoreResume(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, 
       numerator: spec.yearsRequired ? Math.min(1, experienceYears(tree) / spec.yearsRequired) : 0,
       denominator: spec.yearsRequired ? 1 : 0,
     },
-    { key: "bullets", numerator: sirven, denominator: juzgadas.length },
-    { key: "metric", numerator: cifradas, denominator: conCifra.length },
-    { key: "summary", numerator: summaryDone, denominator: 4 },
   ]
 
   const weights = effectiveWeights(raws)

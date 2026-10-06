@@ -21,11 +21,10 @@
 // y reanalizar cuesta cero.
 
 import { buildTermIndex, findingId, nodeHash, normalize, sha256, termsIn, type AnchoredSuggestion, type Finding, type JobSpec, type Resolution, type ResumeTree } from "@/lib/ats3/contracts"
-import { droppedNames, isStale, loyalty, type GuardVerdict } from "@/lib/ats3/guards"
+import { isStale, loyalty, type GuardVerdict } from "@/lib/ats3/guards"
 import { cvTextOf, deltaOf, gainOf, scoreResume, statesQuantity, termsOf, titleForms, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 import { type RawResume, buildTree, readableChecks, writeInto } from "@/lib/ats3/cv"
-import { findingsOf, hayTrabajo, respaldadoEnCv, trabajoPorViñeta } from "@/lib/ats3/findings"
-import { BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN } from "@/lib/ats3/ledger"
+import { findingsOf, respaldadoEnCv } from "@/lib/ats3/findings"
 import { type AtsAi, type AtsStore, cacheKey } from "@/lib/ats3/ports"
 // Viven con quien mide; se re-exportan porque el motor es la puerta de siempre.
 export { cvTextOf, termsOf } from "@/lib/ats3/score"
@@ -112,7 +111,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
    *
    * Una línea reescrita cambia de id —el id sale del texto—, así que el
    * registro por id no la reconoce. Viaja al ATS por su texto: lo que él mismo
-   * mandó hacer queda en «mantener», y el panel no vuelve a pedirlo.
+   * mandó escribir cuenta como prueba de esa skill, y el panel no vuelve a pedirlo.
    */
   const log = ((await input.store.read("ats3-log", cacheKey.log(input.resumeId, jdKey))) as Resolution[] | null) ?? []
   const lineas = new Set(tree.roles.flatMap((r) => r.bullets.map((b) => b.text.trim())))
@@ -124,68 +123,31 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   if (audit) {
     telemetry.served.audit = true
   } else {
-    const [primera, herramientas] = await Promise.all([
-      input.ai.audit(tree, spec, arregladas),
-      // Si falla, el diagnóstico sigue: las herramientas son un plus, no la base.
-      input.ai.matchTools(tree).catch(() => [] as { id: string; tools: string[]; sinTamano?: boolean; sinLogro?: boolean }[]),
-    ])
-    audit = primera
-    telemetry.calls += 2
+    audit = await input.ai.audit(tree, spec)
+    telemetry.calls++
     /**
-     * CADA VIÑETA TIENE SU DECISIÓN. Lo que faltó se pide UNA vez más, sólo esas
-     * líneas, dentro de la misma petición: la cuota no cambia. Lo que tampoco
-     * vuelva queda sin decisión y no se cuenta.
+     * CADA REQUISITO DE LA VACANTE TIENE SU JUICIO (2026-10-05). Medido contra la
+     * API con Sezzle: P2 contestó las obligatorias y se salteó TODAS las
+     * deseables. El puntaje las contaba como faltantes y ninguna tenía tarjeta:
+     * puntos perdidos sin decir por qué. Lo que faltó se pide UNA vez más, sólo
+     * eso, dentro de la misma petición.
      */
-    const juzgadas = new Set(audit.bullets.map((b) => b.id))
-    const faltan = new Set(tree.roles.flatMap((r) => r.bullets).filter((b) => !juzgadas.has(b.id)).map((b) => b.id))
-    if (faltan.size > 0) {
-      const resto: ResumeTree = {
-        ...tree,
-        roles: tree.roles
-          .map((r) => ({ ...r, bullets: r.bullets.filter((b) => faltan.has(b.id)) }))
-          .filter((r) => r.bullets.length > 0),
+    const faltan = sinJuicio(spec, audit)
+    if (faltan.mustHave.length + faltan.niceToHave.length + faltan.softSignals.length > 0) {
+      const resto = await input.ai.audit(tree, { ...spec, ...faltan, conditions: [] })
+      telemetry.calls++
+      const ya = new Set(audit.hard.map((h) => normalize(h.skill)))
+      const yaBlandas = new Set(audit.soft.map((x) => normalize(x.signal)))
+      audit = {
+        ...audit,
+        hard: [...audit.hard, ...resto.hard.filter((h) => !ya.has(normalize(h.skill)))],
+        soft: [...audit.soft, ...resto.soft.filter((x) => !yaBlandas.has(normalize(x.signal)))],
       }
-      const segunda = await input.ai.audit(resto, spec, arregladas)
-      telemetry.calls++
-      audit = { ...audit, bullets: [...audit.bullets, ...segunda.bullets.filter((b) => faltan.has(b.id))] }
-    }
-    /**
-     * LOS TOPES DE VIÑETAS POR PUESTO: el prompt los pide y el código los valida
-     * (CEO, 2026-09-29). Medido contra la API: dejó 11 en un puesto con tope 6 y
-     * vació otro entero. Se le pide UNA vez más nombrando el puesto; el código no
-     * elige qué viñeta va o se queda.
-     */
-    const fuera = rangoDeViñetas(tree, audit)
-    if (fuera.length > 0) {
-      const otra = await input.ai.audit(tree, spec, arregladas, fuera.join("\n"))
-      telemetry.calls++
-      if (rangoDeViñetas(tree, otra).length < fuera.length && otra.bullets.length >= audit.bullets.length) audit = otra
-    }
-    // Las herramientas que cada trabajo usó viajan como hechos de esa viñeta.
-    // Un requisito del aviso no es una herramienta que agregar: ése lo cubren las skills.
-    const delAviso = new Set([...spec.mustHave, ...spec.niceToHave].flatMap((r) => r.skill.split(/\s*\|\s*/)).map(normalize))
-    const deViñeta = new Map(
-      herramientas.map((h) => [h.id, h.tools.filter((t) => !delAviso.has(normalize(t)))] as const).filter(([, t]) => t.length > 0),
-    )
-    // Y las que afirman un resultado sin decir cuánto piden la cifra de la persona.
-    const sinTamano = new Set(herramientas.filter((h) => h.sinTamano).map((h) => h.id))
-    // Y las que dicen qué se hizo sin qué se logró: X-Y-Z, el logro con el hueco de su cifra.
-    const sinLogro = new Set(herramientas.filter((h) => h.sinLogro).map((h) => h.id))
-    audit = {
-      ...audit,
-      bullets: audit.bullets.map((b) =>
-        b.decision === "remove" ? b : { ...b, ...(deViñeta.has(b.id) ? { facts: deViñeta.get(b.id) } : {}), ...(sinTamano.has(b.id) || sinLogro.has(b.id) ? { needsFigure: true } : {}), ...(sinLogro.has(b.id) ? { needsOutcome: true } : {}) },
-      ),
     }
     await input.store.write("ats3-audit", auditKey, audit)
   }
   audit = await fijarJuicios(tree, audit, input.store, cacheKey.judge(input.resumeId, jdKey))
 
-  /**
-   * LO QUE TAILOR YA ARREGLÓ SIGUIENDO AL ATS QUEDA EN «MANTENER». El ATS lo
-   * recibe dicho, y el código lo garantiza: volver a pedir mejorar la línea que
-   * él mismo mandó escribir es el bucle que este motor existe para no tener.
-   */
   // Una skill «demostrada» o «listada» cuyo nombre el CV no respalda no está en el CV: falta.
   /**
    * SALVO UNA CREDENCIAL, QUE SE ESCRIBE DISTINTO EN CADA PAÍS (2026-09-30). Medido
@@ -228,12 +190,37 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     const indice = buildTermIndex(opciones.map((o) => ({ canonical: o, variants: titleForms(o) })))
     return termsIn(indice, cvTextOf(tree)).size > 0
   }
+  /**
+   * Y SI TAMPOCO VOLVIÓ, DECIDE EL CÓDIGO CON LO QUE PUEDE PROBAR: el nombre está
+   * escrito en el CV (nombrado; si una viñeta lo escribe, más abajo pasa a
+   * demostrado) o no está (falta, con su tarjeta). Las duras; una blanda, no. Así el puntaje y las tarjetas
+   * recorren la MISMA lista —la de la vacante— y no pueden discrepar.
+   */
+  {
+    const faltan = sinJuicio(spec, audit)
+    const estado = (nombre: string) => (dicho(nombre) ? ("listed" as const) : ("missing" as const))
+    audit = {
+      ...audit,
+      hard: [
+        ...audit.hard,
+        ...faltan.mustHave.map((r) => ({ skill: r.skill, requirement: "MUST" as const, status: estado(r.skill), evidenceNodeId: null, writeIn: null, question: null })),
+        ...faltan.niceToHave.map((r) => ({ skill: r.skill, requirement: "NICE" as const, status: estado(r.skill), evidenceNodeId: null, writeIn: null, question: null })),
+      ],
+      // Una blanda no se prueba por la palabra («trust» está en «user trust»): sin juicio, falta.
+      soft: [...audit.soft, ...faltan.softSignals.map((x) => ({ signal: x, status: "missing" as const, evidenceNodeId: null, writeIn: null }))],
+    }
+  }
   audit = {
     ...audit,
     hard: audit.hard.map((h) =>
       h.status !== "missing" && !citado(h) && !(h.status === "listed" ? dicho(h.skill) : respaldadoEnCv(tree, h.skill)) && (sinDondeTenerla || !credenciales.has(normalize(h.skill)))
         ? { ...h, status: "missing" as const, evidenceNodeId: null }
-        : h,
+        : // Y AL REVÉS (2026-10-05): «falta» con el nombre escrito en el CV es falso.
+          // Medido con Sezzle: «CI/CD — falta» con CI/CD en Habilidades. Queda
+          // nombrada; si una viñeta lo escribe, más abajo pasa a demostrada.
+          h.status === "missing" && dicho(h.skill)
+          ? { ...h, status: "listed" as const, evidenceNodeId: null }
+          : h,
     ),
   }
   /**
@@ -264,94 +251,6 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
       soft: audit.soft.map((x) => prueba(x, x.signal, deTailor)),
     }
   }
-  /**
-   * LA DECISIÓN QUE SE VE ES LA QUE SE PUEDE HACER: «mejorar» si hay algo
-   * verificable que agregar, «sirve» si no. Si no, la anatomía decía «18 hay que
-   * mejorarlas» y Tailor no tenía ni una tarjeta para ellas (visto en local).
-   */
-  /**
-   * SACAR «POR REPETIDA» SE COMPRUEBA (CEO, 2026-09-29). Medido con el CV real: el
-   * ATS sacó «Refactored the lunch box module…» citándose a sí misma, y «Resolved
-   * critical bugs… 20%» para dejar «Improved app stability…» sin ningún número.
-   * Una línea que cita a otra como la que queda sólo se saca si la citada existe,
-   * es otra, y no deja atrás una cifra que la citada no tiene.
-   */
-  {
-    // Si el ATS dijo «son repetidas» pero sacaba la que tiene cifra, se queda ésa y
-    // se va la citada: el juicio de repetición es suyo, cuál es más fuerte se prueba.
-    const todas = tree.roles.flatMap((r) => r.bullets)
-    const sacar = new Map<string, string>()
-    const quedan = new Set<string>()
-    for (const b of audit.bullets) {
-      if (b.decision !== "remove") continue
-      const v = sacarSeSostiene(tree, b.id, b.reason)
-      if (v === true) continue
-      quedan.add(b.id)
-      if (typeof v === "string" && !quedan.has(v)) {
-        const esta = todas.find((x) => x.id === b.id)?.text ?? ""
-        const inicio = esta.split(/\s+/).slice(0, 6).join(" ")
-        sacar.set(v, input.language === "en" ? `Says the same as "${inicio}…", which carries the figure.` : `Dice lo mismo que «${inicio}…», que trae la cifra.`)
-      }
-    }
-    audit = {
-      ...audit,
-      bullets: audit.bullets.map((b) =>
-        quedan.has(b.id) ? { ...b, decision: "keep" as const, reason: seQueda(input.language) } : sacar.has(b.id) ? { ...b, decision: "remove" as const, reason: sacar.get(b.id)! } : b,
-      ),
-    }
-  }
-  /**
-   * UNA LÍNEA QUE TAILOR YA CERRÓ NO RECIBE MÁS ENCARGOS. Ni cifra, ni herramienta,
-   * ni una skill para escribir ahí: medido el 2026-09-29, el reanálisis mandaba
-   * escribir «mobile application lifecycle» en la línea que Tailor acababa de
-   * escribir. La skill que falta se le pregunta a la persona.
-   */
-  const yaArregladas = new Set(arregladas)
-  const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text.trim()] as const)))
-  const cerradas = new Set(audit.bullets.filter((b) => yaArregladas.has(textoDe.get(b.id) ?? "")).map((b) => b.id))
-  audit = {
-    ...audit,
-    bullets: audit.bullets.map((b) => (cerradas.has(b.id) ? { ...b, decision: "keep" as const, instruction: null, needsFigure: false, needsOutcome: false, facts: [], cerrada: true } : b)),
-  }
-  /**
-   * EL RANGO DE VIÑETAS POR PUESTO LO GARANTIZA EL CÓDIGO (CEO, 2026-09-29): el
-   * prompt lo pide y el modelo igual vaciaba puestos (Salamanca quedó con 0 de 9).
-   * Si un puesto queda por debajo del mínimo, vuelven las que traen cifra y
-   * después las primeras del CV; si queda por encima del máximo, se van las
-   * últimas sin cifra. Es la regla de `ledger.ts`, en un solo lugar.
-   */
-  /**
-   * LO QUE EL ATS YA DECIDIÓ CONSERVAR NO SE VUELVE A DISCUTIR (CEO, 2026-09-29).
-   * Medido en local: después de aplicar lo que el ATS sacó, el reanálisis del CV
-   * ya recortado quería sacar 6 viñetas más que la pasada anterior había
-   * conservado. Cada vuelta recortaba otra vez. Una viñeta conservada cuyo texto
-   * no cambió se sigue conservando para este CV y esta vacante; se juzga de nuevo
-   * sólo lo que cambió.
-   */
-  const lockKey = cacheKey.lock(input.resumeId, jdKey)
-  const conservadas = new Set(((await input.store.read("ats3-lock", lockKey)) as string[] | null) ?? [])
-  const textoNorm = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, normalize(b.text)] as const)))
-  audit = {
-    ...audit,
-    bullets: audit.bullets.map((b) => (b.decision === "remove" && conservadas.has(textoNorm.get(b.id) ?? "") ? { ...b, decision: "keep" as const, reason: seQueda(input.language) } : b)),
-  }
-  /**
-   * NO SE SACA LA PRUEBA DE LO QUE PIDE LA VACANTE (CEO, 2026-09-30): «me pediste
-   * sacar viñetas y el score bajó». La línea que demuestra una skill del aviso vale
-   * en el puntaje (demostrada 1, nombrada 0,6): sacarla nunca es «no aporta».
-   */
-  const pruebas = new Set([...audit.hard, ...audit.soft].flatMap((x) => (x.status === "demonstrated" && x.evidenceNodeId ? [x.evidenceNodeId] : [])))
-  audit = { ...audit, bullets: audit.bullets.map((b) => (b.decision === "remove" && pruebas.has(b.id) ? { ...b, decision: "keep" as const, reason: seQueda(input.language, true) } : b)) }
-  audit = { ...audit, bullets: ajustarAlRango(tree, spec, audit.bullets, pruebas, input.language) }
-  const quedan = audit.bullets.filter((b) => b.decision !== "remove").map((b) => textoNorm.get(b.id) ?? "").filter(Boolean)
-  await input.store.write("ats3-lock", lockKey, [...new Set([...conservadas, ...quedan])])
-  const trabajo = trabajoPorViñeta(tree, audit)
-  audit = {
-    ...audit,
-    bullets: audit.bullets.map((b) =>
-      b.decision === "remove" ? b : hayTrabajo(trabajo.get(b.id)) ? { ...b, decision: "improve" as const } : { ...b, decision: "keep" as const, instruction: null },
-    ),
-  }
 
   // ── acto 1: el puntaje, que no cuesta una sola llamada ────────────────────
   // La lectura del documento la mide el motor: es el único que tiene el CV entero.
@@ -360,7 +259,9 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   yield { act: "score", score, tree, audit, checks }
 
   // ── las tarjetas: la decisión del ATS, una por viñeta ─────────────────────
-  const all = findingsOf(tree, audit, score, spec)
+  // Una línea que Tailor ya escribió no recibe otra skill: se cerró con lo que el ATS pidió.
+  const cerradas = tree.roles.flatMap((r) => r.bullets).filter((b) => arregladas.includes(b.text.trim())).map((b) => b.id)
+  const all = findingsOf(tree, audit, score, spec, cerradas)
   for (const [nombre, ok] of Object.entries(checks)) {
     // Un chequeo que falla y no genera tarjeta es un punto perdido que nadie
     // le dijo al usuario cómo recuperar. Se arregla en el documento: sin IA.
@@ -387,40 +288,23 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
 }
 
 /**
- * EL MOTIVO DE UNA VIÑETA QUE EL CÓDIGO CONSERVA (2026-10-02). El modelo la mandaba
- * sacar —«dice casi lo mismo que…»— y el código lo descartó; la línea quedaba
- * en «Sirve» con ese motivo debajo. Visto en local: cuatro viñetas así en la misma
- * pantalla. Lo que se ve es lo que se decidió.
- */
-function seQueda(language: "es" | "en", prueba = false): string {
-  if (prueba) return language === "en" ? "Stays: it proves a skill the posting asks for." : "Se queda: prueba una skill que pide el aviso."
-  return language === "en" ? "Stays: it shows experience and does not repeat another line." : "Se queda: muestra experiencia y no repite a otra línea."
-}
-
-/**
  * UNA LÍNEA QUE NO CAMBIÓ CONSERVA SU JUICIO ENTRE ANÁLISIS (2026-10-02).
  *
- * El comentario de P2 lo prometía desde p2-8 y la función se había perdido con la
- * reescritura del motor. Medido en producción con el CV de Hapi: el editor marcaba
- * 75 después de aplicar, y el reanálisis —que vuelve a preguntar todo— dio 66 con
- * las mismas líneas: blandas 65 → 40%, impacto 70 → 55%. El modelo cambió de
- * opinión sobre lo que nadie tocó, y el número bajó sin una razón en el CV.
- *
- * Se fija por TEXTO, para este CV y esta vacante: la decisión de cada viñeta que
- * sigue igual, y la skill que una línea demostraba mientras esa línea siga ahí.
- * Lo que cambió se juzga de nuevo; lo que se fijó sigue pasando por los controles
- * del código que corren después (respaldo en el CV, credenciales, rango).
+ * Medido en producción con el CV de Hapi: el reanálisis —que vuelve a preguntar
+ * todo— bajó el número con las mismas líneas, porque el modelo cambió de opinión
+ * sobre lo que nadie tocó. Se fija por TEXTO, para este CV y esta vacante: la
+ * skill que una línea demostraba mientras esa línea siga ahí. Lo fijado sigue
+ * pasando por los controles del código que corren después.
  */
-type Juicio = Omit<AuditFacts["bullets"][number], "id">
-type Juicios = { bullets: Record<string, Juicio>; skills: Record<string, { status: "demonstrated" | "listed" | "missing"; evidencia: string | null }> }
+type Juicios = { skills: Record<string, { status: "demonstrated" | "listed" | "missing"; evidencia: string | null }> }
 
 async function fijarJuicios(tree: ResumeTree, audit: AuditFacts, store: AtsStore, key: string): Promise<AuditFacts> {
-  const previos = ((await store.read("ats3-judge", key)) as Juicios | null) ?? { bullets: {}, skills: {} }
+  const previos = ((await store.read("ats3-judge", key)) as Juicios | null) ?? { skills: {} }
   const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, normalize(b.text)] as const)))
   const idDe = new Map([...textoDe].map(([id, t]) => [t, id] as const))
   const rango = { missing: 0, listed: 1, demonstrated: 2 } as const
   const fijar = <T extends { status: "demonstrated" | "listed" | "missing"; evidenceNodeId: string | null }>(x: T, nombre: string): T => {
-    const p = previos.skills[normalize(nombre)]
+    const p = previos.skills?.[normalize(nombre)]
     if (!p || rango[p.status] <= rango[x.status]) return x
     // Demostrada en una línea que ya no está: no hay prueba que conservar.
     if (p.status === "demonstrated") return p.evidencia && idDe.has(p.evidencia) ? { ...x, status: "demonstrated", evidenceNodeId: idDe.get(p.evidencia)! } : x
@@ -428,68 +312,26 @@ async function fijarJuicios(tree: ResumeTree, audit: AuditFacts, store: AtsStore
   }
   const fijada: AuditFacts = {
     ...audit,
-    bullets: audit.bullets.map((b) => {
-      const p = previos.bullets[textoDe.get(b.id) ?? ""]
-      return p ? { ...p, id: b.id } : b
-    }),
     hard: audit.hard.map((h) => fijar(h, h.skill)),
     soft: audit.soft.map((x) => fijar(x, x.signal)),
   }
-  const ahora: Juicios = { bullets: { ...previos.bullets }, skills: { ...previos.skills } }
-  for (const b of fijada.bullets) {
-    const t = textoDe.get(b.id)
-    if (!t) continue
-    ahora.bullets[t] = b
-  }
+  const ahora: Juicios = { skills: { ...previos.skills } }
   for (const x of [...fijada.hard.map((h) => ({ n: h.skill, s: h })), ...fijada.soft.map((y) => ({ n: y.signal, s: y }))]) {
     ahora.skills[normalize(x.n)] = { status: x.s.status, evidencia: x.s.evidenceNodeId ? textoDe.get(x.s.evidenceNodeId) ?? null : null }
   }
-  // Con tope: las líneas viejas se guardan para que un «Deshacer» recupere su juicio, no para siempre.
-  const textos = Object.keys(ahora.bullets)
-  for (const t of textos.slice(0, Math.max(0, textos.length - 300))) delete ahora.bullets[t]
   await store.write("ats3-judge", key, ahora)
   return fijada
 }
 
-/**
- * ¿Se sostiene sacar esta viñeta? Si el motivo cita otra línea del CV («…» o "…"),
- * la citada tiene que existir, ser otra, y tener cifra si la que se va la tiene.
- * Si no cita ninguna (otra tecnología, otra tarea), decide el ATS.
- */
-function sacarSeSostiene(tree: ResumeTree, id: string, reason: string): true | false | string {
-  const todas = tree.roles.flatMap((r) => r.bullets)
-  const esta = todas.find((b) => b.id === id)
-  if (!esta) return true
-  const citas = [...reason.matchAll(/[«"“]([^»"”]{12,})[»"”]/g)].map((m) => normalize(m[1].replace(/…$/, "")).slice(0, 40))
-  if (citas.length === 0) return true
-  const citadas = todas.filter((b) => b.id !== id && citas.some((c) => c.length >= 12 && normalize(b.text).startsWith(c)))
-  // Se cita a sí misma, o cita algo que no está: no se saca.
-  if (citadas.length === 0) return false
-  /**
-   * REPETIR ES DECIR LO MISMO, Y LO QUE QUEDA TIENE QUE DECIRLO (2026-09-30).
-   * Medido en producción: el ATS mandó sacar «Implemented TCA architecture…»
-   * por repetir a «Applied SOLID design principles…», y «Used AI-assisted
-   * engineering tools (Claude Code, Codex, Copilot)…» por parecerse a una de
-   * unit tests. Las dos se parecen en las palabras de siempre; ninguna repite:
-   * sacarlas borraba TCA y Claude Code del CV. Una línea que nombra algo que la
-   * citada no nombra no la repite.
-   */
-  if (droppedNames(esta.text, citadas.map((b) => b.text).join(" ")).length > 0) return false
-  /**
-   * Y TIENE QUE DECIR, EN SUS PALABRAS, LO QUE DICE LA QUE SE VA. Medido contra la
-   * API con el aviso de Sezzle: «Collaborated in code reviews…» salía por
-   * «repetir» a «Conducted unit and UI testing…» (comparten 10% de su contenido),
-   * «networking layers» por «RESTful APIs» (0%), «user-friendly interfaces» por
-   * «cross-platform apps» (30%). Las repetidas de verdad comparten 45–80%.
-   *
-   * ponytail: raíces de cinco letras, no significado; el piso de 40% sale de esos
-   * ocho pares medidos. Si una repetida real queda debajo, la línea se conserva:
-   * el error barato, porque mostrar experiencia vale más que una viñeta menos.
-   */
-  if (cubre(esta.text, citadas.map((b) => b.text).join(" ")) < 0.4) return false
-  // Sacaba la que tiene cifra para dejar una sin cifra: se queda ésta y se va la citada.
-  if (statesQuantity(esta.text) && citadas.every((b) => !statesQuantity(b.text))) return citadas[0].id
-  return true
+/** Lo que la vacante pide y la auditoría no juzgó: requisitos y blandas sin respuesta. */
+function sinJuicio(spec: JobSpec, audit: AuditFacts): Pick<JobSpec, "mustHave" | "niceToHave" | "softSignals"> {
+  const duras = new Set(audit.hard.map((h) => `${h.requirement}:${normalize(h.skill)}`))
+  const blandas = new Set(audit.soft.map((x) => normalize(x.signal)))
+  return {
+    mustHave: (spec.mustHave ?? []).filter((r) => !duras.has(`MUST:${normalize(r.skill)}`)),
+    niceToHave: (spec.niceToHave ?? []).filter((r) => !duras.has(`NICE:${normalize(r.skill)}`)),
+    softSignals: (spec.softSignals ?? []).filter((x) => normalize(x) && !blandas.has(normalize(x))),
+  }
 }
 
 /**
@@ -505,87 +347,6 @@ export function menosAporta(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, 
   const peso = (b: { id: string; text: string }) => (pruebas.has(b.id) ? 100 : 0) + termsIn(indice, b.text).size * 2 + (statesQuantity(b.text) ? 1 : 0)
   // Empate: la de más abajo, que es la que menos se lee.
   return [...role.bullets].map((b, i) => ({ b, i })).sort((x, y) => peso(x.b) - peso(y.b) || y.i - x.i)[0].b.id
-}
-
-function ajustarAlRango(tree: ResumeTree, spec: JobSpec, bullets: AuditFacts["bullets"], pruebas: ReadonlySet<string> = new Set(), language: "es" | "en" = "es"): AuditFacts["bullets"] {
-  const decision = new Map(bullets.map((b) => [b.id, b]))
-  /**
-   * CUÁL VUELVE O CUÁL SE VA: primero lo que prueba el puesto —cuántos requisitos
-   * del aviso nombra, con el mismo índice que usa el puntaje—, después la cifra,
-   * después el orden del CV. Sin la relevancia, Salamanca recuperaba Angular y
-   * Flutter antes que sus líneas de iOS con cifra (medido 2026-09-29).
-   */
-  const indice = buildTermIndex(termsOf(spec, tree))
-  // La prueba de una skill del aviso va primero: sacarla baja el puntaje.
-  const peso = (b: { id: string; text: string }) => (pruebas.has(b.id) ? 100 : 0) + termsIn(indice, b.text).size * 2 + (statesQuantity(b.text) ? 1 : 0)
-  const porPeso = <T extends { id: string; text: string }>(xs: T[]): T[] => xs.map((b, i) => ({ b, i })).sort((x, y) => peso(y.b) - peso(x.b) || x.i - y.i).map((x) => x.b)
-  const cambios = new Map<string, "keep" | "remove">()
-  const porExceso = new Map<string, string>()
-  const todas = tree.roles.flatMap((r) => r.bullets)
-  /**
-   * SÓLO SE SACA LO QUE ES EL CASO (CEO, 2026-09-30): «es preferible mostrar
-   * experiencia en cosas que quizás no pidan que mostrar sólo 1 o 2 viñetas». Una
-   * viñeta se va si repite a otra que queda (la cita y existe) o si el puesto pasa
-   * del máximo; «no le sirve a este puesto» sola no alcanza.
-   */
-  const repetida = (id: string, reason: string) => {
-    const citas = [...reason.matchAll(/[«"“]([^»"”]{12,})[»"”]/g)].map((m) => normalize(m[1].replace(/…$/, "")).slice(0, 40))
-    return citas.some((c) => todas.some((x) => x.id !== id && normalize(x.text).startsWith(c)))
-  }
-  for (const b of bullets) if (b.decision === "remove" && !repetida(b.id, b.reason)) cambios.set(b.id, "keep")
-  const sale = (id: string) => (cambios.get(id) ?? decision.get(id)!.decision) === "remove"
-  for (const r of tree.roles) {
-    const juzgadas = r.bullets.filter((b) => decision.has(b.id))
-    const quedan = juzgadas.filter((b) => !sale(b.id))
-    const minimo = Math.min(BULLETS_PER_ROLE_MIN, juzgadas.length)
-    if (quedan.length < minimo) {
-      const sacadas = juzgadas.filter((b) => sale(b.id))
-      for (const b of porPeso(sacadas).slice(0, minimo - quedan.length)) cambios.set(b.id, "keep")
-    } else if (quedan.length > BULLETS_PER_ROLE_MAX) {
-      const sobran = quedan.length - BULLETS_PER_ROLE_MAX
-      /**
-       * EL MOTIVO ES EL DEL CÓDIGO (2026-10-02). Se guardaba el del modelo, que es
-       * el de su propia decisión —«mantener», o una repetición que el código ya
-       * descartó—. Medido en producción: «Facilité ceremonias Agile» salía con
-       * «se superpone con "Desarrollé y mantuve aplicaciones iOS"», que no repite.
-       * La razón real es que el puesto pasa del máximo, y eso es lo que se dice.
-       */
-      const motivo = language === "en"
-        ? `This role has ${quedan.length} bullets and recruiters read up to ${BULLETS_PER_ROLE_MAX}: this one proves the least for this posting.`
-        : `Este puesto tiene ${quedan.length} viñetas y se leen hasta ${BULLETS_PER_ROLE_MAX}: ésta es la que menos prueba para esta vacante.`
-      for (const b of porPeso(quedan).reverse().slice(0, sobran)) {
-        cambios.set(b.id, "remove")
-        porExceso.set(b.id, motivo)
-      }
-    }
-  }
-  return bullets.map((b) =>
-    cambios.get(b.id) === "keep"
-      ? { ...b, decision: "keep" as const, ...(b.decision === "remove" ? { reason: seQueda(language) } : {}) }
-      : cambios.get(b.id) === "remove"
-        ? { ...b, decision: "remove" as const, reason: porExceso.get(b.id) ?? b.reason }
-        : b,
-  )
-}
-
-/** Cuánto del contenido de `a` (raíces de cinco letras, palabras de 4+) dice también `b`. */
-function cubre(a: string, b: string): number {
-  const raices = (t: string) => [...new Set(normalize(t).split(" ").filter((w) => w.length >= 4).map((w) => w.slice(0, 5)))]
-  const A = raices(a)
-  const B = new Set(raices(b))
-  return A.length === 0 ? 0 : A.filter((w) => B.has(w)).length / A.length
-}
-
-/** Los puestos que quedan fuera del rango de viñetas que se leen, dicho para el ATS. */
-function rangoDeViñetas(tree: ResumeTree, audit: AuditFacts): string[] {
-  const decision = new Map(audit.bullets.map((b) => [b.id, b.decision]))
-  return tree.roles.flatMap((r) => {
-    const quedan = r.bullets.filter((b) => decision.get(b.id) !== "remove").length
-    const minimo = Math.min(BULLETS_PER_ROLE_MIN, r.bullets.length)
-    if (quedan > BULLETS_PER_ROLE_MAX) return [`${r.title} — ${r.company}: quedan ${quedan} viñetas; el máximo es ${BULLETS_PER_ROLE_MAX}. Marcá remove las que menos prueban de este puesto.`]
-    if (quedan < minimo) return [`${r.title} — ${r.company}: quedan ${quedan} viñetas; el mínimo es ${minimo}. Dejá las ${minimo} que más prueban de este puesto.`]
-    return []
-  })
 }
 
 /**

@@ -81,20 +81,12 @@ const RAW: RawResume = {
 /** La decisión del ATS sobre el CV QUE RECIBE, como hace el modelo real. */
 function fakeAudit(tree: ResumeTree = buildTree(RAW)): AuditFacts {
   return {
-    bullets: tree.roles.flatMap((r) => r.bullets).map((b, i) => ({
-      id: b.id,
-      decision: i === 0 ? ("keep" as const) : ("improve" as const),
-      reason: i === 0 ? "Ya prueba la atención." : "No dice qué se cuadraba.",
-      instruction: i === 0 ? null : "Decí que el arqueo cuadraba efectivo y comprobantes del turno.",
-      needsFigure: false,
-    })),
     hard: [
       { skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: tree.roles[0]?.bullets[1]?.id ?? null, writeIn: null, question: null },
       { skill: "Atención al cliente", requirement: "MUST", status: "demonstrated", evidenceNodeId: tree.roles[0]?.bullets[0]?.id ?? null, writeIn: null, question: null },
       { skill: "Inventario", requirement: "NICE", status: "missing", evidenceNodeId: null, writeIn: null, question: "¿Llevaste inventario?" },
     ],
     soft: [],
-    summary: { identity: true, proof: false, fit: false, extra: false },
   }
 }
 
@@ -120,23 +112,15 @@ class CountingAi implements AtsAi {
   nextSuggestion: Suggestion | null = null
   lastNudge: string | undefined
   nudges: (string | undefined)[] = []
-  auditFor: ((tree: ResumeTree, nudge?: string) => AuditFacts) | null = null
-  alreadyFixedSeen: string[][] = []
+  auditFor: ((tree: ResumeTree) => AuditFacts) | null = null
 
   async parseJob() {
     this.jd++
     return SPEC
   }
-  async audit(tree: ResumeTree, _spec: JobSpec, alreadyFixed: string[] = [], nudge?: string) {
+  async audit(tree: ResumeTree) {
     this.audits++
-    this.alreadyFixedSeen.push(alreadyFixed)
-    return this.auditFor ? this.auditFor(tree, nudge) : fakeAudit(tree)
-  }
-  tools = 0
-  toolsFor: ((tree: ResumeTree) => { id: string; tools: string[]; sinTamano?: boolean; sinLogro?: boolean }[]) | null = null
-  async matchTools(tree: ResumeTree) {
-    this.tools++
-    return this.toolsFor ? this.toolsFor(tree) : []
+    return this.auditFor ? this.auditFor(tree) : fakeAudit(tree)
   }
   async rewriteBullet(input: RewriteInput) {
     this.rewrites++
@@ -237,11 +221,10 @@ describe("leer el CV", () => {
 // ── LO QUE EL PRODUCTO PROMETE: el costo de reanalizar ───────────────────────
 
 describe("cuántas llamadas cuesta cada escenario", () => {
-  it("primera corrida: la vacante, la auditoría y las herramientas", async () => {
+  it("primera corrida: la vacante y la auditoría", async () => {
     const ai = new CountingAi()
     const { telemetry } = await analyze(ai, new MemoryStore())
-    expect(telemetry.calls).toBe(3)
-    expect(ai.tools).toBe(1)
+    expect(telemetry.calls).toBe(2)
     expect(ai.jd).toBe(1)
     expect(ai.audits).toBe(1)
   })
@@ -386,14 +369,10 @@ describe("el análisis se entrega en actos", () => {
     const f = acts.find((a) => a.act === "findings")
     if (f?.act !== "findings") throw new Error("sin hallazgos")
     const tree = buildTree(RAW)
-    // «Mejorar» sin nada verificable que agregar (sólo una instrucción libre) no abre tarjeta.
-    expect(f.findings.filter((x) => x.type === "improve_bullet")).toHaveLength(0)
-    // La que el ATS mantiene no tiene tarjeta.
-    expect(f.findings.some((x) => x.nodeId === tree.roles[0].bullets[0].id)).toBe(false)
-    // La skill sin rastro pregunta.
-    const inv = f.findings.find((x) => x.type === "missing_skill")
-    expect(inv?.remedy).toBe("ask")
-    expect(inv?.question).toBe("¿Llevaste inventario?")
+    // Ninguna viñeta tiene tarjeta propia: sólo lo que mira un filtro.
+    expect(f.findings.some((x) => tree.roles[0].bullets.some((b) => b.id === x.nodeId))).toBe(false)
+    // Lo deseable que falta no tiene tarjeta: va en la tabla de términos.
+    expect(f.findings.some((x) => x.subject === "Inventario")).toBe(false)
   })
 })
 
@@ -402,27 +381,6 @@ describe("findingsOf traduce la decisión del ATS, no la juzga", () => {
   const [b0, b1] = tree.roles[0].bullets
   const base = fakeAudit(tree)
   const fs = (audit: AuditFacts, spec: JobSpec = SPEC) => findingsOf(tree, audit, scoreResume(tree, spec, audit, CHECKS), spec)
-
-  it("remove da una tarjeta de sacar con su motivo", () => {
-    const a = { ...base, bullets: base.bullets.map((b) => (b.id === b1.id ? { ...b, decision: "remove" as const, reason: "Repite a otra." } : b)) }
-    const f = fs(a).find((x) => x.nodeId === b1.id)
-    expect(f?.type).toBe("remove_bullet")
-    expect(f?.remedy).toBe("remove")
-    expect(f?.reason).toBe("Repite a otra.")
-  })
-
-  it("ningún nombre del aviso se escribe dentro de una viñeta: aunque el ATS diga dónde, se pregunta", () => {
-    const a: AuditFacts = { ...base, hard: [...base.hard, { skill: "Línea de cajas", requirement: "MUST", status: "missing", evidenceNodeId: null, writeIn: b0.id, question: null }] }
-    expect(fs(a).some((x) => x.nodeId === b0.id && x.type === "improve_bullet")).toBe(false)
-    expect(fs(a).find((x) => x.subject === "Línea de cajas")?.remedy).toBe("ask")
-  })
-
-  it("una soft que el CV no demuestra se pregunta", () => {
-    const a: AuditFacts = { ...base, soft: [{ signal: "Trabajo en equipo", status: "missing", evidenceNodeId: null, writeIn: null }] }
-    const f = fs(a).find((x) => x.subject === "Trabajo en equipo")
-    expect(f?.remedy).toBe("ask")
-    expect(f?.component).toBe("soft")
-  })
 
   it("una skill que el CV no respalda no se escribe en ninguna viñeta: se pregunta", () => {
     const a: AuditFacts = { ...base, hard: [...base.hard, { skill: "POS", requirement: "MUST", status: "missing", evidenceNodeId: null, writeIn: b0.id, question: null }] }
@@ -438,42 +396,9 @@ describe("findingsOf traduce la decisión del ATS, no la juzga", () => {
     expect(f?.question).toBeUndefined()
   })
 
-  it("needsFigure pide la cifra en la misma tarjeta", () => {
-    const a = { ...base, bullets: base.bullets.map((b) => (b.id === b0.id ? { ...b, needsFigure: true } : b)) }
-    const f = fs(a).filter((x) => x.nodeId === b0.id)
-    expect(f).toHaveLength(1)
-    expect(f[0].needsFigure).toBe(true)
-  })
 })
 
 describe("las herramientas de tus habilidades que ese trabajo usó abren su tarjeta", () => {
-  it("una viñeta que el ATS mantiene pero no nombra la herramienta pasa a Tailor con ese hecho", async () => {
-    const ai = new CountingAi()
-    const tree = buildTree(RAW)
-    ai.toolsFor = () => [{ id: tree.roles[0].bullets[0].id, tools: ["Excel"] }]
-    const { acts } = await analyze(ai, new MemoryStore())
-    const f = acts.find((a) => a.act === "findings")
-    if (f?.act !== "findings") throw new Error("sin hallazgos")
-    const card = f.findings.find((x) => x.nodeId === tree.roles[0].bullets[0].id)
-    expect(card?.type).toBe("improve_bullet")
-    expect(card?.facts).toEqual(["Excel"])
-  })
-
-  it("una línea que afirma un resultado sin decir cuánto pide la cifra; una que ya la dice, no", async () => {
-    const ai = new CountingAi()
-    const tree = buildTree({ ...RAW, workExperience: [{ ...RAW.workExperience![0], description: "• Atendí a los clientes y mejoré la satisfacción\n• Reduje las diferencias de caja un 30%" }] })
-    const [sin, con] = tree.roles[0].bullets
-    ai.toolsFor = () => [{ id: sin.id, tools: [], sinTamano: true }, { id: con.id, tools: [], sinTamano: true }]
-    const gen = runAnalysis({ raw: { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: "• Atendí a los clientes y mejoré la satisfacción\n• Reduje las diferencias de caja un 30%" }] }, jdText: "Buscamos cajera", language: "es", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
-    const acts = []
-    let out = await gen.next()
-    while (!out.done) { acts.push(out.value); out = await gen.next() }
-    const f = acts.find((a) => a.act === "findings")
-    if (f?.act !== "findings") throw new Error("sin hallazgos")
-    expect(f.findings.find((x) => x.nodeId === sin.id)?.needsFigure).toBe(true)
-    expect(f.findings.find((x) => x.nodeId === con.id)?.needsFigure).toBeUndefined()
-  })
-
   it("el resumen no suelta un requisito del aviso que ya decía: se pide una vez más y, si igual lo suelta, no se ofrece", async () => {
     // Medido en producción: la reescritura del cargo borró Claude Code, que el aviso exige. Acá, atención al cliente.
     const ai = new CountingAi()
@@ -484,45 +409,9 @@ describe("las herramientas de tus habilidades que ese trabajo usó abren su tarj
     expect(r.ok).toBe(false)
   })
 
-  it("Tailor que no escribe la herramienta: se pide una vez más y, si no la escribe, no se ofrece", async () => {
-    const ai = new CountingAi()
-    const tree = buildTree(RAW)
-    const r = await runRewrite({ tree, nodeId: tree.roles[0].bullets[0].id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore(), facts: ["Xcode Instruments"] })
-    expect(ai.rewrites).toBe(2)
-    expect(ai.lastNudge).toMatch(/Xcode Instruments/)
-    expect(r.ok).toBe(false)
-  })
-})
-
-describe("lo que Tailor ya escribió siguiendo al ATS no se vuelve a pedir", () => {
-  it("la línea del registro viaja al ATS y queda en «mantener» aunque diga otra cosa", async () => {
-    const store = new MemoryStore()
-    const tree = buildTree(RAW)
-    const escrita = tree.roles[0].bullets[1].text
-    const jdKey = cacheKey.jd("Buscamos cajera con arqueo de caja y atención al cliente", "m1")
-    await store.write("ats3-log", cacheKey.log("cv1", jdKey), [{ findingId: "f", nodeId: tree.roles[0].bullets[1].id, kind: "applied", after: escrita, at: 0 }])
-    const ai = new CountingAi()
-    const { acts } = await analyze(ai, store)
-    expect(ai.alreadyFixedSeen[0]).toEqual([escrita])
-    const f = acts.find((a) => a.act === "findings")
-    if (f?.act !== "findings") throw new Error("sin hallazgos")
-    expect(f.findings.some((x) => x.type === "improve_bullet")).toBe(false)
-  })
 })
 
 describe("X-Y-Z y viñetas nuevas", () => {
-  it("la línea que dice qué hizo y no qué logró pide el logro con su hueco", async () => {
-    const ai = new CountingAi()
-    ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: fakeAudit(t).bullets.map((b) => ({ ...b, decision: "keep" as const, instruction: null })) })
-    ai.toolsFor = (t) => [{ id: t.roles[0].bullets[0].id, tools: [], sinLogro: true }]
-    const { acts } = await analyze(ai, new MemoryStore())
-    const f = acts.find((a) => a.act === "findings")
-    if (f?.act !== "findings") throw new Error("sin hallazgos")
-    const t = f.findings.find((x) => x.type === "improve_bullet")
-    expect(t?.needsOutcome).toBe(true)
-    expect(t?.needsFigure).toBe(true)
-  })
-
   it("una viñeta nueva se escribe al final de su puesto sin exigir conservar nada", async () => {
     const ai = new CountingAi()
     const tree = buildTree(RAW)
@@ -573,6 +462,13 @@ describe("lo que filtra y no se redacta: sólo se avisa", () => {
     ])
     expect(avisos[0].gain).toBe(0)
   })
+  it("un nivel de idioma que el CV cumple no se avisa aunque el modelo diga que no (B2 cumple A1)", async () => {
+    const fs = await conCondiciones([
+      { text: "Inglés: A1", met: "no", cvSays: "Inglés B2" },
+      { text: "Inglés C1", met: "no", cvSays: "Inglés B1" },
+    ])()
+    expect(fs.filter((x) => x.type === "eligibility").map((x) => x.subject)).toEqual(["Inglés C1"])
+  })
   it("la credencial que ya es condición no se repite como skill que falta", async () => {
     const fs = await conCondiciones(
       [{ text: "Inglés fluido obligatorio", met: "no", cvSays: "Inglés B2" }],
@@ -584,7 +480,7 @@ describe("lo que filtra y no se redacta: sólo se avisa", () => {
 })
 
 describe("ninguna skill suelta y ninguna que vuelva", () => {
-  const listada = (t: ResumeTree) => ({ ...fakeAudit(t), hard: fakeAudit(t).hard.map((h) => (h.skill === "Arqueo de caja" ? { ...h, status: "listed" as const, evidenceNodeId: null } : h)) })
+  const listada = (t: ResumeTree) => ({ ...fakeAudit(t), hard: fakeAudit(t).hard.map((h) => (h.skill === "Arqueo de caja" ? { ...h, status: "listed" as const, evidenceNodeId: null, writeIn: t.roles[0].bullets[1]?.id ?? null } : h)) })
   // La skill vive sólo en Habilidades: ninguna viñeta la escribe.
   const SOLO_LISTA: RawResume = {
     ...RAW,
@@ -620,102 +516,6 @@ describe("ninguna skill suelta y ninguna que vuelva", () => {
   })
 })
 
-describe("sacar «por repetida» lo comprueba el código", () => {
-  const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: [
-    "• Resolved critical bugs to improve app stability, contributing to a 20% reduction in crash rates",
-    "• Improved app stability and reduced crash rates through thorough debugging",
-    "• Refactored the lunch box module on the main screen",
-    "• Built the offline cache for the orders screen",
-    "• Migrated the payment flow to SwiftUI",
-  ].join("\n") }] }
-  const run = async (reasons: string[]) => {
-    const ai = new CountingAi()
-    ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b, i) => ({ id: b.id, decision: reasons[i] ? ("remove" as const) : ("keep" as const), reason: reasons[i] ?? "", instruction: null, needsFigure: false })) })
-    const gen = runAnalysis({ raw, jdText: "Buscamos iOS", language: "en", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
-    let out = await gen.next()
-    const acts = []
-    while (!out.done) { acts.push(out.value); out = await gen.next() }
-    const sc = acts.find((a) => a.act === "score")
-    if (sc?.act !== "score") throw new Error("sin puntaje")
-    return sc.audit.bullets.map((b) => b.decision)
-  }
-
-  it("no se saca la línea con cifra para dejar una sin cifra: se va la citada", async () => {
-    const d = await run(["Overlaps with «Improved app stability and reduced crash rates through thorough debugging»."])
-    expect(d[0]).not.toBe("remove")
-    expect(d[1]).toBe("remove")
-  })
-
-  it("una línea que se cita a sí misma no se saca", async () => {
-    const d = await run([undefined as unknown as string, undefined as unknown as string, "Adds less than «Refactored the lunch box module on the main screen»."])
-    expect(d[2]).not.toBe("remove")
-  })
-
-  it("una línea que nombra algo que la citada no nombra no la repite: no se saca", async () => {
-    // Medido en producción: «Migrated … SwiftUI» contra «Built the offline cache…» se «parecían».
-    const d = await run([undefined as unknown as string, undefined as unknown as string, undefined as unknown as string, undefined as unknown as string, "Repeats «Built the offline cache for the orders screen»."])
-    expect(d[4]).not.toBe("remove")
-  })
-
-  it("la que el código conserva no queda con el motivo de sacarla", async () => {
-    const ai = new CountingAi()
-    ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b, i) => ({ id: b.id, decision: i === 4 ? ("remove" as const) : ("keep" as const), reason: i === 4 ? "Repeats «Built the offline cache for the orders screen»." : "", instruction: null, needsFigure: false })) })
-    const gen = runAnalysis({ raw, jdText: "Buscamos iOS", language: "en", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
-    let out = await gen.next()
-    const acts = []
-    while (!out.done) { acts.push(out.value); out = await gen.next() }
-    const sc = acts.find((a) => a.act === "score")
-    if (sc?.act !== "score") throw new Error("sin puntaje")
-    expect(sc.audit.bullets[4].decision).not.toBe("remove")
-    expect(sc.audit.bullets[4].reason).not.toMatch(/Repeats/)
-  })
-
-  it("repetida de verdad, citando otra línea que también la prueba: se saca", async () => {
-    const d = await run([undefined as unknown as string, "Repeats «Resolved critical bugs to improve app stability, contributing»."])
-    expect(d[1]).toBe("remove")
-  })
-})
-
-describe("el rango de viñetas por puesto lo garantiza el código", () => {
-  it("«no sirve a este puesto» no saca: sólo lo repetido o lo que pasa del máximo", async () => {
-    // Cada una cita a la siguiente; sólo dos pares se repiten de verdad (sacar exige que la citada diga lo mismo).
-    const lineas = ["Programé una web en Angular con 15% más de velocidad", "Programé la web en Angular y mejoré su velocidad", "Hice el arqueo de caja al cierre", "Hice el arqueo de caja al cierre del turno", "Di atención al cliente en el mostrador"]
-    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: lineas.map((l) => `• ${l}`).join("\n") }] }
-    const ai = new CountingAi()
-    ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b) => ({ id: b.id, decision: "remove" as const, reason: "no sirve", instruction: null, needsFigure: false })) })
-    const gen = runAnalysis({ raw, jdText: "Buscamos cajera con arqueo de caja y atención al cliente", language: "es", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
-    const acts = []
-    let out = await gen.next()
-    while (!out.done) { acts.push(out.value); out = await gen.next() }
-    const sc = acts.find((a) => a.act === "score")
-    if (sc?.act !== "score") throw new Error("sin puntaje")
-    const tree = sc.tree
-    const quedan = sc.audit.bullets.filter((b) => b.decision !== "remove").map((b) => tree.roles[0].bullets.find((x) => x.id === b.id)!.text)
-    expect(quedan).toHaveLength(lineas.length)
-  })
-
-  it("sacando repetidas, el puesto no baja del mínimo: vuelve primero lo que prueba el puesto", async () => {
-    // Cada una cita a la siguiente; sólo dos pares se repiten de verdad (sacar exige que la citada diga lo mismo).
-    const lineas = ["Programé una web en Angular con 15% más de velocidad", "Programé la web en Angular y mejoré su velocidad", "Hice el arqueo de caja al cierre", "Hice el arqueo de caja al cierre del turno", "Di atención al cliente en el mostrador"]
-    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: lineas.map((l) => `• ${l}`).join("\n") }] }
-    const ai = new CountingAi()
-    ai.auditFor = (t) => ({
-      ...fakeAudit(t),
-      bullets: t.roles[0].bullets.map((b, i) => ({ id: b.id, decision: "remove" as const, reason: `Repite a «${lineas[(i + 1) % lineas.length]}».`, instruction: null, needsFigure: false })),
-    })
-    const gen = runAnalysis({ raw, jdText: "Buscamos cajera con arqueo de caja y atención al cliente", language: "es", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
-    const acts = []
-    let out = await gen.next()
-    while (!out.done) { acts.push(out.value); out = await gen.next() }
-    const sc = acts.find((a) => a.act === "score")
-    if (sc?.act !== "score") throw new Error("sin puntaje")
-    const quedan = sc.audit.bullets.filter((b) => b.decision !== "remove").map((b) => sc.tree.roles[0].bullets.find((x) => x.id === b.id)!.text)
-    expect(quedan).toHaveLength(BULLETS_PER_ROLE_MIN)
-    expect(quedan).toContain("Hice el arqueo de caja al cierre del turno")
-    expect(quedan).toContain("Di atención al cliente en el mostrador")
-  })
-})
-
 describe("una línea que no cambió conserva su juicio entre análisis (medido en producción, 2026-10-02)", () => {
   it("el modelo cambia de opinión sobre lo que nadie tocó: manda el juicio anterior", async () => {
     const store = new MemoryStore()
@@ -724,10 +524,9 @@ describe("una línea que no cambió conserva su juicio entre análisis (medido e
       ai.auditFor = (t) => {
         const base = fakeAudit(t)
         if (!cambiaDeOpinion) return base
-        // Segunda lectura: la línea que ya servía pasa a «mejorar» y la skill demostrada, a faltante.
+        // Segunda lectura: la skill demostrada pasa a faltante.
         return {
           ...base,
-          bullets: base.bullets.map((b, i) => (i === 0 ? { ...b, decision: "improve" as const, instruction: "otra cosa" } : b)),
           hard: base.hard.map((h) => (h.skill === "Atención al cliente" ? { ...h, status: "missing" as const, evidenceNodeId: null } : h)),
         }
       }
@@ -742,7 +541,7 @@ describe("una línea que no cambió conserva su juicio entre análisis (medido e
     const primera = await correr("Cajera", false)
     // El resumen cambió: la auditoría se vuelve a pedir. Las viñetas no cambiaron.
     const segunda = await correr("Cajera de sucursal", true)
-    expect(segunda.audit.bullets[0].decision).toBe(primera.audit.bullets[0].decision)
+    expect(primera.audit.hard.find((h) => h.skill === "Atención al cliente")?.status).toBe("demonstrated")
     expect(segunda.audit.hard.find((h) => h.skill === "Atención al cliente")?.status).toBe("demonstrated")
   })
 })
@@ -781,52 +580,8 @@ describe("lo que el ATS cita con las palabras del CV cuenta, aunque no sea la pa
   })
 })
 
-describe("lo que se saca por exceso dice por qué (medido en producción, 2026-10-02)", () => {
-  it("el motivo es el exceso del puesto, no el que el modelo dio para conservarla", async () => {
-    const lineas = Array.from({ length: 8 }, (_, i) => `Atendí la caja número ${i + 1} del turno`)
-    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: lineas.map((l) => `• ${l}`).join("\n") }] }
-    const ai = new CountingAi()
-    ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b) => ({ id: b.id, decision: "keep" as const, reason: "Se superpone con «Atendí la caja número 1 del turno»", instruction: null, needsFigure: false })) })
-    const gen = runAnalysis({ raw, jdText: "Buscamos cajera", language: "es", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
-    const acts = []
-    let out = await gen.next()
-    while (!out.done) { acts.push(out.value); out = await gen.next() }
-    const sc = acts.find((a) => a.act === "score")
-    if (sc?.act !== "score") throw new Error("sin puntaje")
-    const sacadas = sc.audit.bullets.filter((b) => b.decision === "remove")
-    expect(sacadas.length).toBe(2)
-    for (const b of sacadas) {
-      expect(b.reason).toMatch(/tiene 8 viñetas/)
-      expect(b.reason).not.toMatch(/superpone/)
-    }
-  })
-})
-
-describe("lo que el ATS ya decidió conservar no se vuelve a discutir", () => {
-  it("un segundo análisis no saca una viñeta que el primero conservó y no cambió", async () => {
-    const lineas = ["Atendí la caja del turno", "Hice el arqueo de caja al cierre", "Di atención al cliente", "Ordené la góndola", "Repuse mercadería"]
-    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: lineas.map((l) => `• ${l}`).join("\n") }] }
-    const store = new MemoryStore()
-    const correr = async (sacar: number[], resumen: string) => {
-      const ai = new CountingAi()
-      ai.auditFor = (t) => ({ ...fakeAudit(t), bullets: t.roles[0].bullets.map((b, i) => ({ id: b.id, decision: sacar.includes(i) ? ("remove" as const) : ("keep" as const), reason: "", instruction: null, needsFigure: false })) })
-      const gen = runAnalysis({ raw: { ...raw, summary: resumen }, jdText: "Buscamos cajera", language: "es", resumeId: "cv1", model: "m1", ai, store })
-      const acts = []
-      let out = await gen.next()
-      while (!out.done) { acts.push(out.value); out = await gen.next() }
-      const sc = acts.find((a) => a.act === "score")
-      if (sc?.act !== "score") throw new Error("sin puntaje")
-      return sc.audit.bullets.map((b) => b.decision)
-    }
-    await correr([], "Cajera")
-    // El resumen cambió, así que el diagnóstico se vuelve a pedir; las viñetas no. Ahora quiere sacar la 4.ª.
-    const segunda = await correr([3], "Cajera con experiencia en sucursal")
-    expect(segunda[3]).not.toBe("remove")
-  })
-})
-
 describe("una línea que Tailor ya cerró no recibe más encargos", () => {
-  it("la skill que el ATS mandaba escribir ahí pasa a pregunta", async () => {
+  it("la línea que Tailor ya escribió no recibe otra skill", async () => {
     const store = new MemoryStore()
     const tree = buildTree(RAW)
     const escrita = tree.roles[0].bullets[1].text
@@ -838,39 +593,8 @@ describe("una línea que Tailor ya cerró no recibe más encargos", () => {
     const f = acts.find((a) => a.act === "findings")
     if (f?.act !== "findings") throw new Error("sin hallazgos")
     expect(f.findings.some((x) => x.nodeId === tree.roles[0].bullets[1].id)).toBe(false)
-    expect(f.findings.find((x) => x.subject === "Arqueo de caja diario")?.remedy).toBe("ask")
-  })
-})
-
-describe("el rango de viñetas por puesto lo valida el código", () => {
-  const siete: RawResume = {
-    ...RAW,
-    workExperience: [{ ...RAW.workExperience![0], description: Array.from({ length: 8 }, (_, i) => `• Atendí la caja número ${i + 1} del turno`).join("\n") }],
-  }
-  const run = async (ai: CountingAi) => {
-    const gen = runAnalysis({ raw: siete, jdText: "Buscamos cajera", language: "es", resumeId: "cv1", model: "m1", ai, store: new MemoryStore() })
-    let out = await gen.next()
-    while (!out.done) out = await gen.next()
-    return out.value
-  }
-  const todasKeep = (tree: ResumeTree, quitar: number): AuditFacts => ({
-    ...fakeAudit(tree),
-    bullets: tree.roles[0].bullets.map((b, i) => ({ id: b.id, decision: i < quitar ? ("remove" as const) : ("keep" as const), reason: "", instruction: null, needsFigure: false })),
-  })
-
-  it("más del tope: se pide UNA vez más nombrando el puesto", async () => {
-    const ai = new CountingAi()
-    ai.auditFor = (tree, nudge) => todasKeep(tree, nudge ? 2 : 0)
-    const t = await run(ai)
-    expect(ai.audits).toBe(2)
-    expect(t.calls).toBe(4)
-  })
-
-  it("dentro del rango no se pide nada más", async () => {
-    const ai = new CountingAi()
-    ai.auditFor = (tree) => todasKeep(tree, 2)
-    await run(ai)
-    expect(ai.audits).toBe(1)
+    // No se pierde: encaja con ese puesto, así que va en una viñeta nueva de él.
+    expect(f.findings.find((x) => x.subject === "Arqueo de caja diario")?.nodeId).toBe(`nuevo:${tree.roles[0].id}`)
   })
 })
 
@@ -907,8 +631,8 @@ describe("la reescritura y su reintento", () => {
       ai.rewrites++
       return sug({ text: "Atendí a los clientes en la línea de cajas resolviendo consultas y cobros con POS" })
     }
-    await req(ai, new MemoryStore(), { reason: "r", instruction: "i", terms: ["POS"], needsFigure: false, told: "t" })
-    expect(visto).toMatchObject({ reason: "r", instruction: "i", terms: ["POS"], told: "t" })
+    await req(ai, new MemoryStore(), { reason: "r", terms: ["POS"], needsFigure: false, told: "t" })
+    expect(visto).toMatchObject({ reason: "r", terms: ["POS"], told: "t" })
   })
 
   it("una skill que el ATS mandó escribir y falta: se pide una vez más nombrándola", async () => {
@@ -979,13 +703,6 @@ describe("la reescritura y su reintento", () => {
       expect(r.ok).toBe(true)
     })
 
-    it("el logro no es sólo su hueco: «… en [x%]» no se ofrece", async () => {
-      const ai = new CountingAi()
-      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas en [x%]", placeholders: [{ token: "[x%]", type: "PERCENT_DELTA", label: "x", hint: "", evidenceNeeded: "", required: true }] })
-      const r = await pedir(ai, { logro: true, needsFigure: true })
-      expect(r.ok).toBe(false)
-    })
-
     it("la misma palabra nueva dos veces en la línea no se ofrece", async () => {
       const ai = new CountingAi()
       // Con «Proponer con IA», que admite hasta 16 palabras nuevas: así llegó en producción.
@@ -1031,30 +748,8 @@ describe("la reescritura y su reintento", () => {
       ai.rewrites++
       return sug({ bulletId: "summary", text: "Cashier with 3 years of experience in customer service and cash handling. Balanced the till at every close with zero discrepancies across 3 years. Holds a retail certificate and has worked night shifts.", actionVerb: "" })
     }
-    const r = await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "en", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "en", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
     expect(nudges[1] ?? "").toMatch(/third person/)
-    // Y si el reintento insiste, la oración se saca: «Holds a…» no llega al CV.
-    if (r.ok) expect(r.suggestion.text).not.toMatch(/Holds a/)
-  })
-
-  it("el resumen es un párrafo y sin datos sueltos («Español nativo.») (visto en local, 2026-10-02)", async () => {
-    const ai = new CountingAi()
-    let visto: unknown = null
-    ai.rewriteSummary = async (input?: unknown) => {
-      visto = input
-      ai.rewrites++
-      return sug({ bulletId: "summary", text: "Cajera con 3 años de experiencia en atención al cliente en Supermercado Sur S.A. de C.V.\nRealicé el arqueo de caja al cierre del turno con cero diferencias.\nEspañol nativo.", actionVerb: "" })
-    }
-    const r = await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
-    expect(r.ok).toBe(true)
-    if (r.ok) {
-      expect(r.suggestion.text).not.toMatch(/\n/)
-      expect(r.suggestion.text).not.toMatch(/Español nativo/)
-      // Una abreviatura no es un fin de oración: «S.A. de C.V.» queda entera.
-      expect(r.suggestion.text).toContain("S.A. de C.V.")
-    }
-    // Y le llega la trayectoria con sus fechas: sin ellas atribuía los años a una especialidad.
-    expect(visto).toMatchObject({ career: [{ company: "Supermercado Sur", from: "2021-03", to: "2024-06" }] })
   })
 
   it("al cambiar una apertura débil se va la fórmula, no el trabajo: «Encargado del mantenimiento…» → «Mantuve las máquinas» no se ofrece", async () => {
@@ -1068,6 +763,15 @@ describe("la reescritura y su reintento", () => {
     ai2.nextSuggestion = sug({ text: "Realicé el mantenimiento preventivo de las máquinas" })
     const bueno = await runRewrite({ tree: t, nodeId: t.roles[0].bullets[0].id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai: ai2, store: new MemoryStore() })
     expect(bueno.ok).toBe(true)
+  })
+
+  it("una apertura débil cambiada por otra apertura débil no se ofrece («Helped with» → «Assisted with»)", async () => {
+    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: "• Helped with the stock counts\n• Moved pallets with the forklift" }] }
+    const t = buildTree(raw)
+    const ai = new CountingAi()
+    ai.nextSuggestion = sug({ text: "Assisted with the stock counts across the warehouse" })
+    const r = await runRewrite({ tree: t, nodeId: t.roles[0].bullets[0].id, spec: SPEC, language: "en", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
+    expect(r.ok).toBe(false)
   })
 
   it("nunca reintenta dos veces: eso escondería un prompt que dejó de funcionar", async () => {
@@ -1124,20 +828,6 @@ describe("aplicar mide, no promete", () => {
     expect(r.tree.roles[0].bullets[0].origin).toBe("AI_ACCEPTED")
   })
 
-  it("el delta sale de recalcular, no de lo que diga el modelo", () => {
-    const tree = buildTree(RAW)
-    const target = tree.roles[0].bullets[1]
-    const audit = fakeAudit()
-    const r = applySuggestion(
-      tree,
-      // Le agrega una cifra: el componente "metric" sube y el delta tiene que
-      // ser exactamente el que la pantalla había prometido.
-      anchored({ bulletId: target.id, basedOnHash: target.hash, text: "Realicé el arqueo de caja de 3 turnos al cierre" }),
-      SPEC, audit, CHECKS,
-    )
-    const promised = scoreResume(tree, SPEC, audit, CHECKS).components.find((c) => c.key === "metric")!.gainPerUnit
-    expect(r.delta).toBeCloseTo(promised, 10)
-  })
 })
 
 // ── volver al formato de la aplicación ──────────────────────────────────────
@@ -1154,6 +844,15 @@ describe("escribir de vuelta el CV", () => {
   it("un puesto que el motor no tocó vuelve intacto", () => {
     const out = writeBack(buildTree(RAW), RAW)
     expect(readBullets(out.workExperience![0].description!)).toEqual(readBullets(RAW.workExperience![0].description!))
+  })
+
+  it("escribir una línea no reformatea los OTROS puestos: su descripción vuelve byte a byte (QA, 2026-10-02)", () => {
+    const otro = "Empresa familiar de alimentos.\n\n- Repuse mercadería\n* Ordené la góndola"
+    const raw: RawResume = { ...RAW, workExperience: [RAW.workExperience![0], { jobTitle: "Repositor", employer: "Almacén", startDate: "2019-01", endDate: "2020-12", description: otro }] }
+    const tree = buildTree(raw)
+    const out = writeBack(writeInto(tree, tree.roles[0].bullets[0].id, "Atendí a los clientes con cobro y consultas"), raw)
+    expect(out.workExperience![1].description).toBe(otro)
+    expect(out.workExperience![0].description).toContain("Atendí a los clientes con cobro y consultas")
   })
 })
 
@@ -1201,7 +900,6 @@ const specSkills = {
 } as unknown as JobSpec
 
 const auditSkills: AuditFacts = {
-  bullets: [], summary: { identity: true, proof: true, fit: true, extra: true },
   hard: [{ skill: "Combine", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null }],
   soft: [],
 }

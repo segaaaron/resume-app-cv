@@ -4,10 +4,9 @@
 // (CEO, 2026-09-29). El código no juzga ninguna línea: traduce lo que el ATS
 // decidió y le pone la ganancia que mide el puntaje.
 
-import { findingId, mismaRaiz, nodeHash, normalize, type Finding, type JobSpec, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
-import { SKILLS_MAX } from "@/lib/ats3/ledger"
-import { opensWeakly } from "@/lib/services/ai/shared/empty-phrasing"
-import { cargoNucleo, cvTextOf, experienceYears, gainOf, statesQuantity, titleWritten, type AuditFacts, type Score } from "@/lib/ats3/score"
+import { findingId, mismaRaiz, nodeHash, normalize, nuevaEn, type Finding, type JobSpec, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
+import { BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN, SKILLS_MAX } from "@/lib/ats3/ledger"
+import { cargoNucleo, cvTextOf, experienceYears, gainOf, titleWritten, type AuditFacts, type Score } from "@/lib/ats3/score"
 
 /**
  * ¿EL CV RESPALDA ESTE NOMBRE? Cada palabra del nombre aparece en algún lado del
@@ -37,47 +36,7 @@ export function alternativaRespaldada(tree: ResumeTree, nombre: string): string 
   )
 }
 
-/**
- * LO QUE HAY PARA HACER EN CADA VIÑETA, comprobable (CEO, 2026-09-29): las skills
- * del aviso que el CV respalda y el ATS mandó escribir ahí, la cifra que el
- * puesto pide y la línea no dice, y las herramientas de las habilidades que ese
- * trabajo usó. Un solo dueño: de acá salen las tarjetas y la decisión que se ve.
- */
-export function trabajoPorViñeta(tree: ResumeTree, audit: AuditFacts): Map<NodeId, Trabajo> {
-  /**
-   * NINGÚN NOMBRE DEL AVISO SE ESCRIBE DENTRO DE UNA VIÑETA (CEO, 2026-09-29).
-   * Esa puerta (`writeIn`) metía afirmaciones que el CV no hace: «Integrated API
-   * design, RESTful APIs…» sobre una línea de integración. Un requisito que el CV
-   * demuestra con otras palabras va a Habilidades (`skillPlan`); uno que no
-   * muestra se pregunta. En la viñeta sólo entra lo verificado: la herramienta
-   * de la lista de la persona, su cifra, y el verbo en lugar de la apertura débil.
-   */
-  const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text] as const)))
-  return new Map(
-    audit.bullets
-      // Una línea que Tailor ya cerró no tiene trabajo: ni cifra, ni herramienta, ni apertura.
-      .filter((d) => d.decision !== "remove" && !d.cerrada)
-      .map((d) => [
-        d.id,
-        {
-          pideCifra: d.needsFigure && !statesQuantity(textoDe.get(d.id) ?? ""),
-          facts: d.facts ?? [],
-          // «Responsable de…», «Helped with…»: se prueba con la lista de aperturas del proyecto.
-          aperturaDebil: opensWeakly(textoDe.get(d.id) ?? ""),
-          pideLogro: Boolean(d.needsOutcome),
-        },
-      ]),
-  )
-}
-
-export type Trabajo = { pideCifra: boolean; facts: string[]; aperturaDebil: boolean; pideLogro: boolean }
-
-/** Hay algo verificable que hacer en esta viñeta. */
-export function hayTrabajo(t: Trabajo | undefined): boolean {
-  return Boolean(t && (t.pideCifra || t.facts.length > 0 || t.aperturaDebil || t.pideLogro))
-}
-
-export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, spec?: JobSpec): Finding[] {
+export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, spec?: JobSpec, cerradas: readonly string[] = []): Finding[] {
   const out: Finding[] = []
   const textoDe = new Map<NodeId, string>([[tree.summary.id, tree.summary.text], ...tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text] as [NodeId, string]))])
   const tarjeta = (f: Omit<Finding, "id" | "nodeText" | "nodeHash"> & { matiz?: string }): Finding => {
@@ -86,53 +45,19 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
     return { id: findingId(f.nodeId, f.type, matiz), nodeText: texto, nodeHash: nodeHash(texto), ...resto }
   }
 
-  const trabajo = trabajoPorViñeta(tree, audit)
-
-  // ── las viñetas ─────────────────────────────────────────────────────────────
-  const decision = new Map(audit.bullets.map((b) => [b.id, b]))
-  for (const role of tree.roles) {
-    for (const b of role.bullets) {
-      const d = decision.get(b.id)
-      if (!d) continue
-      if (d.decision === "remove") {
-        out.push(tarjeta({ type: "remove_bullet", component: "bullets", remedy: "remove", nodeId: b.id, gain: gainOf(score, "bullets"), detail: "", reason: d.reason }))
-        continue
-      }
-      const t = trabajo.get(b.id)
-      const pideCifra = t?.pideCifra ?? false
-      /**
-       * «Mantener» con una skill que escribir o una cifra que el puesto pide
-       * TAMBIÉN es trabajo sobre esa línea: se hace en la misma tarjeta.
-       */
-      // Un hecho nuevo del CV (la herramienta que ese trabajo usó) también es trabajo sobre la línea.
-      const facts = t?.facts ?? []
-      /**
-       * SÓLO LO QUE SE PUEDE COMPROBAR (CEO, 2026-09-29). Una tarjeta de mejorar
-       * existe si hay algo concreto que agregar: la herramienta que ese trabajo
-       * usó, la skill del aviso que el CV respalda, o la cifra que el puesto pide.
-       * «Mejorar» sin nada de eso era una reescritura libre, y medido en 8 corridas
-       * mezclaba logros de puestos distintos y metía frases del aviso.
-       */
-      if (hayTrabajo(t)) {
-        out.push(
-          tarjeta({
-            type: "improve_bullet",
-            component: "bullets",
-            remedy: "rewrite",
-            nodeId: b.id,
-            gain: (d.decision === "improve" ? gainOf(score, "bullets") : 0) + (pideCifra ? gainOf(score, "metric") : 0),
-            detail: "",
-            ...(facts.length ? { facts } : {}),
-            ...(t?.aperturaDebil ? { weakOpener: true } : {}),
-            ...(pideCifra ? { needsFigure: true } : {}),
-            ...(t?.pideLogro ? { needsOutcome: true } : {}),
-          }),
-        )
-      }
-    }
-  }
-
-  // ── las skills sin ninguna línea donde escribirlas: se le pregunta a la persona
+  /**
+   * ── CUÁNTAS TARJETAS DE SKILL (CEO, 2026-10-05) ───────────────────────────
+   *
+   * Una tarjeta por skill que falta daba 37 contra X-Team; ubicarlas en «el
+   * trabajo más cercano» daba 28 y Tailor inventaba («the Flashlight feature»,
+   * «Rendered Rappi with Skia»). Se escribe con verdad sólo donde la persona YA
+   * hizo ese trabajo: eso lo decide el ATS (`writeIn`) y el código comprueba que
+   * la viñeta exista, que Tailor no la haya cerrado y que lleve UNA skill. Esas
+   * van una por tarjeta, en su línea. Todas las demás —sin evidencia en el CV—
+   * van en UNA tarjeta: la persona dice cuál tiene y dónde la usó, y recién ahí
+   * Tailor la escribe. Nada se pierde y nada se escribe sin respaldo.
+   * Lo deseable que falta no se escribe: un plus que el CV no tiene.
+   */
   const credencial = new Set(
     [...(spec?.mustHave ?? []), ...(spec?.niceToHave ?? [])].filter((r) => r.kind === "credential").map((r) => normalize(r.skill)),
   )
@@ -145,48 +70,124 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
   const condiciones = (audit.conditions ?? []).map((c) => normalize(c.text).split(" "))
   const enCondicion = (skill: string) =>
     condiciones.some((palabras) => normalize(skill).split(" ").filter(Boolean).every((w) => palabras.some((p) => mismaRaiz(p, w))))
+
+  // Una credencial —título, licencia, idioma— se tiene o no se tiene: se avisa sin botón, fuera del cupo.
   for (const h of audit.hard) {
-    if (h.status === "demonstrated") continue
-    const key = h.requirement === "MUST" ? "must" : "nice"
-    /**
-     * Una credencial —título, licencia, idioma— se tiene o no se tiene: vive en
-     * su sección del CV, no en una viñeta. La tarjeta lo dice sin botón de IA;
-     * si ya está nombrada, no hay nada más que hacer.
-     */
-    const esCredencial = credencial.has(normalize(h.skill))
-    if (h.status === "listed" && esCredencial) continue
-    // Una credencial que ya es una condición del aviso («Fluent English is mandatory») la avisa esa condición: no se repite.
-    if (esCredencial && enCondicion(h.skill)) continue
+    if (h.status !== "missing" || h.requirement !== "MUST" || !credencial.has(normalize(h.skill)) || enCondicion(h.skill)) continue
+    out.push(tarjeta({ type: "missing_skill", component: "must", remedy: "none", subject: h.skill, matiz: normalize(h.skill), nodeId: tree.summary.id, gain: gainOf(score, "must"), detail: h.status }))
+  }
+
+  const orden = new Map((spec?.mustHave ?? []).map((r, i) => [normalize(r.skill), i] as const))
+  const duras = audit.hard
+    .filter((h) => h.status !== "demonstrated" && h.requirement === "MUST" && !credencial.has(normalize(h.skill)))
+    .sort((x, y) => (orden.get(normalize(x.skill)) ?? 999) - (orden.get(normalize(y.skill)) ?? 999))
+  type Candidata = { nombre: string; component: "must" | "soft"; status: string; question: string | null }
+  const candidata = (nombre: string, component: "must" | "soft", status: string, question: string | null = null): Candidata => ({ nombre, component, status, question })
+  const rolDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, r.id] as const)))
+  const cerradasSet = new Set(cerradas)
+  /**
+   * ── EL PLAN POR PUESTO (CEO, 2026-10-05) ──────────────────────────────────
+   * Cada línea lleva como mucho UNA dura y UNA blanda (la blanda como el hecho
+   * que la muestra). Lo que encaja con un puesto pero con ninguna línea va en una
+   * viñeta nueva de ese puesto, hasta 6. Un puesto con menos de 4 al que la
+   * vacante no le aporta nada pregunta qué otro trabajo hubo ahí. El resto —sin
+   * evidencia en el CV— va a la tarjeta agrupada.
+   */
+  const porLinea = new Map<string, { dura?: Candidata; blanda?: Candidata }>()
+  const porPuesto = new Map<string, Candidata[]>()
+  const sinEvidencia: Candidata[] = []
+  for (const h of duras) {
+    const c = candidata(h.skill, "must", h.status, h.question)
+    const role = h.writeIn ? rolDe.get(h.writeIn) : undefined
+    if (!h.writeIn || !role) {
+      sinEvidencia.push(c)
+      continue
+    }
+    const linea = porLinea.get(h.writeIn)
+    if (h.writeInRelation === "same_task" && !cerradasSet.has(h.writeIn) && !linea?.dura) {
+      porLinea.set(h.writeIn, { ...linea, dura: c })
+      continue
+    }
+    // Encaja con el puesto y no con una línea libre: viñeta nueva de ese puesto.
+    porPuesto.set(role, [...(porPuesto.get(role) ?? []), c])
+  }
+  for (const x of audit.soft.filter((y) => y.status !== "demonstrated")) {
+    const c: Candidata = { nombre: x.signal, component: "soft", status: x.status, question: null }
+    const linea = x.writeIn ? porLinea.get(x.writeIn) : undefined
+    if (x.writeIn && rolDe.has(x.writeIn) && !cerradasSet.has(x.writeIn) && !linea?.blanda) porLinea.set(x.writeIn, { ...linea, blanda: c })
+    else sinEvidencia.push(c)
+  }
+  // Una tarjeta por línea, con su dura y su blanda juntas.
+  for (const [nodeId, { dura, blanda }] of porLinea) {
+    const juntas = [dura, blanda].filter((c): c is Candidata => Boolean(c))
+    const nombres = juntas.map((c) => c.nombre)
     out.push(
       tarjeta({
         type: "missing_skill",
-        component: key,
-        remedy: esCredencial ? "none" : "ask",
-        subject: h.skill,
-        matiz: normalize(h.skill),
-        nodeId: tree.summary.id,
-        gain: gainOf(score, key) * falta(h.status),
-        detail: h.status,
-        ...(h.question && !esCredencial ? { question: h.question } : {}),
+        component: dura ? "must" : "soft",
+        remedy: "ask",
+        subject: nombres.join(" + "),
+        terms: nombres,
+        matiz: nombres.map(normalize).join("+"),
+        nodeId,
+        gain: juntas.reduce((n, c) => n + gainOf(score, c.component) * falta(c.status), 0),
+        detail: juntas[0].status,
+        roleId: rolDe.get(nodeId),
+        ...(dura?.question ? { question: dura.question } : {}),
       }),
     )
   }
-
-  // ── las soft skills que el CV no demuestra: también se preguntan ────────────
-  // Una soft se demuestra con un logro. Sin uno en el CV, se le pide a la persona
-  // y con lo que cuente Tailor la escribe en su puesto.
-  for (const x of audit.soft) {
-    if (x.status === "demonstrated") continue
+  // Las viñetas nuevas, puesto por puesto: hasta 6; y el puesto que queda debajo de 4 pregunta.
+  for (const r of tree.roles) {
+    const n = r.bullets.length
+    const nuevas = (porPuesto.get(r.id) ?? []).slice(0, Math.max(0, BULLETS_PER_ROLE_MAX - n))
+    for (const c of porPuesto.get(r.id)?.slice(nuevas.length) ?? []) sinEvidencia.push(c)
+    for (const c of nuevas) {
+      out.push(
+        tarjeta({
+          type: "missing_skill",
+          component: "must",
+          remedy: "ask",
+          subject: c.nombre,
+          terms: [c.nombre],
+          matiz: normalize(c.nombre),
+          nodeId: nuevaEn(r.id),
+          gain: gainOf(score, "must") * falta(c.status),
+          detail: c.status,
+          roleId: r.id,
+          ...(c.question ? { question: c.question } : {}),
+        }),
+      )
+    }
+    if (n > 0 && n + nuevas.length < BULLETS_PER_ROLE_MIN) {
+      out.push(
+        tarjeta({
+          type: "role_short",
+          component: "must",
+          remedy: "ask",
+          subject: [r.title, r.company].filter(Boolean).join(" — "),
+          matiz: r.id,
+          nodeId: nuevaEn(r.id),
+          gain: 0,
+          detail: String(n + nuevas.length),
+          roleId: r.id,
+        }),
+      )
+    }
+  }
+  if (sinEvidencia.length > 0) {
+    const nombres = sinEvidencia.map((c) => c.nombre)
     out.push(
       tarjeta({
-        type: "missing_skill",
-        component: "soft",
+        type: "missing_skills",
+        component: sinEvidencia.some((c) => c.component === "must") ? "must" : "soft",
         remedy: "ask",
-        subject: x.signal,
-        matiz: normalize(x.signal),
+        subjects: nombres,
+        // El id cambia si cambia la lista: cerrar una no esconde las demás en el próximo análisis.
+        matiz: [...nombres].map(normalize).sort().join("|"),
         nodeId: tree.summary.id,
-        gain: gainOf(score, "soft") * falta(x.status),
-        detail: x.status,
+        gain: sinEvidencia.reduce((n, c) => n + gainOf(score, c.component) * falta(c.status), 0),
+        detail: String(nombres.length),
       }),
     )
   }
@@ -194,6 +195,14 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
   // ── lo que filtra y no se redacta: sólo se avisa (CEO, 2026-09-30) ─────────
   for (const c of audit.conditions ?? []) {
     if (c.met === "yes") continue
+    /**
+     * UN NIVEL DE IDIOMA QUE SE CUMPLE NO SE AVISA (2026-10-02). Visto en local: «La
+     * vacante exige: Inglés A1 — tu CV dice Inglés B2… probablemente te filtre». El
+     * modelo no comparó los niveles; el marco europeo se compara sin dudas.
+     */
+    const pide = nivelIdioma(c.text)
+    const tiene = nivelIdioma(c.cvSays ?? "")
+    if (pide !== null && tiene !== null && tiene >= pide) continue
     out.push(
       tarjeta({
         type: "eligibility",
@@ -223,12 +232,6 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
     if (tiene < pideAnios && comp) {
       out.push(tarjeta({ type: "years_short", component: "years", remedy: "none", nodeId: tree.summary.id, gain: comp.effectiveWeight - comp.points, detail: `${Math.floor(tiene)}/${pideAnios}` }))
     }
-  }
-
-  // ── el resumen ──────────────────────────────────────────────────────────────
-  const faltan = (["identity", "proof", "fit"] as const).filter((k) => !audit.summary[k])
-  if (faltan.length > 0) {
-    out.push(tarjeta({ type: "summary_gap", component: "summary", remedy: "rewrite", nodeId: tree.summary.id, gain: gainOf(score, "summary"), detail: faltan.join(", ") }))
   }
 
   return out
@@ -291,4 +294,11 @@ export function skillPlan(
     /** Las que dejan de verse. Siguen en tus datos. */
     leaving: declared.slice(0, SKILLS_MAX).filter((s) => !despues.has(normalize(s))),
   }
+}
+
+/** El nivel del marco europeo que dice un texto (A1=1 … C2=6, nativo=7), o null si no dice ninguno. */
+function nivelIdioma(texto: string): number | null {
+  if (/\b(nativ[oa]|native|lengua materna|mother tongue)\b/i.test(texto)) return 7
+  const m = texto.match(/\b([ABC])([12])\b/i)
+  return m ? (m[1].toUpperCase().charCodeAt(0) - 65) * 2 + Number(m[2]) : null
 }

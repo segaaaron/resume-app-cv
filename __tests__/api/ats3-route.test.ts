@@ -279,10 +279,17 @@ describe("la ruta del motor v3", () => {
     expect((await actos(res)).map((a) => a.act)).toContain("findings")
   })
 
-  it("un cuerpo gigante se rechaza en el borde", async () => {
-    const res = await POST(req({ ...CUERPO, jobDescription: "x".repeat(20_001) }))
+  it("un cuerpo absurdo se rechaza en el borde", async () => {
+    const res = await POST(req({ ...CUERPO, jobDescription: "x".repeat(200_001) }))
     expect(res.status).toBe(422)
     expect(llamadas.jd).toBe(0)
+  })
+
+  it("un dato largo del usuario se recorta y el análisis sigue (QA, 2026-10-02)", async () => {
+    // Antes: 422 y análisis muerto con un aviso de 20.001 caracteres o 121 skills.
+    const skills = Array.from({ length: 150 }, (_, i) => ({ name: `Skill ${i}` }))
+    const res = await POST(req({ ...CUERPO, jobDescription: CUERPO.jobDescription + " ".repeat(25_000), resume: { ...CUERPO.resume, skills } }))
+    expect(res.status).toBe(200)
   })
 
   it("lo gastado se registra: UNA fila por petición, con los tokens de todos los prompts", async () => {

@@ -16,32 +16,30 @@ const cvDe = (texto: string) => buildTree({ otherText: texto })
  */
 
 const finding = (over: Partial<Finding>): Finding => ({
-  id: "f1", type: "improve_bullet", component: "bullets", remedy: "rewrite", nodeId: "b_1",
+  id: "f1", type: "missing_skill", component: "must", remedy: "ask", nodeId: "b_1",
   nodeText: "Atendí a los clientes", nodeHash: "h", gain: 4, detail: "", ...over,
 })
 
 const score = (over: Partial<Score> = {}): Score => ({
   total: 60,
-  pillars: { parse: { points: 20, max: 20, ratio: 1 }, relevance: { points: 20, max: 45, ratio: 0.44 }, impact: { points: 20, max: 35, ratio: 0.57 } },
+  pillars: { parse: { points: 20, max: 30, ratio: 0.67 }, relevance: { points: 20, max: 70, ratio: 0.29 } },
   components: [
     { key: "must", pillar: "relevance", numerator: 1, denominator: 2, ratio: 0.5, effectiveWeight: 0.27, points: 12, gainPerUnit: 6 },
     { key: "checks", pillar: "parse", numerator: 0, denominator: 0, ratio: 0, effectiveWeight: 0, points: 0, gainPerUnit: 0 },
-    { key: "bullets", pillar: "impact", numerator: 1, denominator: 4, ratio: 0.25, effectiveWeight: 0.16, points: 4, gainPerUnit: 4 },
-    { key: "metric", pillar: "impact", numerator: 0, denominator: 4, ratio: 0, effectiveWeight: 0.1, points: 0, gainPerUnit: 2 },
   ],
   ...over,
 })
 
 const audit = (over: Partial<AuditFacts> = {}): AuditFacts => ({
-  bullets: [], hard: [], soft: [], summary: { identity: true, proof: true, fit: true, extra: true }, ...over,
+  hard: [], soft: [], ...over,
 })
 
 describe("la decisión del ATS, dicha en la forma que la pantalla pinta", () => {
   it("una tarjeta cae en UNA sola sección", () => {
-    const secciones = sectionsOf(score(), [finding({}), finding({ id: "f2", type: "missing_skill", component: "must", remedy: "ask", subject: "Apigee" })])
+    const secciones = sectionsOf(score(), [finding({ component: "soft" }), finding({ id: "f2", type: "missing_skill", component: "must", remedy: "ask", subject: "Apigee" })])
     const veces = secciones.flatMap((s) => s.checks.map((c) => c.id))
     expect(veces).toHaveLength(new Set(veces).size)
-    expect(secciones.find((s) => s.id === "tips")?.checks.map((c) => c.id)).toEqual(["f1"])
+    expect(secciones.find((s) => s.id === "soft")?.checks.map((c) => c.id)).toEqual(["f1"])
     expect(secciones.find((s) => s.id === "hard")?.checks.map((c) => c.id)).toEqual(["f2"])
   })
 
@@ -49,26 +47,6 @@ describe("la decisión del ATS, dicha en la forma que la pantalla pinta", () => 
     const secciones = sectionsOf(score(), [])
     expect(secciones.find((s) => s.id === "format")?.coveragePct).toBeNull()
     expect(secciones.find((s) => s.id === "hard")?.coveragePct).toBe(50)
-  })
-
-  it("la tarjeta de una viñeta trae el motivo y la instrucción del ATS, lo mismo que recibe Tailor", () => {
-    const c = checkOf(
-      finding({ reason: "Sirve, pero no dice la escala.", instruction: "Decí que era la app de pagos (otra viñeta del puesto).", terms: ["REST"], needsFigure: true }),
-      () => "Integré APIs",
-    )
-    expect(c.line).toBe("Integré APIs")
-    expect(c.reason).toBe("Sirve, pero no dice la escala.")
-    expect(c.instruction).toBe("Decí que era la app de pagos (otra viñeta del puesto).")
-    expect(c.terms).toEqual(["REST"])
-    expect(c.needsFigure).toBe(true)
-    expect(c.titleKey).toBe("type_improve_bullet")
-  })
-
-  it("sacar una viñeta muestra la línea que se va y su motivo", () => {
-    const c = checkOf(finding({ type: "remove_bullet", remedy: "remove", reason: "Repite a otra viñeta." }), () => "Hice arqueos")
-    expect(c.remedy).toBe("remove")
-    expect(c.line).toBe("Hice arqueos")
-    expect(c.reason).toBe("Repite a otra viñeta.")
   })
 
   it("una skill sin rastro pregunta; una credencial no tiene botón de IA", () => {
@@ -89,18 +67,6 @@ describe("la decisión del ATS, dicha en la forma que la pantalla pinta", () => 
     expect(headlineOf(score({ total: 90 }), secciones).recoverable).toBe(10)
   })
 
-  it("la cabecera dice QUÉ es lo crítico: las skills, no cada línea señalada", () => {
-    const secciones = sectionsOf(score(), [
-      finding({ id: "f1", gain: 9, nodeText: "Atendí a los clientes en la línea de cajas" }),
-      finding({ id: "f2", type: "missing_skill", component: "must", remedy: "ask", gain: 9, subject: "Excel avanzado" }),
-    ])
-    const cab = headlineOf(score(), secciones)
-    expect(cab.criticalCount).toBe(2)
-    expect(cab.detail).toEqual(["Excel avanzado"])
-    // Y la viñeta crítica se cuenta: los nombres + las viñetas suman lo que dice el número.
-    expect(cab.criticalLines).toBe(1)
-    expect(cab.detail.length + cab.criticalLines).toBe(cab.criticalCount)
-  })
 })
 
 describe("la tabla de skills: el estado lo decide el ATS, las cuentas se miden", () => {

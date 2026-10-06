@@ -196,7 +196,11 @@ export const PROMPT_VERSION = {
   // p1-20 (2026-09-30): el cargo sin lo que el aviso pone entre paréntesis («(LATAM)»).
   // p1-21 (2026-10-02): una capacidad de rol («architecture decisions», «technical direction») no es un requisito.
   // p1-22 (2026-10-02): un requisito con la redacción larga se recorta, no se descarta (Sezzle: Claude se perdía 0 de 4).
-  P1: "p1-22", // parser de vacante
+  // p1-24 (2026-10-05): « / » con espacios es «A | B» (en el código; la versión sube para no servir lo guardado sin normalizar).
+  // p1-23 (CEO, 2026-10-05): el stack de la EMPRESA es deseable, no requisito; cada blanda se declara {raw, quality} y se guarda la cualidad.
+  // p1-25 (CEO, 2026-10-05): obligatorio = lo que el trabajo central del puesto exige, no el título de la sección (DualEntry: RN+TS y Expo+EAS en responsabilidades).
+  // p1-26 (CEO, 2026-10-05): una capacidad con sus ejemplos es UN requisito con alternativas (SME: 36 requisitos por partir «concurrency: GCD, OperationQueue, async/await»); ejemplos en pares de rubros opuestos.
+  P1: "p1-27", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -225,11 +229,15 @@ export const PROMPT_VERSION = {
   // p2-21 (2026-09-30): el motivo y la pregunta en el idioma del CV, nombrado; una credencial se juzga por lo que es.
   // p2-22 (2026-10-02): cada skill demostrada o listada cita `cvWording`, las palabras del CV que la dicen.
   // p2-23 (2026-10-02): el motivo dice la decisión (keep: qué prueba) en una frase limpia; visto en local «ecosistema no, no;» y «demasiado genérica» bajo «Sirve».
-  P2: "p2-23", // diagnóstico
-  // p3-1 (CEO, 2026-09-29): las herramientas de las habilidades que cada trabajo
-  // usó sin nombrarlas. Separado del diagnóstico: dentro de él el modelo no las
-  // cruzaba (medido: 1 de 42 viñetas) y declaraba frases del aviso como hechos.
-  P3: "p3-4", // herramientas por viñeta
+  // p2-24 (CEO, 2026-10-03): sólo lo que mira un filtro — skills, condiciones. Fuera el juicio de viñetas y del resumen.
+  // p2-25 (CEO, 2026-10-05): `writeIn` = la viñeta del trabajo más cercano a la skill; sin relación, no hay tarjeta.
+  // p2-26 (CEO, 2026-10-05): `writeIn` sólo con evidencia real (la persona ya hizo ese trabajo); medido con avisos reales, «el más cercano» daba 28 tarjetas e inventaba (Flashlight, Skia).
+  // p2-27 (CEO, 2026-10-05): demostrado = esa misma tecnología (híbrido ≠ nativo); `writeIn` = la línea donde la skill nombra cómo se hizo ese mismo trabajo.
+  // p2-28 (CEO, 2026-10-05): el modelo DECLARA `sameTechnology` y `writeInRelation`; en prosa los ignoraba (medido con DualEntry y Stefanini).
+  // p2-29 (CEO, 2026-10-05): plan por puesto — `same_role` (viñeta nueva en ese puesto) y blanda + dura en la misma línea.
+  // p2-30 (2026-10-05): la plantilla traía `"writeInRelation":"new_experience"` y el modelo lo copiaba: 0 ubicaciones (medido con SME Careers).
+  // p2-31 (CEO, 2026-10-05): ejemplos en pares de rubros opuestos; «mismo puesto» y «experiencia nueva» dichos para cualquier oficio.
+  P2: "p2-31", // diagnóstico
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -273,7 +281,13 @@ export const PROMPT_VERSION = {
   // p4-21 (2026-09-28): lo que la línea ya nombra se queda; el término prometido va al lado.
   // p4-26 (CEO, 2026-09-29): Tailor ejecuta la instrucción del ATS; tres reglas.
   // p4-37 (2026-10-02): la skill con las mayúsculas de su nombre, y sin fórmula vacía alrededor.
-  P4: "p4-37", // reescritura de viñeta
+  // p4-38 (CEO, 2026-10-03): fuera los hechos de P3 y el logro X-Y-Z de una línea existente.
+  // p4-39 (2026-10-05): la blanda se escribe con el hecho que la demuestra y su nombre en ese sentido.
+  // p4-40 (2026-10-05): la skill con su significado real; medido en local: «New Architecture … in the iOS application».
+  // p4-41 (CEO, 2026-10-05): valor alto — anclada en el producto/usuarios del puesto, resultado con qué/para quién/unidad.
+  // p4-42 (CEO, 2026-10-05): una dura y una blanda en la misma línea, la blanda como acción.
+  // p4-43 (CEO, 2026-10-05): los ejemplos de «valor alto» en pares de oficios opuestos, no sólo software.
+  P4: "p4-43", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
@@ -638,16 +652,36 @@ export const JobSpecSchema = z.object({
   niceToHave: lista(RequirementSchema, 40),
   // Recortar, no tirar: una responsabilidad larga se perdía entera (ver RequirementSchema).
   responsibilities: lista(z.string().transform((v) => v.slice(0, 300)), 30),
-  softSignals: lista(z.string().transform((v) => v.slice(0, 160)), 20),
+  /**
+   * LA BLANDA SE DECLARA CON SU NOMBRE DE RECLUTADOR (2026-10-05). Con una regla en
+   * prosa el modelo seguía copiando la palabra de una metáfora del aviso
+   * («backbone», medido 2 de 2). Declarar la frase y la cualidad por separado lo
+   * obliga a nombrarla; se guarda la cualidad. Un texto suelto sigue valiendo.
+   */
+  softSignals: lista(
+    z
+      .union([z.string(), z.object({ quality: z.string() }).passthrough()])
+      .transform((v) => (typeof v === "string" ? v : v.quality).trim().slice(0, 160))
+      .refine((v) => v.length > 0),
+    20,
+  ),
   /**
    * LO QUE TE FILTRA Y NO SE REDACTA (CEO, 2026-09-30): residir en un país,
    * permiso de trabajo, un nivel de idioma obligatorio. Se avisa; no hay botón.
    */
   conditions: lista(
-    z.object({ kind: z.enum(["location", "language", "authorization", "other"]).catch("other"), text: z.string().max(200) }),
+    z.object({ kind: z.enum(["location", "language", "authorization", "other"]).catch("other"), text: z.string().min(1).transform((v) => v.slice(0, 200)) }),
     6,
   ),
-}).transform((crudo) => {
+}).transform((original) => {
+  /**
+   * « / » CON ESPACIOS ES UNA LISTA DE ALTERNATIVAS (2026-10-05). Medido en local
+   * con X-Team: «trading / brokerage / crypto exchange / …» llegaba como UN nombre
+   * que ningún CV puede tener. Un nombre con barra no lleva espacios («CI/CD»,
+   * «async/await»), así que la barra con espacios es la forma «A | B» del motor.
+   */
+  const alternativas = <T extends { skill: string }>(r: T): T => ({ ...r, skill: r.skill.replace(/\s+\/\s+/g, " | ") })
+  const crudo = { ...original, mustHave: original.mustHave.map(alternativas), niceToHave: original.niceToHave.map(alternativas) }
   /**
    * UN TÉRMINO VIVE EN UNA SOLA LISTA.
    *
@@ -665,7 +699,8 @@ export const JobSpecSchema = z.object({
     ...crudo,
     mustHave: crudo.mustHave.filter((r, i, xs) => xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i),
     niceToHave,
-    softSignals: crudo.softSignals.filter((x) => !duros.has(termKey(x))),
+    // Una blanda entra una vez: dos frases del aviso pueden dar la misma cualidad.
+    softSignals: crudo.softSignals.filter((x, i, xs) => !duros.has(termKey(x)) && xs.findIndex((y) => termKey(y) === termKey(x)) === i),
   }
 })
 export type JobSpec = z.infer<typeof JobSpecSchema>
@@ -722,6 +757,8 @@ export interface ResumeTree {
    * la huella del CV: es un dato personal y no cambia ningún juicio.
    */
   contact?: { email: string; phone: string }
+  /** El nombre de cada título de la educación, tal como está cargado: sólo para saber si un lector lo entiende. */
+  education?: string[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -815,19 +852,15 @@ export function nodeHash(text: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * LAS TARJETAS (CEO, 2026-09-29): el ATS decide y Tailor ejecuta.
- *
- * Una viñeta tiene UNA tarjeta, con la decisión del ATS sobre ella —mejorarla o
- * borrarla— y lo que tiene que escribirse ahí (la instrucción, las skills del
- * puesto, si lleva cifra). Las skills del puesto que el CV no respalda en
- * ninguna línea son una pregunta a la persona. El resto —resumen, cargo, años,
- * lectura del documento— es lo que ya existía.
+ * LAS TARJETAS (CEO, 2026-10-03): sólo lo que mira un filtro. Las skills que el
+ * puesto pide y el CV no muestra (Tailor las escribe en una viñeta), el cargo,
+ * los años, las condiciones que filtran y la lectura del documento. La redacción
+ * de cada viñeta no la mira ningún ATS y no tiene tarjeta.
  */
 export const FINDING_TYPES = [
-  "improve_bullet", // el ATS dice que esta viñeta sirve y cómo mejorarla para el puesto
-  "remove_bullet", // el ATS dice que esta viñeta no sirve para el puesto o repite a otra
   "missing_skill", // una skill que el puesto pide y el CV no muestra en ninguna línea
-  "summary_gap", // al resumen le falta una de sus funciones
+  "missing_skills", // las que el CV no puede sostener con su experiencia: UNA tarjeta, la persona dice cuál tiene y dónde
+  "role_short", // un puesto con menos de 4 viñetas al que la vacante no le aporta nada: la persona cuenta otro trabajo de ahí
   "title_mismatch", // el cargo que la vacante busca no está escrito en el CV
   "years_short", // la vacante pide más años de los que el CV prueba
   "eligibility", // una condición que filtra y no se redacta: residencia, permiso, idioma obligatorio
@@ -862,12 +895,11 @@ export interface Finding {
   component: ComponentKey
   /**
    * CÓMO SE CIERRA. Lo dice el motor, no la pantalla.
-   *   rewrite — Tailor reescribe la línea con la instrucción del ATS
-   *   remove  — se saca la línea, con confirmación y deshacer
+   *   rewrite — Tailor reescribe la línea (el cargo en el resumen)
    *   ask     — se le pregunta a la persona; con su respuesta, Tailor escribe
    *   none    — lo que ninguna redacción cierra (años, lectura del documento)
    */
-  remedy: "rewrite" | "remove" | "ask" | "none"
+  remedy: "rewrite" | "ask" | "none"
   /** De qué habla cuando no habla de una línea (una skill, el cargo). */
   subject?: string
   type: FindingType
@@ -881,20 +913,14 @@ export interface Finding {
   detail: string
   /** Por qué, dicho por el ATS en el idioma del CV. */
   reason?: string
-  /** Qué tiene que decir la línea nueva, dicho por el ATS: es lo que Tailor ejecuta. */
-  instruction?: string
-  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
-  facts?: string[]
   /** Las skills del puesto que el ATS decidió escribir en esta línea. */
   terms?: string[]
-  /** La línea abre con una fórmula de tarea («Responsable de…»): Tailor la cambia por un verbo de acción. */
-  weakOpener?: boolean
-  /** Este puesto necesita la cifra de este logro: Tailor deja el hueco para la persona. */
-  needsFigure?: boolean
-  /** La línea dice qué se hizo y no qué logró: Tailor agrega el logro (X-Y-Z). */
-  needsOutcome?: boolean
   /** `ask`: la pregunta del ATS a la persona. */
   question?: string
+  /** El puesto donde el motor decidió que esta skill se escribe. */
+  roleId?: string
+  /** `missing_skills`: las skills que el CV no muestra y ninguna línea suya sostiene. */
+  subjects?: string[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

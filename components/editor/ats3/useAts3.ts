@@ -43,10 +43,6 @@ export type FailureReason = string
 export interface Pedido {
   /** Por qué el ATS pide mejorarla. */
   reason?: string
-  /** Qué tiene que decir la línea nueva, según el ATS. */
-  instruction?: string
-  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
-  facts?: string[]
   /** Las skills que el ATS decidió escribir en esta línea (en el resumen, el cargo). */
   terms?: string[]
   /** Este puesto necesita la cifra de este logro. */
@@ -55,8 +51,6 @@ export interface Pedido {
   told?: string
   /** Skill que pide la vacante y el CV no muestra: la IA escribe el trabajo con ella en esta línea; la persona confirma si es verdad. */
   propone?: boolean
-  /** La línea dice qué se hizo y no qué logró: se escribe el logro con el hueco de su cifra. */
-  logro?: boolean
   /** Viñeta nueva: no hay línea original que conservar (se agrega o reemplaza a la señalada). */
   nueva?: boolean
 }
@@ -215,23 +209,8 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   /** Cuál de las tarjetas de esa línea pidió la reescritura. Ver `olvidar`. */
   const [pendingFinding, setPendingFinding] = useState<string | null>(null)
   const inFlight = useRef<AbortController | null>(null)
-  /**
-   * LO QUE SE DESHACE VUELVE A PENDIENTES (2026-10-02). Visto en local: «Deshacer»
-   * devolvía la línea al CV y su tarjeta desaparecía hasta el próximo análisis —
-   * «Todas» bajaba de 10 a 9 sin que nada se hubiera resuelto—. Las tarjetas que
-   * se retiran al aplicar o sacar se guardan por el texto que quedó escrito, y
-   * vuelven cuando ese texto se deshace.
-   */
-  const retiradas = useRef(new Map<string, Finding[]>())
-  const guardarRetiradas = (clave: string, fs: Finding[]) => {
-    if (fs.length) retiradas.current.set(clave.trim(), fs)
-  }
-  const devolverRetiradas = (clave: string) => {
-    const fs = retiradas.current.get(clave.trim())
-    if (!fs) return
-    retiradas.current.delete(clave.trim())
-    setState((st) => ({ ...st, findings: [...st.findings, ...fs.filter((f) => !st.findings.some((x) => x.id === f.id))] }))
-  }
+  /** Lo que se le pidió a Tailor en la reescritura en curso: las skills que entran al aceptar. */
+  const pedidoActual = useRef<Pedido>({})
   /** El CV tal como se mandó a analizar: contra esto se dice si cambió después. */
   const [analizado, setAnalizado] = useState<string | null>(null)
 
@@ -248,6 +227,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       skills: (sectionData.skills ?? []).map((s) => ({ name: s.name ?? "" })),
       otherText: otherTextOf(sectionData),
       contact: { email: sectionData.personalDetails?.email ?? "", phone: sectionData.personalDetails?.phone ?? "" },
+      education: (sectionData.education ?? []).map((e) => ({ degree: e.degree ?? "" })),
     }),
     [sectionData],
   )
@@ -391,6 +371,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     /** Lo que el ATS decidió sobre esta línea viaja tal cual: Tailor lo ejecuta. */
     async (nodeId: string, findingId: string | undefined, pedido: Pedido = {}) => {
       if (!state.spec) return
+      pedidoActual.current = pedido
       setBusyNode(nodeId)
       setPendingFinding(findingId ?? null)
       setRejected(null)
@@ -401,6 +382,9 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         const res = await apiFetch("/api/ai/ats3", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          // Igual que el análisis: cada llamada del servidor puede esperar 150 s y hay
+          // reintento; con los 120 s por defecto el navegador soltaba una reescritura pagada.
+          timeoutMs: 180_000,
           body: JSON.stringify({
             action: "rewrite",
             resumeId,
@@ -559,7 +543,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
         const puntaje = scoreResume(nuevo, state.spec, state.audit, state.checks)
         setState((st) => ({ ...st, score: puntaje }))
       }
-      devolverRetiradas(after)
       return true
     },
     [payloadResume, persistir, state.audit, state.checks, state.spec],
@@ -628,15 +611,15 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        */
       if (medido && state.spec && state.audit) {
         /**
-         * TAILOR EJECUTÓ LO QUE EL ATS PIDIÓ SOBRE ESTA LÍNEA: la línea pasa a
-         * «mantener» y las skills que la tarjeta escribía, a demostradas. Así el
-         * dial se mueve al aplicar, sin volver a preguntar.
+         * TAILOR EJECUTÓ LO QUE EL ATS PIDIÓ: la skill que la tarjeta escribía
+         * pasa a demostrada. Así el dial se mueve al aplicar, sin volver a
+         * preguntar. La tarjeta de una skill la nombra en `subject`.
          */
         const cerrada = findingActual
-        const escritas = new Set((cerrada?.terms ?? []).map(normalize))
+        // Las skills que se pidió escribir: una sola fuente para la tarjeta individual y la agrupada.
+        const escritas = new Set([...(pedidoActual.current.terms ?? []), ...(cerrada?.type === "missing_skill" && cerrada.subject ? [cerrada.subject] : [])].map(normalize))
         const audit: AuditFacts = {
           ...state.audit,
-          bullets: state.audit.bullets.map((b) => (b.id === s.bulletId ? { ...b, decision: "keep" as const, needsFigure: false, needsOutcome: false } : b)),
           hard: state.audit.hard.map((h) => (escritas.has(normalize(h.skill)) ? { ...h, status: "demonstrated" as const, evidenceNodeId: null } : h)),
           soft: state.audit.soft.map((x) => (escritas.has(normalize(x.signal)) ? { ...x, status: "demonstrated" as const, evidenceNodeId: null } : x)),
         }
@@ -663,17 +646,29 @@ export function useAts3(resumeId: string, language: "es" | "en") {
        * que se dijo sobre él. Lo que siga faltando vuelve en el próximo
        * análisis, medido sobre lo que ahora hay escrito.
        */
-      guardarRetiradas(finalText, [...state.findings, ...state.regressed].filter((f) => f.id === pendingFinding || (f.nodeId === s.bulletId && !f.subject)))
       setState((st) => {
         // La tarjeta que pidió la propuesta se cierra por su id. La de un
         // término lleva sujeto y `olvidar` por línea la deja viva a propósito,
         // así que respondías «¿tenés Keychain?», la línea entraba al CV y la
         // pregunta seguía abierta (medido el 2026-09-28).
+        /**
+         * LA TARJETA AGRUPADA NO SE CIERRA ENTERA: sale sólo la skill que se escribió
+         * y las demás siguen ahí. Cerrarla toda borraba de la vista skills que la
+         * persona todavía no contestó.
+         */
+        const grupo = pendingFinding ? [...st.findings, ...st.regressed].find((f) => f.id === pendingFinding && f.type === "missing_skills") : undefined
+        if (grupo) {
+          const hechas = new Set((pedidoActual.current.terms ?? []).map(normalize))
+          const quedan = (grupo.subjects ?? []).filter((x) => !hechas.has(normalize(x)))
+          const recortar = (fs: Finding[]) =>
+            quedan.length === 0 ? fs.filter((f) => f.id !== grupo.id) : fs.map((f) => (f.id === grupo.id ? { ...f, subjects: quedan, detail: String(quedan.length) } : f))
+          return olvidar({ ...st, findings: recortar(st.findings), regressed: recortar(st.regressed) }, { nodeId: s.bulletId })
+        }
         const cerrada = pendingFinding ? olvidar(st, { findingId: pendingFinding }) : st
         return olvidar(cerrada, { nodeId: s.bulletId })
       })
     },
-    [findingActual, payloadResume, pendingFinding, persistir, registrarResuelto, state.audit, state.checks, state.findings, state.regressed, state.spec],
+    [findingActual, payloadResume, pendingFinding, persistir, registrarResuelto, state.audit, state.checks, state.spec],
   )
 
   /**
@@ -723,30 +718,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     return (nodeId: string): string => m.get(nodeId) ?? ""
   }, [payloadResume])
 
-  /**
-   * SACA UNA VIÑETA QUE EL ATS DECIDIÓ BORRAR (no sirve para este puesto o
-   * repite a otra). La persona lo confirmó en la tarjeta; «Hechas» guarda el
-   * texto y ofrece deshacer.
-   */
-  const dropLine = useCallback(
-    (nodeId: string, findingId: string, registro?: DoneRecord) => {
-      const raw = payloadResume()
-      const tree = buildTree(raw)
-      const linea = tree.roles.flatMap((r) => r.bullets).find((b) => b.id === nodeId)
-      if (!linea) {
-        setError("stale_node")
-        return
-      }
-      const nuevo: ResumeTree = { ...tree, roles: tree.roles.map((r) => ({ ...r, bullets: r.bullets.filter((b) => b.id !== nodeId) })) }
-      persistir(nuevo, raw, nodeId)
-      registrarResuelto(nodeId, "", "AI_SUGGESTION", findingId, registro)
-      if (state.spec && state.audit) setState((st) => ({ ...st, score: scoreResume(nuevo, state.spec!, state.audit!, state.checks) }))
-      guardarRetiradas(linea.text, [...state.findings, ...state.regressed].filter((f) => f.id === findingId || (f.nodeId === nodeId && !f.subject)))
-      setState((st) => olvidar(olvidar(st, { findingId }), { nodeId }))
-    },
-    [payloadResume, persistir, registrarResuelto, state.audit, state.checks, state.findings, state.regressed, state.spec],
-  )
-
   /** Devuelve una viñeta sacada a su puesto y a su lugar. */
   const undoDrop = useCallback(
     (texto: string, roleId: string, index: number): boolean => {
@@ -767,7 +738,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
       }
       persistir(nuevo, raw, `${roleId}_back`)
       if (state.spec && state.audit) setState((st) => ({ ...st, score: scoreResume(nuevo, state.spec!, state.audit!, state.checks) }))
-      devolverRetiradas(texto)
       return true
     },
     [payloadResume, persistir, state.audit, state.checks, state.spec],
@@ -838,7 +808,6 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     accept,
     undo,
     dismiss,
-    dropLine,
     undoDrop,
     textOf,
   }

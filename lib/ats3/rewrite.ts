@@ -21,10 +21,6 @@ export interface RewriteRequest {
   jdKey: string
   /** Por qué el ATS pide mejorarla (o qué le falta al resumen). */
   reason?: string
-  /** Qué tiene que decir la línea nueva, según el ATS. */
-  instruction?: string
-  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
-  facts?: string[]
   /** Las skills que el ATS decidió escribir en esta línea; en el resumen, el cargo. */
   terms?: string[]
   /** Este puesto necesita la cifra de este logro. */
@@ -33,8 +29,6 @@ export interface RewriteRequest {
   told?: string
   /** Skill que pide la vacante y el CV no muestra: la IA escribe el trabajo con ella en esta línea; la persona confirma si es verdad. */
   propone?: boolean
-  /** La línea dice qué se hizo y no qué logró: se escribe el logro con el hueco de su cifra. */
-  logro?: boolean
   /** Viñeta nueva: no hay línea original que conservar (se agrega o reemplaza a la señalada). */
   nueva?: boolean
   ai: AtsAi
@@ -68,16 +62,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   }
   const terms = req.terms ?? []
   /**
-   * LOS HECHOS QUE EL ATS DECLARÓ, EN LAS PALABRAS QUE LOS DISTINGUEN (CEO, 2026-09-29).
-   * De cada hecho («Xcode Instruments para medir el rendimiento — habilidades») se
-   * quedan las palabras que la línea original no dice: son las que prueban que el
-   * hecho entró. Sin la fuente, que no se escribe.
-   */
-  const palabrasOriginal = new Set(normalize(original).split(" "))
-  const hechos = (req.facts ?? [])
-    .map((f) => ({ f: f.split(/\s+[—–-]\s+/)[0].trim(), w: normalize(f.split(/\s+[—–-]\s+/)[0]).split(" ").filter((x) => x.length >= 4 && !palabrasOriginal.has(x)) }))
-    .filter((h) => h.w.length > 0)
-  /**
    * LO QUE LA LÍNEA NUEVA PUEDE DECIR Y LO QUE NO (CEO, 2026-09-29), comprobado
    * sobre el texto y no pedido en prosa, que el modelo se saltaba:
    *  · una frase del aviso (3+ palabras seguidas de sus responsabilidades o de
@@ -87,7 +71,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    *    que no está en el CV, en lo que la persona contó ni en lo que el ATS
    *    mandó escribir es una afirmación sin respaldo: «SDK», «Apigee».
    */
-  const nombresPermitidos = [...terms, ...(req.facts ?? [])]
+  const nombresPermitidos = [...terms]
   const ngramas = (t: string, n = 3) => {
     const w = normalize(t).split(" ").filter(Boolean)
     return new Set(w.slice(0, Math.max(0, w.length - n + 1)).map((_, i) => w.slice(i, i + n).join(" ")))
@@ -134,7 +118,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     const escritas = termsIn(buildTermIndex(terms.map((t) => ({ canonical: t, variants: titleForms(t) }))), s.text)
     return [
       ...terms.filter((t) => !escritas.has(t)),
-      ...hechosFaltantes(s.text),
       ...(req.needsFigure && s.placeholders.length === 0 && !statesQuantity(s.text) ? ["[cifra]"] : []),
     ]
   }
@@ -143,12 +126,8 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
    * un nombre con calzador, se escribe el trabajo hecho con ella —una cláusula—
    * y la persona confirma si es verdad. Por eso admite más palabras nuevas.
    */
-  const topeLibres = req.propone ? 16 : req.logro ? 12 : 4
-  const hayPedido = terms.length > 0 || (req.facts ?? []).length > 0 || Boolean(req.needsFigure) || Boolean(req.logro) || nueva
-  const hechosFaltantes = (texto: string) => {
-    const dice = new Set(normalize(texto).split(" "))
-    return hechos.filter((h) => !h.w.some((x) => dice.has(x))).map((h) => h.f)
-  }
+  const topeLibres = req.propone ? 16 : 4
+  const hayPedido = terms.length > 0 || Boolean(req.needsFigure) || nueva
   /**
    * CADA PUESTO HABLA DE SU EMPRESA (2026-10-02). Medido en producción: con el
    * dato «En Salamanca Solutions construí aplicaciones web…» y el selector en el
@@ -184,7 +163,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     isSummary && req.language === "en"
       ? texto.split(/(?<=[.!?])\s+/).filter((o) => /^(?:[A-Z][a-z]+s)\s+(?:a|an|the|over|more|strong|deep|solid|extensive|worked|built|led|been|developed|delivered|shipped|experience)\b/.test(o.trim()))
       : []
-  const pedido = JSON.stringify([req.reason ?? "", req.instruction ?? "", req.facts ?? [], terms, Boolean(req.needsFigure), req.told ?? "", Boolean(req.propone), Boolean(req.logro), nueva])
+  const pedido = JSON.stringify([req.reason ?? "", terms, Boolean(req.needsFigure), req.told ?? "", Boolean(req.propone), nueva])
   const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, req.model, pedido)
 
   /**
@@ -268,9 +247,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
      * consulta gastada en un corchete—. Lo que la tarjeta promete es decir qué se
      * logró; si no hay ninguna palabra nueva fuera del hueco, no lo dijo.
      */
-    if (req.logro && !isSummary && !nueva && edicion(s.text).libres.length === 0) {
-      out.push(req.language === "en" ? "Write the outcome this work achieved, not only its slot." : "Escribí el logro que consiguió ese trabajo, no sólo su hueco.")
-    }
     if (!isSummary) {
       const { perdidas, libres } = nueva ? { perdidas: [], libres: [] } : edicion(s.text)
       if (perdidas.length) out.push(req.language === "en" ? `You removed words from the line: ${perdidas.join(", ")}. Keep the line word for word.` : `Sacaste palabras de la línea: ${perdidas.join(", ")}. Conservá la línea palabra por palabra.`)
@@ -334,13 +310,23 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     const delOriginal = new Set(raicesNuevas(original))
     const cuenta = new Map<string, number>()
     for (const r of raicesNuevas(s.text)) if (!delOriginal.has(r)) cuenta.set(r, (cuenta.get(r) ?? 0) + 1)
-    const nuevasPegadas = [...new Set([...[...pegadas(s.text)].filter((r) => !yaPegadas.has(r)), ...[...cuenta].filter(([, n]) => n > 1).map(([r]) => r)])]
+    /**
+     * Lo de «vuelve más adelante» vale para EDITAR una línea, donde una palabra
+     * nueva dos veces es un parche mal pegado. En una viñeta NUEVA el resultado
+     * repite el tema con naturalidad («Elasticsearch-based search…, improving
+     * search relevance»): medido contra la API (2026-10-05), rechazaba 4 de 11
+     * skills buenas. Ahí sólo cuenta la palabra pegada a sí misma.
+     */
+    /**
+     * Y LA RAÍZ DE LA SKILL PEDIDA NO CUENTA (2026-10-05). Medido contra la API con
+     * la cajera: escribir «cuadre de efectivo» en «Realicé el arqueo…» repite
+     * «cuadr» (cuadre / cuadrando) y la línea se rechazaba: la tarjeta fallaba en
+     * el caso normal. Nombrar la skill y decir el trabajo con ella no es repetir.
+     */
+    const deLaSkill = new Set(normalize(terms.join(" ")).split(" ").filter((w) => w.length >= 5).map((w) => w.slice(0, 5)))
+    const nuevasPegadas = [...new Set([...[...pegadas(s.text)].filter((r) => !yaPegadas.has(r)), ...(nueva ? [] : [...cuenta].filter(([, n]) => n > 1).map(([r]) => r))])].filter((r) => !deLaSkill.has(r))
     if (!isSummary && nuevasPegadas.length) {
       out.push(req.language === "en" ? "The same word is repeated in your line. Say that idea once, as one clean phrase." : "Repetiste la misma palabra en la línea. Decí esa idea una vez, como una sola frase limpia.")
-    }
-    const sinEscribir = hechosFaltantes(s.text)
-    if (sinEscribir.length) {
-      out.push(req.language === "en" ? `These facts are missing from your line: ${sinEscribir.join("; ")}. Write them.` : `Estos hechos no están en tu línea: ${sinEscribir.join("; ")}. Escribilos.`)
     }
     if (req.needsFigure && s.placeholders.length === 0 && !statesQuantity(s.text)) {
       out.push(req.language === "en" ? "This line carries its figure: add its typed slot." : "Esta línea lleva su cifra: agregá su hueco tipado.")
@@ -354,12 +340,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     // «A | B» es la forma del motor para un requisito con alternativas: en una frase del CV
     // nunca va la barra (medido: «JavaScript | TypeScript» en un resumen). Se lee como «A / B».
     s = { ...s, text: s.text.replace(/\s*\|\s*/g, " / ") }
-    // El resumen es UN párrafo: llegaba partido en renglones, uno por oración (visto en local).
-    // Y sin datos sueltos: «Español nativo.» como oración. El prompt lo prohíbe y salía
-    // igual, también en el reintento; sacarla no borra nada —el dato vive en su sección—.
-    const texto = isSummary
-      ? s.text.replace(/\s*\n+\s*/g, " ").split(/(?<=[.!?])\s+/).filter((o) => !/^\p{Lu}/u.test(o.trim()) || o.replace(/[^\p{L}\p{N}\s]/gu, "").trim().split(/\s+/).filter(Boolean).length > 2).join(" ").trim()
-      : enPrimera ?? s.text
+    const texto = enPrimera ?? s.text
     return repairSuggestion({ ...s, text: texto })
   }
 
@@ -395,13 +376,10 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           roleLines: role?.bullets.filter((b) => b.id !== req.nodeId).map((b) => b.text),
           siblings,
           reason: req.reason,
-          instruction: req.instruction,
-          facts: req.facts,
           terms,
           needsFigure: req.needsFigure,
           told: req.told?.trim() || undefined,
           propone: req.propone,
-          logro: req.logro,
           nueva,
           language: req.language,
           nudge,
@@ -428,13 +406,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     }
   }
 
-  // La oración en tercera que sobrevivió al reintento se saca, si el resumen sigue
-  // teniendo de qué hablar: el dato que decía vive en su sección (título, idioma).
-  if (terceraEn(first.text).length > 0) {
-    const quedan = first.text.split(/(?<=[.!?])\s+/).filter((o) => !terceraEn(o).length)
-    if (quedan.length >= 2) first = { ...first, text: quedan.join(" ") }
-  }
-
   // Si sigue siendo la misma línea, no hay mejora: se dice, no se ofrece. Salvo que
   // escriba la herramienta que el ATS declaró: una palabra, pero es un hecho nuevo.
   // Lo que la tarjeta pidió y no se escribió: no es «ya está bien», es no poder hacerlo.
@@ -446,8 +417,14 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   if (parecida) return { ok: false, verdict: { ok: false, reason: "declined", detail: parecida }, calls }
   const v = checkSuggestion(first, ctx)
   if (!v.ok) return { ok: false, verdict: v, calls }
-  // Una palabra repetida pegada a sí misma que sobrevivió al reintento: español o inglés roto, no se ofrece.
-  if (!isSummary && problemas(first).some((p) => /Repetiste la misma palabra|same word is repeated/.test(p))) {
+  // La apertura débil que sobrevivió al reintento («Helped with» → «Assisted with»): la línea sigue
+  // sin decir lo que la persona hizo, así que no hay mejora que ofrecer (medido en oficios, 2026-10-02).
+  if (!isSummary && opensWeakly(first.text)) {
+    return { ok: false, verdict: { ok: false, reason: "declined", detail: "apertura débil" }, calls }
+  }
+  // Una palabra o una frase repetida que sobrevivió al reintento: no se ofrece (visto en local:
+  // «…cross-platform compatibility, improving cross-platform compatibility»).
+  if (!isSummary && problemas(first).some((p) => /Repetiste la misma palabra|same word is repeated|^Repetiste «|^You repeated "/.test(p))) {
     return { ok: false, verdict: { ok: false, reason: "declined", detail: "palabra repetida" }, calls }
   }
   // Relleno del aviso, un nombre sin respaldo o una reescritura libre que sobrevivió al reintento: no se ofrece.
@@ -461,14 +438,6 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
   // El trabajo de otro empleador o una cifra que nadie dio, si sobrevivieron al reintento: no se ofrece.
   if (nombraOtraEmpresa(first.text).length > 0 || cifrasNuevas(first.text).length > 0) {
     return { ok: false, verdict: { ok: false, reason: "declined", detail: [...nombraOtraEmpresa(first.text), ...cifrasNuevas(first.text)].join(", ") }, calls }
-  }
-  // La tarjeta pedía el logro y volvió sólo el hueco: no hay nada que ofrecer.
-  if (req.logro && !isSummary && !nueva && edicion(first.text).libres.length === 0) {
-    return { ok: false, verdict: { ok: false, reason: "declined", detail: "sólo el hueco" }, calls }
-  }
-  // El ATS pidió reescribir para decir hechos nuevos: si no dice ninguno, no aporta.
-  if (hechos.length > 0 && hechosFaltantes(first.text).length === hechos.length) {
-    return { ok: false, verdict: { ok: false, reason: "declined", detail: hechos.map((h) => h.f).join("; ") }, calls }
   }
   const soltados = isSummary ? requisitosPerdidos(first.text) : droppedNames(original, first.text)
   if (soltados.length > 0) {

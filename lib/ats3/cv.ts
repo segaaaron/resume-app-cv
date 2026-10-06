@@ -4,7 +4,7 @@
 // mide lo que un lector automático puede leer, y se escribe de vuelta sin tocar
 // lo que no cambió.
 
-import { bulletIdFor, nodeHash, rolDeNueva, roleIdFor, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
+import { bulletIdFor, nodeHash, normalize, rolDeNueva, roleIdFor, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
 import { ABIERTO, FECHA_ABIERTA, mes, type Mes, type ParseChecks } from "@/lib/ats3/score"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +31,8 @@ export interface RawResume {
   otherText?: string
   /** Email y teléfono: sólo se mira que un lector los encuentre. */
   contact?: { email?: string; phone?: string }
+  /** El título de cada estudio, como está cargado: sólo se mira que un lector lo entienda. */
+  education?: { degree?: string }[]
 }
 
 /**
@@ -93,6 +95,7 @@ export function buildTree(raw: RawResume): ResumeTree {
     declaredSkills: (raw.skills ?? []).map((s) => s.name ?? "").filter(Boolean),
     otherText: raw.otherText ?? "",
     ...(raw.contact ? { contact: { email: raw.contact.email ?? "", phone: raw.contact.phone ?? "" } } : {}),
+    ...(raw.education ? { education: raw.education.map((e) => e.degree ?? "") } : {}),
   }
 }
 
@@ -160,7 +163,30 @@ export function readableChecks(tree: ResumeTree): ParseChecks {
      */
     contacto_email: tree.contact ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(tree.contact.email.trim()) : null,
     contacto_telefono: tree.contact ? tree.contact.phone.replace(/\D/g, "").length >= 7 : null,
+    /**
+     * LO QUE UN PARSER LEE MAL Y SE ARREGLA EN EL DATO (CEO, 2026-10-05). Visto en
+     * el CV del CEO: el título decía «2010 — 2015» (las fechas en el campo del
+     * título), 51 habilidades con repetidas («code reviews» y «Code Review») y un
+     * «|» suelto dentro de una viñeta.
+     */
+    // Un título sin nombre (sólo fechas o números) un ATS lo guarda como el nombre del título.
+    educacion_legible: !tree.education?.length ? null : tree.education.every((d) => /\p{L}{3,}/u.test(d)),
+    // La misma habilidad dos veces ocupa el lugar de otra en las primeras que se leen.
+    habilidades_sin_repetir: tree.declaredSkills.length < 2 ? null : !hayRepetidas(tree.declaredSkills),
+    // Una barra suelta entre palabras corta la frase en el texto que extrae un parser.
+    sin_barras_sueltas: [tree.summary.text, ...bullets.map((b) => b.text)].every((t) => !/\s\|\s/.test(t)),
   }
+}
+
+/**
+ * Dos habilidades son la misma si dicen las mismas palabras salvo plural o «-ing»
+ * («Code Review» / «code reviews», «Unit Testing» / «unit tests»). Una palabra con
+ * algo pegado es otra cosa («Swift» ≠ «SwiftUI», «Java» ≠ «JavaScript»).
+ */
+function hayRepetidas(skills: readonly string[]): boolean {
+  const base = (w: string) => (w.length > 4 ? w.replace(/(ing|es|s)$/, "") : w)
+  const llaves = skills.map((s) => normalize(s).split(" ").filter(Boolean).map(base).join(" ")).filter(Boolean)
+  return new Set(llaves).size < llaves.length
 }
 
 /**
@@ -256,6 +282,15 @@ export function writeBack(tree: ResumeTree, raw: RawResume): RawResume {
     workExperience: (raw.workExperience ?? []).map((r) => {
       const node = byRole.get(roleIdFor(r.jobTitle ?? "", r.employer ?? "", r.startDate ?? "", seenRoles))
       if (!node) return r
+      /**
+       * UN PUESTO QUE NO CAMBIÓ SE DEVUELVE TAL CUAL LO ESCRIBIÓ LA PERSONA (QA,
+       * 2026-10-02). Escribir una línea reescribía la descripción de TODOS los
+       * puestos con el formato del motor: «- x» pasaba a «• x», se iban los
+       * renglones en blanco y un párrafo de introducción se volvía viñeta. Lo que
+       * no se tocó sobrevive intacto.
+       */
+      const antes = readBullets(r.description ?? "")
+      if (antes.length === node.bullets.length && antes.every((t, i) => t === node.bullets[i].text)) return r
       return { ...r, description: node.bullets.map((b) => `• ${b.text}`).join("\n") }
     }),
   }

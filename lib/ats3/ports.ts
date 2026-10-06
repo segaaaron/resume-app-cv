@@ -14,17 +14,7 @@ import { type AuditFacts } from "@/lib/ats3/score"
 /** Las seis preguntas que sólo un modelo puede contestar. Ya validadas. */
 export interface AtsAi {
   parseJob(jdText: string, language: "es" | "en"): Promise<JobSpec>
-  /**
-   * `alreadyFixed`: las líneas que Tailor ya escribió siguiendo al ATS. El ATS
-   * no vuelve a pedir lo que él mismo mandó hacer.
-   */
-  audit(tree: ResumeTree, spec: JobSpec, alreadyFixed?: string[], nudge?: string): Promise<AuditFacts>
-  /**
-   * Las herramientas de las habilidades de la persona que cada viñeta usó y no
-   * nombra. Ya verificadas: están en su lista y la línea no las dice.
-   */
-  /** Y las que afirman un resultado sin decir cuánto: ahí va la cifra de la persona. */
-  matchTools(tree: ResumeTree): Promise<{ id: NodeId; tools: string[]; sinTamano?: boolean; sinLogro?: boolean }[]>
+  audit(tree: ResumeTree, spec: JobSpec): Promise<AuditFacts>
   rewriteBullet(input: RewriteInput): Promise<Suggestion>
   rewriteSummary(input: SummaryInput): Promise<Suggestion>
 }
@@ -44,10 +34,6 @@ export interface RewriteInput {
   siblings?: string[]
   /** Por qué el ATS pide mejorarla. */
   reason?: string
-  /** Qué tiene que decir la línea nueva, según el ATS. */
-  instruction?: string
-  /** Los hechos nuevos del CV que la línea tiene que decir, con su fuente (ATS). */
-  facts?: string[]
   /** Las skills del puesto que el ATS decidió escribir en esta línea. */
   terms?: string[]
   /** Este puesto necesita la cifra de este logro: va el hueco para la persona. */
@@ -56,8 +42,6 @@ export interface RewriteInput {
   told?: string
   /** Skill que pide la vacante y el CV no muestra: la IA escribe el trabajo con ella en esta línea; la persona confirma si es verdad. */
   propone?: boolean
-  /** La línea dice qué se hizo y no qué logró: se escribe el logro con el hueco de su cifra. */
-  logro?: boolean
   /** Viñeta nueva: no hay línea original que conservar (se agrega o reemplaza a la señalada). */
   nueva?: boolean
   /** Idioma del CV. */
@@ -107,7 +91,7 @@ export interface AtsStore {
   write(kind: CacheKind, hash: string, payload: unknown): Promise<void>
 }
 
-export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-fix" | "ats3-log" | "ats3-lock" | "ats3-judge"
+export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-fix" | "ats3-log" | "ats3-judge"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CLAVES DE CACHÉ
@@ -132,7 +116,7 @@ export const cacheKey = {
    * precio de la pieza completa es el mismo que el de una sola.
    */
   audit: (nodeHashValue: string, jdHash: string, model: string) =>
-    sha256(nodeHashValue, jdHash, RUBRIC_VERSION, PROMPT_VERSION.P2, PROMPT_VERSION.P3, model),
+    sha256(nodeHashValue, jdHash, RUBRIC_VERSION, PROMPT_VERSION.P2, model),
 
   /** La reescritura: la línea, la vacante y TODO lo que la tarjeta le pasa a Tailor. */
   fix: (nodeId: NodeId, nodeHashValue: string, jdHash: string, model: string, pedido = "") =>
@@ -142,14 +126,11 @@ export const cacheKey = {
   /** El registro de lo resuelto, por CV y vacante. */
   log: (resumeId: string, jdHash: string) => sha256(resumeId, jdHash),
 
-  /** Las viñetas que el ATS ya decidió conservar para este CV y esta vacante. */
-  lock: (resumeId: string, jdHash: string) => sha256("lock", resumeId, jdHash),
-
   /**
    * Lo que el ATS juzgó de cada línea, por su texto, para este CV y esta vacante.
    * Con la versión del diagnóstico: un juicio fijado con un prompt viejo no puede
    * tapar lo que el prompt nuevo corrigió.
    */
-  judge: (resumeId: string, jdHash: string) => sha256("judge", resumeId, jdHash, PROMPT_VERSION.P2, PROMPT_VERSION.P3),
+  judge: (resumeId: string, jdHash: string) => sha256("judge", resumeId, jdHash, PROMPT_VERSION.P2),
 
 }

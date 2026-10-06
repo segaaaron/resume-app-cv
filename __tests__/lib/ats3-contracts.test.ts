@@ -221,10 +221,10 @@ describe("identidad de los nodos", () => {
   })
 
   it("el id de un hallazgo es el mismo dentro de tres semanas", () => {
-    const one = findingId("b_abc123", "improve_bullet")
-    const two = findingId("b_abc123", "improve_bullet")
+    const one = findingId("b_abc123", "missing_skill")
+    const two = findingId("b_abc123", "missing_skill")
     expect(one).toBe(two)
-    expect(findingId("b_abc123", "remove_bullet")).not.toBe(one)
+    expect(findingId("b_abc123", "title_mismatch")).not.toBe(one)
   })
 })
 

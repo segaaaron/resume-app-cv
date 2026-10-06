@@ -75,17 +75,15 @@ function makeSpec(must: number, nice: number): JobSpec {
 
 /**
  * El diagnóstico del ATS: las primeras `mustFound`/`niceFound` skills demostradas,
- * el resto faltantes; las viñetas pares ya sirven, las impares hay que mejorarlas.
+ * el resto faltantes.
  */
 function makeAudit(tree: ResumeTree, spec: JobSpec, mustFound: number, niceFound: number): AuditFacts {
   const skill = (skill: string, requirement: "MUST" | "NICE", ok: boolean) => ({
     skill, requirement, status: (ok ? "demonstrated" : "missing") as "demonstrated" | "missing", evidenceNodeId: null, writeIn: null, question: null,
   })
   return {
-    bullets: tree.roles[0].bullets.map((b, i) => ({ id: b.id, decision: i % 2 === 0 ? ("keep" as const) : ("improve" as const), reason: "", instruction: null, needsFigure: false })),
     hard: [...spec.mustHave.map((m, i) => skill(m.skill, "MUST", i < mustFound)), ...spec.niceToHave.map((n, i) => skill(n.skill, "NICE", i < niceFound))],
     soft: [],
-    summary: { identity: true, proof: false, fit: true, extra: false },
   }
 }
 
@@ -128,10 +126,8 @@ describe("el total cae en [0,100] por construcción", () => {
     const tree = makeTree(4)
     const spec = makeSpec(3, 0) // sin "nice to have"
     const audit: AuditFacts = {
-      bullets: tree.roles[0].bullets.map((b) => ({ id: b.id, decision: "keep" as const, reason: "", instruction: null, needsFigure: true })),
       hard: spec.mustHave.map((m) => ({ skill: m.skill, requirement: "MUST" as const, status: "demonstrated" as const, evidenceNodeId: null, writeIn: null, question: null })),
       soft: [],
-      summary: { identity: true, proof: true, fit: true, extra: true },
     }
     const tree2: ResumeTree = {
       ...tree,
@@ -187,23 +183,6 @@ describe("la ganancia prometida ES el delta medido", () => {
     }
   })
 
-  it("mejorar una viñeta que el ATS pidió mejorar", () => {
-    const tree = makeTree(8)
-    const spec = makeSpec(4, 3)
-    const audit = makeAudit(tree, spec, 2, 1)
-    const flojo = audit.bullets.findIndex((b) => b.decision === "improve")
-    expect(flojo).toBeGreaterThanOrEqual(0)
-
-    const before = scoreResume(tree, spec, audit, CHECKS)
-    const promised = gainOf(before, "bullets")
-
-    const fixed: AuditFacts = {
-      ...audit,
-      bullets: audit.bullets.map((b, i) => (i === flojo ? { ...b, decision: "keep" as const } : b)),
-    }
-    expect(deltaOf(before, scoreResume(tree, spec, fixed, CHECKS))).toBeCloseTo(promised, 10)
-  })
-
   it("un componente ya completo no promete nada", () => {
     const tree = makeTree(3)
     const spec = makeSpec(2, 0)
@@ -247,35 +226,17 @@ describe("¿la línea declara un tamaño?", () => {
   })
 })
 
-it("una viñeta que la auditoría inventó no entra al puntaje", () => {
-  // El juicio por línea lo devuelve un modelo, y un id que el CV no tiene sube
-  // el numerador Y el denominador de un pilar entero con una línea que nadie
-  // escribió — mientras el motor la ignora al emitir hallazgos.
-  const tree = makeTree(2)
-  const spec = makeSpec(2, 1)
-  const real = makeAudit(tree, spec, 1, 0)
-  const conFantasma = {
-    ...real,
-    bullets: [...real.bullets, { id: "b_no_existe", decision: "keep" as const, reason: "", instruction: null, needsFigure: false }],
-  }
-  const vinetas = (s: ReturnType<typeof scoreResume>) => s.components.find((c) => c.key === "bullets")!
-  expect(vinetas(scoreResume(tree, spec, conFantasma, CHECKS)).denominator).toBe(2)
-  expect(scoreResume(tree, spec, conFantasma, CHECKS).total).toBe(scoreResume(tree, spec, real, CHECKS).total)
-})
-
 describe("una skill demostrada vale más que una sólo nombrada", () => {
   it("demostrada 1, nombrada 0,6, ausente 0; y demostrada en una línea que ya no existe cuenta como nombrada", () => {
     const tree = makeTree(2)
     const spec = { ...makeSpec(0, 0), softSignals: ["honestidad", "atención al cliente", "trabajo bajo presión"] }
     const audit: AuditFacts = {
-      bullets: [],
       hard: [],
       soft: [
         { signal: "honestidad", status: "listed", evidenceNodeId: null, writeIn: null },
         { signal: "atención al cliente", status: "demonstrated", evidenceNodeId: "no-existe", writeIn: null },
         { signal: "trabajo bajo presión", status: "demonstrated", evidenceNodeId: "b1", writeIn: null },
       ],
-      summary: { identity: true, proof: false, fit: false, extra: false },
     }
     const soft = scoreResume(tree, spec, audit, CHECKS).components.find((c) => c.key === "soft")!
     expect(soft.numerator).toBeCloseTo(0.6 + 0.6 + 1, 10)
