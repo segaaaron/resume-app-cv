@@ -537,6 +537,7 @@ export default function TailorPanel({
                   // línea donde ese trabajo ya vive.
                   return
                 }
+                if (f.type === "misspelled") return a.proposeSpelling(f)
                 a.requestRewrite(f.nodeId, check.id, {
                   reason: f.reason,
                   terms: f.type === "title_mismatch" ? [f.subject ?? f.detail] : f.terms,
@@ -588,12 +589,12 @@ export default function TailorPanel({
                   a.requestRewrite(f.nodeId, check.id, { reason: check.question, terms, ...(told ? { told } : {}), propone: true })
                   return
                 }
-                if (f.roleId === role.id && rolDeNueva(f.nodeId) === role.id) {
+                // Viñeta nueva mientras el puesto tenga lugar; lleno, reemplaza a la que menos aporta (abajo).
+                if (f.roleId === role.id && rolDeNueva(f.nodeId) === role.id && role.bullets.length < BULLETS_PER_ROLE_MAX) {
                   a.requestRewrite(f.nodeId, check.id, { reason: check.question, terms, ...(told ? { told } : {}), propone: true, nueva: true, needsFigure: true })
                   return
                 }
-                // Nueva si el puesto tiene lugar; dentro de la línea que ya habla de ese
-                // trabajo si está lleno; en lugar de la que menos aporta si ninguna encaja.
+                // Nueva si el puesto tiene lugar; lleno, en lugar de la que menos aporta.
                 const destino = destinoDeSkill(
                   { id: role.id, bullets: role.bullets },
                   told || f.subject || "",

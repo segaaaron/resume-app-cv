@@ -35,6 +35,7 @@ export type GuardReason =
   | "stale" // se pensó sobre una versión que ya no existe
   | "empty" // no hay texto que entregar
   | "declined" // la tarjeta prometía algo y el modelo no encontró cómo escribirlo sin agregar lo que el CV no dice
+  | "repeats" // la propuesta es 90% o más igual a otra línea del CV (CEO, 2026-08-22): no es información nueva
   /**
    * ── ACÁ VIVÍAN CUATRO RECHAZOS MÁS (CEO, 2026-09-11) ───────────────────────
    *
@@ -387,11 +388,13 @@ export function retryNudge(v: GuardVerdict, language: "es" | "en"): string {
     stale: `La línea cambió desde que la leíste.`,
     empty: `Devolviste una reescritura vacía.`,
     declined: `Declinaste una línea que todavía tiene algo que arreglar.`,
+    repeats: `Tu línea repite casi igual otra línea del CV.`,
   }
   const en: Record<GuardReason, string> = {
     stale: `The line changed since you read it.`,
     empty: `You returned an empty rewrite.`,
     declined: `You declined a line that still has something to fix.`,
+    repeats: `Your line nearly repeats another line in the CV.`,
   }
   return (language === "en" ? en : es)[v.reason]
 }

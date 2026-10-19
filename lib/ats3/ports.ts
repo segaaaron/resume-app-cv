@@ -44,6 +44,8 @@ export interface RewriteInput {
   propone?: boolean
   /** Viñeta nueva: no hay línea original que conservar (se agrega o reemplaza a la señalada). */
   nueva?: boolean
+  /** El puesto al que se aplica: su cargo, lo que hace y lo que mide. La viñeta se orienta a eso. */
+  vacante?: { cargo: string; responsabilidades: string[]; requisitos: string[]; mide: string | null }
   /** Idioma del CV. */
   language: "es" | "en"
   /** Qué falló del intento anterior. Vacío la primera vez. */
@@ -91,7 +93,7 @@ export interface AtsStore {
   write(kind: CacheKind, hash: string, payload: unknown): Promise<void>
 }
 
-export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-fix" | "ats3-log" | "ats3-judge"
+export type CacheKind = "ats3-jd" | "ats3-audit" | "ats3-fix" | "ats3-log"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CLAVES DE CACHÉ
@@ -125,12 +127,4 @@ export const cacheKey = {
 
   /** El registro de lo resuelto, por CV y vacante. */
   log: (resumeId: string, jdHash: string) => sha256(resumeId, jdHash),
-
-  /**
-   * Lo que el ATS juzgó de cada línea, por su texto, para este CV y esta vacante.
-   * Con la versión del diagnóstico: un juicio fijado con un prompt viejo no puede
-   * tapar lo que el prompt nuevo corrigió.
-   */
-  judge: (resumeId: string, jdHash: string) => sha256("judge", resumeId, jdHash, PROMPT_VERSION.P2),
-
 }

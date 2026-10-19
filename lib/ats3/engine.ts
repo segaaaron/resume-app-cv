@@ -24,8 +24,9 @@ import { buildTermIndex, findingId, nodeHash, normalize, sha256, termsIn, type A
 import { isStale, loyalty, type GuardVerdict } from "@/lib/ats3/guards"
 import { cvTextOf, deltaOf, gainOf, scoreResume, statesQuantity, termsOf, titleForms, type AuditFacts, type ParseChecks, type Score } from "@/lib/ats3/score"
 import { type RawResume, buildTree, readableChecks, writeInto } from "@/lib/ats3/cv"
-import { findingsOf, respaldadoEnCv } from "@/lib/ats3/findings"
+import { findingsOf } from "@/lib/ats3/findings"
 import { type AtsAi, type AtsStore, cacheKey } from "@/lib/ats3/ports"
+import { replaceWord } from "@/lib/spellcheck/apply-spelling"
 // Viven con quien mide; se re-exportan porque el motor es la puerta de siempre.
 export { cvTextOf, termsOf } from "@/lib/ats3/score"
 // Cada módulo del motor, por la misma puerta: quien ya importa de acá no cambia.
@@ -146,36 +147,8 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     }
     await input.store.write("ats3-audit", auditKey, audit)
   }
-  audit = await fijarJuicios(tree, audit, input.store, cacheKey.judge(input.resumeId, jdKey))
 
-  // Una skill «demostrada» o «listada» cuyo nombre el CV no respalda no está en el CV: falta.
-  /**
-   * SALVO UNA CREDENCIAL, QUE SE ESCRIBE DISTINTO EN CADA PAÍS (2026-09-30). Medido
-   * en producción: «Bachelor's degree» quedaba como faltante con «Systems engineer —
-   * Catolica University» en la educación, porque esta comprobación exige las
-   * palabras del aviso. Un título es lo que es, no cómo se llama: eso lo juzga el
-   * ATS. El código sólo puede probar que no hay nada que juzgar —un CV sin
-   * educación, certificaciones ni idiomas—.
-   */
   const credenciales = new Set([...spec.mustHave, ...spec.niceToHave].filter((r) => r.kind === "credential").map((r) => normalize(r.skill)))
-  const sinDondeTenerla = !tree.otherText.trim()
-  /**
-   * Y SALVO LO QUE EL ATS CITA CON LAS PALABRAS DEL CV (2026-10-02). Medido contra
-   * la API con el aviso de Tekton: P2 daba «Mobile» por demostrado en la viñeta de
-   * «aplicaciones móviles» (4 de 4) y esta comprobación lo bajaba a faltante,
-   * porque exige la palabra del aviso. Que dos formas o dos idiomas digan lo mismo
-   * es semántica y lo decide el ATS; el código sólo comprueba lo que puede: que
-   * las palabras citadas estén de verdad donde dice —la línea de la prueba o, si
-   * sólo está nombrada, el CV—.
-   */
-  const textoCv = normalize(cvTextOf(tree))
-  const lineaDe = new Map([tree.summary, ...tree.roles.flatMap((r) => r.bullets)].map((b) => [b.id, normalize(b.text)] as const))
-  const citado = (h: AuditFacts["hard"][number]) => {
-    const c = normalize(h.cvWording ?? "")
-    if (c.length < 3) return false
-    const donde = h.status === "demonstrated" && h.evidenceNodeId ? lineaDe.get(h.evidenceNodeId) ?? "" : textoCv
-    return ` ${donde} `.includes(` ${c} `)
-  }
   /**
    * «SÓLO EN LA LISTA» ES EL NOMBRE ENTERO, NO SUS PALABRAS SUELTAS (2026-10-02).
    * Visto en local: «Clean Code — sólo en la lista» con «Clean Architecture» en
@@ -206,19 +179,15 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
         ...faltan.mustHave.map((r) => ({ skill: r.skill, requirement: "MUST" as const, status: estado(r.skill), evidenceNodeId: null, writeIn: null, question: null })),
         ...faltan.niceToHave.map((r) => ({ skill: r.skill, requirement: "NICE" as const, status: estado(r.skill), evidenceNodeId: null, writeIn: null, question: null })),
       ],
-      // Una blanda no se prueba por la palabra («trust» está en «user trust»): sin juicio, falta.
-      soft: [...audit.soft, ...faltan.softSignals.map((x) => ({ signal: x, status: "missing" as const, evidenceNodeId: null, writeIn: null }))],
     }
   }
   audit = {
     ...audit,
     hard: audit.hard.map((h) =>
-      h.status !== "missing" && !citado(h) && !(h.status === "listed" ? dicho(h.skill) : respaldadoEnCv(tree, h.skill)) && (sinDondeTenerla || !credenciales.has(normalize(h.skill)))
-        ? { ...h, status: "missing" as const, evidenceNodeId: null }
-        : // Y AL REVÉS (2026-10-05): «falta» con el nombre escrito en el CV es falso.
-          // Medido con Sezzle: «CI/CD — falta» con CI/CD en Habilidades. Queda
-          // nombrada; si una viñeta lo escribe, más abajo pasa a demostrada.
-          h.status === "missing" && dicho(h.skill)
+      // «Falta» con el nombre escrito en el CV es falso (medido con Sezzle: «CI/CD —
+      // falta» con CI/CD en Habilidades). Queda nombrada; si una viñeta lo escribe,
+      // más abajo pasa a demostrada. Lo que la IA dio por demostrado o nombrado no se baja.
+      h.status === "missing" && dicho(h.skill)
           ? { ...h, status: "listed" as const, evidenceNodeId: null }
           : h,
     ),
@@ -259,9 +228,7 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
   yield { act: "score", score, tree, audit, checks }
 
   // ── las tarjetas: la decisión del ATS, una por viñeta ─────────────────────
-  // Una línea que Tailor ya escribió no recibe otra skill: se cerró con lo que el ATS pidió.
-  const cerradas = tree.roles.flatMap((r) => r.bullets).filter((b) => arregladas.includes(b.text.trim())).map((b) => b.id)
-  const all = findingsOf(tree, audit, score, spec, cerradas)
+  const all = findingsOf(tree, audit, score, spec)
   for (const [nombre, ok] of Object.entries(checks)) {
     // Un chequeo que falla y no genera tarjeta es un punto perdido que nadie
     // le dijo al usuario cómo recuperar. Se arregla en el documento: sin IA.
@@ -281,46 +248,32 @@ export async function* runAnalysis(input: AnalysisInput): AsyncGenerator<Act, An
     }
   }
 
+  /**
+   * LA ORTOGRAFÍA DE LO QUE LA PERSONA ESCRIBIÓ (CEO, 2026-10-16): el ATS marca cada
+   * palabra mal escrita del resumen y de las viñetas; acá sólo se reemplaza esa
+   * palabra en su línea. La corrección va lista para confirmar y no toca nada más.
+   */
+  for (const n of [tree.summary, ...tree.roles.flatMap((r) => r.bullets)]) {
+    const errores = (audit.spelling ?? []).filter((e) => e.nodeId === n.id && replaceWord(n.text, e.wrong, e.right) !== n.text)
+    if (errores.length === 0) continue
+    all.push({
+      id: findingId(n.id, "misspelled"),
+      type: "misspelled",
+      component: "checks",
+      remedy: "rewrite",
+      nodeId: n.id,
+      nodeText: n.text,
+      nodeHash: n.hash,
+      gain: 0,
+      detail: errores.map((e) => `${e.wrong} → ${e.right}`).join("|"),
+      corrected: errores.reduce((t, e) => replaceWord(t, e.wrong, e.right), n.text),
+    })
+  }
+
   const seen = loyalty(all, log, cvTextOf(tree))
   yield { act: "findings", findings: seen.shown, suppressed: seen.suppressed.length, regressed: seen.regressed, resolved: log }
 
   return telemetry
-}
-
-/**
- * UNA LÍNEA QUE NO CAMBIÓ CONSERVA SU JUICIO ENTRE ANÁLISIS (2026-10-02).
- *
- * Medido en producción con el CV de Hapi: el reanálisis —que vuelve a preguntar
- * todo— bajó el número con las mismas líneas, porque el modelo cambió de opinión
- * sobre lo que nadie tocó. Se fija por TEXTO, para este CV y esta vacante: la
- * skill que una línea demostraba mientras esa línea siga ahí. Lo fijado sigue
- * pasando por los controles del código que corren después.
- */
-type Juicios = { skills: Record<string, { status: "demonstrated" | "listed" | "missing"; evidencia: string | null }> }
-
-async function fijarJuicios(tree: ResumeTree, audit: AuditFacts, store: AtsStore, key: string): Promise<AuditFacts> {
-  const previos = ((await store.read("ats3-judge", key)) as Juicios | null) ?? { skills: {} }
-  const textoDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, normalize(b.text)] as const)))
-  const idDe = new Map([...textoDe].map(([id, t]) => [t, id] as const))
-  const rango = { missing: 0, listed: 1, demonstrated: 2 } as const
-  const fijar = <T extends { status: "demonstrated" | "listed" | "missing"; evidenceNodeId: string | null }>(x: T, nombre: string): T => {
-    const p = previos.skills?.[normalize(nombre)]
-    if (!p || rango[p.status] <= rango[x.status]) return x
-    // Demostrada en una línea que ya no está: no hay prueba que conservar.
-    if (p.status === "demonstrated") return p.evidencia && idDe.has(p.evidencia) ? { ...x, status: "demonstrated", evidenceNodeId: idDe.get(p.evidencia)! } : x
-    return { ...x, status: p.status, evidenceNodeId: null }
-  }
-  const fijada: AuditFacts = {
-    ...audit,
-    hard: audit.hard.map((h) => fijar(h, h.skill)),
-    soft: audit.soft.map((x) => fijar(x, x.signal)),
-  }
-  const ahora: Juicios = { skills: { ...previos.skills } }
-  for (const x of [...fijada.hard.map((h) => ({ n: h.skill, s: h })), ...fijada.soft.map((y) => ({ n: y.signal, s: y }))]) {
-    ahora.skills[normalize(x.n)] = { status: x.s.status, evidencia: x.s.evidenceNodeId ? textoDe.get(x.s.evidenceNodeId) ?? null : null }
-  }
-  await store.write("ats3-judge", key, ahora)
-  return fijada
 }
 
 /** Lo que la vacante pide y la auditoría no juzgó: requisitos y blandas sin respuesta. */

@@ -67,11 +67,10 @@ describe("las reglas que no pueden faltar", () => {
     expect(jobPrompt("en").toLowerCase()).toContain("untrusted")
   })
 
-  it("la línea entre enriquecer e inventar viaja en el resumen; la viñeta es edición mínima", () => {
-    // La viñeta NO la lleva: «tuyo es el resultado y el método» le daba permiso para agregar lo que no se pidió.
-    expect(bulletPrompt("es")).toMatch(/EDICIÓN MÍNIMA/)
-    expect(bulletPrompt("en")).toMatch(/MINIMAL EDIT/)
-    for (const build of [summaryPrompt]) {
+  it("la línea entre enriquecer e inventar viaja en el resumen y en la viñeta (CEO, 2026-10-16)", () => {
+    expect(bulletPrompt("es")).toMatch(/alto valor curricular/)
+    expect(bulletPrompt("en")).toMatch(/high-value/)
+    for (const build of [summaryPrompt, bulletPrompt]) {
       expect(build("es")).toContain(truthRule("es").split("\n")[0])
       expect(build("en")).toContain(truthRule("en").split("\n")[0])
     }
@@ -83,16 +82,13 @@ describe("las reglas que no pueden faltar", () => {
   })
 
   it("sólo las cifras son del candidato; todo lo demás lo escribe la IA (CEO, 2026-09-28)", () => {
-    expect(truthRule("es")).toMatch(/Del candidato, y sólo suyo: las CIFRAS/)
-    expect(truthRule("en")).toMatch(/only theirs: the FIGURES/)
-    // La estructura tampoco se toca: empleadores, cargos y fechas.
-    expect(truthRule("es")).toMatch(/empleadores, cargos y fechas/)
-    expect(truthRule("en")).toMatch(/employers, job titles and dates/)
+    expect(truthRule("es")).toMatch(/De la persona: las cifras, los empleadores, los cargos y las fechas/)
+    expect(truthRule("en")).toMatch(/The person's: the figures, the employers, the job titles and the dates/)
   })
 
-  it("el resumen NO admite huecos, en los dos idiomas", () => {
-    expect(summaryPrompt("es").toLowerCase()).toContain("huecos")
-    expect(summaryPrompt("en").toLowerCase()).toContain("slots")
+  it("el resumen sigue la regla de la cifra: la que no está en el CV va como hueco (CEO, 2026-10-16)", () => {
+    expect(summaryPrompt("es")).toMatch(/hueco tipado/)
+    expect(summaryPrompt("en")).toMatch(/typed slot/)
   })
 
 })
@@ -309,24 +305,20 @@ describe("cada prompt viaja con su versión", () => {
 
 describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas", () => {
   it("las skills a escribir van tal cual las escribe el aviso", () => {
-    expect(bulletPrompt("es")).toMatch(/tal cual la escribe el aviso/)
-    expect(bulletPrompt("en")).toMatch(/exactly as the posting writes it/)
+    expect(bulletPrompt("es")).toMatch(/nombre exacto que usa el aviso/)
+    expect(bulletPrompt("en")).toMatch(/exact name the posting uses/)
   })
 
-  it("Tailor ejecuta al ATS sin cambiar hechos ni subir el rol", () => {
-    expect(bulletPrompt("es")).toMatch(/Cada HECHO de la línea original se queda/)
-    expect(bulletPrompt("en")).toMatch(/Every FACT of the original line stays/)
-    expect(bulletPrompt("es")).toMatch(/nivel de participación es un hecho/)
-    expect(bulletPrompt("en")).toMatch(/level of involvement is a fact/)
-    expect(bulletPrompt("es")).toMatch(/casi lo mismo que la original ni que ninguna de OTRAS LÍNEAS/)
-    expect(bulletPrompt("en")).toMatch(/nearly the same as the original nor as any of the OTHER LINES/)
+  it("la viñeta reescrita conserva las cifras de la persona", () => {
+    expect(bulletPrompt("es")).toMatch(/conservas sus cifras/)
+    expect(bulletPrompt("en")).toMatch(/keep its figures/)
   })
 
   it("el hueco dice que un aproximado alcanza, y que lo pone el candidato", () => {
     expect(figureRule("es")).toMatch(/aproximado o un rango alcanza/)
     expect(figureRule("en")).toMatch(/approximate figure or a range is enough/)
-    expect(figureRule("es")).toMatch(/vos no escribís uno/)
-    expect(figureRule("en")).toMatch(/you never write one/)
+    expect(truthRule("es")).toMatch(/Nunca escribes un número que no te dio/)
+    expect(truthRule("en")).toMatch(/never write a number they did not give/)
   })
 
   it("la vacante NO parte una sigla en dos requisitos", () => {
@@ -337,8 +329,10 @@ describe("lo que la reescritura tiene que decirle al modelo, en los dos idiomas"
   })
 
   it("el resumen prueba con un resultado, no con cualidades declaradas", () => {
-    expect(summaryPrompt("es")).toMatch(/declara cualidades en vez de mostrar un resultado/)
-    expect(summaryPrompt("en")).toMatch(/declares qualities instead of showing a result/)
+    expect(summaryPrompt("es")).toMatch(/LA PRUEBA \(su logro más fuerte, con su resultado y su cifra,/)
+    expect(summaryPrompt("en")).toMatch(/THE PROOF \(their strongest achievement, with its result and its figure,/)
+    expect(summaryPrompt("es")).toMatch(/Narrativa, no lista/)
+    expect(summaryPrompt("en")).toMatch(/Narrative, not a list/)
   })
 })
 
@@ -375,9 +369,9 @@ describe("tampoco mueren los esquemas del módulo", () => {
     }
   })
 
-  it("una soft se demuestra con un logro de una viñeta, nunca con el resumen", () => {
-    expect(auditPrompt("es")).toMatch(/nunca el resumen/)
-    expect(auditPrompt("en")).toMatch(/never the summary/)
+  it("una soft se demuestra con un logro del CV (CEO, 2026-10-16)", () => {
+    expect(auditPrompt("es")).toMatch(/demonstrated si un logro del CV la muestra/)
+    expect(auditPrompt("en")).toMatch(/demonstrated if an achievement in the CV shows it/)
   })
 })
 
@@ -436,8 +430,8 @@ describe("el diagnóstico habla de la lista de la vacante, y de nada más", () =
       { skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "arqueo de caja" },
       { skill: "Excel", requirement: "NICE", status: "missing", evidenceNodeId: null, writeIn: null, question: "¿Usaste Excel?", cvWording: null },
     ])
-    // Una soft «demostrada» en el resumen no tiene logro detrás: la cita se cae.
-    expect(a.soft).toEqual([{ signal: "trabajo en equipo", status: "demonstrated", evidenceNodeId: null, writeIn: null }])
+    // Una soft demostrada en el resumen conserva su cita (CEO, 2026-10-16).
+    expect(a.soft).toEqual([{ signal: "trabajo en equipo", status: "demonstrated", evidenceNodeId: "summary", writeIn: null }])
   })
 })
 

@@ -174,8 +174,6 @@ These are the hard-coded ones — only the candidate can state them:
   When they DID describe the outcome, write it with the verb it deserves. "I checked the invoices and there were fewer mistakes" becomes "Reduced invoicing errors by reviewing every batch before release" — that is their own information written the way a CV is written, and it is the value they are paying for. Suppressing the verb because it sounds like an achievement leaves them with a duty list.
 - Certifications, licences or degrees.
 - Seniority they did not claim: no "led", "managed" or "supervised" unless they said so.
-- THE SCOPE OR THE SETTING THEY DID NOT NAME: where the work happened, across how many sites, teams or shifts, for which department. "Led the weekly count for a team of 11" does not become "…across store stockrooms and sales floor areas" — that says where THIS person worked, and only they know it.
-  The line is what the work IS versus where THEY did it. Naming what the task consists of is still required: a cash count IS reconciling cash, receipts and differences, and saying so describes the trade, not this candidate's premises.
 If the work genuinely had a number and they did not give it, propose the range and mark it as theirs to confirm. Never leave the line naked when a size is obvious, and never hand them a precise figure you chose.`
     : `LO PROHIBIDO ES UN DATO QUEMADO — un dato que pusiste vos.
 
@@ -193,8 +191,6 @@ Todo lo que escribas A PARTIR DE LO QUE ÉL TE CONTÓ es la mejora que está pag
   Cuando SÍ contó el resultado, escribilo con el verbo que le corresponde. "Revisaba las facturas y había menos errores" se convierte en "Reduje los errores de facturación revisando cada lote antes de emitirlo" — eso es su propia información escrita como se escribe un CV, y es el valor que está pagando. Callarse el verbo porque suena a logro lo deja con una lista de tareas.
 - Certificaciones, licencias ni títulos.
 - Jerarquía que no declaró: nada de "lideré", "gestioné" ni "supervisé" si no lo dijo.
-- EL ALCANCE O EL ÁMBITO QUE NO NOMBRÓ: dónde ocurrió el trabajo, en cuántas sedes, turnos o equipos, para qué área. "Lideré el conteo semanal de un equipo de 11" no se convierte en "…en depósito y sala de ventas" — eso dice dónde trabajaba ESTA persona, y sólo ella lo sabe.
-  La línea es QUÉ ES el trabajo frente a DÓNDE lo hizo. Nombrar en qué consiste la tarea sigue siendo obligatorio: un arqueo ES cuadrar efectivo, comprobantes y diferencias, y decirlo describe el oficio, no las instalaciones de este candidato.
 Si el trabajo realmente tenía un número y no lo dio, proponé el rango y marcalo como suyo para confirmar. Nunca dejes la línea pelada cuando el tamaño es obvio, y nunca le entregues una cifra exacta elegida por vos.`
   if (opts.allowProposedFigure === false) return stripFigureLicense(base, language)
   return base
@@ -239,6 +235,7 @@ export function proseRules(language: string): string {
 - FIRST PERSON, implied. The line is the candidate speaking about their own work, never a third party describing them. Never write it as though someone else were reporting on them.
 - Vary length and sentence shape across lines; three identical rhythms read as generated.
 - Banned as empty: "to optimise the process", "ensuring quality", "performing related tasks", "results-driven", "team player", "proactive", "hard-working". Also the AI tells: ${aiTellWords("en")}.
+- Flawless spelling, accents and grammar in the CV's language, and every tool written with its correct name. If the candidate's text has misspelled words, they come back corrected.
 - Plain "• " bullets. No tables, columns, emoji or brackets — a "[X%]" left in a CV reads as unfinished.`
     : `CÓMO TIENE QUE LEERSE:
 - Abre con un verbo de acción fuerte en pasado, primera persona implícita — nunca un pronombre, y nunca ninguna de estas aperturas de tarea: ${bannedOpeners("es")}. La regla es el VERBO, no la lista: una línea que abre con un sintagma nominal —«Uso constante de…», «Responsabilidad de…», «Manejo de…»— la rompe igual, y pegarle un verbo delante a esa frase NO la arregla. Reescribí la oración para que el verbo la gobierne. Cada una le entrega a otro la autoría del trabajo. Verbos del peso correcto: ${strongOpeners("es")} — son ejemplos del REGISTRO, no un menú para elegir; el verbo correcto es el que nombra lo que ESTE candidato hizo de verdad.
@@ -247,6 +244,7 @@ export function proseRules(language: string): string {
 - NUNCA la forma -ó de tercera persona ("Ejecutó", "Definió", "Coordinó"): eso se lee como si otra persona escribiera un informe sobre el candidato, y una línea de CV la escribe él sobre su propio trabajo. Medido en un CV real: tailor devolvió "Ejecutó suites con Selenium…" y "Definió alcance…" dentro del CV del propio candidato.
 - Variá el largo y la forma de la frase entre líneas; tres ritmos idénticos se leen como generados.
 - Prohibidas por vacías: "para optimizar el proceso", "asegurando la calidad", "realizando tareas afines", "orientado a resultados", "trabajo en equipo", "proactivo". También las marcas de IA: ${aiTellWords("es")}.
+- Ortografía, acentos y gramática impecables en el idioma del CV, y cada herramienta con su nombre bien escrito. Si el texto del candidato trae palabras mal escritas, vuelven corregidas.
 - Viñetas "• " simples. Sin tablas, columnas, emojis ni corchetes — un "[X%]" olvidado en un CV se lee como algo sin terminar.`
 }
 

@@ -149,6 +149,8 @@ export interface AuditFacts {
   }[]
   /** Las condiciones que filtran (residencia, permiso, idioma): si el CV muestra que se cumplen. */
   conditions?: { text: string; met: "yes" | "no" | "unknown"; cvSays: string | null }[]
+  /** Palabras mal escritas en el resumen o en una viñeta, con su corrección (las marca el ATS). */
+  spelling?: { nodeId: string; wrong: string; right: string }[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -456,7 +458,8 @@ export function scoreResume(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, 
   const exigidos = suma("MUST")
   const deseables = suma("NICE")
   const juicioBlando = new Map(audit.soft.map((x) => [normalize(x.signal), x]))
-  const pedidasBlandas = [...new Set((spec.softSignals ?? []).map(normalize).filter(Boolean))]
+  // Una blanda que la IA no evaluó no cuenta en el puntaje: no se pierden puntos sin juicio (CEO, 2026-10-16).
+  const pedidasBlandas = [...new Set((spec.softSignals ?? []).map(normalize).filter((x) => x && juicioBlando.has(x)))]
   const softFound = pedidasBlandas.reduce((n, x) => {
     const j = juicioBlando.get(x)
     return n + (j ? valor(j) : 0)

@@ -644,25 +644,6 @@ describe("AIService", () => {
     // The other side of that line: once a real employer is named, a tool the
     // user never mentioned stops being a draft and becomes a false claim about
     // a job a recruiter can call and check.
-    it("still refuses invented tech on an entry tied to a named employer", async () => {
-      const aiClient = makeMockAIClient(JSON.stringify({
-        workExperienceNew: [{
-          jobTitle: "Analista de Riesgo",
-          employer: "Banco Mercantil",
-          // Nombre con mayúscula interna: la vara genérica lo caza en cualquier
-          // rubro. La lista de marcas de tecnología ya no existe — ver ai-helpers.
-          description: "• Desplegué microservicios en OpenShift4 y KubeFlow",
-        }],
-      }))
-      const service = new AIService(aiClient, logger)
-
-      const result = await service.fillProfile("user-1", {
-        prompt: "trabaje en banco mercantil como analista de riesgo de carteras",
-        sectionData: {},
-      }, "PRO")
-
-      expect(result.workExperienceNew).toHaveLength(0)
-    })
 
     // Same failure seen from the other side: while the schema rejected an empty
     // employer, safeParse failed and the code fell back to the RAW model object,

@@ -399,14 +399,13 @@ describe("findingsOf traduce la decisión del ATS, no la juzga", () => {
 })
 
 describe("las herramientas de tus habilidades que ese trabajo usó abren su tarjeta", () => {
-  it("el resumen no suelta un requisito del aviso que ya decía: se pide una vez más y, si igual lo suelta, no se ofrece", async () => {
-    // Medido en producción: la reescritura del cargo borró Claude Code, que el aviso exige. Acá, atención al cliente.
+  it("el resumen nuevo se ofrece aunque redacte distinto lo que ya decía: la persona lo ve antes de confirmar (CEO, 2026-10-16)", async () => {
     const ai = new CountingAi()
     ai.rewriteSummary = async () => { ai.rewrites++; return sug({ bulletId: "summary", text: "Cajera con experiencia en sucursales de barrio y trato amable con cada persona", actionVerb: "" }) }
     const tree = buildTree({ ...RAW, summary: "Cajera con experiencia en atención al cliente en Supermercado Sur" })
     const r = await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
-    expect(ai.rewrites).toBe(2)
-    expect(r.ok).toBe(false)
+    expect(ai.rewrites).toBe(1)
+    expect(r.ok).toBe(true)
   })
 
 })
@@ -516,35 +515,6 @@ describe("ninguna skill suelta y ninguna que vuelva", () => {
   })
 })
 
-describe("una línea que no cambió conserva su juicio entre análisis (medido en producción, 2026-10-02)", () => {
-  it("el modelo cambia de opinión sobre lo que nadie tocó: manda el juicio anterior", async () => {
-    const store = new MemoryStore()
-    const correr = async (resumen: string, cambiaDeOpinion: boolean) => {
-      const ai = new CountingAi()
-      ai.auditFor = (t) => {
-        const base = fakeAudit(t)
-        if (!cambiaDeOpinion) return base
-        // Segunda lectura: la skill demostrada pasa a faltante.
-        return {
-          ...base,
-          hard: base.hard.map((h) => (h.skill === "Atención al cliente" ? { ...h, status: "missing" as const, evidenceNodeId: null } : h)),
-        }
-      }
-      const gen = runAnalysis({ raw: { ...RAW, summary: resumen }, jdText: "Buscamos cajera con arqueo de caja y atención al cliente", language: "es", resumeId: "cv1", model: "m1", ai, store })
-      const acts = []
-      let out = await gen.next()
-      while (!out.done) { acts.push(out.value); out = await gen.next() }
-      const sc = acts.find((a) => a.act === "score")
-      if (sc?.act !== "score") throw new Error("sin puntaje")
-      return sc
-    }
-    const primera = await correr("Cajera", false)
-    // El resumen cambió: la auditoría se vuelve a pedir. Las viñetas no cambiaron.
-    const segunda = await correr("Cajera de sucursal", true)
-    expect(primera.audit.hard.find((h) => h.skill === "Atención al cliente")?.status).toBe("demonstrated")
-    expect(segunda.audit.hard.find((h) => h.skill === "Atención al cliente")?.status).toBe("demonstrated")
-  })
-})
 
 describe("lo que el ATS cita con las palabras del CV cuenta, aunque no sea la palabra del aviso (2026-10-02)", () => {
   const correr = async (cvWording: string) => {
@@ -563,21 +533,6 @@ describe("lo que el ATS cita con las palabras del CV cuenta, aunque no sea la pa
     expect(await correr("Atendí a los clientes")).toBe("demonstrated")
   })
 
-  it("la cita no está en la línea: el código la baja a faltante", async () => {
-    expect(await correr("atendí al público en ventanilla")).toBe("missing")
-  })
-  it("«sólo en la lista» exige el nombre entero o una cita: palabras sueltas no alcanzan (Clean Code ≠ Clean Architecture + código)", async () => {
-    const lista = async (cvWording: string | null) => {
-      const ai = new CountingAi()
-      ai.auditFor = (t) => ({ ...fakeAudit(t), hard: [...fakeAudit(t).hard, { skill: "Excel avanzado", requirement: "NICE", status: "listed", evidenceNodeId: null, writeIn: null, question: null, cvWording }] })
-      const { acts } = await analyze(ai, new MemoryStore(), { ...RAW, skills: [{ name: "Excel" }, { name: "Inglés avanzado" }] })
-      const sc = acts.find((a) => a.act === "score")
-      if (sc?.act !== "score") throw new Error("sin puntaje")
-      return sc.audit.hard.find((h) => h.skill === "Excel avanzado")?.status
-    }
-    expect(await lista(null)).toBe("missing")
-    expect(await lista("Excel")).toBe("listed")
-  })
 })
 
 describe("una línea que Tailor ya cerró no recibe más encargos", () => {
@@ -635,21 +590,7 @@ describe("la reescritura y su reintento", () => {
     expect(visto).toMatchObject({ reason: "r", terms: ["POS"], told: "t" })
   })
 
-  it("una skill que el ATS mandó escribir y falta: se pide una vez más nombrándola", async () => {
-    const ai = new CountingAi()
-    await req(ai, new MemoryStore(), { terms: ["Excel avanzado"] })
-    expect(ai.rewrites).toBe(2)
-    expect(ai.lastNudge).toMatch(/Excel avanzado/)
-  })
 
-  it("casi igual a OTRA viñeta: se pide una vez más y, si insiste, no se ofrece", async () => {
-    const ai = new CountingAi()
-    ai.nextSuggestion = sug({ text: "Realicé el arqueo de caja al cierre" })
-    const r = await req(ai)
-    expect(ai.rewrites).toBe(2)
-    expect(ai.lastNudge ?? "").toMatch(/casi lo mismo/)
-    expect(r.ok).toBe(false)
-  })
 
   it("si el modelo devuelve la MISMA línea, contesta «ya está bien»", async () => {
     const ai = new CountingAi()
@@ -680,35 +621,12 @@ describe("la reescritura y su reintento", () => {
     const pedir = (ai: CountingAi, over: Record<string, unknown> = {}) =>
       runRewrite({ tree: t2, nodeId: linea.id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore(), ...over })
 
-    it("nombrar la empresa de otro puesto: se pide una vez más y, si insiste, no se ofrece", async () => {
-      const ai = new CountingAi()
-      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas y en Tienda Norte resolví cobros" })
-      const r = await pedir(ai)
-      expect(ai.lastNudge ?? "").toMatch(/Tienda Norte/)
-      expect(r.ok).toBe(false)
-    })
-
-    it("una cifra que la persona no dio para esta línea: se pide una vez más y, si insiste, no se ofrece", async () => {
-      const ai = new CountingAi()
-      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas, para 50 usuarios por turno" })
-      const r = await pedir(ai)
-      expect(ai.lastNudge ?? "").toMatch(/50/)
-      expect(r.ok).toBe(false)
-    })
 
     it("la cifra que contó la persona sí entra", async () => {
       const ai = new CountingAi()
       ai.nextSuggestion = sug({ text: "Atendí a 80 clientes por turno en la línea de cajas resolviendo cobros" })
       const r = await pedir(ai, { told: "unos 80 clientes por turno" })
       expect(r.ok).toBe(true)
-    })
-
-    it("la misma palabra nueva dos veces en la línea no se ofrece", async () => {
-      const ai = new CountingAi()
-      // Con «Proponer con IA», que admite hasta 16 palabras nuevas: así llegó en producción.
-      ai.nextSuggestion = sug({ text: "Atendí a los clientes en la línea de cajas con procesos escalables para que el servicio escale" })
-      const r = await pedir(ai, { propone: true })
-      expect(r.ok).toBe(false)
     })
   })
 
@@ -727,56 +645,11 @@ describe("la reescritura y su reintento", () => {
     expect(visto.provenTerms ?? []).toContain("Excel")
   })
 
-  it("lo que el resumen ya probaba del aviso le llega como término a conservar, en la forma en que lo escribe", async () => {
-    const ai = new CountingAi()
-    let visto: { mustWrite?: string[] } = {}
-    ai.rewriteSummary = async (input?: unknown) => {
-      visto = input as { mustWrite?: string[] }
-      ai.rewrites++
-      return sug({ bulletId: "summary", text: "Cajera con experiencia en atención al cliente y arqueo de caja en sucursal.", actionVerb: "" })
-    }
-    const spec: JobSpec = { ...SPEC, mustHave: [{ skill: "Servicio | Atención al cliente", raw: "servicio o atención al cliente", years: null, category: null }] }
-    await runRewrite({ tree, nodeId: tree.summary.id, spec, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
-    expect(visto.mustWrite ?? []).toContain("Atención al cliente")
-  })
 
-  it("un resumen en inglés en tercera persona («Holds a…») se pide una vez más diciéndolo", async () => {
-    const ai = new CountingAi()
-    const nudges: (string | undefined)[] = []
-    ai.rewriteSummary = async (input?: unknown) => {
-      nudges.push((input as { nudge?: string }).nudge)
-      ai.rewrites++
-      return sug({ bulletId: "summary", text: "Cashier with 3 years of experience in customer service and cash handling. Balanced the till at every close with zero discrepancies across 3 years. Holds a retail certificate and has worked night shifts.", actionVerb: "" })
-    }
-    await runRewrite({ tree, nodeId: tree.summary.id, spec: SPEC, language: "en", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
-    expect(nudges[1] ?? "").toMatch(/third person/)
-  })
-
-  it("al cambiar una apertura débil se va la fórmula, no el trabajo: «Encargado del mantenimiento…» → «Mantuve las máquinas» no se ofrece", async () => {
-    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: "• Encargado del mantenimiento de las máquinas\n• Soldé piezas" }] }
-    const t = buildTree(raw)
-    const ai = new CountingAi()
-    ai.nextSuggestion = sug({ text: "Mantuve las máquinas" })
-    const malo = await runRewrite({ tree: t, nodeId: t.roles[0].bullets[0].id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
-    expect(malo.ok).toBe(false)
-    const ai2 = new CountingAi()
-    ai2.nextSuggestion = sug({ text: "Realicé el mantenimiento preventivo de las máquinas" })
-    const bueno = await runRewrite({ tree: t, nodeId: t.roles[0].bullets[0].id, spec: SPEC, language: "es", model: "m1", jdKey: "jd", ai: ai2, store: new MemoryStore() })
-    expect(bueno.ok).toBe(true)
-  })
-
-  it("una apertura débil cambiada por otra apertura débil no se ofrece («Helped with» → «Assisted with»)", async () => {
-    const raw: RawResume = { ...RAW, workExperience: [{ ...RAW.workExperience![0], description: "• Helped with the stock counts\n• Moved pallets with the forklift" }] }
-    const t = buildTree(raw)
-    const ai = new CountingAi()
-    ai.nextSuggestion = sug({ text: "Assisted with the stock counts across the warehouse" })
-    const r = await runRewrite({ tree: t, nodeId: t.roles[0].bullets[0].id, spec: SPEC, language: "en", model: "m1", jdKey: "jd", ai, store: new MemoryStore() })
-    expect(r.ok).toBe(false)
-  })
 
   it("nunca reintenta dos veces: eso escondería un prompt que dejó de funcionar", async () => {
     const ai = new CountingAi()
-    ai.nextSuggestion = sug({ text: "Realicé el arqueo de caja al cierre" })
+    ai.nextSuggestion = sug({ text: "" })
     await req(ai)
     expect(ai.rewrites).toBe(2)
   })

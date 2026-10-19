@@ -217,7 +217,8 @@ export function checkOf(
         : f.type === "years_short"
           ? { tiene: tiene ?? "", pide: pide ?? "" }
           : undefined
-  const evidence = [...tokens.map((t) => glosa?.(t) ?? t), ...(f.terms ?? []), ...(f.subjects ?? []).map(paraLeer)].filter((x) => x.trim())
+  const corregidas = f.type === "misspelled" ? f.detail.split("|") : []
+  const evidence = [...tokens.map((t) => glosa?.(t) ?? t), ...corregidas, ...(f.terms ?? []), ...(f.subjects ?? []).map(paraLeer)].filter((x) => x.trim())
   return {
     id: f.id,
     remedy: f.remedy,
@@ -402,8 +403,9 @@ export function encajaEn(bullets: readonly { id: string; text: string }[], respu
 /**
  * DÓNDE ESCRIBE LA IA UNA SKILL QUE FALTA (CEO, 2026-09-30):
  *  · el puesto tiene lugar (menos del máximo) → una viñeta NUEVA;
- *  · está lleno y una línea ya habla de ese trabajo → se escribe DENTRO de ella;
- *  · está lleno y ninguna encaja → REEMPLAZA a la que menos aporta a esta vacante.
+ *  · está lleno → una viñeta completa que REEMPLAZA a la que menos aporta a esta
+ *    vacante (CEO, 2026-10-16: meterla dentro de la línea que compartía una
+ *    palabra la pegaba a un trabajo que no era el suyo).
  *
  * UNA BLANDA VA SIEMPRE DENTRO DE UNA VIÑETA REAL (CEO, 2026-10-05). Se demuestra
  * con un hecho, y una viñeta nueva no tiene ninguno: medido contra la API, salía
@@ -423,7 +425,5 @@ export function destinoDeSkill(
     return linea ? { nodeId: linea, nueva: false } : { nodeId: nuevaEn(role.id), nueva: true }
   }
   if (role.bullets.length < maximo) return { nodeId: nuevaEn(role.id), nueva: true }
-  const encaja = encajaEn(role.bullets, sobre)
-  if (encaja) return { nodeId: encaja, nueva: false }
   return menosAporta ? { nodeId: menosAporta, nueva: true } : null
 }

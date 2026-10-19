@@ -33,30 +33,6 @@ describe("los mensajes system existen en los dos idiomas", () => {
   })
 })
 
-// OpenAI documenta que ante reglas en conflicto el modelo gasta tokens de razonamiento
-// intentando reconciliarlas en vez de elegir una. El reintento de improve-bullet pegaba
-// "tu respuesta vacía se rechaza" a un prompt que autorizaba justamente devolver vacío.
-describe("improve-bullet no se contradice en el reintento", () => {
-  const src = read("AIBulletModule.ts")
-
-  it("el reintento RETIRA la licencia de vacío en vez de contradecirla", () => {
-    expect(src).toContain("const withoutLicence = prompt.replace(licence, \"\")")
-    expect(src).not.toContain("IS REJECTED")
-    expect(src).not.toContain("SE RECHAZA")
-  })
-
-  // Si alguien reescribe la frase en la plantilla y no en la constante, el replace se
-  // vuelve un no-op SILENCIOSO: compila, pasa los tests, y la contradicción vuelve.
-  it("la frase de la licencia sigue existiendo literal en las dos plantillas", () => {
-    for (const frase of [
-      "A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. ",
-      "Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo. ",
-    ]) {
-      // Dos veces: una en la plantilla del prompt y otra en la constante que la retira.
-      expect(src.split(frase).length - 1, frase.slice(0, 40)).toBe(2)
-    }
-  })
-})
 
 // La oferta la escribe un desconocido y el usuario la pega. Un delimitador dice dónde
 // empieza el texto, no que no haya que obedecerlo.

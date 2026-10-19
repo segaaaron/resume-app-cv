@@ -30,7 +30,7 @@ import { OpenAIClientAdapter } from "@/lib/services/ai/OpenAIClientAdapter"
 // termina moviéndose en uno solo, y el modelo entra en TODAS las claves de
 // caché — un desacuerdo serviría respuestas de otro oráculo como si fueran de
 // éste. Es el de prosa porque estos prompts ESCRIBEN el CV.
-import { AI_MODEL_BULLETS, AI_MODEL_PROSE, logAIUsage } from "@/lib/ai-client"
+import { AI_MODEL_BULLETS, logAIUsage } from "@/lib/ai-client"
 import { computeCostUsd } from "@/lib/services/ai/shared/cost-tracker"
 import { AIAts3Module } from "@/lib/services/ai/modules/AIAts3Module"
 import {
@@ -206,13 +206,11 @@ const schema = z.union([rewriteSchema, resolveSchema, analyzeSchema])
  * nunca una petición.
  */
 /**
- * LOS DOS MODELOS DE UNA PETICIÓN, en un solo lugar (CEO, 2026-09-30): el de
- * prosa lee la vacante, diagnostica y escribe el resumen; el de viñetas hace la
- * edición mínima. Todas las claves de caché —incluida la del registro de lo
- * resuelto— salen de acá: si una usara otra, el análisis no encontraría lo que
- * la persona ya cerró.
+ * EL MODELO DEL ATS, en un solo lugar: Luna para todo —leer la vacante, el
+ * análisis, las viñetas y el resumen— (CEO, 2026-10-16). Todas las claves de
+ * caché —incluida la del registro de lo resuelto— salen de acá.
  */
-const MODELOS = `${AI_MODEL_PROSE}+${AI_MODEL_BULLETS}`
+const MODELOS = AI_MODEL_BULLETS
 
 function makeStore(resumeId: string, model: string): AtsStore {
   return {
@@ -332,7 +330,7 @@ export async function POST(req: Request) {
     const cuenta = parsed.data.action === "rewrite" ? "ats3-rewrite" : "ats3"
     await enforceAIQuota(authResult.userId, cuenta, authResult.user.plan)
 
-    const model = AI_MODEL_PROSE
+    const model = AI_MODEL_BULLETS
     const modelos = MODELOS
 
     /**

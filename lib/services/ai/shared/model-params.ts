@@ -17,7 +17,8 @@ import type { ChatParams } from "@/lib/interfaces/IAIClient"
 // "minimal"/"low" are the next steps up, "medium"/"high"/"xhigh" are thorough and
 // expensive. The cost of each setting is visible per service in the admin AI
 // dashboard, so a change can be judged on real spend.
-export const REASONING_EFFORT = (process.env.AI_REASONING_EFFORT ?? "none") as string
+// Sin la variable, «low» (CEO, 2026-10-16): toda la IA razona en bajo salvo que el environment diga otra cosa.
+export const REASONING_EFFORT = (process.env.AI_REASONING_EFFORT ?? "low") as string
 
 // Last-known-good model to fall back to if the configured one is unavailable to
 // this API key (see isModelUnavailableError). Deliberately a NON-reasoning model

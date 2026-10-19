@@ -12,7 +12,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, buildSectionContext, resolveLanguage, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
+import { parseAIJson, buildSectionContext, resolveLanguage, isGroundedIn } from "../shared/ai-helpers"
 import { computeCostUsd, costOfChat } from "../shared/cost-tracker"
 import { canonicalSkillName } from "@/lib/skills/skill-catalog"
 import { buildModePrompt } from "./profile-modes"
@@ -416,23 +416,6 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         // an empty employer is a hole they fill in, never a hard-coded company.
         if (!employerGrounded && !roleGrounded) {
           // Nothing here comes from the user. This one really is hard-coded.
-          droppedNewWork++
-          return null
-        }
-        // The description is checked for hard-coded tech and metrics ONLY when the
-        // entry is tied to a real employer the user named. There, a tool they
-        // never mentioned is a false claim about a real job.
-        //
-        // An entry with no employer is a DRAFT of the role — "this is what a
-        // telecommunications engineer does" — which is exactly what we asked
-        // the model for, and it cannot be written without naming the tools of
-        // the trade. Checking it would bin every draft for doing its job. It
-        // reaches the CV only when the user presses Apply on it.
-        if (
-          employerGrounded &&
-          entry.description &&
-          hasHardCodedFact(entry.description, `${prompt}\n${resumeContext}`)
-        ) {
           droppedNewWork++
           return null
         }

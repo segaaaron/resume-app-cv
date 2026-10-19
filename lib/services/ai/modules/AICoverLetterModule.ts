@@ -13,7 +13,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, escapeHtml, resolveLanguage, hasHardCodedFact, stripVersionLabel, stripSignOff, losesStatedFigure } from "../shared/ai-helpers"
+import { parseAIJson, escapeHtml, resolveLanguage, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
 import { LETTER_ONE_PAGE_WORDS } from "@/components/cover-letter/templates/_metrics"
 // The letter takes the BAR and the never-hard-code list, and not `proseRules`:
 // those describe how a CV BULLET opens and how long it runs ("• ", one tense,
@@ -23,12 +23,11 @@ import { LETTER_ONE_PAGE_WORDS } from "@/components/cover-letter/templates/_metr
 import { cvValueBar, noHardCodedFactsRule, aiTellWords } from "../shared/cv-writing-doctrine"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
-import { assessCoverLetter } from "../shared/cover-letter-quality"
 import { buildCoverLetterBrief, type CoverLetterBrief } from "@/lib/cover-letter/cover-letter-brief"
 import { detectCvLanguageOrNull } from "@/lib/resume/cv-language"
 import { detectLanguage } from "../shared/translate-fields"
 import { analyzeCoverLetterAts } from "@/lib/cover-letter/cover-letter-ats"
-import { hasCliche, findCliches, clicheBanList, substituteCliches } from "../shared/cliches"
+import { hasCliche, findCliches, clicheBanList } from "../shared/cliches"
 import { readChat } from "@/lib/services/ai/shared/chat-result"
 import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
 import { CoverBodyShape, CoverVersionsShape } from "@/lib/services/ai/shared/ai-types"
@@ -56,14 +55,6 @@ import {
  * filter compared an HTML original against plain-text rewrites, so nothing ever
  * looked like an echo and already_optimized could not fire at all.
  */
-// Stand-in employer names a thin profile provokes ("XYZ Corp", "[Company]",
-// "Company Name"). hasHardCodedFact catches hard-coded metrics/tech but not a
-// fabricated proper noun, so this belts that specific, reported failure. A match
-// only counts as hard-coded when it is NOT in the grounding source (a real employer
-// literally called "ABC" survives).
-const PLACEHOLDER_COMPANY_REGEX =
-  /\b(?:XYZ|ABC)\b|\[(?:company|empresa|name|nombre|position|puesto)[^\]]*\]|\bcompany name\b|\bnombre de la empresa\b/i
-
 function plainToHtml(text: string): string {
   return text
     .split(/\n\n+/)
@@ -331,34 +322,6 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       body = stripSignOff(parsed.body)
     }
 
-    // Anti-hard-coded fact guard — a fabricated metric, technology, or employer not in the
-    // profile is exactly what got a user a letter about "XYZ Corp" and "+40%". The JD
-    // counts as a grounding source too, so featuring a real vacancy term the brief
-    // asked for is never flagged. On a trip, retry ONCE grounded harder.
-    const grounding = [resumeContext, userPrompt ?? "", ...highlightValues, jobDescription ?? "", company ?? "", jobTitle ?? "", recipientName ?? "", recipientTitle ?? ""].join("\n")
-    if (this.letterHardCodesContent(body, grounding)) {
-      this.logger.warn("[AIService.generateCoverLetter] draft hard-coded content, retrying grounded")
-      const retry = await this.retryGroundedGeneration(prompt, langInstruction, language)
-      if (retry) {
-        retryUsages.push(retry.usage ?? {})
-        const retryBody = stripSignOff(retry.body)
-        // Prefer the retry when it's clean; if both are flagged keep the retry
-        // (grounded-harder) and log — the gate lowers the odds, it never returns nothing.
-        if (!this.letterHardCodesContent(retryBody, grounding)) {
-          body = retryBody
-        } else {
-          body = retryBody
-          this.logger.warn("[AIService.generateCoverLetter] retry still flagged; shipping best effort")
-        }
-      }
-    }
-
-    // ── ATS-in-the-loop ────────────────────────────────────────────────────────
-    // The deterministic ATS engine grades the draft; if the JD keyword overlap is
-    // weak, spend ONE retry weaving in the vacancy terms the résumé genuinely
-    // supports (from the brief's featureKeywords — never the gaps, so no hard-coded fact).
-    // Keep the retry ONLY when it stays clean AND actually scores higher. This is the
-    // "expert engine + AI" loop: the engine judges, the model improves toward it.
     if (jobDescription && brief.hasJd && brief.featureKeywords.length > 0) {
       const before = analyzeCoverLetterAts(body, jobDescription)
       if (before.keywords.checked && before.keywords.score < 45) {
@@ -370,7 +333,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
             retryUsages.push(retry.usage ?? {})
             const retryBody = stripSignOff(retry.body)
             const after = analyzeCoverLetterAts(retryBody, jobDescription)
-            if (!this.letterHardCodesContent(retryBody, grounding) && after.keywords.score > before.keywords.score) {
+            if (after.keywords.score > before.keywords.score) {
               body = retryBody
             } else {
               this.logger.info("[AIService.generateCoverLetter] ATS retry kept the original (not cleaner/higher)")
@@ -382,7 +345,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     // Último paso: que entre en una página. Va al FINAL a propósito — los guards de
     // arriba pueden alargar la carta (el de keywords teje términos nuevos), así que
     // medir antes daría un número que ya no es el que se entrega.
-    body = await this.fitLetterToOnePage(body, prompt, langInstruction, language, grounding, retryUsages)
+    body = await this.fitLetterToOnePage(body, prompt, langInstruction, language, retryUsages)
 
     /**
      * EL PROMPT PROMETÍA UN CHEQUEO QUE ESTE CAMINO NO HACÍA.
@@ -403,7 +366,6 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
      * catálogo delante de una frase real es un reemplazo, no una reescritura.
      * Si aun así queda uno, queda registrado en vez de pasar mudo.
      */
-    body = substituteCliches(body)
     const clichesRestantes = findCliches(body)
     // La prohibición del prompt sigue entera; lo que se retiró de esa frase es
     // el «y se comprueba, y se rechaza». Medido: de las 49 frases de la lista
@@ -520,80 +482,6 @@ Destaca estos términos de la vacante que el CV sí respalda, tejidos con natura
 ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites textual):\n${evidence}\n` : ""}NUNCA reclames esto — el CV no lo respalda: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(ninguno)"}.\n`
   }
 
-  /**
-   * Cifras que la carta afirma y el perfil no respalda.
-   *
-   * `hasHardCodedFact` sólo acusa un número cuando lleva unidad (%, users,
-   * requests…), y es estrecho a propósito: un falso positivo ahí le cuesta al
-   * usuario su carta entera. El precio de esa decisión es que un número pelado
-   * pasa — y una carta se envía a un reclutador tal cual.
-   *
-   * MEDIDO, 1 de 5 rondas sobre el mismo perfil: el modelo se salió de personaje
-   * y le habló al operador con NUESTRA propia instrucción dentro de la carta —
-   * "te devuelvo una versión final en 3 párrafos, dentro de las 250–350 palabras
-   * pedidas". Ni "3", ni "250", ni "350" existen en el CV ni en la vacante. La
-   * regla que lo caza es la misma que lo cazaría si hubiera quemado "atendí a
-   * 250 clientes": una cifra que el candidato no dio.
-   *
-   * Aquí sí se puede ser estricto donde `hasHardCodedFact` no puede: esto NO
-   * descarta la carta, dispara UN reintento, y si el segundo intento tampoco
-   * convence queda en pie el primero. El costo de equivocarse es una llamada.
-   */
-  private letterStatesUnsourcedFigure(body: string, grounding: string): string[] {
-    const norm = (n: string) => n.replace(/[.,]/g, "")
-    // Sólo los números que CUANTIFICAN algo: una cifra seguida de la palabra que
-    // mide. Es la misma pregunta que el proyecto ya se hace en ANY_METRIC_REGEX
-    // ("¿esto cuantifica?"), y es la que separa una afirmación sobre la persona
-    // de un dígito suelto.
-    //
-    // Un dígito a secas no es una afirmación: la primera versión de esta regla
-    // marcaba cualquier número y tumbó un caso que sólo contenía "alert(1)"
-    // dentro de un texto de prueba. Lo que hay que cazar es "250-350 palabras"
-    // y "3 párrafos" — cifras con su unidad, que es como se afirma un dato.
-    // ACOTADA, que es la mitigación que OWASP nombra para ReDoS: conjunto de
-    // caracteres definido y longitud mínima y máxima, en vez de `+` y `*`.
-    // Medido sobre la primera versión, con `+` sin tope: 50.000 dígitos seguidos
-    // sin una letra detrás tardaban 6,6 s, y un dígito con 50.000 espacios 1,4 s
-    // — cuadrático. Hoy sólo corre sobre salida del modelo (acotada por
-    // max_tokens), así que no era explotable; era una bomba esperando que alguien
-    // reutilizara la función con texto del usuario.
-    //
-    // El lookbehind impide arrancar en medio de un número, que es lo que hacía
-    // que cada dígito de una tira fuera un punto de partida nuevo. Las cotas
-    // salen de lo que un CV puede decir: doce dígitos cubren cualquier importe,
-    // tres decimales cualquier porcentaje, y tres espacios cualquier separación
-    // real entre la cifra y su unidad.
-    const QUANTITY =
-      /(?<![\d.,])(\d{1,12}(?:[.,]\d{1,3})?)(?:[ \t]{0,3}[-–—a][ \t]{0,3}(\d{1,12}(?:[.,]\d{1,3})?))?[\s%]{0,3}\p{L}{3,}/gu
-    const quantities = (t: string) => {
-      const out: string[] = []
-      for (const m of t.matchAll(QUANTITY)) {
-        out.push(norm(m[1]))
-        if (m[2]) out.push(norm(m[2]))
-      }
-      return out
-    }
-    // El respaldo se busca entre TODOS los números del perfil, no sólo los que
-    // allí cuantifican: el CV puede decir "40-60" en una tabla y la carta
-    // escribirlo como "40 clientes", y sigue siendo su dato.
-    const known = new Set((grounding.match(/\d+(?:[.,]\d+)?/g) ?? []).map(norm))
-    return [...new Set(quantities(body))].filter((d) => !known.has(d))
-  }
-
-  /** True when a fresh cover-letter draft carries content the profile does not
-   *  support: a hard-coded metric/technology (hasHardCodedFact), a figure the
-   *  profile never states, or a stand-in employer name absent from the source. */
-  private letterHardCodesContent(body: string, grounding: string): boolean {
-    if (hasHardCodedFact(body, grounding)) return true
-    if (this.letterStatesUnsourcedFigure(body, grounding).length > 0) return true
-    const m = body.match(PLACEHOLDER_COMPANY_REGEX)
-    return !!m && !grounding.toLowerCase().includes(m[0].toLowerCase())
-  }
-
-  /** One grounded retry when the first draft hard-coded content. Names the failure
-   *  last (the model must be told what it did wrong), and never quotes the hard-coded
-   *  token back. Returns null on any failure — the first draft still stands. */
-
   /** Palabras de prosa, para contrastar contra lo que entra en la hoja. */
   private letterWordCount(body: string): number {
     return body.trim().split(/\s+/).filter(Boolean).length
@@ -607,13 +495,8 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
    * sale de dos páginas, que no es la convención del rubro y no es lo que el
    * propio prompt promete.
    *
-   * LO QUE NO HACE, y es la parte importante: no acorta a costa del contenido. Un
-   * recorte que se lleva puesto un dato deja una carta más corta y peor, y lo que
-   * se paga acá es el valor curricular, no el largo. Por eso el reintento pide
-   * comprimir RELLENO —conectores, preámbulos, adjetivos— y la versión corta se
-   * acepta sólo si además de entrar NO pierde ninguna cifra que el candidato
-   * declaró y NO quema nada nuevo. Si no cumple, gana la original: dos páginas
-   * con la información completa valen más que una página incompleta.
+   * El reintento pide comprimir RELLENO —conectores, preámbulos, adjetivos— y
+   * conservar los datos; la versión corta entra si es más corta.
    *
    * Un solo reintento, como el resto de los guards del módulo.
    */
@@ -622,7 +505,6 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     basePrompt: string,
     langInstruction: string,
     language: "es" | "en",
-    grounding: string,
     retryUsages: { prompt_tokens?: number; completion_tokens?: number }[],
   ): Promise<string> {
     const words = this.letterWordCount(body)
@@ -638,14 +520,6 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     retryUsages.push(retry.usage ?? {})
     const shorter = stripSignOff(retry.body)
 
-    if (losesStatedFigure(body, shorter)) {
-      this.logger.warn("[AIService.generateCoverLetter] compressed draft dropped a figure; keeping the full letter")
-      return body
-    }
-    if (this.letterHardCodesContent(shorter, grounding)) {
-      this.logger.warn("[AIService.generateCoverLetter] compressed draft hard-coded content; keeping the full letter")
-      return body
-    }
     if (this.letterWordCount(shorter) >= words) return body
     return shorter
   }
@@ -778,23 +652,6 @@ Nada sobre ESTA empresa puede salir de vos —ni logros, ni inversión, ni cultu
       if (bodyLanguage !== language) ({ language, langInstruction } = resolveLanguage(bodyLanguage))
     }
 
-    // Decide in code whether there is anything to improve, before spending a
-    // call. Rule 7 of the prompt below asks the model the same question and it
-    // never says yes — measured 0/3 on a letter that was concrete, quantified
-    // and cliché-free. The endpoint is all-or-nothing, so declining reads to
-    // the model like failing the task; the summary's STEP 0 lost this same
-    // argument 0/5. The criteria are mechanical, so a regex settles them for
-    // free, every time, and the same letter always gets the same verdict.
-    //
-    // Before enforceAIQuota on purpose: no model was called, so this must not
-    // burn one of an UNSUBSCRIBED user's two uses, and must not write an
-    // AI_USED entry — that record exists to prove a paid service was delivered,
-    // and here none was.
-    const quality = assessCoverLetter(plainBody)
-    if (quality.alreadyGood) {
-      return { versions: [body.trim()], status: "already_optimized" }
-    }
-
     await enforceAIQuota(userId, "improve-cover-letter", plan)
 
     const context = language === "en"
@@ -835,7 +692,6 @@ GOLDEN RULES (apply all):
    - Version 2: Balanced and direct
    - Version 3: Dynamic and impact-oriented
 6. Maximum 4 paragraphs per version, up to ${LETTER_ONE_PAGE_WORDS} words. Dense in value, no filler. (This app's own generator writes 3-4 tight paragraphs — roughly 250-${LETTER_ONE_PAGE_WORDS} words, one page — so keep each version in that range and never pad to fill space.)
-7. If the letter is already strong — concrete, specific, free of clichés, and aligned to the role — return {"status": "already_optimized", "versions": []}. That is a correct and expected answer. Never pad the response with three cosmetic rewordings of a letter that did not need them.
 
 ON NUMBERS — read this last and follow it exactly:
 The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: a figure that is not in the letter or the context above is a claim the candidate never made, and they would have to find it and delete it. Write the strongest letter you can using only what is there.
@@ -866,7 +722,6 @@ REGLAS DE ORO (aplica todas):
    - Versión 2: Equilibrada y directa
    - Versión 3: Dinámica y orientada al impacto
 6. Máximo 4 párrafos por versión, hasta ${LETTER_ONE_PAGE_WORDS} palabras. Denso en valor, sin relleno. (El generador de esta misma app escribe 3-4 párrafos concisos — unas 250-${LETTER_ONE_PAGE_WORDS} palabras, una página — así que mantén cada versión en ese rango y nunca rellenes para ocupar espacio.)
-7. Si la carta ya está fuerte — concreta, específica, sin clichés y alineada al puesto — devuelve {"status": "already_optimized", "versions": []}. Es una respuesta correcta y esperada. Nunca rellenes con tres reescrituras cosméticas de una carta que no las necesitaba.
 
 SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
 La carta de arriba puede no tener ninguna cifra. Eso está BIEN y es muy común. Una carta con cero números, construida sobre datos concretos que el candidato sí declaró (el producto, el stack, el equipo, el rol), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: una cifra que no está en la carta ni en el contexto de arriba es algo que el candidato nunca dijo, y él tendría que encontrarla y borrarla. Escribe la carta más fuerte que puedas usando solo lo que hay.
@@ -938,9 +793,6 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       return { versions: [body.trim()], status: "already_optimized" }
     }
 
-    // The source of truth for what the candidate claimed: the words they wrote,
-    // not the markup around them — an `<em>` tag is not a claim they made.
-    const source = [plainBody, company ?? "", jobTitle ?? "", recipientTitle ?? ""].join("\n")
 
     // One owner for both attempts. This used to be written out inline here and
     // again inside the retry helper, which is how the prefix substitution
@@ -954,11 +806,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     // reintento sin filtrar, la ranura i de uno y la del otro dejaban de ser el
     // mismo tono, y el pareo de abajo —que promete «cada ranura sólo mejora»—
     // podía cambiar la versión formal por la dinámica.
-    const conLimpiasPrimero = (vs: string[]) => {
-      const limpias = vs.filter((v) => !this.letterHardCodesContent(v, source))
-      return limpias.length > 0 ? limpias : vs
-    }
-    const rewritten = conLimpiasPrimero(this.usableVersions(parsed.versions, plainBody))
+    const rewritten = this.usableVersions(parsed.versions, plainBody)
 
     // Nothing survived: every version just echoed the letter back. The user keeps
     // what they wrote rather than a non-improvement dressed up as a choice.
@@ -1006,7 +854,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     })
     const retry = await this.retryLetterForQuality(prompt, langInstruction, language, noneFits)
     if (retry) {
-      const retryClean = conLimpiasPrimero(this.usableVersions(retry.versions, plainBody))
+      const retryClean = this.usableVersions(retry.versions, plainBody)
 
       // Slot by slot, not all-or-nothing. Both attempts answer in the same
       // order — version 1 formal, 2 balanced, 3 dynamic — so slot i is the same
@@ -1015,20 +863,10 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       // one version because another still carried filler, and swapping the
       // whole set risked trading a clean tone for a flawed one. Here every slot
       // can only improve or stay.
-      // Una ranura sólo puede mejorar. La alternativa entra si arregla el defecto
-      // que tenía esta versión —el cliché, o el no caber— y NUNCA si para lograrlo
-      // se llevó puesta una cifra que el candidato declaró: una carta más corta a
-      // la que le falta un dato es peor que la larga completa.
+      // La alternativa entra si arregla el defecto que tenía esta versión: el cliché o el no caber.
       const merged = rewritten.map((first, i) => {
         const alt = retryClean[i]
         if (!alt) return first
-        if (losesStatedFigure(first, alt)) return first
-        // Una ranura sólo mejora: no se cambia una limpia por una con un dato
-        // quemado, y sí una con dato quemado por una limpia.
-        const firstQuema = this.letterHardCodesContent(first, source)
-        const altQuema = this.letterHardCodesContent(alt, source)
-        if (altQuema && !firstQuema) return first
-        if (firstQuema && !altQuema) return alt
         if (hasCliche(first) && !hasCliche(alt)) return alt
         const firstFits = this.letterWordCount(first) <= LETTER_ONE_PAGE_WORDS
         const altFits = this.letterWordCount(alt) <= LETTER_ONE_PAGE_WORDS
@@ -1063,18 +901,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       .map(stripSignOff)
       .filter((v) => v.trim().length > 0)
       .slice(0, 3)
-      // Before any check: a stock opener in front of a real sentence is a swap,
-      // not a rewrite. Doing it here means every reader below — the cliché gate,
-      // the retry decision — sees the text the user would actually get.
-      .map(substituteCliches)
-      // ── ACÁ SE TIRABA LA VERSIÓN CON UN DATO QUEMADO (CEO, 2026-09-11) ──
-      // Si caían las tres, el usuario leía «tu carta ya está optimizada» con la
-      // consulta gastada: un bloqueo. Ahora el dato quemado se aparta en
-      // `improveCoverLetter` SÓLO si quedan versiones limpias; si no, llegan
-      // igual y se ven enteras en el selector.
-      //
-      // Lo que sí se aparta no es un juicio: una versión casi idéntica a la
-      // carta que el usuario ya tiene no es otra opción, es la misma.
+      // Una versión casi idéntica a la carta que el usuario ya tiene no es otra opción, es la misma.
       .filter((v) => !isTrivialEdit(plainBody, v))
   }
 

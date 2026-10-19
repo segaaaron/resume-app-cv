@@ -5,38 +5,10 @@
 // decidió y le pone la ganancia que mide el puntaje.
 
 import { findingId, mismaRaiz, nodeHash, normalize, nuevaEn, type Finding, type JobSpec, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
-import { BULLETS_PER_ROLE_MAX, BULLETS_PER_ROLE_MIN, SKILLS_MAX } from "@/lib/ats3/ledger"
-import { cargoNucleo, cvTextOf, experienceYears, gainOf, titleWritten, type AuditFacts, type Score } from "@/lib/ats3/score"
+import { BULLETS_PER_ROLE_MIN, SKILLS_MAX } from "@/lib/ats3/ledger"
+import { cargoNucleo, experienceYears, gainOf, titleWritten, type AuditFacts, type Score } from "@/lib/ats3/score"
 
-/**
- * ¿EL CV RESPALDA ESTE NOMBRE? Cada palabra del nombre aparece en algún lado del
- * CV, por su raíz (4 letras): «REST web services» sí (RESTful, web, services);
- * «SDK architecture» no, si el CV nunca dice SDK (medido 2026-09-29: el ATS la dio
- * por demostrada y la mandaba escribir en la línea de TCA). Lo que no está
- * respaldado no se escribe en el CV: se le pregunta a la persona.
- */
-export function respaldadoEnCv(tree: ResumeTree, nombre: string): boolean {
-  return alternativaRespaldada(tree, nombre) !== null
-}
-
-/**
- * «Soldadura MIG | TIG» se cumple con cualquiera de las dos: devuelve la primera
- * alternativa que el CV respalda —la que se escribe—, o null.
- */
-export function alternativaRespaldada(tree: ResumeTree, nombre: string): string | null {
-  const palabras = normalize(cvTextOf(tree)).split(" ")
-  const opciones = nombre.split(/\s*\|\s*/).filter(Boolean)
-  return (
-    opciones.find((o) =>
-      normalize(o)
-        .split(" ")
-        .filter((w) => w.length >= 3)
-        .every((w) => palabras.some((p) => mismaRaiz(p, w))),
-    ) ?? null
-  )
-}
-
-export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, spec?: JobSpec, cerradas: readonly string[] = []): Finding[] {
+export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, spec?: JobSpec): Finding[] {
   const out: Finding[] = []
   const textoDe = new Map<NodeId, string>([[tree.summary.id, tree.summary.text], ...tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, b.text] as [NodeId, string]))])
   const tarjeta = (f: Omit<Finding, "id" | "nodeText" | "nodeHash"> & { matiz?: string }): Finding => {
@@ -79,12 +51,11 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
 
   const orden = new Map((spec?.mustHave ?? []).map((r, i) => [normalize(r.skill), i] as const))
   const duras = audit.hard
-    .filter((h) => h.status !== "demonstrated" && h.requirement === "MUST" && !credencial.has(normalize(h.skill)))
+    .filter((h) => h.status !== "demonstrated" && !credencial.has(normalize(h.skill)))
     .sort((x, y) => (orden.get(normalize(x.skill)) ?? 999) - (orden.get(normalize(y.skill)) ?? 999))
-  type Candidata = { nombre: string; component: "must" | "soft"; status: string; question: string | null }
-  const candidata = (nombre: string, component: "must" | "soft", status: string, question: string | null = null): Candidata => ({ nombre, component, status, question })
+  type Candidata = { nombre: string; component: "must" | "nice" | "soft"; status: string; question: string | null }
+  const candidata = (nombre: string, component: Candidata["component"], status: string, question: string | null = null): Candidata => ({ nombre, component, status, question })
   const rolDe = new Map(tree.roles.flatMap((r) => r.bullets.map((b) => [b.id, r.id] as const)))
-  const cerradasSet = new Set(cerradas)
   /**
    * ── EL PLAN POR PUESTO (CEO, 2026-10-05) ──────────────────────────────────
    * Cada línea lleva como mucho UNA dura y UNA blanda (la blanda como el hecho
@@ -97,14 +68,14 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
   const porPuesto = new Map<string, Candidata[]>()
   const sinEvidencia: Candidata[] = []
   for (const h of duras) {
-    const c = candidata(h.skill, "must", h.status, h.question)
+    const c = candidata(h.skill, h.requirement === "MUST" ? "must" : "nice", h.status, h.question)
     const role = h.writeIn ? rolDe.get(h.writeIn) : undefined
     if (!h.writeIn || !role) {
       sinEvidencia.push(c)
       continue
     }
     const linea = porLinea.get(h.writeIn)
-    if (h.writeInRelation === "same_task" && !cerradasSet.has(h.writeIn) && !linea?.dura) {
+    if (h.writeInRelation === "same_task" && !linea?.dura) {
       porLinea.set(h.writeIn, { ...linea, dura: c })
       continue
     }
@@ -114,7 +85,7 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
   for (const x of audit.soft.filter((y) => y.status !== "demonstrated")) {
     const c: Candidata = { nombre: x.signal, component: "soft", status: x.status, question: null }
     const linea = x.writeIn ? porLinea.get(x.writeIn) : undefined
-    if (x.writeIn && rolDe.has(x.writeIn) && !cerradasSet.has(x.writeIn) && !linea?.blanda) porLinea.set(x.writeIn, { ...linea, blanda: c })
+    if (x.writeIn && rolDe.has(x.writeIn) && !linea?.blanda) porLinea.set(x.writeIn, { ...linea, blanda: c })
     else sinEvidencia.push(c)
   }
   // Una tarjeta por línea, con su dura y su blanda juntas.
@@ -124,7 +95,7 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
     out.push(
       tarjeta({
         type: "missing_skill",
-        component: dura ? "must" : "soft",
+        component: dura ? dura.component : "soft",
         remedy: "ask",
         subject: nombres.join(" + "),
         terms: nombres,
@@ -140,19 +111,19 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
   // Las viñetas nuevas, puesto por puesto: hasta 6; y el puesto que queda debajo de 4 pregunta.
   for (const r of tree.roles) {
     const n = r.bullets.length
-    const nuevas = (porPuesto.get(r.id) ?? []).slice(0, Math.max(0, BULLETS_PER_ROLE_MAX - n))
-    for (const c of porPuesto.get(r.id)?.slice(nuevas.length) ?? []) sinEvidencia.push(c)
+    // Con el puesto lleno, la viñeta nueva reemplaza a la que menos aporta (lo decide Tailor al escribir).
+    const nuevas = porPuesto.get(r.id) ?? []
     for (const c of nuevas) {
       out.push(
         tarjeta({
           type: "missing_skill",
-          component: "must",
+          component: c.component,
           remedy: "ask",
           subject: c.nombre,
           terms: [c.nombre],
           matiz: normalize(c.nombre),
           nodeId: nuevaEn(r.id),
-          gain: gainOf(score, "must") * falta(c.status),
+          gain: gainOf(score, c.component) * falta(c.status),
           detail: c.status,
           roleId: r.id,
           ...(c.question ? { question: c.question } : {}),
@@ -180,7 +151,7 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
     out.push(
       tarjeta({
         type: "missing_skills",
-        component: sinEvidencia.some((c) => c.component === "must") ? "must" : "soft",
+        component: sinEvidencia.some((c) => c.component === "must") ? "must" : sinEvidencia[0].component,
         remedy: "ask",
         subjects: nombres,
         // El id cambia si cambia la lista: cerrar una no esconde las demás en el próximo análisis.

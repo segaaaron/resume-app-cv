@@ -109,8 +109,8 @@ describe("dónde escribe la IA una skill que falta", () => {
   it("con lugar en el puesto, una viñeta nueva", () => {
     expect(destinoDeSkill({ id: "r1", bullets: seis.slice(0, 5) }, "SDK architecture", 6, "b4")).toEqual({ nodeId: "nuevo:r1", nueva: true })
   })
-  it("lleno y con una línea de ese trabajo, dentro de ella", () => {
-    expect(destinoDeSkill({ id: "r1", bullets: seis }, "servicios del backend", 6, "b5")).toEqual({ nodeId: "b2", nueva: false })
+  it("lleno: una viñeta completa en lugar de la que menos aporta, aunque otra línea comparta palabras (CEO, 2026-10-16)", () => {
+    expect(destinoDeSkill({ id: "r1", bullets: seis }, "servicios del backend", 6, "b5")).toEqual({ nodeId: "b5", nueva: true })
   })
   it("lleno y sin línea que encaje, en lugar de la que menos aporta", () => {
     expect(destinoDeSkill({ id: "r1", bullets: seis }, "Splunk", 6, "b5")).toEqual({ nodeId: "b5", nueva: true })

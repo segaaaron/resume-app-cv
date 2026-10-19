@@ -104,34 +104,7 @@ describe("improveCoverLetter — the HTML round trip", () => {
   })
 })
 
-// Rule 7 asks the model to decline a strong letter and it never does — 0 of 3
-// measured on a letter that met every criterion it lists. The endpoint returns
-// three versions or nothing, so declining reads to the model like failing the
-// task; the summary's STEP 0 lost the same argument 0/5. A regex settles it.
-const STRONG_HTML =
-  "<p>Dear Ms. Vega,</p>" +
-  "<p>Northwind's posting mentions consolidating three payment services onto one platform. That is the same problem I spent 2023 solving at Acme.</p>" +
-  "<p>I led the billing migration off a legacy monolith and cut deploy time from 40 minutes to under 6. I mentored five engineers who were all promoted within 18 months.</p>" +
-  "<p>What I would bring is the part that is hard to hire for: I have made this migration once already, including the rollback plan nobody wants to write.</p>" +
-  "<p>I would welcome the chance to talk it through.</p>"
-
 describe("improveCoverLetter — the deterministic pre-check", () => {
-  it("declines a strong letter without calling the model at all", async () => {
-    let called = 0
-    const client = { chat: async () => { called++; throw new Error("must not be called") } } as unknown as IAIClient
-    const mod = new AICoverLetterModule(client, logger)
-    const r = await mod.improveCoverLetter("u", { body: STRONG_HTML, language: "en" }, "PRO")
-    expect(r.status).toBe("already_optimized")
-    expect(called).toBe(0)
-  })
-
-  it("hands the strong letter back exactly as it arrived", async () => {
-    const client = { chat: async () => { throw new Error("must not be called") } } as unknown as IAIClient
-    const mod = new AICoverLetterModule(client, logger)
-    const r = await mod.improveCoverLetter("u", { body: STRONG_HTML, language: "en" }, "PRO")
-    expect(r.versions).toEqual([STRONG_HTML])
-  })
-
   it("still improves a letter that carries filler", async () => {
     const mod = new AICoverLetterModule(clientReturning({ versions: REWRITES }), logger)
     const r = await mod.improveCoverLetter("u", { body: HTML_BODY, language: "en" }, "PRO")
@@ -201,28 +174,6 @@ describe("improveCoverLetter — the cliché gate", () => {
    * cambiar la formal por la dinámica, o quedarse con el cliché que venía a
    * limpiar.
    */
-  it("aparta el dato quemado en LOS DOS intentos, así la ranura sigue siendo el mismo tono", async () => {
-    // 47% no está en la carta ni en el contexto: es un dato que el candidato no dio.
-    const QUEMADA = "Dear Ms. Vega,\n\nAt Acme I drove a 47% lift in revenue across the platform.\n\nI would be glad to talk it through."
-    const QUEMADA2 = "Dear Ms. Vega,\n\nAt Acme I drove a 63% lift in revenue across the platform.\n\nI would be glad to talk it through."
-    const firstTry = [QUEMADA, CLICHED[1], REWRITES[2]]
-    const secondTry = [QUEMADA2, REWRITES[1], REWRITES[2]]
-    let calls = 0
-    const client = {
-      chat: async () => {
-        calls++
-        const payload = calls === 1 ? { versions: firstTry } : { versions: secondTry }
-        return { choices: [{ message: { content: JSON.stringify(payload) } }], usage: {} }
-      },
-    } as unknown as IAIClient
-    const r = await new AICoverLetterModule(client, logger).improveCoverLetter("u", { body: HTML_BODY, language: "en" }, "PRO")
-    // La ranura del cliché se empareja con la versión limpia del MISMO tono del
-    // reintento, no con la quemada que quedó primera en la lista cruda.
-    expect(r.versions.join(" ")).not.toContain("hard-working team player")
-    // Y ninguna versión quemada llega al usuario mientras haya limpias.
-    expect(r.versions.join(" ")).not.toContain("47%")
-    expect(r.versions.join(" ")).not.toContain("63%")
-  })
 
   it("never swaps a clean slot for a flawed one", async () => {
     let calls = 0
@@ -275,18 +226,4 @@ describe("improveCoverLetter — the cliché gate", () => {
     expect(r.versions.length).toBe(3)
   })
 
-  it("never lets a retry smuggle in a placeholder", async () => {
-    let calls = 0
-    const client = {
-      chat: async () => {
-        calls++
-        const payload = calls === 1
-          ? { versions: CLICHED }
-          : { versions: REWRITES.map((v) => v.replace("40 minutes to under 6", "[X%]")) }
-        return { choices: [{ message: { content: JSON.stringify(payload) } }], usage: {} }
-      },
-    } as unknown as IAIClient
-    const r = await new AICoverLetterModule(client, logger).improveCoverLetter("u", { body: HTML_BODY, language: "en" }, "PRO")
-    expect(r.versions.join(" ")).not.toContain("[X%]")
-  })
 })

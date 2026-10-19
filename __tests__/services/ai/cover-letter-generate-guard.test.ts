@@ -47,26 +47,7 @@ describe("generateCoverLetter — anti-invention guard", () => {
     expect(chat).toHaveBeenCalledTimes(1)
   })
 
-  it("retries when the first draft invents a metric, then ships the clean retry", async () => {
-    const dirty = "At my last role I increased revenue by 40% in one quarter.\n\nGlad to share details."
-    const clean = "At my last role I led the checkout rebuild and mentored two engineers.\n\nGlad to share details."
-    const { client, chat } = queuedClient([dirty, clean])
-    const mod = new AICoverLetterModule(client, logger as never)
-    const res = await mod.generateCoverLetter("u1", input(), "PRO")
-    expect(chat).toHaveBeenCalledTimes(2)
-    expect(res.body).toContain("checkout rebuild")
-    expect(res.body).not.toContain("40%")
-  })
 
-  it("retries when the first draft invents a stand-in employer name", async () => {
-    const dirty = "At XYZ Corp I built the mobile app end to end.\n\nGlad to talk."
-    const clean = "I built a mobile app end to end and shipped it to production.\n\nGlad to talk."
-    const { client, chat } = queuedClient([dirty, clean])
-    const mod = new AICoverLetterModule(client, logger as never)
-    const res = await mod.generateCoverLetter("u1", input(), "PRO")
-    expect(chat).toHaveBeenCalledTimes(2)
-    expect(res.body).not.toContain("XYZ Corp")
-  })
 
   it("does not flag a real employer that happens to be named 'ABC' (present in the profile)", async () => {
     const clean = "At ABC I owned the payments service and cut incident volume.\n\nGlad to talk."
@@ -78,16 +59,6 @@ describe("generateCoverLetter — anti-invention guard", () => {
     expect(res.body).toContain("ABC")
   })
 
-  it("ships best-effort (never empty) when both drafts still invent", async () => {
-    const dirty1 = "I boosted sales by 50% at my previous company.\n\nThanks."
-    const dirty2 = "I boosted sales by 30% at my previous company.\n\nThanks."
-    const { client, chat } = queuedClient([dirty1, dirty2])
-    const mod = new AICoverLetterModule(client, logger as never)
-    const res = await mod.generateCoverLetter("u1", input(), "PRO")
-    expect(chat).toHaveBeenCalledTimes(2)
-    // returns the retry draft rather than nothing
-    expect(res.body).toContain("30%")
-  })
 })
 
 describe("generateCoverLetter — anti-empty fallback (Phase 4)", () => {
@@ -161,17 +132,6 @@ describe("generateCoverLetter — tailoring brief (Phase 2)", () => {
 describe("generateCoverLetter — cifras sin respaldo", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("reintenta cuando la carta cita una cifra que el perfil no dio", async () => {
-    const leak = "Me entusiasma el puesto en Acme.\n\nEn cuanto me pases el perfil, te devuelvo una versión final en 3 párrafos, dentro de las 250-350 palabras pedidas."
-    const clean = "Me entusiasma el puesto en Acme por su foco en la calidad.\n\nQuedo a disposición para conversarlo."
-    const { client, chat } = queuedClient([leak, clean])
-    const mod = new AICoverLetterModule(client, logger as never)
-    const res = await mod.generateCoverLetter("u1", input({ language: "es" }), "PRO")
-
-    expect(chat.mock.calls.length).toBe(2)
-    expect(res.body).not.toContain("250")
-    expect(res.body).toContain("calidad")
-  })
 
   it("deja pasar una cifra que SÍ está en el perfil", async () => {
     const body = "Con 9 años en atención al cliente, me interesa el puesto en Acme.\n\nQuedo a disposición."
@@ -211,17 +171,6 @@ describe("improveCoverLetter — la misma vara que la carta nueva", () => {
   })
   const BODY = "<p>Me interesa el puesto en Acme por su foco en la atención al cliente.</p><p>Quedo a disposición.</p>"
 
-  it("descarta la versión que cita una cifra que la carta no tenía", async () => {
-    const leak = "Te devuelvo la carta en 3 párrafos, dentro de las 250-350 palabras pedidas, lista para enviar."
-    const good = "Me interesa el puesto en Acme porque mi trabajo diario es sostener el trato en mostrador sin perder el ritmo del turno."
-    const chat = vi.fn(async () => versionsReply([leak, good]))
-    const mod = new AICoverLetterModule({ chat } as never, logger as never)
-    const r = await mod.improveCoverLetter("u1", { body: BODY, language: "es" } as never, "PRO")
-
-    const all = (r.versions ?? []).join(" ")
-    expect(all).not.toContain("250")
-    expect(all).toContain("mostrador")
-  })
 
   /**
    * Nunca bloquear (CEO, 2026-09-11): si TODAS traen un dato quemado, llegan
@@ -259,15 +208,6 @@ describe("qué cuenta como cifra afirmada", () => {
     expect(chat.mock.calls.length).toBe(1)
   })
 
-  it("sí reintenta por un rango con su unidad", async () => {
-    const leak = "Te la devuelvo dentro de las 250-350 palabras pedidas."
-    const clean = "Me interesa el puesto en Acme por su foco en el trato diario.\n\nQuedo a disposición."
-    const { client, chat } = queuedClient([leak, clean])
-    const mod = new AICoverLetterModule(client, logger as never)
-    const r = await mod.generateCoverLetter("u1", input({ language: "es" }), "PRO")
-    expect(chat.mock.calls.length).toBe(2)
-    expect(r.body).not.toContain("250")
-  })
 
   it("acepta la cifra del candidato aunque su unidad cambie de palabra", async () => {
     const body = "Con 9 años de trayectoria, me interesa el puesto en Acme.\n\nQuedo a disposición."

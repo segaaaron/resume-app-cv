@@ -215,10 +215,10 @@ export class AIBulletModule {
       : language === "en"
         ? `\n=== ALREADY DIAGNOSED — THIS IS NOT A JUDGEMENT CALL ===
 This bullet was flagged by the resume analyzer for: \n${focusLines.map((l) => `- ${l.en}`).join("\n")}
-You MUST return a rewrite for it. "already_optimized" is NOT an acceptable answer here — the defect above is real and the user asked for it to be fixed. Rule 8 ("leave strong bullets alone") does NOT apply to this bullet. Keep every fact, tool and number the original states.\n`
+You MUST return a rewrite for it. "already_optimized" is NOT an acceptable answer here — the defect above is real and the user asked for it to be fixed. Keep every fact, tool and number the original states.\n`
         : `\n=== YA DIAGNOSTICADO — ESTO NO ES OPINABLE ===
 El analizador de CV marcó este bullet por: \n${focusLines.map((l) => `- ${l.es}`).join("\n")}
-DEBES devolver una reescritura. "already_optimized" NO es una respuesta aceptable aquí — el defecto de arriba es real y el usuario pidió arreglarlo. La regla 8 ("deja en paz los bullets ya fuertes") NO aplica a este bullet. Conserva todos los datos, herramientas y cifras del original.\n`
+DEBES devolver una reescritura. "already_optimized" NO es una respuesta aceptable aquí — el defecto de arriba es real y el usuario pidió arreglarlo. Conserva todos los datos, herramientas y cifras del original.\n`
 
     /**
      * Angles, and the reason they exist.
@@ -240,14 +240,14 @@ Return the strongest rewrite as "text", plus up to 2 "alternatives" that argue t
 - "technical": the engineering — systems, tools, architecture, how it was built.
 - "business": what it was worth — users, revenue, cost, risk, time.
 - "leadership": people and process — who was aligned, what practice changed.
-Every angle obeys the rules above: an angle the source does not support is simply omitted. Two honest options beat three where one is hard-coded.
+Every angle obeys the rules above.
 Add "why" to each (max 20 words): what the candidate gains over their original wording. Name the concrete change, never "more impactful".\n`
         : `\n=== DALE A ELEGIR AL CANDIDATO ===
 Devuelve la mejor reescritura en "text", más hasta 2 "alternatives" que defiendan el MISMO trabajo desde otro ángulo:
 - "technical": la ingeniería — sistemas, herramientas, arquitectura, cómo se construyó.
 - "business": cuánto valió — usuarios, ingresos, costo, riesgo, tiempo.
 - "leadership": personas y proceso — a quién se alineó, qué práctica cambió.
-Cada ángulo cumple las reglas de arriba: un ángulo que el source no respalda simplemente se omite. Dos opciones honestas valen más que tres con una quemada.
+Cada ángulo cumple las reglas de arriba.
 Agrega "why" a cada una (máx 20 palabras): qué gana el candidato frente a su redacción original. Nombra el cambio concreto, nunca "más impactante".\n`
 
     const postingTerms = input.postingTerms ?? []
@@ -269,7 +269,7 @@ Original bullets (each addressed by its index):
 ${indexedBullets}
 ${focusBlock}${variantsBlock}
 TRANSFORMATION RULES:
-1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Result stated in the source.
+1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Result: the natural outcome of that work (what improved, for whom).
 2. Verb first, always. PROHIBITED openers/clichés: "Responsible for", "In charge of", "Assisted with", "Helped with", "Worked on", "Duties included", and empty buzzwords ("team player", "detail-oriented", "hard-working", "results-driven", "go-getter"). No personal pronouns (I, my).
 3. Choose verbs based on role context:
    - Tech/Product: Architected, Developed, Automated, Migrated, Optimized, Deployed, Refactored, Scaled
@@ -279,14 +279,10 @@ TRANSFORMATION RULES:
 4. ATS: ${atsRule}
 5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never supply one yourself.
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
-7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. Either end on a concrete result the source states (a number, a named system, a real outcome) or end on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
-8. FIGURES: write the number the source states, exactly as it states it. When the source gives no number, write the sentence without one — it still reads as a finished line. What you return is printed on someone's résumé as-is, so every character of it has to be something they can hand to a recruiter.
-9. LEAVE STRONG BULLETS ALONE. If a bullet already opens with a strong action verb AND names specific work (real tools, systems, or outcomes), it is already good — OMIT it. Do NOT reword it just to phrase it differently or "tighten" it: swapping "enhance"→"expand" or dropping "strengthen team performance" makes it DIFFERENT, not better, and quietly loses detail the candidate stated. Only rewrite such a bullet if you can ADD a concrete result, number, or keyword the source supports. When in doubt, leave it.
-
+7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. End on a concrete result (a named system, a real outcome) or on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
 WHAT TO RETURN — read this last and follow it exactly:
-Include an entry in "improvements" ONLY for a bullet you can MATERIALLY improve using facts already in the source. Omit every other bullet. A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. A bullet with no number can still be improved by wording (stronger verb, clearer action/outcome) — improve it; never demand a figure.
-- No bullet can be materially improved → {"status": "already_optimized", "improvements": []}. This is a correct and expected answer.
-- Otherwise → {"status": "improved", "improvements": [...]}.
+Include an entry in "improvements" for every bullet, rewritten with high impact. A bullet with no number is still improved (stronger verb, clearer action and outcome); never demand a figure.
+- {"status": "improved", "improvements": [...]}.
 - The text is not real professional work experience → {"status": "off_topic", "improvements": []}.
 
 Respond ONLY with valid JSON (no markdown):
@@ -305,7 +301,7 @@ Bullets originales (cada uno con su índice):
 ${indexedBullets}
 ${focusBlock}${variantsBlock}
 REGLAS DE TRANSFORMACIÓN:
-1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado presente en el source.
+1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado: el resultado natural de ese trabajo (qué mejoró, para quién).
 2. Verbo primero, siempre. PROHIBIDO aperturas/clichés: "Responsable de", "Encargado de", "Apoyé en", "Ayudé con", "Trabajé en", "Mis funciones incluían", y muletillas vacías ("trabajo en equipo", "orientado al detalle", "proactivo", "orientado a resultados"). Sin pronombres (yo, mi, mis).
 3. Elige verbos según el contexto del puesto:
    - Tech/Producto: Arquitecté, Desarrollé, Automaticé, Migré, Optimicé, Desplegué, Refactoricé, Escalé
@@ -315,13 +311,10 @@ REGLAS DE TRANSFORMACIÓN:
 4. ATS: ${atsRuleEs}
 5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo pongas vos.
 6. Cada entrada reemplaza exactamente UN bullet original: da su "index" y prefija el texto con "• ". Nunca fusiones, dividas ni reordenes bullets.
-7. TERMINA EN SUSTANCIA. Nunca cierres un bullet con una cola de impacto vaga que no nombra nada concreto — colas prohibidas: "para mejorar X", "para asegurar/garantizar/fortalecer Y", "contribuyendo a la eficiencia", "asegurando el desarrollo", "mejorando la experiencia", "optimizando el rendimiento", y cualquier "…para <verbo> <sustantivo abstracto>" añadido para sonar impactante. Termina en un resultado concreto que el source declare (una cifra, un sistema nombrado, un resultado real) o termina en la acción concreta misma. Un bullet más corto que se detiene en el trabajo real gana a uno rellenado con una cláusula de propósito hueca.
-8. DEJA EN PAZ LOS BULLETS YA FUERTES. Si un bullet ya empieza con un verbo de acción fuerte Y nombra trabajo específico (herramientas, sistemas o resultados reales), ya está bien — OMÍTELO. NO lo reescribas solo para decirlo distinto o "condensarlo": cambiar "mejorar"→"ampliar" o eliminar "fortalecer el rendimiento del equipo" lo hace DIFERENTE, no mejor, y pierde en silencio detalle que el candidato declaró. Reescribe un bullet así SOLO si puedes AGREGAR un resultado concreto, cifra o keyword que el source respalde. Ante la duda, déjalo.
-
+7. TERMINA EN SUSTANCIA. Nunca cierres un bullet con una cola de impacto vaga que no nombra nada concreto — colas prohibidas: "para mejorar X", "para asegurar/garantizar/fortalecer Y", "contribuyendo a la eficiencia", "asegurando el desarrollo", "mejorando la experiencia", "optimizando el rendimiento", y cualquier "…para <verbo> <sustantivo abstracto>" añadido para sonar impactante. Termina en un resultado concreto (un sistema nombrado, un resultado real) o en la acción concreta misma. Un bullet más corto que se detiene en el trabajo real gana a uno rellenado con una cláusula de propósito hueca.
 QUÉ DEVOLVER — lee esto al final y cúmplelo exactamente:
-Incluye una entrada en "improvements" SOLO para un bullet que puedas mejorar MATERIALMENTE usando datos ya presentes en el source. Omite todos los demás. Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo. Un bullet sin número igual se puede mejorar por redacción (verbo más fuerte, acción/resultado más claros) — mejóralo; nunca exijas una cifra.
-- Ningún bullet se puede mejorar materialmente → {"status": "already_optimized", "improvements": []}. Es una respuesta correcta y esperada.
-- En cualquier otro caso → {"status": "improved", "improvements": [...]}.
+Incluye una entrada en "improvements" para cada bullet, reescrito con alto impacto. Un bullet sin número igual se mejora (verbo más fuerte, acción y resultado más claros); nunca exijas una cifra.
+- {"status": "improved", "improvements": [...]}.
 - El texto no es experiencia laboral profesional real → {"status": "off_topic", "improvements": []}.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
@@ -473,23 +466,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // The insistence below is only truthful when a defect WAS diagnosed, so
     // without one the retry is a plain second ask.
     if (improvements.length === 0) {
-      // Se RETIRA la licencia de devolver vacío en vez de contradecirla. Antes esto
-      // pegaba "tu respuesta vacía se rechaza" a un prompt que unas líneas arriba decía
-      // "dejarlo fuera es lo correcto": OpenAI documenta que ante reglas en conflicto el
-      // modelo gasta tokens de razonamiento intentando reconciliarlas en lugar de elegir
-      // una. Aquí no hay conflicto real — el defecto ya se diagnosticó en código, así que
-      // en ESTE camino vaciar sí es una negativa.
-      const licence = language === "en"
-        ? "A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. "
-        : "Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo. "
-      const withoutLicence = prompt.replace(licence, "")
+      // Respuesta vacía: se pide una vez más.
       const insist = !diagnosed
         // No diagnosis to lean on: ask again, plainly. Claiming a defect the
         // panel never found would push the model to hard-code one and "fix" it.
         ? prompt + retryNudge(language)
         : language === "en"
-          ? `${withoutLicence}\n\nThe bullet above has the diagnosed defect named in this request, so it CAN be improved. Return exactly one entry for index 0 that fixes it, preserving every fact.`
-          : `${withoutLicence}\n\nEl bullet de arriba tiene el defecto diagnosticado que se nombra en esta petición, así que SÍ se puede mejorar. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos.`
+          ? `${prompt}\n\nThe bullet above has the diagnosed defect named in this request, so it CAN be improved. Return exactly one entry for index 0 that fixes it, preserving every fact.`
+          : `${prompt}\n\nEl bullet de arriba tiene el defecto diagnosticado que se nombra en esta petición, así que SÍ se puede mejorar. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos.`
       /**
        * Y SI LO QUE FALLÓ FUE UN TÉRMINO, SE LE DICE CUÁL.
        *

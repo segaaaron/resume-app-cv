@@ -200,7 +200,7 @@ export const PROMPT_VERSION = {
   // p1-23 (CEO, 2026-10-05): el stack de la EMPRESA es deseable, no requisito; cada blanda se declara {raw, quality} y se guarda la cualidad.
   // p1-25 (CEO, 2026-10-05): obligatorio = lo que el trabajo central del puesto exige, no el título de la sección (DualEntry: RN+TS y Expo+EAS en responsabilidades).
   // p1-26 (CEO, 2026-10-05): una capacidad con sus ejemplos es UN requisito con alternativas (SME: 36 requisitos por partir «concurrency: GCD, OperationQueue, async/await»); ejemplos en pares de rubros opuestos.
-  P1: "p1-27", // parser de vacante
+  P1: "p1-28", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -237,7 +237,8 @@ export const PROMPT_VERSION = {
   // p2-29 (CEO, 2026-10-05): plan por puesto — `same_role` (viñeta nueva en ese puesto) y blanda + dura en la misma línea.
   // p2-30 (2026-10-05): la plantilla traía `"writeInRelation":"new_experience"` y el modelo lo copiaba: 0 ubicaciones (medido con SME Careers).
   // p2-31 (CEO, 2026-10-05): ejemplos en pares de rubros opuestos; «mismo puesto» y «experiencia nueva» dichos para cualquier oficio.
-  P2: "p2-31", // diagnóstico
+  // p2-33 (CEO, 2026-10-19): herramientas y logros demuestran también las capacidades para usarlos.
+  P2: "p2-33", // diagnóstico
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -287,7 +288,7 @@ export const PROMPT_VERSION = {
   // p4-41 (CEO, 2026-10-05): valor alto — anclada en el producto/usuarios del puesto, resultado con qué/para quién/unidad.
   // p4-42 (CEO, 2026-10-05): una dura y una blanda en la misma línea, la blanda como acción.
   // p4-43 (CEO, 2026-10-05): los ejemplos de «valor alto» en pares de oficios opuestos, no sólo software.
-  P4: "p4-43", // reescritura de viñeta
+  P4: "p4-44", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
@@ -309,7 +310,7 @@ export const PROMPT_VERSION = {
   // p5-15: la antigüedad del resumen viejo no se exige conservar (se escribe la medida).
   // p5-16: la regla de verdad compartida (truthRule) ahora deja a la IA escribir todo salvo las cifras.
   // p5-18 (2026-10-02): recibe la TRAYECTORIA con fechas; los años van con el total si el cargo pedido es sólo una parte.
-  P5: "p5-18", // resumen
+  P5: "p5-19", // resumen
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -600,9 +601,9 @@ export const RequirementSchema = z.object({
    * presentación no tumba un requisito exigido.
    */
   /** Nombre canónico, decidido por el modelo a partir del propio aviso. */
-  skill: z.string().min(1).transform((v) => v.slice(0, 80)),
+  skill: z.string().min(1).transform((v) => v.slice(0, 200)),
   /** Cómo lo escribió la vacante. Es la variante que alimenta el índice. */
-  raw: z.string().min(1).transform((v) => v.slice(0, 300)),
+  raw: z.string().min(1).transform((v) => v.slice(0, 600)),
   years: anios(),
   /** Categoría libre, en las palabras del aviso: no hay taxonomía cerrada
    *  porque un aviso de soldadura no habla de "LANGUAGE" ni de "FRAMEWORK". */
@@ -648,10 +649,10 @@ export const JobSpecSchema = z.object({
    * deducirlo sería inventar la vara.
    */
   metricThatMatters: texto(80),
-  mustHave: lista(RequirementSchema, 40),
-  niceToHave: lista(RequirementSchema, 40),
+  mustHave: lista(RequirementSchema, 100),
+  niceToHave: lista(RequirementSchema, 100),
   // Recortar, no tirar: una responsabilidad larga se perdía entera (ver RequirementSchema).
-  responsibilities: lista(z.string().transform((v) => v.slice(0, 300)), 30),
+  responsibilities: lista(z.string().transform((v) => v.slice(0, 600)), 60),
   /**
    * LA BLANDA SE DECLARA CON SU NOMBRE DE RECLUTADOR (2026-10-05). Con una regla en
    * prosa el modelo seguía copiando la palabra de una metáfora del aviso
@@ -663,15 +664,15 @@ export const JobSpecSchema = z.object({
       .union([z.string(), z.object({ quality: z.string() }).passthrough()])
       .transform((v) => (typeof v === "string" ? v : v.quality).trim().slice(0, 160))
       .refine((v) => v.length > 0),
-    20,
+    40,
   ),
   /**
    * LO QUE TE FILTRA Y NO SE REDACTA (CEO, 2026-09-30): residir en un país,
    * permiso de trabajo, un nivel de idioma obligatorio. Se avisa; no hay botón.
    */
   conditions: lista(
-    z.object({ kind: z.enum(["location", "language", "authorization", "other"]).catch("other"), text: z.string().min(1).transform((v) => v.slice(0, 200)) }),
-    6,
+    z.object({ kind: z.enum(["location", "language", "authorization", "other"]).catch("other"), text: z.string().min(1).transform((v) => v.slice(0, 400)) }),
+    20,
   ),
 }).transform((original) => {
   /**
@@ -865,6 +866,7 @@ export const FINDING_TYPES = [
   "years_short", // la vacante pide más años de los que el CV prueba
   "eligibility", // una condición que filtra y no se redacta: residencia, permiso, idioma obligatorio
   "parse_risk", // algo que un lector automático no va a extraer bien
+  "misspelled", // una línea de la persona con palabras mal escritas: la corrección va lista para confirmar
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
 
@@ -921,6 +923,8 @@ export interface Finding {
   roleId?: string
   /** `missing_skills`: las skills que el CV no muestra y ninguna línea suya sostiene. */
   subjects?: string[]
+  /** `misspelled`: la línea con sólo sus palabras mal escritas corregidas. */
+  corrected?: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -992,7 +996,7 @@ export const SuggestionSchema = z.object({
   // asumir que no, que es la respuesta que no escribe nada en el CV de nadie.
   changed: bandera(false),
   /** El único que NO se recorta: es lo que se escribe en el CV. */
-  text: z.string().max(1200).nullish().transform((v) => v ?? ""),
+  text: z.string().max(3000).nullish().transform((v) => v ?? ""),
   actionVerb: texto(60),
   keywordsUsed: lista(z.string().transform((v) => v.slice(0, 80)), 10),
   claim: texto(200),
@@ -1018,7 +1022,7 @@ export const SuggestionSchema = z.object({
    */
   placeholders: lista(PlaceholderSchema, 8),
   /** La salida del mismo trabajo sin cifra, para quien no tiene el dato. */
-  variantWithoutMetric: z.string().max(1200).nullish().transform((v) => v ?? null),
+  variantWithoutMetric: z.string().max(3000).nullish().transform((v) => v ?? null),
 
   /**
    * QUÉ SE PUEDE MEDIR DE ESTE TRABAJO, en las palabras del oficio.

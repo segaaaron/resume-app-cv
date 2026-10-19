@@ -69,12 +69,9 @@ describe("normalizeParamsForModel", () => {
     expect(out.max_completion_tokens).toBeUndefined()
   })
 
-  it("OMITS reasoning_effort when configured 'none' — the API only accepts minimal|low|medium|high and 400s on any other literal", () => {
-    // AI_REASONING_EFFORT is unset in the test env → REASONING_EFFORT defaults to "none",
-    // meaning "use OpenAI's own default". Sending the literal "none" 400'd every reasoning
-    // call (the tailor/review 500 bug), so the param must NOT be present.
+  it("sin AI_REASONING_EFFORT, todo razona en «low» (CEO, 2026-10-16) — nunca el literal «none», que la API rechaza", () => {
     const out = normalizeParamsForModel(base("gpt-5.4-mini")) as unknown as Record<string, unknown>
-    expect(out.reasoning_effort).toBeUndefined()
+    expect(out.reasoning_effort).toBe("low")
   })
 
   it("never sets reasoning_effort on GPT-4 models", () => {

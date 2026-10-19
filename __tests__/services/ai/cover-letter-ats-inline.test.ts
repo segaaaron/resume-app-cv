@@ -100,13 +100,9 @@ describe("las frases que afirman una cualidad se le dicen al usuario", () => {
     })),
   })
 
-  it("las nombra, y son las que la sustitución NO puede arreglar sola", async () => {
+  it("las nombra para que la persona decida (el texto de la IA no se toca)", async () => {
     const mod = new AICoverLetterModule(clienteCon(conCliches) as never, logger as never)
     const res = await mod.generateCoverLetter("u1", { jobTitle: "iOS Developer", language: "en", tone: "balanced" }, "PRO")
-    // «I am excited to» tiene reemplazo determinista y NO debe aparecer acá: se
-    // arregló sola, sin gastar un token y sin molestar al usuario.
-    expect(res.weakPhrases ?? []).not.toContain("i am excited to")
-    // Las cualidades afirmadas sí: son las que sólo la persona puede cambiar.
     expect(res.weakPhrases ?? []).toEqual(expect.arrayContaining(["team player"]))
   })
 

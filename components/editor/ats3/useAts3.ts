@@ -768,6 +768,21 @@ export function useAts3(resumeId: string, language: "es" | "en") {
     setPending,
     analyze,
     requestRewrite,
+    /**
+     * LA CORRECCIÓN ORTOGRÁFICA NO PASA POR LA IA (CEO, 2026-10-16): el ATS ya trae
+     * la línea corregida; se abre la misma ventana de confirmar, sin consulta.
+     */
+    proposeSpelling: (f: Finding) => {
+      if (!f.corrected) return
+      pedidoActual.current = {}
+      setRejected(null)
+      setPendingFinding(f.id)
+      setPending({
+        bulletId: f.nodeId, changed: true, text: f.corrected, actionVerb: "", keywordsUsed: [], claim: "",
+        metricType: null, placeholders: [], variantWithoutMetric: null, measurableAspect: null,
+        basedOnHash: f.nodeHash, originalText: f.nodeText,
+      })
+    },
     applySkills,
     /**
      * ¿EL CV SIGUE SIENDO EL QUE SE ANALIZÓ?
