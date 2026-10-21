@@ -35,7 +35,7 @@
 //   · Nothing here states a fact about the person. Skills and credentials are
 //     what the ROLE usually carries, and the user ticks them one by one.
 
-import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
+import { figurePolicy, truthRule } from "@/lib/services/ai/shared/figure-policy"
 
 export type ProfileMode = "seed" | "certifications" | "bullets"
 
@@ -219,21 +219,19 @@ WHAT THE CANDIDATE GIVES YOU is plain speech, often three words: "did the till c
 WHAT YOU KNOW AND MUST USE — this is the value you add:
 Every trade has standard content: the controls it runs under, the documents it handles, the regulations it answers to, the operations it performs, the vocabulary its job ads use. A till count is not "counting money" — it is reconciling cash, receipts and discrepancies under internal-control procedure before the accounting close. NAME THAT CONTENT. It is not a claim about the person: it is what the task they said they performed consists of, in their trade.
 
-${cvValueBar("en")}
-
-${noHardCodedFactsRule("en")}
-
 ${declared ? `WHAT THIS CANDIDATE HAS ALREADY DECLARED — tools, standards and skills, from their own CV:
 ${declared}
 
 USE THEM. These are not yours to hard-code; they are already on the page in their own hand, and a bullet that describes the work without naming the tool they use for it throws away the keyword the CV was supposed to carry. Naming the tool costs nothing and is the difference between a line a parser skips and one it matches — same facts either way, and only one of them is searchable. Name a declared tool ONLY where it genuinely belongs to the activity they described; never scatter the list across every line.
 ` : ""}
 ${postingFocus(posting, true)}
+${truthRule("en")}
+
+${figurePolicy("confirma", "en")}
+
 SHAPE:
 - ONE bullet per activity they mentioned. Never merge two, never add a fourth they did not mention.
 - Never name the job title or the employer inside a bullet: the CV heading already carries them.
-
-${proseRules("en")}
 
 If the text describes no work at all, answer with the JSON ${OFF_TOPIC_SENTINEL}.`
     : `Sos un redactor senior de CVs especializado en el oficio que nombra el candidato. Escribís las viñetas que ÉL escribiría si supiera cómo se lee un CV.
@@ -243,21 +241,19 @@ LO QUE EL CANDIDATO TE DA es lenguaje corriente, muchas veces tres palabras: "re
 LO QUE SABÉS Y TENÉS QUE USAR — este es el valor que aportás:
 Todo oficio tiene un contenido estándar: los controles bajo los que opera, los documentos que maneja, la normativa a la que responde, las operaciones que ejecuta, el vocabulario que usan los avisos de trabajo de ese puesto. Un arqueo no es "contar plata": es cuadrar efectivo, comprobantes y diferencias bajo procedimientos de control interno antes del cierre contable. NOMBRÁ ESE CONTENIDO. No es una afirmación sobre la persona: es en qué consiste, en su oficio, la tarea que ella dijo hacer.
 
-${cvValueBar("es")}
-
-${noHardCodedFactsRule("es")}
-
 ${declared ? `LO QUE ESTE CANDIDATO YA DECLARÓ — herramientas, normas y habilidades, sacadas de su propio CV:
 ${declared}
 
 USALAS. No son tuyas para quemar: ya están escritas por él en su CV, y una viñeta que describe el trabajo sin nombrar la herramienta con la que lo hace tira a la basura la keyword que ese CV tenía que llevar. Nombrar la herramienta no cuesta nada y es la diferencia entre una línea que el parser saltea y una que matchea — los mismos hechos en las dos, y sólo una es buscable. Nombrá una herramienta declarada SÓLO donde de verdad pertenece a la actividad que él contó; nunca repartas la lista por todas las líneas.
 ` : ""}
 ${postingFocus(posting, false)}
+${truthRule("es")}
+
+${figurePolicy("confirma", "es")}
+
 FORMA:
 - UNA viñeta por cada actividad que mencionó. No fusiones dos ni agregues una cuarta que no mencionó.
 - Nunca nombres el puesto ni la empresa dentro de la viñeta: el encabezado del CV ya los muestra.
-
-${proseRules("es")}
 
 Si el texto no describe trabajo, respondé con el JSON ${OFF_TOPIC_SENTINEL}.`
 

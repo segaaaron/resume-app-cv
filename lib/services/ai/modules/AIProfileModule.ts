@@ -7,7 +7,6 @@ import {
   buildResumeContext,
   logAIUsage,
 } from "@/lib/ai-client"
-import { aiTellWords } from "../shared/cv-writing-doctrine"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
@@ -43,7 +42,6 @@ import {
 } from "../shared/ai-types"
 
 /** Longest a skill may be. See `isSkillName` for where the number comes from. */
-const MAX_SKILL_WORDS = 4
 
 export class AIProfileModule {
   constructor(
@@ -156,7 +154,7 @@ Rules:
 - ALWAYS use the exact ids from the section listing above. Use only the ids listed; never make one up.
 - Improved descriptions integrate what the candidate said + what already existed, cohesively and professionally.
 - Do not hard-code data (dates, companies, metrics) the candidate didn't mention.
-- Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release. Avoid AI-tell words: ${aiTellWords("en")}.
+- Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release.
 
 ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-second read):
 - Every bullet OPENS with a strong action verb (Built, Led, Reduced, Increased, Designed, Launched, Delivered, Automated, Migrated, Improved, Cut, Grew). NEVER open with a duty phrase ("Responsible for", "Helped with", "Worked on", "Involved in") or a pronoun.
@@ -224,7 +222,7 @@ Reglas:
 - Usa SIEMPRE los ids exactos del listado de secciones de arriba. Usá sólo los ids listados; nunca uses uno que no esté ahí.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
 - Fechas, empresas y métricas salen de lo que el candidato mencionó; cualquier otra sería un dato quemado por ti.
-- Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: ${aiTellWords("es")}.
+- Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa.
 
 ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundos de un reclutador):
 - Cada bullet ABRE con un verbo de acción fuerte (Desarrollé, Lideré, Reduje, Aumenté, Diseñé, Lancé, Entregué, Automaticé, Migré, Mejoré, Recorté). NUNCA abras con una frase de tarea ("Responsable de", "Ayudé con", "Trabajé en", "Encargado de") ni con un pronombre.
@@ -307,7 +305,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
      * The prompt asks for canonical names; this is what happens when it does not
      * get them.
      */
-    const isSkillName = (s: string) => s.trim().split(/\s+/).length <= MAX_SKILL_WORDS
+    const isSkillName = (s: string) => s.trim().length > 0
 
     /**
      * Our catalog's spelling when it knows the skill, the model's when it does
@@ -550,7 +548,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       // the same thing.
       if (parsed.off_topic) throw new AppError("off_topic", 422)
 
-      const skills = (parsed.inferredSkills ?? []).filter((s) => s.trim() && s.trim().split(/\s+/).length <= MAX_SKILL_WORDS)
+      const skills = (parsed.inferredSkills ?? []).filter((s) => s.trim())
       const certs = (parsed.suggestedCertifications ?? []).filter((c) => c.trim())
       const lines = (parsed.bullets ?? []).filter((b) => b.trim())
       // One summary or three: the prompt asks for three, and a model that
@@ -581,7 +579,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         // Our text, so our typos. "Creeé matrices de test" reached a real CV
         // because this path never ran the shared cleaner every other generated
         // line runs through.
-        cleanLines = await cleanGeneratedText(cleanLines, language === "en" ? "en" : "es", sectionData ?? {})
+        cleanLines = await cleanGeneratedText(cleanLines)
       }
 
       return {

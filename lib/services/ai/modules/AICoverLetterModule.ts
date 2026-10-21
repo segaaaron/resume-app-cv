@@ -8,6 +8,7 @@ import {
   logAIUsage,
 } from "@/lib/ai-client"
 import { AppError } from "@/lib/services/auth/AppError"
+import { figurePolicy, truthRule } from "@/lib/services/ai/shared/figure-policy"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
@@ -20,7 +21,6 @@ import { LETTER_ONE_PAGE_WORDS } from "@/components/cover-letter/templates/_metr
 // 16-28 words, a past-tense verb first), which is the wrong shape for a letter
 // and would fight the paragraph structure below. The two that do apply are the
 // two that are about content rather than form.
-import { cvValueBar, noHardCodedFactsRule, aiTellWords } from "../shared/cv-writing-doctrine"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { buildCoverLetterBrief, type CoverLetterBrief } from "@/lib/cover-letter/cover-letter-brief"
@@ -189,11 +189,11 @@ export class AICoverLetterModule {
     const prompt = language === "en"
       ? `You are a senior career coach and professional writer specializing in cover letters that get interviews at top companies.
 
+${truthRule("en", "directo")}
+
+${figurePolicy("directo", "en")}
+
 Write a complete, compelling cover letter body for the following candidate and position. This letter must feel personal, specific, and tailored — not generic. It should demonstrate clear understanding of the role and convincingly show why this candidate is the right fit.
-
-${cvValueBar("en")}
-
-${noHardCodedFactsRule("en", { allowProposedFigure: false })}
 
 ${untrustedDataRule(true)}
 
@@ -216,20 +216,19 @@ Rules:
 - Do NOT use placeholder text like [Company] or [Name] — use the actual values provided
 - NEVER name a company, employer, product, or client that is not in the candidate profile. NEVER use a stand-in like "XYZ Corp", "ABC Company", or "Company Name" — if the profile names no employer, describe the work without naming one.
 - Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text, so a signature here duplicates it or leaves an unfilled bracket in their letter.
-- NEVER write a bracket placeholder such as [X%] or [N projects]. This letter is sent to a recruiter as-is. If the candidate states no figure, write the achievement without a number.
 - NEVER these phrases, no exceptions: ${clicheBanList("en")}
 - Each paragraph must be 2–4 sentences, substantive and specific — never padding to reach a length
 - The letter must feel written by a human, not AI
-- Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: ${aiTellWords("en")}. Ground every claim in a concrete detail from the profile (tool, company, real result) — never supply one yourself.
+- Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Ground every claim in a concrete detail from the profile (tool, company, real result) — never supply one yourself.
 
 Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using \\n\\n>"}`
       : `Eres un redactor senior especializado en cartas de presentación que consiguen entrevistas en empresas top. Tienes años de experiencia ayudando a profesionales a destacar en procesos de selección.
 
+${truthRule("es", "directo")}
+
+${figurePolicy("directo", "es")}
+
 Escribe el cuerpo completo de una carta de presentación para el siguiente candidato y puesto. La carta debe sentirse personal, específica y totalmente adaptada — no genérica. Debe demostrar comprensión real del rol y convencer de forma genuina por qué este candidato es la persona indicada.
-
-${cvValueBar("es")}
-
-${noHardCodedFactsRule("es", { allowProposedFigure: false })}
 
 ${untrustedDataRule(false)}
 
@@ -252,11 +251,10 @@ Reglas:
 - NO uses placeholders como [Empresa] o [Nombre] — usa los valores reales proporcionados
 - NUNCA nombres una empresa, empleador, producto o cliente que no esté en el perfil del candidato. NUNCA uses un nombre quemado como "XYZ Corp", "Empresa ABC" o "Nombre de la Empresa" — si el perfil no nombra un empleador, describe el trabajo sin nombrarlo.
 - NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto, así que una firma aquí lo duplica o le deja un corchete sin rellenar.
-- NUNCA escribas un placeholder entre corchetes como [X%] o [N proyectos]. Esta carta se envía al recruiter tal cual. Si el candidato no declara la cifra, escribe el logro sin número.
 - NUNCA estas frases, sin excepción: ${clicheBanList("es")}
 - Cada párrafo debe tener 2–4 oraciones, sustanciales y específicas — nunca relleno para alcanzar un largo
 - La carta debe sonar escrita por un humano, no por IA
-- Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: ${aiTellWords("es")}. Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo pongas vos.
+- Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo pongas vos.
 
 Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo usando \\n\\n>"}`
 
@@ -667,9 +665,7 @@ Nada sobre ESTA empresa puede salir de vos —ni logros, ni inversión, ni cultu
         ].filter(Boolean).join(" | ")
 
     const prompt = language === "en"
-      ? `${noHardCodedFactsRule("en", { allowProposedFigure: false })}
-
-ADDITIONAL RULES:
+      ? `ADDITIONAL RULES:
 1. ONLY rewrite using information already present in the current letter and the context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the source.
 2. Preserve every metric the original states. Never leave a bracket standing in for a figure.
 3. If a version could only be impactful by adding data of your own, prefer a shorter, conservative rewrite anchored to the source.
@@ -697,9 +693,7 @@ ON NUMBERS — read this last and follow it exactly:
 The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: a figure that is not in the letter or the context above is a claim the candidate never made, and they would have to find it and delete it. Write the strongest letter you can using only what is there.
 
 Respond ONLY with valid JSON, shaped: a "status" key set to "improved", and a "versions" key holding an array of exactly three strings. Each string is one entire rewritten letter — every paragraph of it, separated by \\n\\n. Write all three in full. Nothing else in the response.`
-      : `${noHardCodedFactsRule("es", { allowProposedFigure: false })}
-
-REGLAS ADICIONALES:
+      : `REGLAS ADICIONALES:
 1. SOLO reescribe usando información ya presente en la carta actual y el contexto de arriba. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no presentes en el source.
 2. Conservá cada métrica que el original declara. Nunca dejes un corchete en lugar de una cifra.
 3. Si una versión requiere fabricar contenido para ser impactante, prefiere una reescritura más corta y conservadora anclada al source.
@@ -793,7 +787,6 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       return { versions: [body.trim()], status: "already_optimized" }
     }
 
-
     // One owner for both attempts. This used to be written out inline here and
     // again inside the retry helper, which is how the prefix substitution
     // landed on the retry only — the first attempt, the one that answers most
@@ -842,7 +835,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     if (flawed.length === 0 && !noneFits) {
       this.logSummaryUsage(userId, plan, response.usage, undefined)
       // Same rule as bullets and summaries: our own words, spell-checked.
-      const cleanBody = await cleanGeneratedText(rewritten, language)
+      const cleanBody = await cleanGeneratedText(rewritten)
       return { versions: cleanBody.map(plainToHtml) }
     }
 

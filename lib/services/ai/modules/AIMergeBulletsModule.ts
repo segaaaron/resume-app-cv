@@ -18,19 +18,17 @@
 import { AI_MODEL_PROSE, logAIUsage } from "@/lib/ai-client"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { AppError } from "@/lib/services/auth/AppError"
+import { truthRule } from "@/lib/services/ai/shared/figure-policy"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { resolveLanguage, parseAIJson } from "../shared/ai-helpers"
-import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { clicheBanList } from "../shared/cliches"
-import { reportGuardDrops } from "../shared/guard-metrics"
 import { cleanGeneratedText } from "../shared/clean-output"
 import { readChat } from "@/lib/services/ai/shared/chat-result"
 import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
 import { MergeBulletShape } from "@/lib/services/ai/shared/ai-types"
-import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 
 export interface MergeBulletsInput {
   targetId: string
@@ -76,14 +74,6 @@ interface WorkRow {
  * —cubre las palabras además de los números— pero las dos se declaran porque
  * una cifra que cambia de verbo no es una palabra perdida.
  */
-const MERGE_RULES: readonly GateRule[] = [
-  "only_declared_facts",
-  "figure_policy",
-  "figure_intact",
-  "keeps_content",
-  "keeps_terms",
-]
-
 export class AIMergeBulletsModule {
   constructor(
     private readonly aiClient: IAIClient,
@@ -114,13 +104,9 @@ export class AIMergeBulletsModule {
     // variable se cobra al precio de caché en la segunda llamada en adelante. Con los
     // bullets arriba, ese prefijo era de cero.
     const prompt = language === "en"
-      ? `Fuse the two résumé bullets below —both from the same role— into ONE line.
+      ? `${truthRule("en")}
 
-${cvValueBar("en")}
-
-${noHardCodedFactsRule("en", { allowProposedFigure: false })}
-
-${keepCandidateFactsRule("en")}
+Fuse the two résumé bullets below —both from the same role— into ONE line.
 
 WHAT A MERGE IS, and this is the part that goes wrong:
 - A merge is NOT the two sentences joined by "and". "Picked orders from the pick list and packed them onto pallets" is two lines with a conjunction between them: it is longer than either, says nothing neither said, and buys the candidate one line of space and no more. Measured: three of four merges came back exactly like that.
@@ -137,13 +123,9 @@ Respond ONLY with valid JSON (no markdown):
 
 BULLET A: ${a}
 BULLET B: ${b}`
-      : `Fusiona los dos bullets de currículum de abajo —ambos del mismo puesto— en UNA sola línea.
+      : `${truthRule("es")}
 
-${cvValueBar("es")}
-
-${noHardCodedFactsRule("es", { allowProposedFigure: false })}
-
-${keepCandidateFactsRule("es")}
+Fusiona los dos bullets de currículum de abajo —ambos del mismo puesto— en UNA sola línea.
 
 QUÉ ES UNA FUSIÓN, y esta es la parte que sale mal:
 - Una fusión NO son las dos oraciones unidas con "y". "Gestioné la agenda y confirmé los turnos por teléfono" son dos líneas con una conjunción en el medio: queda más larga que cualquiera de las dos, no dice nada que ninguna dijera, y le compra al candidato un renglón de espacio y nada más. Medido: tres de cada cuatro fusiones volvieron exactamente así.
@@ -263,91 +245,8 @@ BULLET B: ${b}`
     // Strip a bullet marker or wrapping quotes the model may add back.
     text = text.replace(/^\s*[•·▪‣*\-–—]\s*/, "").replace(/^["'“”]|["'“”]$/g, "").trim()
 
-    /**
-     * LA FUSIÓN DECLARA SU LISTA; EL MOTOR LA CORRE.
-     *
-     * Estas cinco preguntas —¿quemó un dato?, ¿la cifra sobrevivió?, ¿sobrevivió
-     * cada palabra de LAS DOS líneas?, ¿soltó un término de la vacante?— eran
-     * cinco `if` escritos a mano acá, que es como se llega a que un escritor
-     * corra cuatro chequeos y su hermano tres. `figurePolicy: "drop"` es la
-     * postura de este endpoint desde siempre: la fusión no puede proponer una
-     * cifra, porque no nace de un relato nuevo del candidato.
-     *
-     * El chequeo de largo se queda a mano: no es una regla del motor, es
-     * aritmética sobre estas dos líneas en particular.
-     */
-    const veredicto = runWriteGate({
-      text,
-      source: `${a}\n${b}`,
-      mergedFrom: [a, b],
-      postingTerms: input.postingTerms ?? [],
-      figurePolicy: "drop",
-      language,
-    }, MERGE_RULES)
-
-    if (!veredicto.ok && veredicto.rule === "only_declared_facts") {
-      this.logger.warn("[AIService.mergeBullets] merged bullet introduced ungrounded content — discarded", { targetId })
-      return { status: "not_mergeable" }
-    }
-    if (!veredicto.ok && veredicto.rule === "figure_policy") {
-      this.logger.warn("[AIService.mergeBullets] merged bullet introduced a figure — discarded", { targetId })
-      return { status: "not_mergeable" }
-    }
-
-    // A merge that is shorter than the longer of the two inputs has dropped
-    // content rather than combined it.
-    if (text.length < Math.max(a.length, b.length)) return { status: "not_mergeable" }
-
-    if (!veredicto.ok && veredicto.rule === "figure_intact") {
-      this.logger.warn("[AIService.mergeBullets] merged bullet dropped a stated figure — discarded", { targetId })
-      reportGuardDrops({ endpoint: "merge-bullets", offered: 1, kept: 0, hardCoded: 0, figureLoss: 1, trivial: 0, termLoss: 0, weak: 0 })
-      return { status: "not_mergeable" }
-    }
-
-    // El motor ya dijo QUÉ se perdió: el reintento lo nombra en vez de recontarlo.
-    const perdioTermino = !veredicto.ok && veredicto.rule === "keeps_terms"
-    const dropped = !veredicto.ok && (veredicto.rule === "keeps_content" || perdioTermino)
-      ? (veredicto.dropped ?? [])
-      : []
-    if (dropped.length > 0) {
-      /**
-       * ONE retry, saying exactly what went missing.
-       *
-       * A discarded merge is not free: the user spent a use and a cooldown to be
-       * told their two lines stay as they were. Measured, the loss is usually a
-       * single word the fusion swallowed ("los TURNOS por teléfono" → "por
-       * teléfono"), which a second pass fixes — this is the "bad roll, not a bad
-       * prompt" case the never-empty rule exists for.
-       *
-       * The note REPORTS the miss, it does not add a rule: keeping every word is
-       * already in the prompt, and a retry that introduces new instructions is
-       * how a prompt ends up arguing with itself.
-       */
-      const missed = dropped.slice(0, 6).join(", ")
-      const note = language === "en"
-        ? `Your last answer dropped these words from the two lines: ${missed}. They are facts the candidate wrote. Write the merge again with every one of them in it.`
-        : `Tu respuesta anterior perdió estas palabras de las dos líneas: ${missed}. Son datos que escribió el candidato. Escribí la fusión de nuevo con todas ellas adentro.`
-      const second = await this.retryMerge(note, callOnce, usages, a, b, targetId, input.postingTerms ?? [], language)
-      if (second) return { status: "ok", text: (await cleanGeneratedText([second], language, sectionData))[0] ?? second }
-      this.logger.warn("[AIService.mergeBullets] merged bullet dropped content twice — discarded", { targetId, dropped: dropped.slice(0, 5) })
-      // Y al panel de admin, no sólo a la consola del contenedor: una fusión
-      // descartada le costó al usuario un uso y un cooldown para que sus dos
-      // líneas se queden como estaban.
-      reportGuardDrops({
-        endpoint: "merge-bullets",
-        offered: 1,
-        kept: 0,
-        hardCoded: 0,
-        figureLoss: 0,
-        trivial: perdioTermino ? 0 : 1,
-        termLoss: perdioTermino ? 1 : 0,
-        weak: 0,
-      })
-      return { status: "not_mergeable" }
-    }
-
     // Our text, so our typos: the shared cleaner runs on everything generated.
-    const [cleaned] = await cleanGeneratedText([text], language, sectionData)
+    const [cleaned] = await cleanGeneratedText([text])
     return { status: "ok", text: cleaned ?? text }
     } finally {
       bill()
@@ -383,20 +282,6 @@ BULLET B: ${b}`
       let out = typeof parsed.text === "string" ? parsed.text.trim() : ""
       if (!out) return null
       out = out.replace(/^\s*[•·▪‣*\-–—]\s*/, "").replace(/^["\u2018\u2019\u201c\u201d']|["\u2018\u2019\u201c\u201d']$/g, "").trim()
-      // La segunda respuesta pasa por EL MISMO motor y LA MISMA lista que la
-      // primera. Escrita a mano, esta copia ya se había desincronizado una vez:
-      // la de arriba corría cinco chequeos y ésta cuatro más el largo, y un
-      // hermano con un chequeo de menos es exactamente cómo se cuela lo que el
-      // otro rechaza.
-      if (!runWriteGate({
-        text: out,
-        source: `${a}\n${b}`,
-        mergedFrom: [a, b],
-        postingTerms,
-        figurePolicy: "drop",
-        language,
-      }, MERGE_RULES).ok) return null
-      if (out.length < Math.max(a.length, b.length)) return null
       this.logger.info("[AIService.mergeBullets] second attempt kept every word", { targetId })
       return out
     } catch {

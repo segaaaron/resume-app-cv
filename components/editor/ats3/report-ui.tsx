@@ -20,7 +20,7 @@ import { useTranslations } from "next-intl"
 // El lenguaje de pulsación vive con el resto del vocabulario visual: definirlo
 // acá otra vez era la misma frase en dos archivos.
 import { Btn, Chip, Note, PRESSABLE, toneOf, type Tone } from "./ui"
-import { AlertCircle, AlertTriangle, Check, ChevronDown, FileText, Sparkles, Tag, User } from "lucide-react"
+import { AlertCircle, AlertTriangle, Check, ChevronDown, Eye, FileText, Sparkles, Tag, User } from "lucide-react"
 import { READY_SCORE, scoreBand } from "@/lib/ats3/score"
 import { normalize } from "@/lib/ats3/contracts"
 import type { PanelCheck, PanelSection, PanelSectionId, PanelTerm } from "./view-model"
@@ -310,6 +310,7 @@ const SECTION_ICON: Record<PanelSectionId, typeof Tag> = {
   soft: User,
   other: Sparkles,
   format: FileText,
+  lectura: Eye,
 }
 
 interface SectionProps {

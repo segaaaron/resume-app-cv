@@ -5,6 +5,7 @@ import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
+import { MODEL_PRICING } from "@/lib/services/ai/shared/cost-tracker"
 
 const logger = createLogger("admin-ai-usage")
 
@@ -77,16 +78,46 @@ export async function GET(req: Request) {
       }))
       .sort((a, b) => b.costUsd - a.costUsd)
 
-    // Per-model breakdown, most expensive first.
+    // Per-model breakdown, most expensive first. Lleva la TARIFA VIGENTE de cada
+    // modelo junto al gasto: sin ella, una fila cara no dice si pesa por precio o
+    // por volumen. Sale de MODEL_PRICING, la misma tabla con la que se cobró.
     const byModel = byModelRaw
-      .map((r) => ({
-        model: r.model || "(unknown)",
-        calls: r._count.id ?? 0,
-        promptTokens: r._sum.promptTokens ?? 0,
-        completionTokens: r._sum.completionTokens ?? 0,
-        costUsd: r._sum.costUsd ?? 0,
-      }))
+      .map((r) => {
+        const model = r.model || "(unknown)"
+        const price = MODEL_PRICING[model]
+        return {
+          model,
+          calls: r._count.id ?? 0,
+          promptTokens: r._sum.promptTokens ?? 0,
+          completionTokens: r._sum.completionTokens ?? 0,
+          costUsd: r._sum.costUsd ?? 0,
+          // null = modelo sin precio en la tabla: se cobró con la tarifa
+          // conservadora y el número de arriba es una estimación alta.
+          inputPer1M: price?.inputPer1M ?? null,
+          outputPer1M: price?.outputPer1M ?? null,
+        }
+      })
       .sort((a, b) => b.costUsd - a.costUsd)
+
+    /**
+     * CLAUDE CONTRA OPENAI (CEO, 2026-10-20): cuánto se gastó con cada proveedor.
+     *
+     * Se deriva del nombre del modelo y NO de una columna nueva en la base: es el
+     * mismo criterio con el que `AnthropicClientAdapter` rutea la llamada, así que
+     * no pueden discrepar. Un `AIUsageLog` viejo sigue contando: su modelo no
+     * empieza con `claude-`, o sea OpenAI, que es lo que era.
+     */
+    const porProveedor = new Map<string, { calls: number; promptTokens: number; completionTokens: number; costUsd: number }>()
+    for (const r of byModel) {
+      const key = r.model.startsWith("claude-") ? "Claude (Anthropic)" : "OpenAI"
+      const acc = porProveedor.get(key) ?? { calls: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 }
+      acc.calls += r.calls
+      acc.promptTokens += r.promptTokens
+      acc.completionTokens += r.completionTokens
+      acc.costUsd += r.costUsd
+      porProveedor.set(key, acc)
+    }
+    const byProvider = [...porProveedor].map(([provider, v]) => ({ provider, ...v })).sort((a, b) => b.costUsd - a.costUsd)
 
     // Paginate
     const pageRows = grouped.slice(offset, offset + limit)
@@ -123,6 +154,7 @@ export async function GET(req: Request) {
       },
       byEndpoint,
       byModel,
+      byProvider,
       rows,
       total: totalActiveUsers,
     })

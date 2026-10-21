@@ -7,14 +7,14 @@ import {
   logAIUsage,
 } from "@/lib/ai-client"
 import { AppError } from "@/lib/services/auth/AppError"
+import { figurePolicy, truthRule } from "@/lib/services/ai/shared/figure-policy"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
-import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
+import { buildMetricGuidance, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { askUntilAnswered, retryNudge } from "../shared/never-empty"
-import { aiTellWords, cvValueBar, noHardCodedFactsRule } from "../shared/cv-writing-doctrine"
 import { buildModePrompt } from "./profile-modes"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { extractProfileMetrics } from "../shared/summary-quality"
@@ -85,11 +85,9 @@ export class AISummaryModule {
         : "Keywords ATS del sector para incluir de forma natural")
 
     const prompt = language === "en"
-      ? `${cvValueBar("en")}
+      ? `${truthRule("en", "directo")}
 
-${noHardCodedFactsRule("en")}
-
-NEVER write a bracket placeholder. No [X years], [N projects], [X%] — this text goes into the candidate's CV as-is and a bracket reads as an unfinished resume.
+${figurePolicy("directo", "en")}
 
 TASK: Analyze this professional profile and generate 3 high-impact resume summaries, each with a different positioning.
 
@@ -112,27 +110,20 @@ Version 2 — SPECIALIST: Emphasis on technical or functional expertise specific
 
 Version 3 — VALUE PROPOSITION: Focuses on what the candidate brings to their next team. Combines past achievement + differential skill + future value. Tone: dynamic, forward-looking, impact-oriented. 3 sentences.
 
-${cvValueBar("en")}
-
-${noHardCodedFactsRule("en")}
-
 ABSOLUTE RULES:
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: ${clicheBanList("en")}. They are checked, and a summary that leads with one is asked for again.
 • No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
 • Never leave a bracket like [X%]: unfilled, in a CV it reads as unfinished.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
-• Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: ${aiTellWords("en")}. Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
-
+• Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
 
 ${numbersRuleEN}
 
 Respond ONLY with valid JSON. Each entry is the complete text itself, not a label:
 {"versions": ["<the complete executive summary>", "<the complete specialist summary>", "<the complete value-proposition summary>"]}`
-      : `${cvValueBar("es")}
+      : `${truthRule("es", "directo")}
 
-${noHardCodedFactsRule("es")}
-
-NUNCA escribas un corchete. Ni [X años], ni [N proyectos], ni [X%] — este texto entra en el CV tal cual y un corchete se lee como un CV a medio hacer.
+${figurePolicy("directo", "es")}
 
 TAREA: Analiza este perfil profesional y genera 3 resúmenes de CV de alto impacto, cada uno con posicionamiento diferente.
 
@@ -155,17 +146,12 @@ Versión 2 — ESPECIALISTA: Énfasis en expertise técnico o funcional específ
 
 Versión 3 — PROPUESTA DE VALOR: Enfoca en lo que el candidato aporta a su próximo equipo. Combina logro pasado + habilidad diferencial + valor futuro. Tono: dinámico, propositivo, orientado al impacto. 3 oraciones.
 
-${cvValueBar("es")}
-
-${noHardCodedFactsRule("es")}
-
 REGLAS ABSOLUTAS:
 • Acciones de impacto, nombradas sin sujeto y nunca conjugadas en tercera persona: liderazgo de, desarrollo de, transformación de, escalado de, optimización de, implementación de, diseño de. NUNCA estas frases —se comprueban, y un resumen que abra con una se vuelve a pedir—: ${clicheBanList("es")}.
 • Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
 • Nunca dejes un corchete tipo [X%]: sin rellenar, en un CV se lee como algo sin terminar.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
-• Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: ${aiTellWords("es")}. Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
-
+• Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
 
 ${numbersRuleES}
 
@@ -260,30 +246,23 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     const list = (Array.isArray(rawParsed.versions) ? rawParsed.versions : rawParsed.summaries) as unknown
     const parsed = { versions: Array.isArray(list) ? list : [] }
 
-    const gated = await gateSummaryVersions(this.aiClient, this.logger, {
-      rawVersions: parsed.versions,
-      source: resumeContext,
-      metrics,
-      basePrompt: prompt,
-      langInstruction,
-      language,
-      temperature: AI_TEMPERATURE_GENERATIVE,
-      maxTokens: 600,
-      endpoint: "generate-summary",
-    })
+    // Las versiones que escribió el modelo, tal como vinieron.
+    const versiones = parsed.versions
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .map((text, sourceIndex) => ({ text: text.trim(), sourceIndex }))
 
-    this.logSummaryUsage(userId, "generate-summary", plan, response.usage, gated.retryUsage)
+    this.logSummaryUsage(userId, "generate-summary", plan, response.usage, null)
 
     // No previous summary to fall back to in generate-summary. If every version
     // was dropped, return empty array with a status flag so the frontend can
     // show its own empty-state — never surface hard-coded content.
-    if (gated.versions.length === 0) {
+    if (versiones.length === 0) {
       return { versions: [], status: "already_optimized" }
     }
     // Spell-checked before it reaches the CV: this is our text, not the
     // user's, so a typo here is ours to fix rather than to report back at them.
-    const cleanText = await cleanGeneratedText(gated.versions.map((v) => v.text), language)
-    return toVersionsResult(gated.versions.map((v, i) => ({ ...v, text: cleanText[i] ?? v.text })))
+    const cleanText = await cleanGeneratedText(versiones.map((v) => v.text))
+    return toVersionsResult(versiones.map((v, i) => ({ ...v, text: cleanText[i] ?? v.text })))
   }
 
   /**

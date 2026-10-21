@@ -25,6 +25,12 @@ interface AIEndpointRow extends AIBreakdownRow {
 }
 interface AIModelRow extends AIBreakdownRow {
   model: string
+  /** Tarifa vigente por 1M de tokens. null = modelo sin precio en MODEL_PRICING. */
+  inputPer1M?: number | null
+  outputPer1M?: number | null
+}
+interface AIProviderRow extends AIBreakdownRow {
+  provider: string
 }
 
 interface AIUsageResponse {
@@ -37,6 +43,7 @@ interface AIUsageResponse {
   }
   byEndpoint?: AIEndpointRow[]
   byModel?: AIModelRow[]
+  byProvider?: AIProviderRow[]
   rows: AIUsageRow[]
   total: number
 }
@@ -147,23 +154,23 @@ export default function AIUsagePanel() {
       <div className="mb-5">
         <div className="flex items-center gap-[7px] text-[10px] font-bold tracking-[0.1em] uppercase text-[#00D4FF] mb-[5px]">
           <span className="inline-block w-[14px] h-[1.5px] bg-[#00D4FF] opacity-50" />
-          AI Cost Tracking
+          Gasto de IA
         </div>
         <h2
           className="text-[20px] font-bold text-[#1a2e4a] tracking-[-0.025em] leading-[1.2] m-0"
           style={{ fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)" }}
         >
-          OpenAI Usage
+          Uso de IA
         </h2>
         <p className="text-[12.5px] text-[#6B7A8C] mt-[4px]">
-          Real token consumption and cost per user. Read-only.
+          Tokens y costo real por usuario, en dólares. Sólo lectura.
         </p>
       </div>
 
       {/* Date filters */}
       <div className="flex flex-wrap items-end gap-3 mb-5">
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6B7A8C]">From</label>
+          <label className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6B7A8C]">Desde</label>
           <input
             type="date"
             value={from}
@@ -172,7 +179,7 @@ export default function AIUsagePanel() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6B7A8C]">To</label>
+          <label className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6B7A8C]">Hasta</label>
           <input
             type="date"
             value={to}
@@ -185,7 +192,7 @@ export default function AIUsagePanel() {
           disabled={loading}
           className="h-8 px-4 rounded-[7px] bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white text-[12px] font-bold tracking-[0.05em] shadow-[0_2px_10px_rgba(0,212,255,0.35)] hover:shadow-[0_4px_16px_rgba(0,212,255,0.45)] hover:-translate-y-px active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Loading..." : "Apply"}
+          {loading ? "Cargando…" : "Ver"}
         </button>
       </div>
 
@@ -201,7 +208,7 @@ export default function AIUsagePanel() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             <div className="bg-white border border-[#D9E1ED] rounded-[10px] p-4 relative overflow-hidden">
               <div className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#6B7A8C] mb-1.5">
-                Total Calls
+                Llamadas
               </div>
               <div
                 className="text-[22px] font-bold text-[#1a2e4a] tracking-[-0.02em] leading-none"
@@ -216,7 +223,7 @@ export default function AIUsagePanel() {
 
             <div className="bg-gradient-to-br from-[rgba(0,212,255,0.05)] to-[rgba(0,212,255,0.02)] border border-[rgba(0,212,255,0.15)] rounded-[10px] p-4 relative overflow-hidden">
               <div className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#00D4FF] mb-1.5">
-                Total Cost
+                Gasto total
               </div>
               <div
                 className="text-[22px] font-bold text-[#00D4FF] tracking-[-0.02em] leading-none"
@@ -231,7 +238,7 @@ export default function AIUsagePanel() {
 
             <div className="bg-white border border-[#D9E1ED] rounded-[10px] p-4 relative overflow-hidden">
               <div className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#6B7A8C] mb-1.5">
-                Active Users
+                Usuarios activos
               </div>
               <div
                 className="text-[22px] font-bold text-[#1a2e4a] tracking-[-0.02em] leading-none"
@@ -245,6 +252,53 @@ export default function AIUsagePanel() {
             </div>
           </div>
 
+          {/* Por proveedor: Claude manda, OpenAI respalda — cuánto costó cada uno */}
+          {data.byProvider && data.byProvider.length > 0 && (
+            <div className="bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden mb-4 shadow-[0_1px_3px_rgba(26,46,74,0.06)]">
+              <div className="px-4 py-3 border-b border-[#D9E1ED] bg-[#f5f8fc] flex items-center gap-[7px]">
+                <span className="inline-block w-[12px] h-[1.5px] bg-[#00D4FF] opacity-60" />
+                <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#1a2e4a]">
+                  Gasto por proveedor
+                </span>
+                <span className="text-[10px] text-[#6B7A8C] ml-auto tracking-[0.04em]">
+                  Claude principal · OpenAI respaldo
+                </span>
+              </div>
+              {/*
+                SIN PORCENTAJES NI BARRAS (CEO, 2026-10-20).
+                Decían «77%» sin sustantivo, al lado de una barra que se llenaba:
+                se leía como un medidor a punto de reventar y un gasto enorme,
+                cuando el total del día eran cinco centavos. Lo que el admin
+                necesita saber es cuánto dinero y cuántos tokens — ambos son
+                números absolutos y no hay nada que malinterpretar.
+              */}
+              <div className="p-3">
+                {data.byProvider.map((r) => {
+                  const esClaude = r.provider.startsWith("Claude")
+                  return (
+                    <div key={r.provider} className="flex items-baseline justify-between gap-3 px-1.5 py-[7px] rounded-[7px] hover:bg-[rgba(0,212,255,0.03)] transition-colors">
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className={`inline-block w-[9px] h-[9px] rounded-full shrink-0 ${esClaude ? "bg-[#00D4FF]" : "bg-[#1a2e4a]"}`} />
+                        <span className="text-[12.5px] font-semibold text-[#1a2e4a] truncate">{r.provider}</span>
+                        <span className="text-[11px] text-[#6B7A8C] shrink-0">
+                          {r.calls.toLocaleString()} {r.calls === 1 ? "llamada" : "llamadas"}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        <span className="text-[13px] font-bold text-[#00A8CC] tabular-nums" style={{ fontFamily: "var(--mono,monospace)" }}>
+                          {formatCost(r.costUsd)}
+                        </span>
+                        <span className="text-[11px] text-[#6B7A8C] ml-2 tabular-nums" style={{ fontFamily: "var(--mono,monospace)" }}>
+                          {formatTokens(r.promptTokens + r.completionTokens)} tokens
+                        </span>
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Breakdown: per-service + per-model */}
           {((data.byEndpoint && data.byEndpoint.length > 0) || (data.byModel && data.byModel.length > 0)) && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
@@ -254,31 +308,23 @@ export default function AIUsagePanel() {
                   <div className="px-4 py-3 border-b border-[#D9E1ED] bg-[#f5f8fc] flex items-center gap-[7px]">
                     <span className="inline-block w-[12px] h-[1.5px] bg-[#00D4FF] opacity-60" />
                     <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#1a2e4a]">
-                      Cost by Service
+                      Gasto por función
                     </span>
                   </div>
                   <div className="p-2">
-                    {data.byEndpoint.map((r) => {
-                      const pct = data.totals.costUsd > 0 ? (r.costUsd / data.totals.costUsd) * 100 : 0
-                      return (
-                        <div key={r.endpoint} className="px-2.5 py-2 rounded-[7px] hover:bg-[rgba(0,212,255,0.03)] transition-colors">
-                          <div className="flex items-baseline justify-between gap-3 mb-1">
-                            <span className="text-[12.5px] font-medium text-[#1a2e4a] truncate">{endpointLabel(r.endpoint)}</span>
-                            <span className="text-[12.5px] font-semibold text-[#00A8CC] tabular-nums shrink-0" style={{ fontFamily: "var(--mono,monospace)" }}>
-                              {formatCost(r.costUsd)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-[5px] rounded-full bg-[#F0F3F8] overflow-hidden">
-                              <div className="h-full rounded-full bg-gradient-to-r from-[#00D4FF] to-[#00A8CC]" style={{ width: `${Math.max(2, pct)}%` }} />
-                            </div>
-                            <span className="text-[10.5px] text-[#6B7A8C] tabular-nums shrink-0 w-[68px] text-right" style={{ fontFamily: "var(--mono,monospace)" }}>
-                              {r.calls.toLocaleString()} · {pct.toFixed(0)}%
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {data.byEndpoint.map((r) => (
+                      <div key={r.endpoint} className="flex items-baseline justify-between gap-3 px-2.5 py-[7px] rounded-[7px] hover:bg-[rgba(0,212,255,0.03)] transition-colors">
+                        <span className="flex items-baseline gap-2 min-w-0">
+                          <span className="text-[12.5px] font-medium text-[#1a2e4a] truncate">{endpointLabel(r.endpoint)}</span>
+                          <span className="text-[11px] text-[#6B7A8C] shrink-0">
+                            {r.calls.toLocaleString()} {r.calls === 1 ? "llamada" : "llamadas"}
+                          </span>
+                        </span>
+                        <span className="text-[12.5px] font-semibold text-[#00A8CC] tabular-nums shrink-0" style={{ fontFamily: "var(--mono,monospace)" }}>
+                          {formatCost(r.costUsd)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -289,26 +335,32 @@ export default function AIUsagePanel() {
                   <div className="px-4 py-3 border-b border-[#D9E1ED] bg-[#f5f8fc] flex items-center gap-[7px]">
                     <span className="inline-block w-[12px] h-[1.5px] bg-[#00D4FF] opacity-60" />
                     <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#1a2e4a]">
-                      Cost by Model
+                      Gasto por modelo
                     </span>
                   </div>
                   <div className="p-2">
                     {data.byModel.map((r) => {
-                      const pct = data.totals.costUsd > 0 ? (r.costUsd / data.totals.costUsd) * 100 : 0
                       return (
-                        <div key={r.model} className="px-2.5 py-2 rounded-[7px] hover:bg-[rgba(0,212,255,0.03)] transition-colors">
-                          <div className="flex items-baseline justify-between gap-3 mb-1">
-                            <span className="text-[12px] font-medium text-[#1a2e4a] truncate" style={{ fontFamily: "var(--mono,monospace)" }}>{r.model}</span>
-                            <span className="text-[12.5px] font-semibold text-[#00A8CC] tabular-nums shrink-0" style={{ fontFamily: "var(--mono,monospace)" }}>
-                              {formatCost(r.costUsd)}
+                        <div key={r.model} className="px-2.5 py-[7px] rounded-[7px] hover:bg-[rgba(0,212,255,0.03)] transition-colors">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="text-[12px] font-medium text-[#1a2e4a] truncate" style={{ fontFamily: "var(--mono,monospace)" }}>
+                              {r.model}
+                              {/* La tarifa con la que se cobró: sin ella no se sabe si la fila
+                                  pesa por precio o por volumen. «sin tarifa» = el modelo no está
+                                  en MODEL_PRICING y el gasto es una estimación alta. */}
+                              <span className="ml-2 text-[10px] font-normal text-[#6B7A8C] tracking-[0.02em]">
+                                {r.inputPer1M != null && r.outputPer1M != null
+                                  ? `$${r.inputPer1M.toFixed(2)}/$${r.outputPer1M.toFixed(2)} ·1M`
+                                  : "sin tarifa"}
+                              </span>
                             </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-[5px] rounded-full bg-[#F0F3F8] overflow-hidden">
-                              <div className="h-full rounded-full bg-gradient-to-r from-[#1a2e4a] to-[#3a5a8a]" style={{ width: `${Math.max(2, pct)}%` }} />
-                            </div>
-                            <span className="text-[10.5px] text-[#6B7A8C] tabular-nums shrink-0 w-[92px] text-right" style={{ fontFamily: "var(--mono,monospace)" }}>
-                              {formatTokens(r.promptTokens + r.completionTokens)} tok · {pct.toFixed(0)}%
+                            <span className="shrink-0 text-right">
+                              <span className="text-[12.5px] font-semibold text-[#00A8CC] tabular-nums" style={{ fontFamily: "var(--mono,monospace)" }}>
+                                {formatCost(r.costUsd)}
+                              </span>
+                              <span className="text-[11px] text-[#6B7A8C] ml-2 tabular-nums" style={{ fontFamily: "var(--mono,monospace)" }}>
+                                {formatTokens(r.promptTokens + r.completionTokens)} tokens
+                              </span>
                             </span>
                           </div>
                         </div>
@@ -331,7 +383,7 @@ export default function AIUsagePanel() {
                 <table className="w-full min-w-[720px] border-collapse">
                   <thead>
                     <tr className="bg-[#f5f8fc]">
-                      {["Email", "Plan", "Calls", "Input Tokens", "Output Tokens", "Cost USD", "Last Call", ""].map((h) => (
+                      {["Usuario", "Plan", "Llamadas", "Tokens de entrada", "Tokens de salida", "Gasto", "Última llamada", ""].map((h) => (
                         <th
                           key={h}
                           className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-[#6B7A8C] border-b border-[#D9E1ED] whitespace-nowrap"
@@ -446,7 +498,7 @@ export default function AIUsagePanel() {
 
       {!data && !loading && (
         <div className="py-8 text-center text-[13px] text-[#6B7A8C]">
-          Set a date range (optional) and click Apply to load usage data.
+          Elegí un rango de fechas (opcional) y tocá «Ver» para cargar el gasto.
         </div>
       )}
     </div>

@@ -73,6 +73,8 @@ export interface SummaryInput {
    */
   yearsOfExperience: number | null
   spec: JobSpec
+  /** El idioma del CV —leído del CV, no del campo del documento—; sin él, el del módulo. */
+  language?: "es" | "en"
   topBullets: string[]
   /** Lo que la vacante pide y el CV ya demuestra, en su orden de peso (`provenTermsOf`). */
   provenTerms: string[]

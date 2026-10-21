@@ -163,6 +163,46 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
     )
   }
 
+  /**
+   * ── LO QUE LEE LA PERSONA, NO EL FILTRO (CEO, 2026-10-20) ──────────────────
+   *
+   * `gain: 0` a propósito: un ATS no mira si la viñeta dice el tamaño ni si
+   * pega dos trabajos, así que inventarle puntos sería mentir sobre el puntaje
+   * que el resto de las tarjetas mueve de verdad.
+   *
+   * El tamaño se pide POR PUESTO y no por línea: con una tarjeta por viñeta,
+   * un CV normal recibía quince iguales. Y sólo cuando NINGUNA línea del puesto
+   * lo dice: la que ya lo dice es la prueba de que la persona lo sabe contar.
+   */
+  const porNodo = new Map((audit.bullets ?? []).map((b) => [b.nodeId, b] as const))
+  for (const r of tree.roles) {
+    for (const b of r.bullets) {
+      const hechos = porNodo.get(b.id)
+      if (hechos?.mismaHistoriaQue) {
+        const otro = textoDe.get(hechos.mismaHistoriaQue as NodeId) ?? ""
+        out.push(tarjeta({ type: "bullet_twin", component: "must", remedy: "rewrite", nodeId: b.id, gain: 0, detail: otro.slice(0, 120) }))
+      }
+      if (!hechos?.dosTrabajos) continue
+      out.push(tarjeta({ type: "bullet_two_jobs", component: "must", remedy: "rewrite", nodeId: b.id, gain: 0, detail: "" }))
+    }
+    const conDatos = r.bullets.filter((b) => porNodo.has(b.id))
+    if (conDatos.length > 0 && conDatos.every((b) => !porNodo.get(b.id)!.conEscala)) {
+      out.push(
+        tarjeta({
+          type: "role_no_scale",
+          component: "must",
+          remedy: "ask",
+          subject: [r.title, r.company].filter(Boolean).join(" — "),
+          matiz: r.id,
+          nodeId: nuevaEn(r.id),
+          gain: 0,
+          detail: String(conDatos.length),
+          roleId: r.id,
+        }),
+      )
+    }
+  }
+
   // ── lo que filtra y no se redacta: sólo se avisa (CEO, 2026-09-30) ─────────
   for (const c of audit.conditions ?? []) {
     if (c.met === "yes") continue
@@ -193,6 +233,28 @@ export function findingsOf(tree: ResumeTree, audit: AuditFacts, score: Score, sp
   const cargo = cargoNucleo(spec?.roleTitleRaw ?? "")
   if (cargo && spec && !titleWritten(tree, spec)) {
     out.push(tarjeta({ type: "title_mismatch", component: "title", remedy: "rewrite", subject: cargo, nodeId: tree.summary.id, gain: gainOf(score, "title"), detail: cargo }))
+  }
+
+  /**
+   * ── EL PERFIL NO NOMBRA NADA DE LO QUE ESTA VACANTE PIDE (CEO, 2026-10-20) ──
+   *
+   * Es lo PRIMERO que lee la persona y lo único del CV que se escribe para una
+   * vacante en particular. La condición se comprueba leyendo, sin modelo: de
+   * todas las skills que el ATS dio por DEMOSTRADAS, ninguna aparece en el
+   * resumen. Si aparece aunque sea una, no hay tarjeta: el perfil ya habla de
+   * este puesto. Sin puntos, como el resto de esta sección — el cargo, que sí
+   * puntúa, tiene su propia tarjeta y no se duplica con ésta.
+   */
+  const resumen = normalize(tree.summary.text)
+  if (resumen && spec && titleWritten(tree, spec)) {
+    const probadas = audit.hard.filter((h) => h.status === "demonstrated").map((h) => h.skill)
+    const nombrada = probadas.find((sk) => {
+      const palabras = normalize(sk).split(" ").filter((w) => w.length > 2)
+      return palabras.length > 0 && palabras.every((w) => resumen.includes(w))
+    })
+    if (probadas.length > 0 && !nombrada) {
+      out.push(tarjeta({ type: "summary_blind", component: "must", remedy: "rewrite", nodeId: tree.summary.id, gain: 0, detail: String(probadas.length) }))
+    }
   }
 
   // ── los años que la vacante pide: no se redactan ────────────────────────────

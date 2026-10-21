@@ -1,5 +1,6 @@
 // lib/services/ai/modules/AIBulletModule.ts
 import { validateAIInput } from "@/lib/ai-safety"
+import { figurePolicy, truthRule } from "@/lib/services/ai/shared/figure-policy"
 import { AI_MODEL_PROSE, AI_TEMPERATURE_STRUCTURED, logAIUsage, buildResumeContext } from "@/lib/ai-client"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
@@ -12,7 +13,6 @@ import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
-import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 import { readChat } from "@/lib/services/ai/shared/chat-result"
 import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
 import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
@@ -23,8 +23,6 @@ import {
   type BulletResult,
   type ImproveBulletInput,
 } from "../shared/ai-types"
-
-
 
 export class AIBulletModule {
   constructor(
@@ -255,11 +253,9 @@ Agrega "why" a cada una (máx 20 palabras): qué gana el candidato frente a su r
     const atsRuleEs = this.atsKeywordRule(postingTerms, false)
 
     const prompt = language === "en"
-      ? `${cvValueBar("en")}
+      ? `${truthRule("en")}
 
-${noHardCodedFactsRule("en")}
-
-${proseRules("en")}
+${figurePolicy("confirma", "en")}
 
 TASK: Improve the bullets of this work experience.
 
@@ -279,19 +275,16 @@ TRANSFORMATION RULES:
 4. ATS: ${atsRule}
 5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never supply one yourself.
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
-7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. End on a concrete result (a named system, a real outcome) or on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
 WHAT TO RETURN — read this last and follow it exactly:
-Include an entry in "improvements" for every bullet, rewritten with high impact. A bullet with no number is still improved (stronger verb, clearer action and outcome); never demand a figure.
+Include an entry in "improvements" for every bullet, rewritten with high impact. A bullet with no number is still improved (stronger verb, clearer action and outcome).
 - {"status": "improved", "improvements": [...]}.
 - The text is not real professional work experience → {"status": "off_topic", "improvements": []}.
 
 Respond ONLY with valid JSON (no markdown):
 {"status": "improved", "improvements": [{"index": 0, "text": "• improved bullet", "why": "names the system instead of the duty", "alternatives": [{"text": "• same work, business angle", "angle": "business", "why": "leads with what it was worth"}]}]}`
-      : `${cvValueBar("es")}
+      : `${truthRule("es")}
 
-${noHardCodedFactsRule("es")}
-
-${proseRules("es")}
+${figurePolicy("confirma", "es")}
 
 TAREA: Mejorá los bullets de esta experiencia laboral.
 
@@ -311,9 +304,8 @@ REGLAS DE TRANSFORMACIÓN:
 4. ATS: ${atsRuleEs}
 5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo pongas vos.
 6. Cada entrada reemplaza exactamente UN bullet original: da su "index" y prefija el texto con "• ". Nunca fusiones, dividas ni reordenes bullets.
-7. TERMINA EN SUSTANCIA. Nunca cierres un bullet con una cola de impacto vaga que no nombra nada concreto — colas prohibidas: "para mejorar X", "para asegurar/garantizar/fortalecer Y", "contribuyendo a la eficiencia", "asegurando el desarrollo", "mejorando la experiencia", "optimizando el rendimiento", y cualquier "…para <verbo> <sustantivo abstracto>" añadido para sonar impactante. Termina en un resultado concreto (un sistema nombrado, un resultado real) o en la acción concreta misma. Un bullet más corto que se detiene en el trabajo real gana a uno rellenado con una cláusula de propósito hueca.
 QUÉ DEVOLVER — lee esto al final y cúmplelo exactamente:
-Incluye una entrada en "improvements" para cada bullet, reescrito con alto impacto. Un bullet sin número igual se mejora (verbo más fuerte, acción y resultado más claros); nunca exijas una cifra.
+Incluye una entrada en "improvements" para cada bullet, reescrito con alto impacto. Un bullet sin número igual se mejora (verbo más fuerte, acción y resultado más claros).
 - {"status": "improved", "improvements": [...]}.
 - El texto no es experiencia laboral profesional real → {"status": "off_topic", "improvements": []}.
 
@@ -539,7 +531,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // Our own words, spell-checked before they reach the CV. Handing the user a
     // rewritten bullet and then flagging a typo in it — in text they never
     // typed — is the fastest way to make the whole feature feel unreliable.
-    const cleaned = await cleanGeneratedText(improvements.map((i) => i.text), language)
+    const cleaned = await cleanGeneratedText(improvements.map((i) => i.text))
     return { status: "improved", improvements: improvements.map((i, idx) => ({ ...i, text: cleaned[idx] ?? i.text })) }
   }
 }

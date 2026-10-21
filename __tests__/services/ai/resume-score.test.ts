@@ -42,13 +42,6 @@ describe("computeResumeScore — deterministic, JD-independent", () => {
     expect(dim(computeResumeScore(partial), "completeness").score).toBe(60)
   })
 
-  it("flags an overly long bullet on the Brevity dimension", () => {
-    const longBullet = "• " + "word ".repeat(45) // 45 words > 32 cap
-    const sd = { workExperience: [{ id: "w1", description: longBullet }] }
-    const r = computeResumeScore(sd)
-    expect(dim(r, "brevity").score).toBe(0)
-    expect(dim(r, "brevity").detail.tooLong).toBe(1)
-  })
 
   it("scores Recruiter Scan on the top-of-resume 6-second items", () => {
     // All 5 scan items present + strong → 100.

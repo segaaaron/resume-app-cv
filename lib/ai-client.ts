@@ -14,7 +14,7 @@ let _openai: OpenAI | null = null
 export function getOpenAI(): OpenAI {
   if (!_openai) {
     _openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: OPENAI_API_KEY,
       // Bound hung requests and let the SDK back off on 429/5xx (exponential)
       // instead of the caller hammering the provider during a surge.
       timeout: Math.max(5_000, Number(process.env.OPENAI_TIMEOUT_MS ?? 60_000)),
@@ -43,21 +43,93 @@ export function getOpenAI(): OpenAI {
 // to change its request shape.
 export const EXPECTED_AI_MODEL = "gpt-5.4-nano"
 
-// Shared model config. Prod can still override via the AI_MODEL env var — an
-// override to a non-GPT-5 model stays valid because the adapter only normalizes
-// params for the GPT-5 family and passes older models through untouched.
-export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-5.4-nano") as string
+// ─────────────────────────────────────────────────────────────────────────────
+// LAS CLAVES, UNA POR PROVEEDOR Y EN UN SOLO LUGAR (CEO, 2026-10-20)
+//
+// La clave se lee acá y no en cada punto de uso: así «qué proveedor está
+// configurado» se contesta leyendo un archivo, no grepeando `process.env`. Nunca
+// se imprime ni se loguea: lo único que se dice de ella es si está o no.
+// ─────────────────────────────────────────────────────────────────────────────
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? ""
+export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? ""
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS MODELOS DE CLAUDE — LA IA PRINCIPAL, EN LAS MISMAS TRES RANURAS
+//
+// Una ranura por trabajo, no un modelo global: es la única forma de cambiar el
+// modelo de la prosa sin tocar el del ATS. Precios por 1M (tabla oficial de
+// Anthropic, 2026-10-06; el ATS mide in 13.660 / out 4.927 por análisis):
+//   claude-opus-5-5    $4,00 / $20,00  → 40x gpt-6-luna en ese perfil
+//   claude-sonnet-5-5  $2,00 / $10,00  → 20x
+//   claude-haiku-5-5   $0,10 /  $0,50  → paridad exacta con gpt-6-luna
+//
+// Los defaults son el techo de calidad de cada ranura, NO una decisión de costo:
+// bajarlos es del CEO y se hace por env, sin tocar código.
+//
+// Un aviso: en Claude el razonamiento no se apaga (`thinking` es 400 en Opus 5.5
+// y Sonnet 5.5) y se cobra como salida, así que paridad de tarifa no es paridad
+// de factura hasta medirla. El equivalente de `AI_REASONING_EFFORT` es
+// `output_config.effort`, y lo traduce `AnthropicClientAdapter`.
+// ─────────────────────────────────────────────────────────────────────────────
+export const CLAUDE_MODEL = (process.env.CLAUDE_MODEL ?? "claude-opus-5-5") as string
+export const CLAUDE_MODEL_PROSE = (process.env.CLAUDE_MODEL_PROSE ?? "claude-sonnet-5-5") as string
+export const CLAUDE_MODEL_BULLETS = (process.env.CLAUDE_MODEL_BULLETS ?? "claude-haiku-5-5") as string
+
+/**
+ * LOS MODELOS DE OPENAI — UNA GLOBAL Y UNA POR RANURA.
+ *
+ * `OPENAI_MODEL` es LA GLOBAL del proveedor: la que vale para toda ranura que no
+ * tenga la suya puesta. Encima de ella mandan las de ranura
+ * (`OPENAI_MODEL_PROSE`, `OPENAI_MODEL_BULLETS`), y encima de todo las viejas
+ * `AI_MODEL*`, que siguen ganando porque ya están en Dokploy y un rename
+ * silencioso cambiaría el modelo de producción sin que nadie lo pida.
+ *
+ * Orden, de mayor a menor: `AI_MODEL_<RANURA>` → `OPENAI_MODEL_<RANURA>` →
+ * `OPENAI_MODEL` → el default escrito acá.
+ *
+ * OJO con el ATS: la global también alcanza la ranura de viñetas, y la regla del
+ * CEO ahí es `gpt-6-luna` fijo. Poner `OPENAI_MODEL` sin `OPENAI_MODEL_BULLETS`
+ * mueve el ATS, y eso invalida las mediciones de P1/P2/P4/P5.
+ */
+const OPENAI_MODEL_GLOBAL = process.env.OPENAI_MODEL
+export const AI_MODEL = (process.env.AI_MODEL ?? OPENAI_MODEL_GLOBAL ?? "gpt-5.4-nano") as string
 
 // Prose-quality model for user-facing generated text (summaries, bullet
-// rewrites, cover letters). gpt-5.4-mini trades a higher price ($0.75/$4.50) for
-// stronger fluency where the output IS the deliverable. Overridable per deploy.
-export const AI_MODEL_PROSE = (process.env.AI_MODEL_PROSE ?? "gpt-5.4-mini") as string
+// rewrites, cover letters) — the ranura donde el texto ES el entregable.
+//
+// CLAUDE MANDA ACÁ (CEO, 2026-10-20): el default pasó de `gpt-5.4-mini` a
+// `CLAUDE_MODEL_PROSE`. La env `AI_MODEL_PROSE` sigue ganando, así que un deploy
+// que ya la tenga puesta no se mueve hasta que se la saque.
+export const AI_MODEL_PROSE = (process.env.AI_MODEL_PROSE ?? CLAUDE_MODEL_PROSE) as string
+
+// El respaldo de la prosa: a quién se le pregunta cuando Claude no contesta por
+// algo que no es culpa nuestra (429, 5xx, timeout, modelo caído, refusal).
+export const OPENAI_MODEL_PROSE = (process.env.OPENAI_MODEL_PROSE ?? OPENAI_MODEL_GLOBAL ?? "gpt-5.4-mini") as string
 // Model for the ATS bullet work: Tailor's minimal edits (P4) and the tools/figure
 // check (P3). Measured 2026-09-30 on the CEO's CV vs DECISION + 3 trades: same or
 // better than gpt-5.4-mini on bullets, ~6x cheaper and faster. NOT used for reading
 // the posting, the diagnosis or the summary: there it read the posting worse and
 // wrote a broken summary. Overridable per deploy, like the others.
-export const AI_MODEL_BULLETS = (process.env.AI_MODEL_BULLETS ?? "gpt-6-luna") as string
+export const AI_MODEL_BULLETS = (process.env.AI_MODEL_BULLETS ?? process.env.OPENAI_MODEL_BULLETS ?? OPENAI_MODEL_GLOBAL ?? "gpt-6-luna") as string
+
+/**
+ * A QUIÉN SE LE PREGUNTA CUANDO CLAUDE NO CONTESTA (CEO, 2026-10-20).
+ *
+ * Claude es la IA principal; OpenAI es el respaldo y SÓLO ante un error que no
+ * es culpa nuestra: 429, 5xx, timeout, modelo caído y `refusal`. Un 400 (params
+ * mal) o un 401 (clave mal) NO se respaldan: son bugs o configuración, y taparlos
+ * los esconde meses — el usuario recibe texto y el motor parece sano.
+ *
+ * El mapa va por MODELO y no por ranura porque es lo único que el adapter ve en
+ * la petición. Un modelo de Claude que no esté acá no tiene respaldo: su error
+ * sube tal cual, que es la respuesta honesta.
+ */
+export const OPENAI_BACKUP: Readonly<Record<string, string>> = {
+  [CLAUDE_MODEL]: AI_MODEL,
+  [CLAUDE_MODEL_PROSE]: OPENAI_MODEL_PROSE,
+  [CLAUDE_MODEL_BULLETS]: AI_MODEL_BULLETS,
+}
+
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — reproducible results (ats-score)

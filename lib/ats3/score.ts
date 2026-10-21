@@ -151,6 +151,12 @@ export interface AuditFacts {
   conditions?: { text: string; met: "yes" | "no" | "unknown"; cvSays: string | null }[]
   /** Palabras mal escritas en el resumen o en una viñeta, con su corrección (las marca el ATS). */
   spelling?: { nodeId: string; wrong: string; right: string }[]
+  /**
+   * CÓMO ESTÁ ESCRITA CADA VIÑETA: hechos, no opiniones. No entra en el puntaje
+   * —un filtro no lee si la línea tiene resultado— y por eso vive acá y no en
+   * `scoreResume`: es lo que lee la persona, no lo que mide la máquina.
+   */
+  bullets?: { nodeId: string; conCifra: boolean; conEscala: boolean; dosTrabajos: boolean; mismaHistoriaQue: string | null }[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -327,10 +333,20 @@ export function cargoNucleo(raw: string): string {
 export function titleForms(raw: string): string[] {
   const t = raw.trim()
   if (!t) return []
-  const genero = t.match(/^(.*\p{L})\/(as?|os?)$/iu)
+  /**
+   * La barra del género, al final del cargo o EN MEDIO (CEO, 2026-10-20).
+   *
+   * Sólo miraba el final, y un aviso real de enfermería —«Enfermera/o de Unidad
+   * de Cuidados Intensivos»— lleva la barra en la primera palabra y el resto del
+   * cargo detrás. Resultado medido: ninguna forma coincidía nunca, el cargo
+   * contaba como no escrito y su tarjeta no se podía cerrar con ningún CV.
+   */
+  const genero = t.match(/^(.*?\p{L})\/(as?|os?)(\s.*)?$/iu)
   if (genero) {
     const base = genero[1]
-    return [base, /[aeo]$/i.test(base) ? base.replace(/[aeo]$/i, genero[2]) : base + genero[2]]
+    const resto = genero[3] ?? ""
+    const otro = /[aeo]$/i.test(base) ? base.replace(/[aeo]$/i, genero[2]) : base + genero[2]
+    return [base + resto, otro + resto]
   }
   // Alternativas del aviso («Scrum | Kanban», ver P1 regla 1b): cada una es su
   // propio nombre y escribir cualquiera cumple.

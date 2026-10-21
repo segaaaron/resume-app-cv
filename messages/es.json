@@ -1745,6 +1745,8 @@
       "section_soft_blurb": "Las blandas que pide la vacante. Se demuestran dentro de una viñeta, no se listan como adjetivos.",
       "section_other_blurb": "Lo que esta vacante nombra como un plus, no como condición. Mueve el puntaje, y nunca pesa más que un requisito.",
       "section_format_blurb": "Que el archivo se parsee entero y que una persona pueda leerlo sin esfuerzo.",
+      "section_lectura": "Cómo se lee tu experiencia",
+      "section_lectura_blurb": "Esto no lo mira ningún filtro y no mueve el puntaje: lo mira la persona que decide si te llama.",
       "section_moves_score": "mueve el puntaje",
       "section_band_bad": "por debajo del umbral",
       "section_band_warn": "a medio camino",
@@ -1818,7 +1820,15 @@
       "type_missing_skills": "La vacante pide {n} cosas que tu CV no muestra",
       "type_missing_skills_detail": "Ninguna línea de tu CV muestra ese trabajo, así que la IA no las escribe sola. Si tenés alguna, elegila, contá dónde la usaste y la escribe en ese puesto; vos confirmás antes de que entre al CV.",
       "type_role_short": "«{puesto}» tiene {n} viñetas: un puesto se lee bien con 4 a 6",
-      "type_role_short_detail": "La vacante no pide nada que encaje con lo que este puesto ya cuenta. Contá otro trabajo real que hiciste ahí y la IA lo escribe como viñeta; vos confirmás antes de que entre al CV."
+      "type_role_short_detail": "La vacante no pide nada que encaje con lo que este puesto ya cuenta. Contá otro trabajo real que hiciste ahí y la IA lo escribe como viñeta; vos confirmás antes de que entre al CV.",
+      "type_summary_blind": "Tu perfil no nombra nada de lo que esta vacante pide",
+      "type_summary_blind_detail": "Tu CV demuestra {n} de las cosas que piden, y el perfil —lo primero que se lee— no menciona ninguna. La IA lo reescribe con lo que ya probaste; vos confirmás antes de que entre al CV.",
+      "type_bullet_twin": "Esta línea y otra cuentan el mismo trabajo",
+      "type_bullet_twin_detail": "La otra dice: «{otra}». Quien lee ve una sola historia contada dos veces, y una de las dos ocupa un lugar que podría contar algo nuevo. La IA la reescribe desde otro ángulo; vos confirmás.",
+      "type_bullet_two_jobs": "Esta línea cuenta dos trabajos distintos",
+      "type_bullet_two_jobs_detail": "Quien lee se queda con el primero y el segundo se pierde. La IA la reescribe alrededor de un solo trabajo; vos confirmás antes de que entre al CV.",
+      "type_role_no_scale": "Ninguna línea de «{puesto}» dice el tamaño",
+      "type_role_no_scale_detail": "Cuántas personas, cuánto volumen, cuánto dinero o cada cuánto. El tamaño es lo que separa un trabajo parecido de otro, y sólo lo sabés vos: contalo y la IA lo escribe en la línea que corresponda."
     },
     "cv_review": {
       "title": "Revisión IA del CV",

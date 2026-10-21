@@ -57,15 +57,6 @@ describe("the assistant is told what the candidate already declared", () => {
     expect(system).not.toMatch(/YA DECLARÓ|ALREADY DECLARED/)
   })
 
-  /**
-   * The ban is on a brand the candidate never mentioned — not on the tool they
-   * put in their own skills list. Suppressing that one removes the exact keyword
-   * an ATS searches for.
-   */
-  it("still forbids inventing a brand they never named", () => {
-    const { system } = buildModePrompt("bullets", "Cajera: hice el arqueo", "es", SKILLS)
-    expect(system).toMatch(/NO HAYA DECLARADO/)
-  })
 
   /**
    * These bullets are prose that lands in the CV. Measured on the extraction

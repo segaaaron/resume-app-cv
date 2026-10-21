@@ -1745,6 +1745,8 @@
       "section_soft_blurb": "The soft skills the posting asks for. Evidence them inside a bullet rather than listing them as adjectives.",
       "section_other_blurb": "What this posting names as a plus, not a condition. It moves the score, and one of these never weighs more than a requirement.",
       "section_format_blurb": "That the file parses whole, and that a person can read it without effort.",
+      "section_lectura": "How your experience reads",
+      "section_lectura_blurb": "No filter looks at this and it does not move the score: the person who decides whether to call you does.",
       "section_moves_score": "moves the score",
       "section_band_bad": "below the bar",
       "section_band_warn": "halfway there",
@@ -1818,7 +1820,15 @@
       "type_missing_skills": "The posting asks for {n} things your CV does not show",
       "type_missing_skills_detail": "No line of your CV shows that work, so the AI does not write them on its own. If you have one, pick it, say where you used it and it writes it in that role; you confirm before it goes into the CV.",
       "type_role_short": "\"{puesto}\" has {n} bullets: a role reads well with 4 to 6",
-      "type_role_short_detail": "The posting asks for nothing that fits what this role already says. Describe other real work you did there and the AI writes it as a bullet; you confirm before it goes into the CV."
+      "type_role_short_detail": "The posting asks for nothing that fits what this role already says. Describe other real work you did there and the AI writes it as a bullet; you confirm before it goes into the CV.",
+      "type_summary_blind": "Your profile names nothing this posting asks for",
+      "type_summary_blind_detail": "Your CV proves {n} of the things they ask for, and the profile — the first thing anyone reads — mentions none of them. The AI rewrites it with what you already proved; you confirm before it goes into the CV.",
+      "type_bullet_twin": "This line and another tell the same work",
+      "type_bullet_twin_detail": "The other one says: “{otra}”. Whoever reads sees one story told twice, and one of the two takes a slot that could say something new. The AI rewrites it from another angle; you confirm.",
+      "type_bullet_two_jobs": "This line tells two different jobs",
+      "type_bullet_two_jobs_detail": "Whoever reads it keeps the first one and loses the second. The AI rewrites it around a single job; you confirm before it goes into the CV.",
+      "type_role_no_scale": "No line in \"{puesto}\" states the size",
+      "type_role_no_scale_detail": "How many people, how much volume, how much money, how often. Size is what separates one similar job from another, and only you know it: tell it and the AI writes it into the right line."
     },
     "cv_review": {
       "title": "AI Resume Review",

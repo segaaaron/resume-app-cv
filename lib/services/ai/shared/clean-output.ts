@@ -14,50 +14,24 @@
 // Deterministic and local — the same Hunspell dictionaries the card uses. No
 // model, no network, no cost.
 
-import { checkSpelling } from "@/lib/spellcheck/spellcheck"
 import { stripSectionLabel } from "@/lib/ats/strip-label"
-import { replaceWord } from "@/lib/spellcheck/apply-spelling"
-import { collectProperNouns } from "@/lib/spellcheck/spellcheck-collect"
 
 /**
- * @param texts       the generated strings, in order
- * @param language    the language they were written in
- * @param sectionData the CV, so its own proper nouns (employers, products,
- *                    people) are never "corrected" into something else
- * @returns the same strings with confident spelling fixes applied
+ * LO ÚNICO QUE SE LE SACA AL TEXTO GENERADO: LA ETIQUETA DE SECCIÓN.
+ *
+ * ── EL CORRECTOR SE FUE (CEO, 2026-10-20) ──────────────────────────────────
+ * Acá corría Hunspell (`checkSpelling`) sobre TODO lo que el modelo escribía.
+ * La regla del CEO ya lo había prohibido en el ATS por corregir mal —el caso
+ * medido fue «moviles» → «mociles»— y seguía vivo en los otros cinco módulos:
+ * una corrección equivocada entraba al CV sin que nadie la viera. Si el modelo
+ * escribe una palabra, esa palabra es la que se entrega.
+ *
+ * @param texts  las cadenas generadas, en orden
+ * @returns las mismas, sin la etiqueta de sección que el modelo a veces antepone
  */
-export async function cleanGeneratedText(
-  texts: string[],
-  language: "es" | "en",
-  sectionData: Record<string, unknown> = {},
-): Promise<string[]> {
-  // A section's NAME is not part of its content. The model quotes the section it
-  // is fixing ("Professional Summary: …"), and applied verbatim that label was
-  // printed inside a CV under a heading that already said PERFIL. Stripped here,
-  // where EVERY generated text passes, so no write path can miss it.
-  texts = texts.map((t) => (t?.trim() ? stripSectionLabel(t) : t))
-  const nonEmpty = texts.filter((t) => t?.trim())
-  if (nonEmpty.length === 0) return texts
-
-  try {
-    const issues = await checkSpelling(nonEmpty, language, collectProperNouns(sectionData))
-    if (issues.length === 0) return texts
-
-    return texts.map((t) => {
-      let out = t
-      for (const issue of issues) {
-        const correct = issue.suggestions[0]
-        // Only a confident, single correction. Where the dictionary offers
-        // nothing, the word stays — a wrong "fix" in generated text is worse
-        // than the typo, because the user did not write either one and cannot
-        // tell which is which.
-        if (correct) out = replaceWord(out, issue.typed, correct)
-      }
-      return out
-    })
-  } catch {
-    // Fail open: a spell-check failure must never cost the user the rewrite
-    // they asked for. Worst case they get exactly what they got before.
-    return texts
-  }
+export async function cleanGeneratedText(texts: string[]): Promise<string[]> {
+  // El NOMBRE de una sección no es parte de su contenido. El modelo cita la
+  // sección que está arreglando ("Professional Summary: …") y, aplicado tal
+  // cual, eso se imprimía dentro del CV bajo un encabezado que ya decía PERFIL.
+  return texts.map((t) => (t?.trim() ? stripSectionLabel(t) : t))
 }

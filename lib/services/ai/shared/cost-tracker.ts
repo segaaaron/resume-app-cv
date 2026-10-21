@@ -26,6 +26,14 @@ export const MODEL_PRICING: Record<string, { inputPer1M: number; cachedInputPer1
   // el 2026-09-30, tarifa estándar de contexto corto (≤272K de entrada).
   "gpt-5.6-luna":   { inputPer1M: 0.20,  cachedInputPer1M: 0.02,  outputPer1M: 1.20  },
   "gpt-6-luna":     { inputPer1M: 0.10,  cachedInputPer1M: 0.01,  outputPer1M: 0.50  },
+  // Claude (Anthropic), la IA principal desde 2026-10-20. Verificado el
+  // 2026-10-20 contra la tabla oficial (platform.claude.com/docs/en/about-claude/pricing).
+  // La lectura de caché en Opus 5.5 y Sonnet 5.5 es 0,05x la entrada — $0,20 y
+  // $0,10 — y no el 0,1x habitual; en Haiku 5.5 sí es 0,1x. Haiku: estos precios
+  // valen hasta 100K tokens de entrada (arriba, $0,50/$2,50) — el motor manda ~14K.
+  "claude-opus-5-5":   { inputPer1M: 4.00, cachedInputPer1M: 0.20,  outputPer1M: 20.00 },
+  "claude-sonnet-5-5": { inputPer1M: 2.00, cachedInputPer1M: 0.10,  outputPer1M: 10.00 },
+  "claude-haiku-5-5":  { inputPer1M: 0.10, cachedInputPer1M: 0.01,  outputPer1M: 0.50  },
   // Embeddings (semantic ATS recall) — active. La API de embeddings no cachea prompts
   // ni devuelve `cached_tokens`, así que el precio cacheado nunca se aplica: se iguala
   // al de entrada para que un cero accidental no vuelva gratis una llamada real.

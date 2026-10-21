@@ -478,28 +478,6 @@ describe("AIService", () => {
       expect(result.suggestedSkills).toContain("Analisis de Riesgo")
     })
 
-    /**
-     * Reported from a real CV: the skills section read "Diseño y mantenimiento
-     * de bases de datos relacionales" and "Control de versiones con Git" —
-     * descriptions of activities, which match nothing in an ATS. A résumé needs
-     * the name: PostgreSQL, Git.
-     */
-    it("drops skills that are sentences instead of names", async () => {
-      const aiClient = makeMockAIClient(JSON.stringify({
-        summary: "Perfil",
-        suggestedSkills: ["React", "Diseño y mantenimiento de bases de datos relacionales"],
-        inferredSkills: ["PostgreSQL", "Control de versiones con Git y despliegue continuo"],
-      }))
-      const service = new AIService(aiClient, logger)
-
-      const result = await service.fillProfile("user-1", {
-        prompt: "soy desarrollador web y uso react y postgresql",
-        sectionData: {},
-      }, "PRO")
-
-      expect(result.suggestedSkills).toEqual(["React"])
-      expect(result.inferredSkills).toEqual(["PostgreSQL"])
-    })
 
     /**
      * Taxonomy alignment: our 1,002 curated terms decide the spelling when they

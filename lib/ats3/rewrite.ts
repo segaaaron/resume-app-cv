@@ -7,6 +7,7 @@
 // tres controles de `guards.ts`, y como mucho un reintento que dice qué falló.
 
 import { buildTermIndex, normalize, rolDeNueva, termKey, termsIn, type AnchoredSuggestion, type JobSpec, type NodeId, type ResumeTree, type Suggestion } from "@/lib/ats3/contracts"
+import { idiomaDelCv } from "@/lib/ats3/cv"
 import { checkSuggestion, findNode, repairSuggestion, retryNudge, toFirstPerson, type GuardVerdict } from "@/lib/ats3/guards"
 import { cvTextOf, experienceYears, statesQuantity, termsOf, titleForms } from "@/lib/ats3/score"
 import { type AtsAi, type AtsStore, cacheKey } from "@/lib/ats3/ports"
@@ -61,6 +62,14 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
     known: [req.tree.summary.text, ...req.tree.roles.map((r) => r.title), ...req.tree.declaredSkills, req.tree.otherText].join(" "),
   }
   const terms = req.terms ?? []
+  /**
+   * EL IDIOMA LO DECIDE EL CV, NO LA PANTALLA (CEO, 2026-10-20): «si el resume
+   * está en inglés, todo debería ser en inglés; si está en español, lo propio».
+   * El campo del documento lo fija la interfaz donde se creó y miente seguido;
+   * el texto que la persona escribió, no. Si el CV es demasiado corto para
+   * decidir, manda el campo, como hasta ahora.
+   */
+  const idioma = idiomaDelCv(req.tree) ?? req.language
   const pedido = JSON.stringify([req.reason ?? "", terms, Boolean(req.needsFigure), req.told ?? "", Boolean(req.propone), nueva])
   const key = cacheKey.fix(req.nodeId, node.hash, req.jdKey, req.model, pedido)
 
@@ -72,7 +81,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
 
   // La tercera persona regular se corrige, no se rechaza («Atendió» → «Atendí»).
   const preparar = (s: Suggestion): Suggestion => {
-    const enPrimera = req.language !== "en" && !isSummary ? toFirstPerson(s.text) : null
+    const enPrimera = idioma !== "en" && !isSummary ? toFirstPerson(s.text) : null
     // «A | B» es la forma del motor para un requisito con alternativas: en una frase del CV
     // nunca va la barra (medido: «JavaScript | TypeScript» en un resumen). Se lee como «A / B».
     s = { ...s, text: s.text.replace(/\s*\|\s*/g, " / ") }
@@ -97,6 +106,7 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           cvLines: req.tree.roles.flatMap((r) => r.bullets.map((b) => b.text)),
           otherSections: req.tree.otherText,
           spec: req.spec,
+          language: idioma,
           topBullets: topBulletsOf(req.tree),
           provenTerms: provenTermsOf(req.tree, req.spec),
           declaredSkills: req.tree.declaredSkills,
@@ -118,11 +128,22 @@ export async function runRewrite(req: RewriteRequest): Promise<RewriteResult> {
           vacante: {
             cargo: req.spec.roleTitleRaw ?? "",
             responsabilidades: req.spec.responsibilities ?? [],
-            // Lo que la vacante pide, con su frase: ahí suelen estar las tecnologías y procesos del trabajo.
-            requisitos: [...(req.spec.mustHave ?? []), ...(req.spec.niceToHave ?? [])].map((r) => r.raw || r.skill),
+            /**
+             * LO QUE PIDE LA VACANTE, POR SU NOMBRE (CEO, 2026-10-20).
+             *
+             * Iba `r.raw`: la ORACIÓN completa del aviso, una por requisito. P4
+             * recibía 17 oraciones del aviso contra 4 líneas del CV, el aviso
+             * ganaba y la viñeta describía el puesto en vez del trabajo de la
+             * persona —medido: «reviewing code for correctness and adherence to
+             * requirements», que es el deber del aviso, no lo que ella hizo—.
+             * El nombre es además lo que compara un filtro; la oración no.
+             * Ya estaba anotado en `docs/claude/ats.md`: «pasarle a P4 la frase
+             * del aviso junto a cada skill → empeoró».
+             */
+            requisitos: [...(req.spec.mustHave ?? []), ...(req.spec.niceToHave ?? [])].map((r) => r.skill),
             mide: req.spec.metricThatMatters ?? null,
           },
-          language: req.language,
+          language: idioma,
           nudge,
         })
 

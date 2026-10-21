@@ -18,6 +18,10 @@ vi.mock("@/lib/ai-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/ai-client")>()
   return {
     ...actual,
+    // Este test mide el gate de PLANES, no el proveedor. El cliente mockeado es
+    // el de OpenAI, así que la ranura de prosa apunta a un modelo de OpenAI:
+    // con Claude (el default) la llamada no pasaría por este mock.
+    AI_MODEL_PROSE: "gpt-5.4-mini",
     getOpenAI: vi.fn(() => ({
       chat: {
         completions: {

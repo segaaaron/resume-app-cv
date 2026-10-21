@@ -200,7 +200,18 @@ export const PROMPT_VERSION = {
   // p1-23 (CEO, 2026-10-05): el stack de la EMPRESA es deseable, no requisito; cada blanda se declara {raw, quality} y se guarda la cualidad.
   // p1-25 (CEO, 2026-10-05): obligatorio = lo que el trabajo central del puesto exige, no el título de la sección (DualEntry: RN+TS y Expo+EAS en responsabilidades).
   // p1-26 (CEO, 2026-10-05): una capacidad con sus ejemplos es UN requisito con alternativas (SME: 36 requisitos por partir «concurrency: GCD, OperationQueue, async/await»); ejemplos en pares de rubros opuestos.
-  P1: "p1-28", // parser de vacante
+  // p1-29 (CEO, 2026-10-20): medido con un aviso real (Wikimedia, prueba-20):
+  // «Commitment to mission and values» y «self-driven, lean environment» salían
+  // como requisitos OBLIGATORIOS y le aparecían al usuario como arreglos críticos
+  // valiendo 19,2 puntos. Ningún CV las demuestra y ningún filtro las compara.
+  // Las reglas 4h y 8 ya lo decían por separado; ahora la 4h lo dice donde se
+  // decide: la cualidad va a `softSignals`, lo que condiciona la contratación a
+  // `conditions`.
+  // p1-30 (CEO, 2026-10-20): PROBADO Y REVERTIDO el mismo día. La regla 4i
+  // («del párrafo de descripción entra sólo el nombre propio») no estabilizó la
+  // lista: con el mismo CV y el mismo aviso dio 38 requisitos en una corrida y 17
+  // en la otra, peor que sin ella (23 contra 24). Anotado para no reintentarla.
+  P1: "p1-29", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -238,7 +249,14 @@ export const PROMPT_VERSION = {
   // p2-30 (2026-10-05): la plantilla traía `"writeInRelation":"new_experience"` y el modelo lo copiaba: 0 ubicaciones (medido con SME Careers).
   // p2-31 (CEO, 2026-10-05): ejemplos en pares de rubros opuestos; «mismo puesto» y «experiencia nueva» dichos para cualquier oficio.
   // p2-33 (CEO, 2026-10-19): herramientas y logros demuestran también las capacidades para usarlos.
-  P2: "p2-33", // diagnóstico
+  // p2-36/37 (CEO, 2026-10-20): P2 devolvió por un rato cinco banderas por
+  // viñeta. Medidas: `sinResultado` y `mismaHistoriaQue` reprobaron con un CV de
+  // enfermería (marcaba mala «Atendí a 30 pacientes por turno»), y `conCifra`,
+  // `conEscala` y `dosTrabajos` variaban entre corridas con la MISMA entrada.
+  // p2-38: ninguna se le pide al modelo. Las tres que quedan se LEEN de la línea
+  // (`leeLaLinea`): un número, un número que no es porcentaje ni año, y un
+  // conector con oración detrás. Mismo resultado siempre, y cero tokens.
+  P2: "p2-38", // diagnóstico
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -288,7 +306,26 @@ export const PROMPT_VERSION = {
   // p4-41 (CEO, 2026-10-05): valor alto — anclada en el producto/usuarios del puesto, resultado con qué/para quién/unidad.
   // p4-42 (CEO, 2026-10-05): una dura y una blanda en la misma línea, la blanda como acción.
   // p4-43 (CEO, 2026-10-05): los ejemplos de «valor alto» en pares de oficios opuestos, no sólo software.
-  P4: "p4-44", // reescritura de viñeta
+  // p4-45 (CEO, 2026-10-20): el «cómo» pedía una RESPONSABILIDAD de la vacante
+  // —un deber— en el lugar del método, y el modelo la volvía gerundio: «Improved
+  // data synchronization … by optimizing the synchronization process» (prueba-15).
+  // Ahora el logro, la cifra y el INSTRUMENTO salen de tres lugares distintos y la
+  // responsabilidad da el contexto del logro. Fuera tres repeticiones: la regla del
+  // relleno, el bloque «ANTES DEL TEXTO» y `noScoreRule`.
+  // p4-46 (CEO, 2026-10-20): el campo declarado era `jobResponsibility` —un DEBER
+  // del aviso— y el modelo escribía ese deber en la viñeta. La respuesta cruda lo
+  // mostró: declaró «Assess solutions for correctness…» y la viñeta salió
+  // «…reviewing code for correctness and adherence to requirements». El campo,
+  // además, no existe en `SuggestionSchema`: Zod lo descartaba, así que su único
+  // efecto era inclinar la redacción hacia el aviso. Ahora declara `instrument`,
+  // que es un NOMBRE —y el cambio va también en `OUTPUT_SHAPE.P4`, que es donde
+  // de verdad manda: con el campo viejo en la forma exacta, el modelo seguía
+  // declarándolo y mi regla en prosa no movía nada (medido con la respuesta
+  // cruda)—. Además el cuerpo lleva el IDIOMA DEL CV como dato: una viñeta nueva
+  // llega sin `original` y 2 de 6 tiradas salieron en español sobre un CV en
+  // inglés. Y fuera el voseo y la verificación «antes de devolver»
+  // (`docs/claude/ats.md`: ese patrón ya empeoró P1).
+  P4: "p4-46", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
@@ -310,7 +347,11 @@ export const PROMPT_VERSION = {
   // p5-15: la antigüedad del resumen viejo no se exige conservar (se escribe la medida).
   // p5-16: la regla de verdad compartida (truthRule) ahora deja a la IA escribir todo salvo las cifras.
   // p5-18 (2026-10-02): recibe la TRAYECTORIA con fechas; los años van con el total si el cargo pedido es sólo una parte.
-  P5: "p5-19", // resumen
+  // p5-20 (CEO, 2026-10-20): el cuerpo lleva el IDIOMA DEL CV. Medido en la
+  // pantalla con un aviso real en portugués sobre un CV en inglés: P5 devolvió
+  // el resumen entero en portugués. El aviso lo escribió un tercero y su idioma
+  // no manda sobre el documento de la persona.
+  P5: "p5-20", // resumen
 } as const
 
 export type PromptId = keyof typeof PROMPT_VERSION
@@ -853,10 +894,13 @@ export function nodeHash(text: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * LAS TARJETAS (CEO, 2026-10-03): sólo lo que mira un filtro. Las skills que el
+ * LAS TARJETAS (CEO, 2026-10-03): lo que mira un filtro. Las skills que el
  * puesto pide y el CV no muestra (Tailor las escribe en una viñeta), el cargo,
- * los años, las condiciones que filtran y la lectura del documento. La redacción
- * de cada viñeta no la mira ningún ATS y no tiene tarjeta.
+ * los años, las condiciones que filtran y la lectura del documento.
+ *
+ * Y, desde el 2026-10-20, dos que NO mira un filtro y sí mira quien contrata.
+ * Van en su propia sección, con `gain: 0`, para que el puntaje siga diciendo
+ * una sola cosa: cuánto de lo que la vacante pide está en el CV.
  */
 export const FINDING_TYPES = [
   "missing_skill", // una skill que el puesto pide y el CV no muestra en ninguna línea
@@ -867,6 +911,13 @@ export const FINDING_TYPES = [
   "eligibility", // una condición que filtra y no se redacta: residencia, permiso, idioma obligatorio
   "parse_risk", // algo que un lector automático no va a extraer bien
   "misspelled", // una línea de la persona con palabras mal escritas: la corrección va lista para confirmar
+  // ── LO QUE LEE LA PERSONA, NO EL FILTRO (CEO, 2026-10-20) ────────────────
+  // No puntúan: un ATS no mira si la viñeta dice el tamaño ni si pega dos
+  // trabajos. Los mira quien contrata, que es quien decide.
+  "bullet_two_jobs", // una viñeta que pega dos trabajos distintos en una línea
+  "role_no_scale", // ninguna viñeta de ese puesto dice el tamaño de lo que manejó
+  "summary_blind", // el perfil no nombra ninguna de las skills que el CV sí demuestra para esta vacante
+  "bullet_twin", // dos viñetas de puestos distintos cuentan el mismo trabajo
 ] as const
 export type FindingType = (typeof FINDING_TYPES)[number]
 

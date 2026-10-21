@@ -56,9 +56,7 @@ const SCAN_SUMMARY_MIN_WORDS = 15
 // recruiter skims past. These bands come from the same guidance the review
 // prompt gives users — kept here as the single source for the numeric score.
 const BULLET_MIN_WORDS = 6
-const BULLET_MAX_WORDS = 32
 const SUMMARY_MIN_WORDS = 25
-const SUMMARY_MAX_WORDS = 90
 
 function wordCount(s: string): number {
   return s.trim().split(/\s+/).filter(Boolean).length
@@ -113,21 +111,19 @@ export function computeResumeScore(sectionData: Record<string, unknown>): Resume
   const units: boolean[] = []
   if (summary.trim()) {
     const w = wordCount(summary)
-    units.push(w >= SUMMARY_MIN_WORDS && w <= SUMMARY_MAX_WORDS)
+    units.push(w >= SUMMARY_MIN_WORDS)
   }
-  let longBullets = 0
   for (const job of work as Array<{ description?: string }>) {
     for (const b of parseBullets(job?.description ?? "")) {
       const w = wordCount(b)
-      const ok = w >= BULLET_MIN_WORDS && w <= BULLET_MAX_WORDS
+      const ok = w >= BULLET_MIN_WORDS
       units.push(ok)
-      if (w > BULLET_MAX_WORDS) longBullets++
     }
   }
   const brevity: ResumeScoreDimension = {
     key: "brevity",
     score: units.length > 0 ? clamp((units.filter(Boolean).length / units.length) * 100) : null,
-    detail: { withinRange: units.filter(Boolean).length, total: units.length, tooLong: longBullets },
+    detail: { withinRange: units.filter(Boolean).length, total: units.length, tooLong: 0 },
   }
 
   // ── Recruiter scan: the 6 items a recruiter checks in the first 6-11 seconds ─

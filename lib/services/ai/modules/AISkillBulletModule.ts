@@ -9,6 +9,7 @@
 // did is rejected by them, exactly like every other suggestion in the editor.
 import { hasRoomForBullet } from "@/lib/ats/role-budget"
 import { readChat } from "@/lib/services/ai/shared/chat-result"
+import { figurePolicy, truthRule } from "@/lib/services/ai/shared/figure-policy"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL_PROSE,
@@ -25,31 +26,11 @@ import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { costOfChat } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
-import { sharesSubject, addsNothingNew } from "@/lib/ats/resume-integrity"
 import { AI_INPUT_LIMITS, type SkillBulletInput, type SkillBulletResult } from "../shared/ai-types"
-import { noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 import { strictJsonFormat } from "@/lib/services/ai/shared/strict-schema"
 import { SkillBulletShape } from "@/lib/services/ai/shared/ai-types"
-import { runWriteGate, type GateRule } from "@/lib/ats/write-gate"
 
 interface WorkRow { id?: string; jobTitle?: string; employer?: string; description?: string }
-
-/**
- * True when the skill's significant signal already shows up in a bullet — so a
- * "new" bullet weaving it in would just duplicate what the CV states. Substring
- * first (atomic skill like "graphql"), then a loose token check for compound
- * skills ("async/await" → "async", "await").
- */
-function bulletMentionsSkill(skill: string, haystackLower: string): boolean {
-  const sl = skill.toLowerCase().trim()
-  if (!sl) return false
-  if (haystackLower.includes(sl)) return true
-  const tokens = sl.split(/[^a-z0-9+#.]+/).filter((w) => w.length > 2)
-  if (tokens.length === 0) return false
-  // Compound skill is "present" only if EVERY significant token is there, so
-  // "async/await" is not counted present just because a bullet says "await".
-  return tokens.every((w) => haystackLower.includes(w))
-}
 
 /**
  * Lo que una línea nacida de cero tiene que cumplir.
@@ -58,12 +39,6 @@ function bulletMentionsSkill(skill: string, haystackLower: string): boolean {
  * pérdida lateral: esas reglas no se declaran porque acá no tienen pregunta que
  * responder, no porque se hayan olvidado.
  */
-const SKILL_RULES: readonly GateRule[] = [
-  "only_declared_facts",
-  "figure_policy",
-  "output_floor",
-]
-
 export class AISkillBulletModule {
   constructor(
     private readonly aiClient: IAIClient,
@@ -80,7 +55,7 @@ export class AISkillBulletModule {
    */
   private buildSoftPrompt(skill: string, resumeContext: string, workList: string, language: string): string {
     return language === "en"
-      ? `${noHardCodedFactsRule("en")}
+      ? `${truthRule("en")}
 
 ADDITIONAL RULES:
 1. Use ONLY facts already in the chosen job. Do NOT introduce any technology, framework, tool, company, certification, percentage, number, or date not already in that job.
@@ -94,8 +69,6 @@ ${resumeContext}
 WORK EXPERIENCE (bullets indexed by job ID):
 ${workList}
 
-${proseRules("en")}
-
 RULES:
 - Choose the single best-fit job by ID. If it fits none credibly, return {"targetId": null, "text": null}.
 - Write exactly ONE bullet, prefixed with "• ". Do NOT write the word "${skill}" as a label; prove it through a real action anchored to that job.
@@ -103,7 +76,7 @@ RULES:
 
 Respond ONLY with valid JSON (no markdown):
 {"targetId": "ID", "text": "• bullet that demonstrates ${skill}"}`
-      : `${noHardCodedFactsRule("es")}
+      : `${truthRule("es")}
 
 REGLAS ADICIONALES:
 1. Usa SOLO datos que ya estén en el puesto elegido. NO introduzcas NINGUNA tecnología, framework, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
@@ -116,8 +89,6 @@ ${resumeContext}
 
 EXPERIENCIA LABORAL (bullets indexados por ID de puesto):
 ${workList}
-
-${proseRules("es")}
 
 REGLAS:
 - Elige el único puesto que mejor encaje por ID. Si no encaja en ninguno de forma creíble, devuelve {"targetId": null, "text": null}.
@@ -210,28 +181,16 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return `ID:${j.id} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}:\n${bulletLines}`
     }).join("\n\n")
 
-    // Grounding for hasHardCodedFact: skills/education context + every job's
-    // bullets + the skill itself. Including the skill is what lets the new bullet
-    // name it without being flagged as a hard-coded technology; anything ELSE the
-    // model introduces (a second framework, a metric) still trips the guard.
-    //
-    // Soft mode does NOT license the skill word — a soft skill is a behavior, not
-    // a technology, so the bullet proves it through actions already in the CV and
-    // never needs to name it. Leaving the term out of grounding keeps the guard
-    // honest: a hard-coded tool/metric still trips, common prose verbs do not.
     const resumeContext = buildResumeContext(sectionData, language, { includeWorkExperience: false })
-    const groundingSource = soft
-      ? `${resumeContext}\n${workList}`
-      : `${resumeContext}\n${workList}\n${skill}`
 
     const prompt = soft
       ? this.buildSoftPrompt(skill, resumeContext, workList, language)
       : language === "en"
-      ? `${noHardCodedFactsRule("en")}
+      ? `${truthRule("en")}
 
 ADDITIONAL RULES:
 1. Write about ONLY the skill "${skill}" and the job you place it in. Do NOT introduce any OTHER technology, framework, library, tool, company, certification, percentage, number, or date not already in that job.
-2. NARROWING FOR THIS ONE BULLET, not a contradiction of the rule above: no figure and no bracket placeholder ([X%], [N users]) here. The rule above lets you PROPOSE a size as a range when the candidate described work that plainly has one — but this line is written from scratch, with no account from them to size, so any number would be yours, not theirs.
+${figurePolicy("confirma", "en")}
 3. The bullet asserts the candidate USED this skill at the chosen job. Only place it where the job's title/bullets make that credible; if no job is a credible home, return {"targetId": null}.
 
 TASK: The candidate already lists "${skill}" as one of their skills, but no bullet shows it. Pick the ONE job below where it most credibly fits and write ONE new bullet that demonstrates it.
@@ -243,18 +202,17 @@ WORK EXPERIENCE (bullets indexed by job ID):
 ${workList}
 
 RULES:
-${proseRules("en")}
 
 - Choose the single best-fit job by ID. If the skill fits none credibly, return {"targetId": null, "text": null}.
 - Write exactly ONE bullet, prefixed with "• ". It must naturally contain "${skill}" and read like something the candidate would say in an interview — not a press release.
 
 Respond ONLY with valid JSON (no markdown):
 {"targetId": "ID", "text": "• bullet that uses ${skill}"}`
-      : `${noHardCodedFactsRule("es")}
+      : `${truthRule("es")}
 
 REGLAS ADICIONALES:
 1. Escribe SOLO sobre la habilidad "${skill}" y el puesto donde la coloques. NO introduzcas NINGUNA otra tecnología, framework, librería, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
-2. ACOTACIÓN SÓLO PARA ESTE BULLET, no una contradicción de la regla de arriba: acá no va cifra ni placeholder entre corchetes ([X%], [N usuarios]). La regla de arriba te deja PROPONER un tamaño como rango cuando el candidato describió un trabajo que claramente lo tiene — pero esta línea se escribe de cero, sin relato suyo que medir, así que cualquier número sería tuyo y no de él.
+${figurePolicy("confirma", "es")}
 3. El bullet afirma que el candidato USÓ esta habilidad en el puesto elegido. Colócala solo donde el título/bullets del puesto lo hagan creíble; si ningún puesto es un hogar creíble, devuelve {"targetId": null}.
 
 TAREA: El candidato ya lista "${skill}" entre sus habilidades, pero ningún bullet la muestra. Elige el ÚNICO puesto de abajo donde encaje de forma más creíble y escribe UN bullet nuevo que la demuestre.
@@ -266,7 +224,6 @@ EXPERIENCIA LABORAL (bullets indexados por ID de puesto):
 ${workList}
 
 REGLAS:
-${proseRules("es")}
 
 - Elige el único puesto que mejor encaje por ID. Si no encaja en ninguno de forma creíble, devuelve {"targetId": null, "text": null}.
 - Escribe exactamente UN bullet, con prefijo "• ". Debe contener "${skill}" de forma natural y sonar como algo que el candidato diría en una entrevista — no una nota de prensa.
@@ -342,39 +299,6 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return { status: "no_fit" }
     }
 
-    /**
-     * LA HABILIDAD DECLARA SU LISTA; EL MOTOR LA CORRE.
-     *
-     * Esta línea nace de cero —no reemplaza a ninguna—, así que las reglas que
-     * comparan contra un original no aplican y no se declaran. Quedan tres: no
-     * quemar un dato, no proponer una cifra (`drop`: sin relato del candidato
-     * detrás, el número sería del modelo) y el piso de salida.
-     *
-     * Escrito a mano, este módulo corría el chequeo de dato quemado y el piso
-     * como dos `if` separados por veinte líneas de otras reglas, y el orden
-     * entre ellos era casualidad.
-     */
-    const veredicto = runWriteGate({
-      text,
-      source: groundingSource,
-      figurePolicy: "drop",
-      language,
-    }, SKILL_RULES)
-
-    if (!veredicto.ok && (veredicto.rule === "only_declared_facts" || veredicto.rule === "figure_policy")) {
-      this.logger.warn("[AIService.weaveSkillBullet] dropped hard-coded bullet", {
-        skill, rule: veredicto.rule, previewSample: text.slice(0, 120),
-      })
-      return { status: "no_fit" }
-    }
-
-    // Hard mode only: the whole point is to surface the named skill, so a draft
-    // that doesn't contain it is off-target noise. A soft skill is proven by the
-    // action, not the word, so this check is skipped for it.
-    if (!soft && !bulletMentionsSkill(skill, text.toLowerCase())) {
-      this.logger.warn("[AIService.weaveSkillBullet] bullet omits the skill", { skill })
-      return { status: "no_fit" }
-    }
 
     /**
      * NO ESCRIBIR UNA LÍNEA QUE EL INFORME VA A LLAMAR DUPLICADA.
@@ -403,29 +327,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
      * agrega es el caso que sólo el detector del informe ve.
      */
     const existing = parseBullets(job.description ?? "")
-    if (!soft && bulletMentionsSkill(skill, (job.description ?? "").toLowerCase())) return { status: "no_fit" }
     if (existing.some((b) => isTrivialEdit(b, text))) return { status: "no_fit" }
-    if (existing.some((b) => sharesSubject(b, text) && addsNothingNew(b, text))) return { status: "no_fit" }
-
-    /**
-     * EL PISO DE SALIDA — el mismo que el ejecutor, del mismo dueño.
-     *
-     * Esta línea nace de cero, así que no hay original contra la que medir
-     * ganancia: quedan las tres condiciones que sí aplican —verbo de acción,
-     * nada de frase vacía, y el mínimo de palabras de la doctrina—. Una línea
-     * como «Trabajo en equipo en el puesto de Cajera» cumple todos los guards de
-     * arriba (sólo datos declarados, menciona la habilidad, no duplica) y no dice NADA: es
-     * exactamente la respuesta básica que el CEO reportó.
-     *
-     * No se reintenta acá: `no_fit` ya es una salida honesta con su aviso en
-     * pantalla, y un segundo intento por una sola línea gasta otro uso del plan.
-     */
-    if (!veredicto.ok && veredicto.rule === "output_floor") {
-      this.logger.warn("[AIService.weaveSkillBullet] bullet below the floor", {
-        skill, misses: veredicto.misses, previewSample: text.slice(0, 120),
-      })
-      return { status: "no_fit" }
-    }
 
     return {
       status: "written",

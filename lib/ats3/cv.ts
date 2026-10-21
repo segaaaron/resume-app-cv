@@ -124,6 +124,37 @@ export function buildTree(raw: RawResume): ResumeTree {
  */
 const MES_ANIO = /^\s*(\d{4}([-/]\d{1,2})?|\d{1,2}[-/]\d{4}|[a-záéíóúñ]{3,}\.?\s+(de\s+)?\d{4})\s*$/i
 
+/**
+ * EL IDIOMA DEL CV SE LEE DEL CV (CEO, 2026-10-20).
+ *
+ * El motor lo tomaba del campo `language` del documento, que lo fija la pantalla
+ * donde se creó. Medido en local: un CV escrito ENTERO en inglés, creado en la
+ * interfaz en español, tenía `language: "es"`, así que Tailor le proponía
+ * viñetas en español para pegar dentro de un CV en inglés. Y con un aviso real
+ * de Brasil en portugués, el resumen volvía en portugués.
+ *
+ * La regla del CEO: lo que decide es el CV. Dos idiomas, los que el producto
+ * tiene. Se cuentan palabras funcionales —las que aparecen en cualquier texto y
+ * no se parecen entre idiomas— sobre el texto que la persona escribió. Sin
+ * modelo, sin red y sin diccionario: contar y comparar.
+ *
+ * Empate o texto demasiado corto para decidir: `null`, y manda el campo. Nunca
+ * adivina.
+ */
+const ES_FUNCIONALES = ["de", "la", "el", "los", "las", "en", "con", "para", "por", "del", "una", "un", "que", "y", "su", "sus", "mediante", "entre", "desde", "sobre"]
+const EN_FUNCIONALES = ["the", "of", "and", "for", "with", "to", "in", "by", "from", "on", "through", "their", "its", "an", "a", "that", "across", "into", "using", "between"]
+
+export function idiomaDelCv(tree: ResumeTree): "es" | "en" | null {
+  const texto = ` ${normalize([tree.summary.text, ...tree.roles.flatMap((r) => r.bullets.map((b) => b.text))].join(" . "))} `
+  const cuantas = (palabras: string[]) => palabras.reduce((n, w) => n + (texto.split(` ${w} `).length - 1), 0)
+  const es = cuantas(ES_FUNCIONALES)
+  const en = cuantas(EN_FUNCIONALES)
+  // Un margen, no un empate técnico: «API design» tiene «de» adentro de nada y
+  // un CV corto en inglés igual trae algún «de» de un nombre propio.
+  if (es + en < 8 || Math.abs(es - en) < 3) return null
+  return es > en ? "es" : "en"
+}
+
 export function readableChecks(tree: ResumeTree): ParseChecks {
   const roles = tree.roles
   const bullets = roles.flatMap((r) => r.bullets)

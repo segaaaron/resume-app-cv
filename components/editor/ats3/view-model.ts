@@ -17,7 +17,7 @@
 // "probar" leyendo que la línea existía, y un test que lee el código no prueba
 // nada.
 
-import type { Finding, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
+import type { Finding, FindingType, JobSpec, ResumeTree } from "@/lib/ats3/contracts"
 import { mismaRaiz, buildTermIndex, normalize, nuevaEn, termCounts, termKey } from "@/lib/ats3/contracts"
 import { cvTextOf, SCORED_COMPONENTS, statesQuantity, termsOf } from "@/lib/ats3/score"
 import type { AuditFacts, ComponentKey, Score } from "@/lib/ats3/score"
@@ -49,7 +49,7 @@ import type { AuditFacts, ComponentKey, Score } from "@/lib/ats3/score"
  * producto —sigue valiendo 0,15 del pilar de relevancia y el dial lo cuenta—;
  * lo que desaparece es la promesa de que había algo que hacer con él.
  */
-export type PanelSectionId = "hard" | "soft" | "other" | "format"
+export type PanelSectionId = "hard" | "soft" | "other" | "format" | "lectura"
 
 
 export interface PanelCheck {
@@ -162,7 +162,16 @@ const COMPONENTS_OF: Record<PanelSectionId, ComponentKey[]> = {
   soft: ["soft"],
   other: ["nice"],
   format: ["checks"],
+  /**
+   * LO QUE LEE LA PERSONA, NO EL FILTRO. Sin componentes a propósito: no puntúa,
+   * así que `scored` da false y la sección no muestra porcentaje. Sus tarjetas
+   * llegan por tipo, no por componente (ver `LECTURA` abajo).
+   */
+  lectura: [],
 }
+
+/** Las tarjetas que no miden cobertura: hablan de cómo está escrita la experiencia. */
+const LECTURA = new Set<FindingType>(["bullet_two_jobs", "role_no_scale", "summary_blind", "bullet_twin"])
 
 /** La sección de un componente. Se deriva del mapa de arriba: no hay segunda lista. */
 const SECTION_OF = new Map<ComponentKey, PanelSectionId>(
@@ -210,6 +219,12 @@ export function checkOf(
         ? { n: f.subjects?.length ?? 0 }
       : f.type === "role_short"
         ? { puesto: f.subject ?? "", n: f.detail }
+      : f.type === "role_no_scale"
+        ? { puesto: f.subject ?? "" }
+      : f.type === "summary_blind"
+        ? { n: f.detail }
+      : f.type === "bullet_twin"
+        ? { otra: f.detail }
       : f.type === "eligibility"
         ? { term: f.subject ?? "", cv: f.reason ?? "" }
       : f.type === "title_mismatch"
@@ -223,7 +238,7 @@ export function checkOf(
     id: f.id,
     remedy: f.remedy,
     subject: f.subject,
-    section: SECTION_OF.get(f.component) ?? "hard",
+    section: LECTURA.has(f.type) ? "lectura" : SECTION_OF.get(f.component) ?? "hard",
     state: f.gain >= CRITICAL_GAIN ? "crit" : "warn",
     weight: Number(f.gain.toFixed(1)),
     titleKey: f.type === "parse_risk" ? `type_parse_risk_${f.detail}` : f.type === "missing_skill" && f.detail === "listed" ? "type_missing_skill_listed" : `type_${f.type}`,

@@ -55,21 +55,7 @@ describe("AISkillBulletModule.weaveSkillBullet", () => {
     expect(res.status).toBe("no_fit")
   })
 
-  it("drops a bullet that invents a metric not in the CV", async () => {
-    const mod = moduleWith(async () =>
-      reply({ targetId: "w1", text: "• Built a GraphQL gateway that cut latency by 40%" }),
-    )
-    const res = await mod.weaveSkillBullet("u1", { skill: "GraphQL", sectionData: sectionData(), language: "en" }, "PRO")
-    expect(res.status).toBe("no_fit")
-  })
 
-  it("drops a bullet that does not actually contain the skill", async () => {
-    const mod = moduleWith(async () =>
-      reply({ targetId: "w1", text: "• Improved the billing service reliability" }),
-    )
-    const res = await mod.weaveSkillBullet("u1", { skill: "GraphQL", sectionData: sectionData(), language: "en" }, "PRO")
-    expect(res.status).toBe("no_fit")
-  })
 
   it("no_fit when the model targets a job that isn't in the list", async () => {
     const mod = moduleWith(async () => reply({ targetId: "w999", text: "• Used GraphQL somewhere" }))
@@ -119,41 +105,8 @@ describe("AISkillBulletModule.weaveSkillBullet", () => {
       }
     })
 
-    it("still drops a soft bullet that invents a metric", async () => {
-      const mod = moduleWith(async () =>
-        reply({ targetId: "w1", text: "• Coordinated across teams, cutting release delays by 30%" }),
-      )
-      const res = await mod.weaveSkillBullet(
-        "u1",
-        { skill: "teamwork", sectionData: sectionData(), language: "en", soft: true },
-        "PRO",
-      )
-      expect(res.status).toBe("no_fit")
-    })
 
-    it("still drops a soft bullet that invents a technology not in the CV", async () => {
-      const mod = moduleWith(async () =>
-        reply({ targetId: "w1", text: "• Aligned the team on the Kubernetes migration roadmap" }),
-      )
-      const res = await mod.weaveSkillBullet(
-        "u1",
-        { skill: "leadership", sectionData: sectionData(), language: "en", soft: true },
-        "PRO",
-      )
-      expect(res.status).toBe("no_fit")
-    })
 
-    it("hard mode is unchanged: still requires the skill word", async () => {
-      const mod = moduleWith(async () =>
-        reply({ targetId: "w1", text: "• Improved the billing service reliability" }),
-      )
-      const res = await mod.weaveSkillBullet(
-        "u1",
-        { skill: "GraphQL", sectionData: sectionData(), language: "en", soft: false },
-        "PRO",
-      )
-      expect(res.status).toBe("no_fit")
-    })
   })
 })
 

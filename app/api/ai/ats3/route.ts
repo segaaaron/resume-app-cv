@@ -25,7 +25,7 @@ import { enforceAIQuota, refundDailyQuota } from "@/lib/services/ai/shared/quota
 // El adaptador del proveedor: es el borde de la API, no lógica del ATS viejo.
 // Escribir un segundo cliente duplicaría el manejo de reintentos, el modelo de
 // respaldo y la normalización de parámetros que el modelo de razonamiento exige.
-import { OpenAIClientAdapter } from "@/lib/services/ai/OpenAIClientAdapter"
+import { AnthropicClientAdapter } from "@/lib/services/ai/AnthropicClientAdapter"
 // El modelo sale de su dueño, no de un literal acá: un id escrito en dos lados
 // termina moviéndose en uno solo, y el modelo entra en TODAS las claves de
 // caché — un desacuerdo serviría respuestas de otro oráculo como si fueran de
@@ -358,7 +358,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const ai = new AIAts3Module({ client: new OpenAIClientAdapter(), model, bulletModel: AI_MODEL_BULLETS, language: parsed.data.language, onUsage })
+    // Mismo cliente que el resto del producto: Claude principal, OpenAI de respaldo,
+    // ruteado por el nombre del modelo. El ATS sigue con `gpt-6-luna` hasta que una
+    // env diga otra cosa, así que esto no cambia a quién se le pregunta hoy.
+    const ai = new AIAts3Module({ client: new AnthropicClientAdapter(), model, bulletModel: AI_MODEL_BULLETS, language: parsed.data.language, onUsage })
     const store = makeStore(parsed.data.resumeId, modelos)
 
     // ── REESCRIBIR UNA LÍNEA ────────────────────────────────────────────────
