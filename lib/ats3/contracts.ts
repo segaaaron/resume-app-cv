@@ -211,7 +211,26 @@ export const PROMPT_VERSION = {
   // («del párrafo de descripción entra sólo el nombre propio») no estabilizó la
   // lista: con el mismo CV y el mismo aviso dio 38 requisitos en una corrida y 17
   // en la otra, peor que sin ella (23 contra 24). Anotado para no reintentarla.
-  P1: "p1-29", // parser de vacante
+  // p1-31 (2026-10-22): la MISMA vacante daba 12 o 16 requisitos según la tirada
+  // y el puntaje se movía ±5 (`prueba-06` contra `prueba-07`): «Experience with
+  // networking and data: URLSession, JSON parsing… persistence» salía una vez
+  // como UN requisito y otra partida en «Networking» y «Data persistence», y
+  // «UIKit»/«SwiftUI» una vez bajo su paraguas y otra sueltas. La regla que lo
+  // resuelve YA existía, pero vivía al final de la 4d, un párrafo de 1.500
+  // caracteres; ahora cierra la 1b, que es donde se decide agrupar. No se agregó
+  // ninguna regla: la 4i de `p1-30` ya probó que agregar empeora.
+  // p1-33 (CEO, 2026-10-22): LA REGLA DE ORIGEN. La 4 pedía «normaliza cada
+  // término a un nombre canónico», o sea: inventá una etiqueta. Cada tirada
+  // inventaba otra —«ARC» o «Memory management», «UIKit» suelto o bajo su
+  // paraguas— y el mismo aviso daba 12 o 16 requisitos, con el puntaje moviéndose
+  // ±5 entre dos análisis seguidos del MISMO CV. Ahora el nombre se COPIA del
+  // aviso, que es el dato que `raw` ya guardaba y que nadie usaba para nombrar;
+  // además, el filtro compara cadenas, así que la forma del aviso es la que
+  // coincide. Y la 4d dejó de tratar la lista de etiquetas del portal como
+  // requisitos: un nombre que ninguna oración del aviso exige no descarta a
+  // nadie, así que es deseable. Eso cierra en el origen lo que `p2-41` compensa
+  // desde el otro lado. (p1-32 se usó y se revirtió el mismo día.)
+  P1: "p1-33", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -256,7 +275,31 @@ export const PROMPT_VERSION = {
   // p2-38: ninguna se le pide al modelo. Las tres que quedan se LEEN de la línea
   // (`leeLaLinea`): un número, un número que no es porcentaje ni año, y un
   // conector con oración detrás. Mismo resultado siempre, y cero tokens.
-  P2: "p2-38", // diagnóstico
+  // p2-39 (2026-10-22): la frontera entre `listed` y `missing` era una opinión
+  // —«se deduce claramente del cargo»— y basculaba entre tiradas. Medido con el
+  // MISMO aviso y el MISMO CV: ARC salió `listed` con tarjeta propia y write-in a
+  // Rappi en `docs/ats-validacion/2026-10-22/prueba-01-p4-46-sme.log`, y `missing`
+  // sin lugar en `prueba-03`; el 20/10 pasó igual con el nombre viejo (Memory
+  // management: `listed` en las pruebas 13 y 15, `missing` en la 18). La persona
+  // veía dos pantallas distintas con el mismo CV. Ahora los dos estados se apoyan
+  // en el juicio que el modelo YA emite en la misma respuesta —`writeInRelation`—:
+  // hay una línea con trabajo relacionado → `listed`; no hay ninguna en todo el CV
+  // → `missing`. Sin campo nuevo y sin control de código.
+  // p2-40 (2026-10-22): con `p2-39` se fue el `missing` (las dos tiradas lo
+  // dieron por presente), pero una volvió `listed` con `writeIn` null — o sea,
+  // «hay una línea relacionada» y ninguna nombrada, dentro de la misma respuesta—
+  // y la skill cayó igual en la tarjeta agrupada (`prueba-05`). El estado y el
+  // campo se decidían por separado; ahora la regla del campo cierra el círculo:
+  // `listed` siempre nombra su viñeta, y no nombrarla ES `missing`.
+  // p2-41 (CEO, 2026-10-22): MEDIDO EN LA PANTALLA con un aviso real y su CV: el
+  // aviso abre dos caminos para el mismo puesto y marca el otro como no requerido,
+  // y el panel igual cobraba el camino ajeno dentro de una tarjeta de 5,5 puntos,
+  // porque la lista de skills del portal lo repite suelto y P1 lo emite como
+  // requisito propio. Arreglarlo en P1 era enumerar casos —ya se intentó y se
+  // revirtió—. Lo decide quien tiene el dato: P2 ya recibe el CARGO DEL AVISO y
+  // los CARGOS DEL CV, y ahora la regla dice que eso define qué camino ejerce la
+  // persona. Sirve para cualquier oficio sin nombrar ninguno.
+  P2: "p2-41", // diagnóstico
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -325,7 +368,33 @@ export const PROMPT_VERSION = {
   // llega sin `original` y 2 de 6 tiradas salieron en español sobre un CV en
   // inglés. Y fuera el voseo y la verificación «antes de devolver»
   // (`docs/claude/ats.md`: ese patrón ya empeoró P1).
-  P4: "p4-46", // reescritura de viñeta
+  // p4-47 (CEO, 2026-10-22): «tienes la información del usuario, úsala con la IA».
+  // El cuerpo ya traía el CARGO DE LA VACANTE y el PUESTO de la línea, y ninguna
+  // regla le decía al modelo que escribiera DESDE ese oficio: las viñetas salían
+  // correctas y genéricas, con la misma forma para una enfermera y un backend.
+  // La regla 7 ancla el vocabulario, las unidades y lo que cuenta como buen
+  // resultado en el oficio que dicen esos dos campos — sin nombrar ningún oficio
+  // en el prompt: el modelo ya los conoce, lo que faltaba era mandarlo a usarlos.
+  // La 6 suma lo único aprovechable de la consulta a Gemini del CEO: fuera los
+  // adverbios de elogio, y los términos técnicos del original se conservan tal
+  // cual —reescribir «pulido» se lleva puesta la palabra que compara el filtro—.
+  // p4-49 (CEO, 2026-10-22): «si veo algo corto que me diga: apliqué mejoras de
+  // buenas prácticas subiendo el rating al 50%, yo como reclutador preguntaría
+  // qué mejoras y qué buenas prácticas». Las viñetas salían verdaderas pero
+  // flacas: 14 palabras, «qué hice con qué» y nada más. El piso de 16 palabras
+  // murió con `output-floor.ts` el 20/10 —era un guard que frenaba— y nada lo
+  // reemplazó en el prompt. La 1b no pone mínimos ni máximos: pide que las tres
+  // piezas se NOMBREN («buenas prácticas» es una categoría, no un hecho) y deja
+  // la prueba del reclutador —si queda la pregunta «¿cuáles?», falta un hecho—.
+  // El único tope sigue siendo UN trabajo por viñeta, que el ATS ya mide.
+  // p4-50 (CEO, 2026-10-22): «no busquemos lo corto, busquemos lo mejor». Con
+  // `p4-49` la viñeta ya nombraba el instrumento y sobre qué («GitLab CI/CD»,
+  // «production iOS applications») pero seguía en 20 palabras: el prompt pedía
+  // desarrollo y sus dos EJEMPLOS tenían 15-18 palabras, y el modelo copia el
+  // patrón del ejemplo antes que la prosa de la regla. Los ejemplos ahora
+  // muestran el nivel esperado —qué, sobre qué, para quién, con qué nombre— y
+  // siguen siendo de rubros opuestos y ajenos al CV del CEO.
+  P4: "p4-50", // reescritura de viñeta
   // p5-2: la PRUEBA muestra un resultado con su tamaño, y el AJUSTE se dice con
   // las palabras del aviso cuando el CV ya lo demuestra.
   // p5-3 (2026-09-11): la misma `noScoreRule`, sin la amenaza falsa.
