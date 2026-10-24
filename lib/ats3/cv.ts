@@ -6,6 +6,7 @@
 
 import { bulletIdFor, nodeHash, normalize, rolDeNueva, roleIdFor, type NodeId, type ResumeTree } from "@/lib/ats3/contracts"
 import { ABIERTO, FECHA_ABIERTA, mes, type Mes, type ParseChecks } from "@/lib/ats3/score"
+import type { ResumeSections } from "@/types/resume"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LECTURA DEL CV
@@ -21,6 +22,58 @@ interface RawRole {
   startDate?: string
   endDate?: string
   description?: string
+}
+
+/**
+ * EL DOCUMENTO DE LA APP, LEÍDO POR EL MOTOR — una sola definición.
+ *
+ * Vivía en el hook de la pantalla (`useAts3`), así que el servidor no podía
+ * armar el árbol del CV: la carta de presentación tenía que adivinar la vacante
+ * porque no sabía leer el CV con el mismo lector que el ATS. Vive acá, al lado
+ * de `RawResume`, y la pantalla la importa.
+ */
+export function rawFromSections(d: ResumeSections): RawResume {
+  return {
+    summary: d.summary ?? "",
+    workExperience: (d.workExperience ?? []).map((r) => ({
+      jobTitle: r.jobTitle ?? "",
+      employer: r.employer ?? "",
+      startDate: r.startDate ?? "",
+      endDate: r.endDate ?? "",
+      description: r.description ?? "",
+    })),
+    skills: (d.skills ?? []).map((x) => ({ name: x.name ?? "" })),
+    otherText: otherTextOf(d),
+    contact: { email: d.personalDetails?.email ?? "", phone: d.personalDetails?.phone ?? "" },
+    education: (d.education ?? []).map((e) => ({ degree: e.degree ?? "" })),
+  }
+}
+
+/**
+ * EL RESTO DEL CV, EN TEXTO PLANO: lo que un filtro lee y el motor no reescribe.
+ *
+ * Un aviso que pide «English B2» se cumple en Idiomas; uno que pide una
+ * certificación, en Certificaciones. Se dicen en las palabras del CV —el nivel
+ * de idioma como se lee impreso— porque eso es lo que el filtro compara.
+ */
+function otherTextOf(d: ResumeSections): string {
+  const nivel = (l: string) => (l === "native" ? "Native" : l.toUpperCase())
+  return [
+    d.personalDetails?.jobTitle ?? "",
+    // Dónde vive la persona: la vacante puede exigir residir en un país.
+    [d.personalDetails?.city, d.personalDetails?.country].filter(Boolean).join(", "),
+    ...(d.languages ?? []).map((l) => `${l.name} ${nivel(l.level)}`),
+    ...(d.certifications ?? []).map((c) => `${c.name} ${c.issuer}`),
+    ...(d.education ?? []).map((e) => `${e.degree} ${e.fieldOfStudy} ${e.institution} ${e.description}`),
+    ...(d.projects ?? []).map((pr) => `${pr.name} ${pr.role} ${pr.description}`),
+    ...(d.volunteer ?? []).map((v) => `${v.role} ${v.organization} ${v.description}`),
+    ...(d.customSections ?? []).flatMap((c) => [c.title, ...c.items.map((i) => `${i.title} ${i.subtitle} ${i.description}`)]),
+    d.hobbies ?? "",
+  ]
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .join(" . ")
+    .slice(0, 8_000)
 }
 
 export interface RawResume {

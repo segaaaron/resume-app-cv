@@ -1,5 +1,14 @@
 // lib/services/ai/modules/AICoverLetterModule.ts
 import { db } from "@/lib/db"
+import { AI_MODEL_BULLETS } from "@/lib/ai-client"
+import { AIAts3Module } from "@/lib/services/ai/modules/AIAts3Module"
+import { cacheKey } from "@/lib/ats3/ports"
+import { treeHash } from "@/lib/ats3/engine"
+import { sha256 } from "@/lib/ats3/contracts"
+import type { AuditFacts } from "@/lib/ats3/score"
+import { buildTermIndex, specTerms, termsIn, type JobSpec } from "@/lib/ats3/contracts"
+import { buildTree, rawFromSections } from "@/lib/ats3/cv"
+import type { ResumeSections } from "@/types/resume"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL_PROSE,
@@ -23,7 +32,6 @@ import { LETTER_ONE_PAGE_WORDS } from "@/components/cover-letter/templates/_metr
 // two that are about content rather than form.
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
-import { buildCoverLetterBrief, type CoverLetterBrief } from "@/lib/cover-letter/cover-letter-brief"
 import { detectCvLanguageOrNull } from "@/lib/resume/cv-language"
 import { detectLanguage } from "../shared/translate-fields"
 import { analyzeCoverLetterAts } from "@/lib/cover-letter/cover-letter-ats"
@@ -83,6 +91,14 @@ function htmlToPlain(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
+}
+
+/** Lo que la carta sabe del aviso: lo exigido que el CV respalda, con su prueba. */
+interface PlanDeCarta {
+  spec: JobSpec
+  respaldados: { skill: string; exigido: boolean; prueba: string }[]
+  sinRespaldo: string[]
+  terminos: string[]
 }
 
 export class AICoverLetterModule {
@@ -159,13 +175,27 @@ export class AICoverLetterModule {
       ({ language, langInstruction } = resolveLanguage(resumeLanguage))
     }
 
-    // Deterministic planning layer — "the algorithm detects, the AI writes". Given
-    // the vacancy + the real résumé, it computes which of the JD's keywords the
-    // résumé genuinely supports (feature these), which it lacks (never claim), and
-    // the real lines that back them. The model writes prose around this skeleton,
-    // so the letter is tailored AND grounded by construction, not by hope.
-    const brief = buildCoverLetterBrief({ jobDescription, sectionData, company, jobTitle })
-    const briefBlock = this.renderBriefBlock(brief, language) + this.roleFallbackBlock(brief.hasJd, jobTitle, language)
+    /**
+     * LA CARTA LEE EL AVISO CON EL MOTOR DEL ATS (CEO, 2026-10-23).
+     *
+     * Tenía el suyo: sacaba «palabras importantes» por frecuencia y adivinaba qué
+     * pedía el puesto. En un aviso real de LinkedIn eso daba «hapi», «eres»,
+     * «que», «mandatorio» como términos de la vacante —muletillas y el nombre de
+     * la empresa— y la carta se escribía contra eso. El ATS ya sabe leer un aviso:
+     * qué exige, qué suma, con qué palabras y en qué orden de peso. Ahora la carta
+     * recibe ESO, y el CV y la carta defienden los mismos hechos del mismo puesto.
+     */
+    const vacante = await this.leerVacante(jobDescription, sectionData, language)
+    /**
+     * EL PUESTO AL QUE SE POSTULA, SIEMPRE EN EL PROMPT (CEO, 2026-10-23).
+     *
+     * El formulario tiene el campo vacío la mayoría de las veces, y entonces el
+     * modelo escribía una carta sobre «el puesto» sin nombre. El aviso ya dice
+     * cómo se llama: el ATS lo extrae en `roleTitleRaw`, con las palabras del
+     * propio aviso. La carta se escribe PARA ese puesto.
+     */
+    const puesto = (jobTitle ?? "").trim() || vacante?.spec.roleTitleRaw || ""
+    const briefBlock = this.renderBriefBlock(vacante, language) + this.roleFallbackBlock(!!jobDescription?.trim(), puesto, language)
 
     // The candidate's own input. The structured form wins when present: three
     // labelled answers tell the model WHICH paragraph each fact belongs to,
@@ -200,7 +230,7 @@ ${untrustedDataRule(true)}
 ${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${candidateBlock}${briefBlock}
 === TARGET POSITION ===
 ${company ? `Company: ${company}` : ""}
-${jobTitle ? `Role: ${jobTitle}` : ""}
+${puesto ? `Role you are applying to: ${puesto}` : ""}
 ${recipientName ? `Hiring Manager: ${recipientName}${recipientTitle ? `, ${recipientTitle}` : ""}` : ""}
 
 Tone: ${toneLabel}
@@ -235,7 +265,7 @@ ${untrustedDataRule(false)}
 ${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}${candidateBlock}${briefBlock}
 === PUESTO OBJETIVO ===
 ${company ? `Empresa: ${company}` : ""}
-${jobTitle ? `Puesto: ${jobTitle}` : ""}
+${puesto ? `Puesto al que se postula: ${puesto}` : ""}
 ${recipientName ? `Responsable de selección: ${recipientName}${recipientTitle ? `, ${recipientTitle}` : ""}` : ""}
 
 Tono: ${toneLabel}
@@ -320,26 +350,6 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       body = stripSignOff(parsed.body)
     }
 
-    if (jobDescription && brief.hasJd && brief.featureKeywords.length > 0) {
-      const before = analyzeCoverLetterAts(body, jobDescription)
-      if (before.keywords.checked && before.keywords.score < 45) {
-        const bodyLower = body.toLowerCase()
-        const stillMissing = brief.featureKeywords.filter((k) => !bodyLower.includes(k.toLowerCase()))
-        if (stillMissing.length > 0) {
-          const retry = await this.retryWeaveKeywords(prompt, stillMissing, langInstruction, language)
-          if (retry) {
-            retryUsages.push(retry.usage ?? {})
-            const retryBody = stripSignOff(retry.body)
-            const after = analyzeCoverLetterAts(retryBody, jobDescription)
-            if (after.keywords.score > before.keywords.score) {
-              body = retryBody
-            } else {
-              this.logger.info("[AIService.generateCoverLetter] ATS retry kept the original (not cleaner/higher)")
-            }
-          }
-        }
-      }
-    }
     // Último paso: que entre en una página. Va al FINAL a propósito — los guards de
     // arriba pueden alargar la carta (el de keywords teje términos nuevos), así que
     // medir antes daría un número que ya no es el que se entrega.
@@ -415,7 +425,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
      * puntuar y viaja `undefined` — la carta se entrega igual. Ninguna nota, por
      * baja que sea, impide entregar la carta.
      */
-    const graded = jobDescription?.trim() ? analyzeCoverLetterAts(htmlToPlain(html), jobDescription) : null
+    const graded = jobDescription?.trim() ? analyzeCoverLetterAts(htmlToPlain(html), jobDescription, vacante?.terminos) : null
     if (!graded) return { body: html, ...(weakPhrases.length ? { weakPhrases } : {}) }
     return {
       body: html,
@@ -467,17 +477,148 @@ Usa la motivación para el párrafo 1 y el logro + el encaje para el párrafo 2.
 `
   }
 
-  private renderBriefBlock(brief: CoverLetterBrief, language: "es" | "en"): string {
-    if (!brief.hasJd || brief.featureKeywords.length === 0) return ""
-    const evidence = brief.supportingEvidence.map((e) => `- ${e.text}`).join("\n")
-    if (language === "en") {
-      return `\n=== TAILORING BRIEF (computed from the job description + the candidate's résumé) ===
-Feature these vacancy terms the résumé genuinely supports, woven in naturally: ${brief.featureKeywords.join(", ")}.
-${evidence ? `Back them with these real achievements from the résumé (paraphrase, do not quote verbatim):\n${evidence}\n` : ""}DO NOT ATTRIBUTE these — the résumé does not back them: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(none)"}.\n`
+  /**
+   * EL AVISO, LEÍDO POR EL MOTOR DEL ATS, Y CRUZADO CONTRA EL CV REAL.
+   *
+   * `null` cuando no hay oferta: la carta se escribe igual desde el CV, sólo que
+   * sin apuntar a un puesto.
+   *
+   * La lectura del aviso se guarda con LA MISMA CLAVE que usa el ATS
+   * (`cacheKey.jd`), así que si la persona ya analizó esta vacante en el editor,
+   * la carta no gasta una llamada — y si escribe la carta primero, el ATS después
+   * tampoco. El cruce contra el CV es determinista y gratis: usa el índice de
+   * términos del propio motor, que ya conoce las variantes del aviso y las
+   * alternativas «A | B».
+   */
+  private async leerVacante(
+    jobDescription: string | undefined,
+    sectionData: Record<string, unknown> | null,
+    language: "es" | "en",
+  ): Promise<PlanDeCarta | null> {
+    const jd = (jobDescription ?? "").trim()
+    if (jd.length < 20 || !sectionData) return null
+
+    const hash = cacheKey.jd(jd, AI_MODEL_BULLETS)
+    let spec: JobSpec | null = null
+    try {
+      const fila = await db.aiAnswerCache.findUnique({ where: { kind_inputHash: { kind: "ats3-jd", inputHash: hash } }, select: { payload: true } })
+      spec = (fila?.payload as JobSpec | undefined) ?? null
+    } catch {
+      // Un caché roto cuesta una llamada, nunca la carta.
     }
-    return `\n=== BRIEF DE PERSONALIZACIÓN (calculado desde la vacante + el CV del candidato) ===
-Destaca estos términos de la vacante que el CV sí respalda, tejidos con naturalidad: ${brief.featureKeywords.join(", ")}.
-${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites textual):\n${evidence}\n` : ""}NUNCA reclames esto — el CV no lo respalda: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(ninguno)"}.\n`
+    if (!spec) {
+      /**
+       * LEER EL AVISO MEJORA LA CARTA; NO ES CONDICIÓN PARA ESCRIBIRLA. Si esta
+       * lectura falla —la API, un aviso ilegible—, la carta se escribe igual
+       * desde el CV. Lo contrario convertiría una mejora en un punto único de
+       * falla sobre algo que antes siempre funcionaba.
+       */
+      const ats = new AIAts3Module({ client: this.aiClient, model: AI_MODEL_BULLETS, language })
+      try {
+        spec = await ats.parseJob(jd, language)
+      } catch (e) {
+        this.logger.warn("[AIService.generateCoverLetter] no se pudo leer la vacante; se escribe desde el CV", { error: String(e) })
+        return null
+      }
+      try {
+        await db.aiAnswerCache.upsert({
+          where: { kind_inputHash: { kind: "ats3-jd", inputHash: hash } },
+          create: { kind: "ats3-jd", inputHash: hash, payload: spec as never, model: AI_MODEL_BULLETS, resumeId: null },
+          update: { payload: spec as never, model: AI_MODEL_BULLETS },
+        })
+      } catch {
+        // Idem: no poder guardar no cancela nada.
+      }
+    }
+
+    // El CV leído por el MISMO lector que usa el ATS.
+    const tree = buildTree(rawFromSections(sectionData as ResumeSections))
+    const lineas = [
+      { id: tree.summary.id, text: tree.summary.text },
+      ...tree.roles.flatMap((r) => r.bullets.map((b) => ({ id: b.id, text: b.text }))),
+      { id: "otros", text: tree.otherText },
+      { id: "skills", text: tree.declaredSkills.join(" . ") },
+    ].filter((l) => l.text.trim())
+
+    const respaldo = new Map<string, string>()
+
+    /**
+     * EL JUICIO DEL ATS MANDA SOBRE LA COMPARACIÓN DE TEXTO.
+     *
+     * Si la persona ya analizó este CV contra este aviso en el editor, el
+     * diagnóstico está guardado y sabe lo que una comparación de cadenas NO
+     * puede saber: que «design patterns» del CV cumple «Patrones de diseño» del
+     * aviso. Medido el 2026-10-23 con un CV en inglés y un aviso en español: sin
+     * esto, requisitos que la persona SÍ tiene caían en «nunca los reclames» y la
+     * carta se quedaba callada sobre sus mejores cartas.
+     */
+    try {
+      const auditKey = cacheKey.audit(sha256(treeHash(tree)), hash, AI_MODEL_BULLETS)
+      const fila = await db.aiAnswerCache.findUnique({ where: { kind_inputHash: { kind: "ats3-audit", inputHash: auditKey } }, select: { payload: true } })
+      const audit = fila?.payload as AuditFacts | undefined
+      for (const h of audit?.hard ?? []) {
+        if (h.status === "missing") continue
+        const prueba = (h.evidenceNodeId && lineas.find((l) => l.id === h.evidenceNodeId)?.text) || h.cvWording || ""
+        if (prueba) respaldo.set(h.skill, prueba)
+      }
+    } catch {
+      // Sin diagnóstico guardado se sigue con la comparación de texto de abajo.
+    }
+
+    // Y lo que el texto sí puede ver —el aviso y el CV en el mismo idioma— se
+    // suma: no reemplaza al juicio del ATS, lo completa.
+    const indice = buildTermIndex(specTerms(spec))
+    for (const l of lineas) for (const t of termsIn(indice, l.text)) if (!respaldo.has(t)) respaldo.set(t, l.text)
+
+    const requisitos = [
+      ...spec.mustHave.map((r) => ({ skill: r.skill, exigido: true })),
+      ...spec.niceToHave.map((r) => ({ skill: r.skill, exigido: false })),
+    ]
+    return {
+      spec,
+      // Lo que el aviso pide Y el CV respalda, con la línea que lo prueba.
+      respaldados: requisitos.filter((r) => respaldo.has(r.skill)).map((r) => ({ ...r, prueba: respaldo.get(r.skill)! })),
+      // Lo que el aviso pide y el CV NO respalda: escribirlo sería atribuirle algo que no tiene.
+      sinRespaldo: requisitos.filter((r) => !respaldo.has(r.skill)).map((r) => r.skill),
+      // Cada nombre suelto del aviso: es lo que un filtro busca en el texto.
+      terminos: [...new Set(requisitos.flatMap((r) => r.skill.split(/\s*\|\s*/).map((x) => x.trim()).filter(Boolean)))],
+    }
+  }
+
+  /** El brief que ve el modelo: los hechos del aviso, no palabras sueltas. */
+  private renderBriefBlock(plan: PlanDeCarta | null, language: "es" | "en"): string {
+    if (!plan || plan.respaldados.length === 0) return ""
+    const { spec } = plan
+    const linea = (r: { skill: string; exigido: boolean; prueba: string }) => `- ${r.skill}${r.exigido ? "" : language === "en" ? " (a plus for them)" : " (les suma)"} → ${r.prueba}`
+    const exige = plan.respaldados.filter((r) => r.exigido).map(linea).join("\n")
+    const suma = plan.respaldados.filter((r) => !r.exigido).map(linea).join("\n")
+    const hace = spec.responsibilities.slice(0, 4).map((x) => `- ${x}`).join("\n")
+    if (language === "en") {
+      return `
+=== TAILORING BRIEF (the posting read requirement by requirement, crossed against the résumé) ===
+Role as the posting writes it: ${spec.roleTitleRaw}${spec.yearsRequired ? ` · ${spec.yearsRequired}+ years` : ""}.
+${exige ? `What the posting DEMANDS and the résumé backs, in the posting's own words and in weight order — the letter must carry these THROUGH the real achievement that proves each one:
+${exige}
+` : ""}${suma ? `What adds and the résumé backs:
+${suma}
+` : ""}${hace ? `What the role does day to day:
+${hace}
+` : ""}${spec.metricThatMatters ? `What this role measures success by: ${spec.metricThatMatters}.
+` : ""}NEVER claim these — the résumé does not back them: ${plan.sinRespaldo.length ? plan.sinRespaldo.join(", ") : "(none)"}.
+`
+    }
+    return `
+=== BRIEF DE PERSONALIZACIÓN (el aviso leído requisito por requisito, cruzado contra el CV) ===
+El puesto, como lo escribe el aviso: ${spec.roleTitleRaw}${spec.yearsRequired ? ` · ${spec.yearsRequired}+ años` : ""}.
+${exige ? `Lo que el aviso EXIGE y el CV respalda, con las palabras del aviso y en orden de peso — la carta tiene que decirlos A TRAVÉS del logro real que los prueba:
+${exige}
+` : ""}${suma ? `Lo que suma y el CV respalda:
+${suma}
+` : ""}${hace ? `Lo que se hace en el puesto:
+${hace}
+` : ""}${spec.metricThatMatters ? `Con qué mide el éxito este puesto: ${spec.metricThatMatters}.
+` : ""}NUNCA reclames esto — el CV no lo respalda: ${plan.sinRespaldo.length ? plan.sinRespaldo.join(", ") : "(ninguno)"}.
+`
   }
 
   /** Palabras de prosa, para contrastar contra lo que entra en la hoja. */
@@ -601,23 +742,6 @@ Nada sobre ESTA empresa puede salir de vos —ni logros, ni inversión, ni cultu
     const note = language === "en"
       ? "YOUR LAST DRAFT BURNED IN DATA YOU CHOSE. Rewrite the letter from the candidate profile alone: every number, percentage, employer, company, product and technology has to come from it. If the profile gives no figure, the achievement goes without one. Never write a stand-in name like \"XYZ Corp\"."
       : "TU BORRADOR ANTERIOR AFIRMÓ DATOS QUE EL CANDIDATO NUNCA DIO. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO quemes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre quemado como \"XYZ Corp\"."
-    return this.retryWithNote(basePrompt, note, langInstruction, language)
-  }
-
-  /** ATS-in-the-loop retry: weave in specific résumé-supported vacancy terms the
-   *  first draft missed — naturally, through real achievements, never hard-coding and
-   *  never keyword-stuffing, and still one page. Returns null on any failure so the
-   *  first draft stands. */
-  private async retryWeaveKeywords(
-    basePrompt: string,
-    keywords: string[],
-    langInstruction: string,
-    language: "es" | "en",
-  ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
-    const list = keywords.slice(0, 8).join(", ")
-    const note = language === "en"
-      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT keyword-stuff, keep it under ${LETTER_ONE_PAGE_WORDS} words and ONE page.`
-      : `Tu borrador anterior usó poco el lenguaje de la vacante. Reescribe la carta tejiendo estos términos que el CV respalda de forma NATURAL, a través de los logros reales del candidato: ${list}. NO quemes nada, NO amontones keywords, mantenla por debajo de ${LETTER_ONE_PAGE_WORDS} palabras y UNA página.`
     return this.retryWithNote(basePrompt, note, langInstruction, language)
   }
 

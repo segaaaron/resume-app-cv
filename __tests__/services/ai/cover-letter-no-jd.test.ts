@@ -5,11 +5,13 @@ import { join } from "node:path"
 vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({ enforceAIQuota: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/lib/ai-client", () => ({
   AI_MODEL_PROSE: "gpt-prose",
+  // La carta lee el aviso con el mismo modelo que el ATS (2026-10-23).
+  AI_MODEL_BULLETS: "gpt-6-luna",
   AI_TEMPERATURE_STRUCTURED: 0.3,
   buildResumeContext: () => "",
   logAIUsage: vi.fn(),
 }))
-vi.mock("@/lib/db", () => ({ db: { resume: { findFirst: vi.fn() } } }))
+vi.mock("@/lib/db", () => ({ db: { resume: { findFirst: vi.fn() }, aiAnswerCache: { findUnique: vi.fn(), upsert: vi.fn() } } }))
 
 import { AICoverLetterModule } from "@/lib/services/ai/modules/AICoverLetterModule"
 

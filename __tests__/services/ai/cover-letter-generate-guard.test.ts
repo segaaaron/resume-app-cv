@@ -5,11 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({ enforceAIQuota: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/lib/ai-client", () => ({
   AI_MODEL_PROSE: "gpt-prose",
+  // La carta lee el aviso con el mismo modelo que el ATS (2026-10-23).
+  AI_MODEL_BULLETS: "gpt-6-luna",
   AI_TEMPERATURE_STRUCTURED: 0.3,
   buildResumeContext: () => "",
   logAIUsage: vi.fn(),
 }))
-vi.mock("@/lib/db", () => ({ db: { resume: { findFirst: vi.fn() } } }))
+vi.mock("@/lib/db", () => ({ db: { resume: { findFirst: vi.fn() }, aiAnswerCache: { findUnique: vi.fn(), upsert: vi.fn() } } }))
 
 import { AICoverLetterModule } from "@/lib/services/ai/modules/AICoverLetterModule"
 import { db } from "@/lib/db"
@@ -83,11 +85,28 @@ describe("generateCoverLetter — anti-empty fallback (Phase 4)", () => {
 describe("generateCoverLetter — tailoring brief (Phase 2)", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("injects the deterministic brief into the prompt when a JD + résumé are given", async () => {
+  /**
+   * LA CARTA LEE EL AVISO CON EL MOTOR DEL ATS (2026-10-23): el brief sale de la
+   * vacante ya leída —qué exige, con las palabras del aviso— y no de contar
+   * palabras repetidas. Acá la lectura llega del caché, que es lo que pasa en
+   * cuanto la persona analizó su CV contra ese aviso en el editor.
+   */
+  it("le pasa al modelo lo que el aviso EXIGE y el CV respalda, y le prohíbe lo que no", async () => {
     vi.mocked(db.resume.findFirst).mockResolvedValue({
       personalDetails: {
         skills: [{ name: "Swift" }, { name: "SwiftUI" }],
         workExperience: [{ description: "Shipped Swift and SwiftUI apps integrating REST APIs." }],
+      },
+    } as never)
+    vi.mocked(db.aiAnswerCache.findUnique).mockResolvedValue({
+      payload: {
+        roleTitleRaw: "iOS Developer", roleTitleCanonical: "iOS Developer", language: "en",
+        seniority: null, yearsRequired: 3, domain: null, workMode: null, metricThatMatters: null,
+        mustHave: [
+          { skill: "Swift | SwiftUI", raw: "strong in Swift and SwiftUI", years: null, category: null },
+          { skill: "Kubernetes", raw: "Kubernetes is required", years: null, category: null },
+        ],
+        niceToHave: [], responsibilities: [], softSignals: [], conditions: [],
       },
     } as never)
     const { client, chat } = queuedClient(["I ship Swift and SwiftUI apps.\n\nGlad to talk."])
@@ -98,12 +117,30 @@ describe("generateCoverLetter — tailoring brief (Phase 2)", () => {
       "PRO",
     )
     const prompt = ((chat.mock.calls[0] as unknown[])[0] as { messages: { content: string }[] }).messages[1].content
-    // the injected block header (the rule text mentions "TAILORING BRIEF" always;
-    // only the "=== TAILORING BRIEF ===" section is conditional on a JD).
     expect(prompt).toContain("=== TAILORING BRIEF")
-    expect(prompt.toLowerCase()).toContain("swift")
-    // the gaps line names tech the résumé lacks and tells the model never to claim it
-    expect(prompt.toLowerCase()).toContain("kubernetes")
+    // Lo exigido que el CV respalda viaja con la línea del CV que lo prueba.
+    expect(prompt).toContain("Swift | SwiftUI")
+    expect(prompt).toContain("Shipped Swift and SwiftUI apps")
+    // Y el puesto al que se postula, con el nombre que le da el aviso.
+    expect(prompt).toContain("iOS Developer")
+    // Lo que el CV no respalda se nombra para PROHIBIRLO, nunca para escribirlo.
+    expect(prompt).toMatch(/NEVER claim these[^\n]*Kubernetes/)
+  })
+
+  it("si no se puede leer el aviso, la carta se escribe igual desde el CV", async () => {
+    vi.mocked(db.resume.findFirst).mockResolvedValue({
+      personalDetails: { workExperience: [{ description: "Shipped Swift apps." }] },
+    } as never)
+    // Sin caché y con el modelo contestando cualquier cosa a la lectura del aviso.
+    vi.mocked(db.aiAnswerCache.findUnique).mockResolvedValue(null as never)
+    const { client } = queuedClient(["A letter written from the résumé.\n\nThanks."])
+    const mod = new AICoverLetterModule(client, logger as never)
+    const res = await mod.generateCoverLetter(
+      "u1",
+      input({ resumeId: "r1", jobDescription: "We need a developer strong in Swift. Kubernetes is required." }),
+      "PRO",
+    )
+    expect(res.body).toContain("written from the résumé")
   })
 
   it("adds NO brief when there is no JD (purely additive — old behavior intact)", async () => {

@@ -395,7 +395,7 @@ describe("el diagnóstico habla de la lista de la vacante, y de nada más", () =
     bullets: [],
     summary: { identity: true, proof: false, fit: false, extra: false },
     hard: [
-      { ref: "M1", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "arqueo de caja" },
+      { ref: "M1", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "arqueo de caja", shown: [{ option: "Arqueo de caja", nodeId: "b1", wording: "Cuadré la caja" }] },
       { ref: "M1", status: "missing" }, // repetida
       { ref: "M9", status: "demonstrated" }, // no existe
       { ref: "n1", status: "missing", writeIn: "no-existe", question: "¿Usaste Excel?" },
@@ -415,6 +415,42 @@ describe("el diagnóstico habla de la lista de la vacante, y de nada más", () =
     expect(a.hard[0]?.cvWording?.length).toBe(160)
   })
 
+  /**
+   * p2-42: el estado sale de lo que P2 PUEDE NOMBRAR. Un «demostrado» sin una
+   * opción del requisito citada en una línea del CV queda en «nombrado»: medido,
+   * el paquete de 10 nombres saltaba entre los dos estados y movía el dial 2,7
+   * puntos con el mismo CV.
+   */
+  it("un «demostrado» sin opción nombrada queda en «nombrado»", async () => {
+    const sinNombrar = JSON.stringify({
+      hard: [{ ref: "M1", status: "demonstrated", evidenceNodeId: "b1", cvWording: "arqueo de caja" }],
+      soft: [],
+    })
+    const a = await mod(new ScriptedClient(sinNombrar)).audit(tree, spec)
+    expect(a.hard[0]?.status).toBe("listed")
+  })
+
+  it("una opción que la vacante no puso, o una cita que no está en la línea, no demuestran nada", async () => {
+    const mentiras = JSON.stringify({
+      hard: [
+        { ref: "M1", status: "listed", shown: [{ option: "Tesorería", nodeId: "b1", wording: "Cuadré la caja" }] },
+        { ref: "n1", status: "listed", shown: [{ option: "Excel", nodeId: "b1", wording: "armé tableros en Excel" }] },
+      ],
+      soft: [],
+    })
+    const a = await mod(new ScriptedClient(mentiras)).audit(tree, spec)
+    expect(a.hard.map((h) => h.status)).toEqual(["listed", "listed"])
+  })
+
+  it("una opción del paquete, citada en su línea, demuestra el requisito aunque P2 diga «nombrado»", async () => {
+    const nombrada = JSON.stringify({
+      hard: [{ ref: "M1", status: "listed", shown: [{ option: "Arqueo de caja", nodeId: "b1", wording: "Cuadré la caja" }] }],
+      soft: [],
+    })
+    const a = await mod(new ScriptedClient(nombrada)).audit(tree, spec)
+    expect(a.hard[0]).toMatchObject({ status: "demonstrated", evidenceNodeId: "b1", cvWording: "Cuadré la caja" })
+  })
+
   it("le manda al modelo las blandas y los requisitos, cada uno con su referencia", async () => {
     const client = new ScriptedClient(respuesta)
     await mod(client).audit(tree, spec)
@@ -427,7 +463,8 @@ describe("el diagnóstico habla de la lista de la vacante, y de nada más", () =
   it("traduce la referencia al nombre de la vacante y descarta lo que no está en la lista", async () => {
     const a = await mod(new ScriptedClient(respuesta)).audit(tree, spec)
     expect(a.hard).toEqual([
-      { skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "arqueo de caja" },
+      // La cita que vale es la de la opción nombrada: sale de la línea citada.
+      { skill: "Arqueo de caja", requirement: "MUST", status: "demonstrated", evidenceNodeId: "b1", writeIn: null, question: null, cvWording: "Cuadré la caja" },
       { skill: "Excel", requirement: "NICE", status: "missing", evidenceNodeId: null, writeIn: null, question: "¿Usaste Excel?", cvWording: null },
     ])
     // Una soft demostrada en el resumen conserva su cita (CEO, 2026-10-16).

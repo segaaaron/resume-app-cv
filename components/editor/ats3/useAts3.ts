@@ -18,6 +18,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useAtsPostingStore } from "@/stores/atsPostingStore"
 import { applySuggestion, buildTree, writeBack, writeInto, type RawResume } from "@/lib/ats3/engine"
+import { rawFromSections } from "@/lib/ats3/cv"
 import { findNode } from "@/lib/ats3/guards"
 import { nodeHash, normalize, rolDeNueva } from "@/lib/ats3/contracts"
 import type { AnchoredSuggestion, Finding, JobSpec, Resolution, ResumeTree } from "@/lib/ats3/contracts"
@@ -130,33 +131,6 @@ function olvidar(st: Ats3State, quien: { nodeId: string } | { findingId: string 
   }
 }
 
-/**
- * EL RESTO DEL CV, EN TEXTO PLANO: lo que un filtro lee y el motor no reescribe.
- *
- * El árbol del motor tenía el campo desde el primer día y nadie lo llenaba. Un
- * aviso que pide «English B2» se cumple en Idiomas; uno que pide una
- * certificación, en Certificaciones. Se dicen en las palabras del CV —el nivel
- * de idioma como se lee impreso— porque eso es lo que el filtro compara.
- */
-function otherTextOf(d: ResumeSections): string {
-  const nivel = (l: string) => (l === "native" ? "Native" : l.toUpperCase())
-  return [
-    d.personalDetails?.jobTitle ?? "",
-    // Dónde vive la persona: la vacante puede exigir residir en un país.
-    [d.personalDetails?.city, d.personalDetails?.country].filter(Boolean).join(", "),
-    ...(d.languages ?? []).map((l) => `${l.name} ${nivel(l.level)}`),
-    ...(d.certifications ?? []).map((c) => `${c.name} ${c.issuer}`),
-    ...(d.education ?? []).map((e) => `${e.degree} ${e.fieldOfStudy} ${e.institution} ${e.description}`),
-    ...(d.projects ?? []).map((p) => `${p.name} ${p.role} ${p.description}`),
-    ...(d.volunteer ?? []).map((v) => `${v.role} ${v.organization} ${v.description}`),
-    ...(d.customSections ?? []).flatMap((c) => [c.title, ...c.items.map((i) => `${i.title} ${i.subtitle} ${i.description}`)]),
-    d.hobbies ?? "",
-  ]
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .join(" . ")
-    .slice(0, 8_000)
-}
 
 export function useAts3(resumeId: string, language: "es" | "en") {
   const sectionData = useResumeStore((s: { sectionData: ResumeSections }) => s.sectionData)
@@ -214,23 +188,7 @@ export function useAts3(resumeId: string, language: "es" | "en") {
   /** El CV tal como se mandó a analizar: contra esto se dice si cambió después. */
   const [analizado, setAnalizado] = useState<string | null>(null)
 
-  const payloadResume = useCallback(
-    (): RawResume => ({
-      summary: sectionData.summary ?? "",
-      workExperience: (sectionData.workExperience ?? []).map((r) => ({
-        jobTitle: r.jobTitle ?? "",
-        employer: r.employer ?? "",
-        startDate: r.startDate ?? "",
-        endDate: r.endDate ?? "",
-        description: r.description ?? "",
-      })),
-      skills: (sectionData.skills ?? []).map((s) => ({ name: s.name ?? "" })),
-      otherText: otherTextOf(sectionData),
-      contact: { email: sectionData.personalDetails?.email ?? "", phone: sectionData.personalDetails?.phone ?? "" },
-      education: (sectionData.education ?? []).map((e) => ({ degree: e.degree ?? "" })),
-    }),
-    [sectionData],
-  )
+  const payloadResume = useCallback((): RawResume => rawFromSections(sectionData), [sectionData])
 
   /**
    * Corre el análisis y pinta cada acto al llegar.

@@ -145,7 +145,18 @@ describe("el error que este módulo existe para no cometer", () => {
     expect(termsIn(i, "Emití facturas ante el SIN; soporte de IT")).toEqual(new Set(["SIN", "IT"]))
   })
 
-  it("la oración del aviso no le roba el tramo a otro requisito", () => {
+  it("la oración del aviso no le roba el tramo a sus propias opciones", () => {
+    /**
+     * EL COSTO ACEPTADO DE p1-34 (CEO, 2026-10-23), a la vista: dos nombres del
+     * MISMO renglón son UN requisito con dos opciones, y tener cualquiera lo
+     * cumple. Acá el aviso los pide juntos («REST and GraphQL»), así que el
+     * puntaje se vuelve más indulgente que cuando eran dos requisitos. Se eligió
+     * con la medición delante: el renglón es lo único que el modelo copia igual
+     * en cada tirada (12 de 12 de 12 en `prueba-21`), y pedirle que agrupe él
+     * movía el conteo —y el puntaje— sin que el CV cambiara.
+     * Lo que este test sigue cuidando: la oración no le roba el tramo a ninguna
+     * de sus opciones, que es el error medido el 2026-09-28.
+     */
     const spec = JobSpecSchema.parse({
       roleTitleRaw: "iOS", roleTitleCanonical: "iOS", seniority: null, yearsRequired: null, domain: null,
       workMode: null, language: "en", metricThatMatters: null, responsibilities: [], softSignals: [], namedTools: [],
@@ -155,9 +166,11 @@ describe("el error que este módulo existe para no cometer", () => {
       ],
       niceToHave: [],
     })
+    expect(spec.mustHave.map((r) => r.skill)).toEqual(["REST | GraphQL"])
+    // La oración del aviso es la misma que el CV podría escribir: el requisito se
+    // encuentra ahí, y no queda en «no lo pude contar» por culpa de su propio `raw`.
     const counts = termCounts(idx(specTerms(spec)), "Integrate REST and GraphQL APIs")
-    expect(counts.get("REST")).toBe(1)
-    expect(counts.get("GraphQL")).toBe(1)
+    expect(counts.get("REST | GraphQL")).toBe(1)
   })
 
   it("un requisito con la redacción larga se recorta, no se descarta (Sezzle: «Claude» se perdía, 2026-10-02)", () => {
@@ -358,5 +371,44 @@ describe("la vacante no se contradice", () => {
     const r = JobSpecSchema.parse({ ...base, namedTools: ["GraphQL"] })
     expect(r.niceToHave).toEqual([])
     expect("namedTools" in r).toBe(false)
+  })
+
+  /**
+   * EL CORTE DEL GRUPO LO HACE EL AVISO (p1-34, medido en `prueba-19`): el modelo
+   * declara de qué requisito es parte cada nombre y el código arma el requisito,
+   * porque agrupar a ojo daba 16, 14 y 14 requisitos para el MISMO aviso.
+   */
+  it("los nombres del mismo renglón son UN requisito; dos renglones son dos", () => {
+    const linea = "Experience with networking and data: URLSession, JSON parsing, caching"
+    const otra = "Knowledge of internal audit"
+    const r = JobSpecSchema.parse({
+      ...base,
+      mustHave: [
+        { skill: "networking and data", raw: linea },
+        { skill: "URLSession", raw: linea },
+        { skill: "JSON parsing", raw: linea },
+        { skill: "caching", raw: linea },
+        { skill: "auditoría interna", raw: otra },
+      ],
+    })
+    expect(r.mustHave.map((x) => x.skill)).toEqual([
+      "networking and data | URLSession | JSON parsing | caching",
+      "auditoría interna",
+    ])
+    expect(r.mustHave[0].raw).toBe(linea)
+  })
+
+  it("el «plus» que el aviso mete DENTRO de un renglón exigido no se entierra en lo obligatorio", () => {
+    // «…mocking strategies, CI/CD (Fastlane is a plus)…»: un solo renglón, pero
+    // Fastlane no es obligatorio. Se agrupa por renglón Y lista, así que Fastlane
+    // queda como su propio deseable en vez de ser una opción de lo exigido.
+    const linea = "Experience with testing and quality: XCTest, CI/CD (Fastlane is a plus)"
+    const r = JobSpecSchema.parse({
+      ...base,
+      mustHave: [{ skill: "XCTest", raw: linea }, { skill: "CI/CD", raw: linea }],
+      niceToHave: [{ skill: "Fastlane", raw: linea }],
+    })
+    expect(r.mustHave.map((x) => x.skill)).toEqual(["XCTest | CI/CD"])
+    expect(r.niceToHave.map((x) => x.skill)).toEqual(["Fastlane"])
   })
 })

@@ -230,7 +230,18 @@ export const PROMPT_VERSION = {
   // requisitos: un nombre que ninguna oración del aviso exige no descarta a
   // nadie, así que es deseable. Eso cierra en el origen lo que `p2-41` compensa
   // desde el otro lado. (p1-32 se usó y se revirtió el mismo día.)
-  P1: "p1-33", // parser de vacante
+  // p1-34 (2026-10-23): EL CORTE LO HACE EL RENGLÓN DEL AVISO. `prueba-19` midió
+  // tres lecturas del mismo aviso: la frontera obligatorio/deseable salió
+  // idéntica 3 de 3, pero el conteo dio 16, 14 y 14 —«Networking and data:
+  // URLSession, JSON parsing…» salía una vez bajo su paraguas y otra partida en
+  // dos— y el puntaje se movía 2,8 puntos sin que el CV cambiara. Pedirle al
+  // modelo que declare el grupo lo empeoró dos veces (`prueba-20` con un campo
+  // nullable: 22/21/19; `prueba-21` con uno obligatorio: 16/16/18), porque toda
+  // etiqueta que inventa cambia en cada tirada. Lo que NO cambió nunca fue el
+  // renglón copiado: 12 de 12 de 12. Así que el modelo ya no agrupa ni etiqueta
+  // —declara cada nombre con el renglón que lo pide— y el `transform` arma UN
+  // requisito por renglón y lista. Se fue con esto la regla 1b entera.
+  P1: "p1-34", // parser de vacante
   // p2-2: la frontera FOUND/IMPLIED es lo que el filtro PUEDE VER, no lo que el
   // modelo entiende. Marcar FOUND por comprensión propia le dice a alguien que
   // está cubierto cuando el filtro lo va a descartar.
@@ -299,7 +310,15 @@ export const PROMPT_VERSION = {
   // revirtió—. Lo decide quien tiene el dato: P2 ya recibe el CARGO DEL AVISO y
   // los CARGOS DEL CV, y ahora la regla dice que eso define qué camino ejerce la
   // persona. Sirve para cualquier oficio sin nombrar ninguno.
-  P2: "p2-41", // diagnóstico
+  // p2-42 (2026-10-23): EL ESTADO SALE DE LO QUE P2 PUEDE NOMBRAR. Medido con 5
+  // auditorías del MISMO aviso y el MISMO CV: un requisito que es un paquete de
+  // nombres («URLSession | JSON parsing | … | Realm») salía `demonstrated` 3
+  // veces y `listed` 2, y el dial se movía 2,7 puntos sin que el CV cambiara.
+  // La cita nunca fue el problema (25 de 25 estaban en la viñeta citada): el
+  // problema era que «con cualquiera se cumple» vivía en la prosa y P2 lo
+  // aplicaba a ojo sobre el paquete entero. Ahora P2 nombra qué opción demuestra,
+  // en qué línea y con qué palabras, y el código decide el estado.
+  P2: "p2-42", // diagnóstico
   // p4-2 (2026-08-29): se sacaron del prompt los ejemplos de oficios (piezas
   // por turno, pacientes por guardia). Cambia lo que el modelo escribe, así que
   // lo guardado con la versión anterior ya no es la respuesta a esta pregunta.
@@ -732,6 +751,22 @@ export const RequirementSchema = z.object({
    * caso de siempre—.
    */
   kind: z.enum(["capability", "credential"]).optional().catch(undefined),
+  /**
+   * ── POR QUÉ ACÁ NO HAY UN CAMPO PARA AGRUPAR (2026-10-23) ───────────────────
+   *
+   * Hubo dos, medidos contra la API el mismo día y los dos peores que nada:
+   * `head` nullable (`prueba-20`) y `group` obligatorio (`prueba-21`). El modelo
+   * COPIA de manera reproducible y ETIQUETA de manera irreproducible: el mismo
+   * renglón del aviso volvía como «education», «degree», «field of study» o
+   * «Bachelor's degree or higher» según la tirada, y cada etiqueta nueva era un
+   * requisito nuevo —de 14 requisitos a 22—. Es el mismo error que `p1-33`
+   * corrigió en `skill`, repetido en un campo nuevo.
+   *
+   * Lo único estable fue `raw`: 12 renglones distintos en 3 corridas, sin una
+   * diferencia. Así que el corte cuelga del renglón del aviso y de nada más (ver
+   * el `transform` de `JobSpecSchema`): el modelo declara nombres con el renglón
+   * que los pide, y el requisito lo arma el código.
+   */
 })
 
 export const JobSpecSchema = z.object({
@@ -791,8 +826,54 @@ export const JobSpecSchema = z.object({
    * que ningún CV puede tener. Un nombre con barra no lleva espacios («CI/CD»,
    * «async/await»), así que la barra con espacios es la forma «A | B» del motor.
    */
-  const alternativas = <T extends { skill: string }>(r: T): T => ({ ...r, skill: r.skill.replace(/\s+\/\s+/g, " | ") })
-  const crudo = { ...original, mustHave: original.mustHave.map(alternativas), niceToHave: original.niceToHave.map(alternativas) }
+  const alternativas = (s: string) => s.replace(/\s+\/\s+/g, " | ")
+
+  /**
+   * EL CORTE LO HACE EL AVISO, NO LA TIRADA (2026-10-23; ver `RequirementSchema`).
+   *
+   * El modelo entrega NOMBRES, cada uno con el renglón del aviso que lo pide.
+   * Acá hay UN requisito por renglón: se llama con los nombres de ese renglón
+   * unidos por « | » —«higiene alimentaria | HACCP | BPM»— y tener cualquiera lo
+   * cumple, que es lo que el aviso acepta: partirlo en tres castiga a quien
+   * tiene la capacidad en otra de sus formas.
+   *
+   * Y POR LISTA, no sólo por renglón: un aviso marca un plus DENTRO de un
+   * renglón exigido («…CI/CD (Fastlane is a plus)», «Swift y (ideally)
+   * Objective-C»). Esos nombres el modelo ya los manda a deseables, y agrupar
+   * sólo por renglón los enterraría como una opción más de lo obligatorio.
+   *
+   * `skill` conserva el tope de 200 del esquema: una opción que no entra se deja
+   * afuera entera, nunca cortada a la mitad.
+   */
+  type Grupo = { skill: string; raw: string; years: number | null; category: string | null; kind?: "capability" | "credential" }
+  const grupoMust: Grupo[] = []
+  const grupoNice: Grupo[] = []
+  for (const [atomos, destino] of [[original.mustHave, grupoMust], [original.niceToHave, grupoNice]] as const) {
+    const porGrupo = new Map<string, Grupo>()
+    for (const a of atomos) {
+      const skill = alternativas(a.skill)
+      // Sin renglón —el modelo lo omitió— el nombre es su propio requisito: nunca
+      // se pierde un requisito por un campo que faltó.
+      const raw = (a.raw || skill).slice(0, 600)
+      const llave = normalize(raw)
+      let g = porGrupo.get(llave)
+      if (!g) {
+        g = { skill: skill.slice(0, 200), raw, years: a.years, category: a.category, kind: a.kind }
+        porGrupo.set(llave, g)
+        destino.push(g)
+        continue
+      }
+      // La llave del nombre COMPLETO entra al set, no sólo sus partes: un `skill`
+      // que ya viene con opciones («Claude | large language model tools») no
+      // coincidía con ninguna parte y se escribía dos veces (Sezzle, 2026-10-02).
+      const opciones = new Set([termKey(g.skill), ...g.skill.split(/\s*\|\s*/).map(termKey)])
+      if (!opciones.has(termKey(skill)) && g.skill.length + 3 + skill.length <= 200) g.skill = `${g.skill} | ${skill}`
+      g.years ??= a.years
+      g.category ??= a.category
+      g.kind ??= a.kind
+    }
+  }
+  const crudo = { ...original, mustHave: grupoMust, niceToHave: grupoNice }
   /**
    * UN TÉRMINO VIVE EN UNA SOLA LISTA.
    *
@@ -802,9 +883,25 @@ export const JobSpecSchema = z.object({
   const llaves = (rs: { skill: string; raw: string }[]) =>
     new Set(rs.flatMap((r) => [termKey(r.skill), termKey(r.raw), ...r.skill.split(/\s*\|\s*/).map(termKey)]))
   const exigidos = llaves(crudo.mustHave)
-  const niceToHave = crudo.niceToHave.filter(
-    (r, i, xs) => !exigidos.has(termKey(r.skill)) && xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i,
-  )
+  /**
+   * Y SE LIMPIA NOMBRE POR NOMBRE, no requisito por requisito (2026-10-23).
+   *
+   * Con el corte por renglón, la llave de un requisito es una cadena de varios
+   * nombres, así que comparar llaves enteras dejó de ver el choque: medido contra
+   * la API, «UIKit | SwiftUI | memory management | threading» entró en deseables
+   * mientras nombres suyos ya vivían en un obligatorio, y el puntaje los contó
+   * dos veces. Un nombre exigido sale de su opción en deseables, y el deseable
+   * que se queda sin nombres propios desaparece.
+   */
+  const niceToHave = crudo.niceToHave
+    .map((r) => {
+      const propias = r.skill.split(/\s*\|\s*/).filter((o) => o.trim() && !exigidos.has(termKey(o)))
+      return propias.length ? { ...r, skill: propias.join(" | ") } : null
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null)
+    .filter(
+      (r, i, xs) => !exigidos.has(termKey(r.skill)) && xs.findIndex((x) => termKey(x.skill) === termKey(r.skill)) === i,
+    )
   const duros = new Set([...exigidos, ...llaves(niceToHave)])
   return {
     ...crudo,

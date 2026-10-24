@@ -943,7 +943,7 @@ export interface GenerateCoverLetterInput {
     /** What they bring that fits the role. */
     fit?: string
   }
-  /** The vacancy text. Fed to the deterministic planner (buildCoverLetterBrief)
+  /** The vacancy text. Lo lee el motor del ATS (`leerVacante`)
    *  so the letter is tailored to the role and grounded in the résumé. */
   jobDescription?: string
 }

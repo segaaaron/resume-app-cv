@@ -322,7 +322,13 @@ export function menosAporta(tree: ResumeTree, spec: JobSpec, audit: AuditFacts, 
  * cambia lo que el modelo lee —qué llega primero, qué queda enterrado— así que
  * también tiene que cambiar la huella.
  */
-function treeHash(tree: ResumeTree): string {
+/**
+ * Se exporta porque la CARTA de presentación necesita la misma llave para leer
+ * el diagnóstico que el ATS ya guardó: su juicio entiende los dos idiomas
+ * («atención al público» para «Customer service»), cosa que una comparación de
+ * texto no puede hacer (2026-10-23).
+ */
+export function treeHash(tree: ResumeTree): string {
   return sha256(
     ...tree.roles.flatMap((r) => [r.title, r.company, r.startDate, r.endDate, ...r.bullets.map((b) => b.hash)]),
     tree.summary.hash,

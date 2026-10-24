@@ -65,7 +65,16 @@ function scoreToVerdict(score: number): CoverLetterAtsVerdict {
  * caller strips HTML first). `jobDescription` is optional — without it the
  * keyword dimension is skipped and the score is drawn from the rest.
  */
-export function analyzeCoverLetterAts(letterText: string, jobDescription = ""): CoverLetterAtsResult {
+/**
+ * `terms` son los requisitos que el ATS leyó del aviso, con las palabras del
+ * aviso (2026-10-23). Sin ellos esta función los sacaba por FRECUENCIA, y con un
+ * aviso real en español eso daba «hapi», «eres», «que», «mandatorio» como
+ * términos de la vacante: el usuario leía en pantalla que su carta no cubría
+ * muletillas. El servidor ya leyó el aviso requisito por requisito, así que le
+ * pasa esa lista. Sin ella —el panel del navegador, que no llama a la IA— se
+ * sigue usando la frecuencia, que es mejor que nada.
+ */
+export function analyzeCoverLetterAts(letterText: string, jobDescription = "", terms?: string[]): CoverLetterAtsResult {
   const text = (letterText ?? "").trim()
   const words = wordsOf(text)
   const wordCount = words.length
@@ -74,7 +83,7 @@ export function analyzeCoverLetterAts(letterText: string, jobDescription = ""): 
   const jd = (jobDescription ?? "").trim()
   let keywords: CoverLetterAtsResult["keywords"]
   if (jd.length >= 20 && wordCount > 0) {
-    const top = extractTopKeywords(jd)
+    const top = terms?.length ? terms : extractTopKeywords(jd)
     const { matched, missing } = partitionByPresence(top, normalize(text))
     const kwScore = top.length ? Math.round((matched.length / top.length) * 100) : 0
     keywords = {
